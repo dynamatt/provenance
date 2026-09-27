@@ -6,7 +6,7 @@ BIN    := bin/provenance
 
 # Build identity is injected, never read at runtime. Override on the command
 # line (make build VERSION=v0.1.0) for release builds.
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)-$(shell date +%s%N)
 COMMIT  ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 
 # Reproducible: no cgo, no absolute paths (-trimpath), no VCS stamping beyond
