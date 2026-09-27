@@ -306,15 +306,29 @@ with the cycle path.
 ### E1.6 Project templates and template functions
 
 **Deliverables:** load `templates/<TypeName>.tmpl` (`html/template`), falling
-back to the built-in template. Template functions: `markdown`, `heading N` with
-relative depth resolved at render time, link helpers. Data model per Detailed
-Design §7. **Example-repo PR:** rename `Requirement.tmpl.illustrative` →
-`Requirement.tmpl`, update `templates/README.md` and the README's "nothing in
-templates is functional" note; bump the pin.
+back to the built-in template. **Site-level overrides (added 2026-09-27,
+Matt):** `templates/style.css` (stylesheet), `templates/_layout.tmpl` (page
+layout wrapping every page) and `templates/_index.tmpl` (the site's main page)
+each replace the built-in one independently; any not provided falls back to
+the built-in. The underscore prefix keeps them from colliding with a type
+template, since CamelCase type names cannot start with `_`. A project template
+that fails to parse or execute exits 2 naming the file and line. The layout and
+index data contracts are recorded in Detailed Design §7. Template functions:
+`markdown`, `heading N` with relative depth resolved at render time, link
+helpers. Data model per Detailed Design §7. **Example-repo PR:** rename
+`Requirement.tmpl.illustrative` → `Requirement.tmpl`; add a
+`templates/style.css`, `templates/_layout.tmpl` and `templates/_index.tmpl` so
+the example exercises every override; update `templates/README.md` and the
+README's "nothing in templates is functional" note; bump the pin. The built-in
+fallbacks keep unit-test coverage.
 
 **Check it yourself:** REQ pages use the project template ("Implements"
 heading); DES pages still use the fallback. REQ-0003 embedded in DOC-0001
-renders its headings deeper than on its own page.
+renders its headings deeper than on its own page. Every page carries the
+example's layout and stylesheet, and the index is the example's own. Delete
+`templates/style.css`, re-export → the built-in stylesheet comes back while the
+layout stays the example's. Break a `{{` in `templates/_layout.tmpl` → exit 2
+naming the file and line.
 
 ### E1.7 Query engine spike (decision task)
 
@@ -424,7 +438,8 @@ diagram to DES-0001.
 ### E1.14 Epic close-out: docs and first binary release
 
 **Deliverables:** website `export` reference page complete (usage, scope
-files, template authoring and template functions, context variables);
+files, template authoring (type templates, and the stylesheet, layout and
+index overrides) and template functions, context variables);
 architecture page updated where implementation refined the design; example-repo
 README updated for what now works. GitHub release `v0.1.0-alpha` built by CI
 with a `SHA256SUMS` manifest (format recorded in Detailed Design §4 — it's what
