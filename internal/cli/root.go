@@ -55,6 +55,7 @@ The same binary runs locally and as the CI merge gate. Exit codes are the CI con
 	}
 	// version.String contains no template actions, so it is used verbatim.
 	root.SetVersionTemplate(version.String())
+	root.Flags().BoolP("version", "v", false, "print the tool version, source commit and Go toolchain")
 	root.SetFlagErrorFunc(func(c *cobra.Command, err error) error {
 		return exitcode.Usage(fmt.Errorf("%s: %w", commandName(c), err))
 	})
@@ -85,6 +86,19 @@ func commandName(c *cobra.Command) string {
 		return path[i+1:]
 	}
 	return path
+}
+
+// statusAnnotation marks commands whose implementation has not landed yet.
+// The documentation generator reads it, so the CLI reference flags exactly the
+// commands that still return "not implemented". Remove the annotation together
+// with the notImplemented RunE when a command is built.
+const statusAnnotation = "provenance/status"
+
+var notImplementedYet = map[string]string{statusAnnotation: "not-implemented"}
+
+// Implemented reports whether c has a real implementation in this build.
+func Implemented(c *cobra.Command) bool {
+	return c.Annotations[statusAnnotation] != "not-implemented"
 }
 
 // notImplemented is the RunE for commands that exist in the CLI surface but
