@@ -22,10 +22,24 @@ EXAMPLE_REF  := $(shell cat testdata/example-repo.ref)
 # provenance-website checkout that receives the generated CLI reference.
 WEBSITE_DIR ?= ../provenance-website
 
-.PHONY: build test lint acceptance example bump-example docs ci
+.PHONY: build dist test lint acceptance example bump-example docs ci
 
 build:
 	CGO_ENABLED=0 go build $(GO_BUILD_FLAGS) -ldflags '$(GO_LDFLAGS)' -o $(BIN) ./cmd/provenance
+
+# Cross-compile the release platforms into dist/ with exactly the build recipe
+# above. The reproducible-build workflow runs this on two runners and compares.
+PLATFORMS ?= linux/amd64 darwin/arm64 windows/amd64
+
+dist:
+	rm -rf dist && mkdir -p dist
+	@for p in $(PLATFORMS); do \
+		os=$${p%/*}; arch=$${p#*/}; ext=""; \
+		if [ "$$os" = windows ]; then ext=.exe; fi; \
+		out=dist/provenance-$$os-$$arch$$ext; \
+		echo "$$out"; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build $(GO_BUILD_FLAGS) -ldflags '$(GO_LDFLAGS)' -o $$out ./cmd/provenance; \
+	done
 
 test:
 	go test ./...

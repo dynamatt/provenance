@@ -13,7 +13,7 @@
 - [x] S0.3 CLAUDE.md, PLAN.md and website CLI reference
 - [x] S0.4 Design reconciliation
 - [x] S1.1 GitHub Actions CI workflow
-- [ ] S1.2 Reproducible-build check
+- [x] S1.2 Reproducible-build check
 - [ ] E1.1 Exporter interface and output folder
 - [ ] E1.2 Entity discovery and parsing
 - [ ] E1.3 Schema loading, default entity pages, golden test
