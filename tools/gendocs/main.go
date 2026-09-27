@@ -125,9 +125,9 @@ func index(root *cobra.Command, cmds []*cobra.Command) string {
 	b.WriteString("are part of the planned command surface: in the current build they print\n")
 	b.WriteString("`<command>: not implemented yet` and exit with code 2.\n\n")
 
-	b.WriteString("## Commands\n\n| Command | Description | Status |\n| --- | --- | --- |\n")
+	b.WriteString("## Commands\n\n| Command | Description | Flags | Status |\n| --- | --- | --- | --- |\n")
 	for _, c := range cmds {
-		fmt.Fprintf(&b, "| %s | %s | %s |\n", ref(c), cell(c.Short), status(c))
+		fmt.Fprintf(&b, "| %s | %s | %s | %s |\n", ref(c), cell(c.Short), flagNames(c), status(c))
 	}
 
 	b.WriteString("\n## Exit codes\n\n")
@@ -182,6 +182,20 @@ func page(c *cobra.Command, weight int) string {
 		flagTable(&b, c.LocalFlags())
 	}
 	return strings.TrimRight(b.String(), "\n") + "\n"
+}
+
+// flagNames lists c's own flags for the index, e.g. "`--scope`, `--out`".
+func flagNames(c *cobra.Command) string {
+	var names []string
+	c.LocalFlags().VisitAll(func(f *pflag.Flag) {
+		if !f.Hidden && f.Name != "help" {
+			names = append(names, "`--"+f.Name+"`")
+		}
+	})
+	if len(names) == 0 {
+		return "—"
+	}
+	return strings.Join(names, ", ")
 }
 
 func hasFlags(fs *pflag.FlagSet) bool {

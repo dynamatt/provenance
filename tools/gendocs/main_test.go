@@ -25,8 +25,8 @@ func TestOnePagePerCommandPlusIndex(t *testing.T) {
 			t.Errorf("no page for %q", name(c))
 			continue
 		}
-		if !strings.Contains(pages["_index.md"], ref(c)) {
-			t.Errorf("index does not link %q", name(c))
+		if !strings.Contains(pages["_index.md"], "| "+ref(c)+" | "+cell(c.Short)+" | "+flagNames(c)+" |") {
+			t.Errorf("index row for %q missing or without its flags", name(c))
 		}
 		marked := strings.Contains(p, "**Not yet implemented.**")
 		if marked == cli.Implemented(c) {
