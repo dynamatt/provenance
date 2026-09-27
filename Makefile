@@ -19,10 +19,13 @@ EXAMPLE_REPO ?= https://github.com/dynamatt/provenance-example.git
 EXAMPLE_DIR  := .cache/example
 EXAMPLE_REF  := $(shell cat testdata/example-repo.ref)
 
+# Snapshot of `export website` on the pinned example (E1 standing acceptance).
+GOLDEN_DIR := testdata/golden
+
 # provenance-website checkout that receives the generated CLI reference.
 WEBSITE_DIR ?= ../provenance-website
 
-.PHONY: build dist test lint acceptance example bump-example docs ci
+.PHONY: build dist test lint acceptance golden-update example bump-example docs ci
 
 build:
 	CGO_ENABLED=0 go build $(GO_BUILD_FLAGS) -ldflags '$(GO_LDFLAGS)' -o $(BIN) ./cmd/provenance
@@ -70,7 +73,15 @@ bump-example:
 	echo "example pinned to $$sha"
 
 acceptance: build example
-	PROV=$(CURDIR)/$(BIN) EXAMPLE_DIR=$(CURDIR)/$(EXAMPLE_DIR) bash scripts/acceptance.sh
+	PROV=$(CURDIR)/$(BIN) EXAMPLE_DIR=$(CURDIR)/$(EXAMPLE_DIR) GOLDEN_DIR=$(CURDIR)/$(GOLDEN_DIR) \
+		bash scripts/acceptance.sh
+
+# Rewrite the golden site from the pinned example. Commit the result with the
+# change that caused it, so the PR shows the rendering difference.
+golden-update: build example
+	rm -rf $(GOLDEN_DIR)
+	cd $(EXAMPLE_DIR) && $(CURDIR)/$(BIN) export website --out $(CURDIR)/$(GOLDEN_DIR) >/dev/null
+	@echo "golden site rewritten: review 'git diff $(GOLDEN_DIR)'"
 
 # Regenerate the website's CLI reference from the command definitions. Run it
 # whenever a command, flag or help text changes, and commit the result in

@@ -1,0 +1,23 @@
+{{/* value renders one *model.Value by its field kind. */}}
+{{- define "value" -}}
+{{- $k := kind . -}}
+{{- if eq $k "calculated" -}}
+<span class="placeholder">calculated</span>
+{{- else if not .Present -}}
+<span class="absent">—</span>
+{{- else if .Invalid -}}
+<span class="invalid-value">{{.Raw}}</span> <span class="invalid">{{.Problem}}</span>
+{{- else if eq $k "number" -}}
+{{number .Num}}
+{{- else if eq $k "boolean" -}}
+{{if .Bool}}true{{else}}false{{end}}
+{{- else if eq $k "text" -}}
+<span class="text">{{.Str}}</span>
+{{- else if eq $k "link" -}}
+{{range $i, $id := .IDs}}{{if $i}}, {{end}}<span class="id">{{$id}}</span>{{end}}
+{{- else if eq $k "list" -}}
+<span class="placeholder">{{rows (len .Rows)}}</span>
+{{- else -}}
+{{.Str}}
+{{- end -}}
+{{- end -}}
