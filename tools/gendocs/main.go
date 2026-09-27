@@ -103,12 +103,16 @@ func ref(c *cobra.Command) string {
 }
 
 // isGroup reports whether c only holds subcommands.
-func isGroup(c *cobra.Command) bool { return c.HasAvailableSubCommands() && cli.Implemented(c) }
+func isGroup(c *cobra.Command) bool {
+	return c.HasAvailableSubCommands() && cli.CommandStatus(c) == cli.Complete
+}
 
 func status(c *cobra.Command) string {
 	switch {
-	case !cli.Implemented(c):
+	case cli.CommandStatus(c) == cli.NotImplemented:
 		return "Not yet implemented"
+	case cli.CommandStatus(c) == cli.InDevelopment:
+		return "In development"
 	case isGroup(c):
 		return "—"
 	default:
@@ -123,7 +127,8 @@ func index(root *cobra.Command, cmds []*cobra.Command) string {
 	b.WriteString("Every command of the `" + root.Name() + "` binary, generated from the same\n")
 	b.WriteString("definitions as its `--help` output. Commands marked *Not yet implemented*\n")
 	b.WriteString("are part of the planned command surface: in the current build they print\n")
-	b.WriteString("`<command>: not implemented yet` and exit with code 2.\n\n")
+	b.WriteString("`<command>: not implemented yet` and exit with code 2. Commands marked\n")
+	b.WriteString("*In development* work in part while their implementation is completed.\n\n")
 
 	b.WriteString("## Commands\n\n| Command | Description | Flags | Status |\n| --- | --- | --- | --- |\n")
 	for _, c := range cmds {
@@ -147,9 +152,13 @@ func page(c *cobra.Command, weight int) string {
 	fmt.Fprintf(&b, "---\n%s\ntitle: %q\ndescription: %q\nweight: %d\n---\n\n",
 		generatedNote, name(c), c.Short, weight)
 
-	if !cli.Implemented(c) {
+	switch cli.CommandStatus(c) {
+	case cli.NotImplemented:
 		fmt.Fprintf(&b, "> **Not yet implemented.** In the current build this command prints\n"+
 			"> `%s: not implemented yet` and exits with code 2.\n\n", name(c))
+	case cli.InDevelopment:
+		b.WriteString("> **In development.** Part of this command works in the current build.\n" +
+			"> This page describes its complete planned behaviour.\n\n")
 	}
 
 	b.WriteString("## Usage\n\n```text\n")

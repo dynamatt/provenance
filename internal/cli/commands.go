@@ -166,8 +166,8 @@ can never delete a folder it did not create.
 Exit codes: 0 output written, 2 anything else. Export never returns 1 — judging content
 is validate's job.`,
 		Args:        exactArgs("format"),
-		Annotations: notImplementedYet,
-		RunE:        notImplemented,
+		Annotations: inDevelopment,
+		RunE:        runExport,
 	}
 	c.Flags().String("scope", "", "`path` to a query file or entity file that limits what is exported")
 	c.Flags().String("out", "_site", "output folder `path`")
