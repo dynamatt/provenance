@@ -143,6 +143,8 @@ func shiftLines(n *yaml.Node, by int) {
 // start of the frontmatter, to file line numbers.
 func yamlError(path string, err error) error {
 	msg := strings.TrimPrefix(err.Error(), "yaml: ")
+	msg = strings.TrimSpace(strings.TrimPrefix(msg, "unmarshal errors:"))
+	msg, _, _ = strings.Cut(msg, "\n")
 	var line int
 	if n, _ := fmt.Sscanf(msg, "line %d:", &line); n == 1 {
 		msg = strings.TrimSpace(strings.TrimPrefix(msg, fmt.Sprintf("line %d:", line)))

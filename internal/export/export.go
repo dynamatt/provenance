@@ -9,15 +9,18 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dynamatt/provenance/internal/entity"
+	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/repo"
+	"github.com/dynamatt/provenance/internal/schema"
 )
 
 // Input is everything an exporter reads.
 type Input struct {
-	Repo *repo.Repo
-	// Entities are all entities in the repository, sorted by ID.
-	Entities []*entity.Entity
+	Repo   *repo.Repo
+	Schema *schema.Schema
+	// Entities are all entities in the repository, typed against Schema and
+	// sorted by ID.
+	Entities []*model.Entity
 }
 
 // Files is the content of an output folder: slash-separated relative path to

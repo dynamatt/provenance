@@ -1,0 +1,22 @@
+{{define "content"}}
+{{- with .Data}}
+<p class="entity-type">{{.Type}}</p>
+<h1><span class="id">{{.ID}}</span> {{.Title}}</h1>
+{{- if .Fields}}
+<table class="fields">
+<tbody>
+{{- range .Fields}}
+<tr><th>{{humanize .Field.Name}}</th><td>{{template "value" .}}</td></tr>
+{{- end}}
+</tbody>
+</table>
+{{- end}}
+{{- with .BodyField}}
+<h2>{{humanize .Field.Name}}</h2>
+<div class="body-source">{{.Str}}</div>
+{{- end}}
+{{- with .Body}}
+<div class="body-source">{{.}}</div>
+{{- end}}
+{{- end}}
+{{end}}

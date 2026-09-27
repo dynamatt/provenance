@@ -12,7 +12,9 @@ import (
 	"github.com/dynamatt/provenance/internal/exitcode"
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/export/website"
+	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/repo"
+	"github.com/dynamatt/provenance/internal/schema"
 )
 
 // exporters is the registry of export formats. PDF and Word are part of the
@@ -60,12 +62,20 @@ func runExport(c *cobra.Command, args []string) error {
 
 	// The output folder may sit inside the repository (the default ./_site
 	// usually does); never read it back as source.
-	entities, err := entity.Discover(r.Root, outDir)
+	parsed, err := entity.Discover(r.Root, outDir)
+	if err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
+	s, err := schema.Load(r.Root)
+	if err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
+	entities, err := model.Build(s, parsed)
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 
-	files, err := exp.Export(&export.Input{Repo: r, Entities: entities})
+	files, err := exp.Export(&export.Input{Repo: r, Schema: s, Entities: entities})
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}

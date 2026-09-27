@@ -8,6 +8,7 @@ set -euo pipefail
 
 PROV=${PROV:?PROV must point at the provenance binary}
 EXAMPLE_DIR=${EXAMPLE_DIR:?EXAMPLE_DIR must point at the provenance-example checkout}
+GOLDEN_DIR=${GOLDEN_DIR:?GOLDEN_DIR must point at testdata/golden}
 
 failures=0
 
@@ -73,10 +74,22 @@ cp REQ/REQ-0001.md REQ/copy.md
 expect 2 '^export: duplicate entity ID REQ-0001 in REQ/REQ-0001\.md and REQ/copy\.md$' "$PROV" export website
 rm REQ/copy.md
 
-# Standing E1 acceptance: exporting twice gives an identical site.
+# E1.3: schema loading and default entity pages.
+"$PROV" export website >/dev/null
+expect 0 '<tr><th>Status</th><td>approved</td></tr>'  cat _site/entities/REQ-0001.html
+expect 0 '<tr><th>Order</th><td>1</td></tr>'          cat _site/entities/REQ-0001.html
+expect 0 'The system shall automatically adjust'       cat _site/entities/REQ-0001.html
+expect 0 'href="entities/REQ-0001.html"'               cat _site/index.html
+sed -i.orig '0,/type: string/s//type: strnig/' schema/Requirement.yaml
+expect 2 '^export: schema/Requirement\.yaml:[0-9]+: field "title": unknown type "strnig"' "$PROV" export website
+mv schema/Requirement.yaml.orig schema/Requirement.yaml
+
+# Standing E1 acceptance: exporting twice gives an identical site, and the
+# site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null
 "$PROV" export website --out "$WORK/b" >/dev/null
 expect 0 ''                               diff -r "$WORK/a" "$WORK/b"
+expect 0 ''                               diff -ru "$GOLDEN_DIR" "$WORK/a"
 
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"
