@@ -40,7 +40,7 @@ expect() {
 cd "$EXAMPLE_DIR"
 
 # S0.2: the binary runs inside the example repository.
-expect 0 '^  export +'                    "$PROV" --help
+expect 0 '^  exportx +'                    "$PROV" --help
 expect 0 '^provenance '                   "$PROV" version
 expect 0 '^commit: [0-9a-f]{40}$'         "$PROV" version
 expect 0 '^go: go[0-9]'                   "$PROV" --version
