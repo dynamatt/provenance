@@ -13,7 +13,7 @@ func TestOf(t *testing.T) {
 		err  error
 		want int
 	}{
-		{"nil", nil, OK},
+		{"nil", nil, Failure},
 		{"plain error", base, Error},
 		{"usage", Usage(base), Error},
 		{"not implemented", &NotImplementedError{Command: "export"}, Error},
