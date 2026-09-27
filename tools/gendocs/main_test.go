@@ -28,9 +28,14 @@ func TestOnePagePerCommandPlusIndex(t *testing.T) {
 		if !strings.Contains(pages["_index.md"], "| "+ref(c)+" | "+cell(c.Short)+" | "+flagNames(c)+" |") {
 			t.Errorf("index row for %q missing or without its flags", name(c))
 		}
-		marked := strings.Contains(p, "**Not yet implemented.**")
-		if marked == cli.Implemented(c) {
-			t.Errorf("%s: not-implemented marker = %v, Implemented() = %v", name(c), marked, cli.Implemented(c))
+		for status, marker := range map[cli.Status]string{
+			cli.NotImplemented: "**Not yet implemented.**",
+			cli.InDevelopment:  "**In development.**",
+		} {
+			marked := strings.Contains(p, marker)
+			if marked != (cli.CommandStatus(c) == status) {
+				t.Errorf("%s: %s marker = %v, status = %q", name(c), marker, marked, cli.CommandStatus(c))
+			}
 		}
 		c.LocalFlags().VisitAll(func(f *pflag.Flag) {
 			if f.Name != "help" && !strings.Contains(p, "`--"+f.Name) {

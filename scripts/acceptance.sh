@@ -37,6 +37,9 @@ expect() {
 	fi
 }
 
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
 cd "$EXAMPLE_DIR"
 
 # S0.2: the binary runs inside the example repository.
@@ -44,6 +47,25 @@ expect 0 '^  export +'                    "$PROV" --help
 expect 0 '^provenance '                   "$PROV" version
 expect 0 '^commit: [0-9a-f]{40}$'         "$PROV" version
 expect 0 '^go: go[0-9]'                   "$PROV" --version
+
+# E1.1: exporter registry and output folder.
+expect 0 '^exported website to _site$'    "$PROV" export website
+expect 0 '<h1>NeuroPulse Implantable Stimulator System \(NEURO\)</h1>' cat _site/index.html
+expect 0 '^exported website to _site$'    "$PROV" export website
+expect 2 '^export: pdf is not available in this release$'  "$PROV" export pdf
+expect 2 '^export: docx is not available in this release$' "$PROV" export docx
+expect 2 '^export: unknown format "latex"' "$PROV" export latex
+mkdir -p "$WORK/notmine" && touch "$WORK/notmine/x"
+expect 2 'not empty and has no \.provenance-export marker' "$PROV" export website --out "$WORK/notmine"
+expect 0 '^x$'                            ls "$WORK/notmine"
+cd REQ  # repository root is found from a subfolder; --out is relative to the working directory
+expect 0 '^exported website to \.\./_site$' "$PROV" export website --out ../_site
+cd ..
+
+# Standing E1 acceptance: exporting twice gives an identical site.
+"$PROV" export website --out "$WORK/a" >/dev/null
+"$PROV" export website --out "$WORK/b" >/dev/null
+expect 0 ''                               diff -r "$WORK/a" "$WORK/b"
 
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"

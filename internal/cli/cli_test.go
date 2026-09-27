@@ -3,7 +3,7 @@ package cli
 import (
 	"bytes"
 	"errors"
-	"io"
+	"reflect"
 	"runtime"
 	"sort"
 	"strings"
@@ -108,7 +108,6 @@ func TestStubsExitTwoWithNotImplemented(t *testing.T) {
 		{"rename", []string{"rename", "REQ-0001", "REQ-0100"}},
 		{"fmt", []string{"fmt", "--check", "REQ/REQ-0001.md", "REQ/REQ-0002.md"}},
 		{"diff", []string{"diff", "main", "HEAD", "--entity", "REQ-0001"}},
-		{"export", []string{"export", "website", "--scope", "DOC/DOC-0001.md", "--out", "_doc"}},
 		{"report", []string{"report", "--metric", "coverage", "--scope", "DOC/DOC-0001.md", "--json"}},
 		{"release tag", []string{"release", "tag", "v1.0.0"}},
 		{"plugin", []string{"plugin", "importer", "--anything", "goes"}},
@@ -214,19 +213,21 @@ func TestNotImplementedAnnotationMatchesStubs(t *testing.T) {
 			if sub.Name() == "help" {
 				continue
 			}
-			var err error
-			if sub.RunE != nil {
-				err = sub.RunE(sub, nil)
-			}
-			var ni *exitcode.NotImplementedError
-			isStub := errors.As(err, &ni)
-			if isStub == Implemented(sub) {
-				t.Errorf("%s: stub = %v but Implemented() = %v", commandName(sub), isStub, Implemented(sub))
+			isStub := sub.RunE != nil &&
+				reflect.ValueOf(sub.RunE).Pointer() == reflect.ValueOf(notImplemented).Pointer()
+			if isStub != (CommandStatus(sub) == NotImplemented) {
+				t.Errorf("%s: stub = %v but status = %q", commandName(sub), isStub, CommandStatus(sub))
 			}
 			walk(sub)
 		}
 	}
-	root := NewRootCmd()
-	root.SetOut(io.Discard) // group commands print help when run bare
-	walk(root)
+	walk(NewRootCmd())
+}
+
+func TestStubReturnsNotImplemented(t *testing.T) {
+	var ni *exitcode.NotImplementedError
+	err := notImplemented(NewRootCmd(), nil)
+	if !errors.As(err, &ni) {
+		t.Errorf("notImplemented returned %v", err)
+	}
 }
