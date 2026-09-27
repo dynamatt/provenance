@@ -15,7 +15,7 @@
 - [x] S1.1 GitHub Actions CI workflow
 - [x] S1.2 Reproducible-build check
 - [x] E1.1 Exporter interface and output folder
-- [ ] E1.2 Entity discovery and parsing
+- [x] E1.2 Entity discovery and parsing
 - [ ] E1.3 Schema loading, default entity pages, golden test
 - [ ] E1.4 Links, reverse links and list fields
 - [ ] E1.5 Markdown and wikilinks

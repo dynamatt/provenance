@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/exitcode"
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/export/website"
@@ -57,7 +58,14 @@ func runExport(c *cobra.Command, args []string) error {
 		outDir = filepath.Join(cwd, outDir)
 	}
 
-	files, err := exp.Export(&export.Input{Repo: r})
+	// The output folder may sit inside the repository (the default ./_site
+	// usually does); never read it back as source.
+	entities, err := entity.Discover(r.Root, outDir)
+	if err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
+
+	files, err := exp.Export(&export.Input{Repo: r, Entities: entities})
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
