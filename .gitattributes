@@ -1,0 +1,3 @@
+# LF everywhere: gofmt, shell scripts and reproducible builds must not depend on the
+# checkout platform.
+* text=auto eol=lf
