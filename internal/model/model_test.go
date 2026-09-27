@@ -143,6 +143,20 @@ rows: nope
 	}
 }
 
+// A Windows checkout with core.autocrlf=true has CRLF files for the same
+// commit; typed values must not depend on that.
+func TestLineEndingsDoNotChangeValues(t *testing.T) {
+	front := "title: T\nnote: |\n  one\n  two\n"
+	body := "\nLine one\nLine two\n"
+	lf := load(t, front, body)
+	crlf := load(t, strings.ReplaceAll(front, "\n", "\r\n"), strings.ReplaceAll(body, "\n", "\r\n"))
+	for _, name := range []string{"statement", "note", "title"} {
+		if lf.Field(name).Str != crlf.Field(name).Str {
+			t.Errorf("%s: LF %q vs CRLF %q", name, lf.Field(name).Str, crlf.Field(name).Str)
+		}
+	}
+}
+
 func TestNullIsAbsent(t *testing.T) {
 	e := load(t, "title:\nscore: ~\n", "")
 	if e.Field("title").Present || e.Field("score").Present {

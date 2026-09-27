@@ -105,7 +105,7 @@ func Build(s *schema.Schema, entities []*entity.Entity) ([]*Entity, error) {
 			m.Fields = append(m.Fields, v)
 		}
 		if t.BodyField == nil {
-			m.Body = strings.Trim(e.Body, "\r\n")
+			m.Body = bodyText(e.Body)
 		}
 		out = append(out, m)
 	}
@@ -113,8 +113,15 @@ func Build(s *schema.Schema, entities []*entity.Entity) ([]*Entity, error) {
 }
 
 func bodyValue(f *schema.Field, body string) *Value {
-	text := strings.Trim(body, "\r\n")
+	text := bodyText(body)
 	return &Value{Field: f, Present: strings.TrimSpace(text) != "", Str: text}
+}
+
+// bodyText normalizes line endings to LF and drops surrounding blank lines.
+// A Windows checkout with core.autocrlf has CRLF bodies for the same commit;
+// normalizing keeps rendered output identical on every platform.
+func bodyText(body string) string {
+	return strings.Trim(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
 }
 
 func value(f *schema.Field, n *yaml.Node) *Value {
