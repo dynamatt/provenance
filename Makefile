@@ -19,7 +19,10 @@ EXAMPLE_REPO ?= https://github.com/dynamatt/provenance-example.git
 EXAMPLE_DIR  := .cache/example
 EXAMPLE_REF  := $(shell cat testdata/example-repo.ref)
 
-.PHONY: build test lint acceptance example bump-example ci
+# provenance-website checkout that receives the generated CLI reference.
+WEBSITE_DIR ?= ../provenance-website
+
+.PHONY: build test lint acceptance example bump-example docs ci
 
 build:
 	CGO_ENABLED=0 go build $(GO_BUILD_FLAGS) -ldflags '$(GO_LDFLAGS)' -o $(BIN) ./cmd/provenance
@@ -54,5 +57,11 @@ bump-example:
 
 acceptance: build example
 	PROV=$(CURDIR)/$(BIN) EXAMPLE_DIR=$(CURDIR)/$(EXAMPLE_DIR) bash scripts/acceptance.sh
+
+# Regenerate the website's CLI reference from the command definitions. Run it
+# whenever a command, flag or help text changes, and commit the result in
+# provenance-website.
+docs:
+	go run ./tools/gendocs -out $(WEBSITE_DIR)/content/docs/cli
 
 ci: lint test build acceptance

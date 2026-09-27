@@ -2,12 +2,16 @@ package cli
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"runtime"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
+
+	"github.com/dynamatt/provenance/internal/exitcode"
 )
 
 func run(args ...string) (code int, stdout, stderr string) {
@@ -199,4 +203,30 @@ func TestVersion(t *testing.T) {
 	if flagOut != out {
 		t.Errorf("--version output %q differs from version output %q", flagOut, out)
 	}
+}
+
+// The documentation generator trusts the not-implemented annotation, so it must
+// mark exactly the commands whose RunE is the stub.
+func TestNotImplementedAnnotationMatchesStubs(t *testing.T) {
+	var walk func(*cobra.Command)
+	walk = func(c *cobra.Command) {
+		for _, sub := range c.Commands() {
+			if sub.Name() == "help" {
+				continue
+			}
+			var err error
+			if sub.RunE != nil {
+				err = sub.RunE(sub, nil)
+			}
+			var ni *exitcode.NotImplementedError
+			isStub := errors.As(err, &ni)
+			if isStub == Implemented(sub) {
+				t.Errorf("%s: stub = %v but Implemented() = %v", commandName(sub), isStub, Implemented(sub))
+			}
+			walk(sub)
+		}
+	}
+	root := NewRootCmd()
+	root.SetOut(io.Discard) // group commands print help when run bare
+	walk(root)
 }
