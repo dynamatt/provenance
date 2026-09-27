@@ -62,6 +62,17 @@ cd REQ  # repository root is found from a subfolder; --out is relative to the wo
 expect 0 '^exported website to \.\./_site$' "$PROV" export website --out ../_site
 cd ..
 
+# E1.2: entity discovery and parsing.
+"$PROV" export website >/dev/null
+for id in USR-0001 USR-0002 REQ-0001 REQ-0002 REQ-0003 DES-0001 SEV-0001 SEV-0002 SEV-0003 \
+	OCC-0001 OCC-0002 OCC-0003 RSK-0001 VER-0001 VER-0002 EVD-0001 EVD-0002 ECO-0001 DOC-0001; do
+	expect 0 ">$id<"                      cat _site/index.html
+done
+expect 0 '<h2>VerificationEvidence</h2>' cat _site/index.html
+cp REQ/REQ-0001.md REQ/copy.md
+expect 2 '^export: duplicate entity ID REQ-0001 in REQ/REQ-0001\.md and REQ/copy\.md$' "$PROV" export website
+rm REQ/copy.md
+
 # Standing E1 acceptance: exporting twice gives an identical site.
 "$PROV" export website --out "$WORK/a" >/dev/null
 "$PROV" export website --out "$WORK/b" >/dev/null
