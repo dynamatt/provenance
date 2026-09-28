@@ -54,7 +54,7 @@ func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
 	if l.Label != "" {
 		text = l.Label
 	}
-	writeLink(w, target, text)
+	writeLink(w, r.ctx.linkBase, target, text)
 	if marker != "" {
 		fmt.Fprintf(w, ` <span class="unresolved">%s</span>`, template.HTMLEscapeString(marker))
 	}
@@ -78,12 +78,17 @@ func (r *resolver) Embed(w util.BufWriter, l markdown.Link) error {
 			return &EmbedCycleError{Path: target.Path, Chain: append(chain, target.ID)}
 		}
 	}
-	child := &renderCtx{site: r.ctx.site, chain: append(append([]*model.Entity{}, r.ctx.chain...), target)}
-	html, err := child.fragment(target)
+	chain := append(append([]*model.Entity{}, r.ctx.chain...), target)
+	html, err := r.ctx.site.renderEntity(target, chain)
 	if err != nil {
-		return unwrapTemplateError(err)
+		return err
 	}
-	fmt.Fprintf(w, "<section class=\"embed\" data-entity=\"%s\">%s</section>\n", template.HTMLEscapeString(target.ID), html)
+	// The fragment's headings can only be shifted once the host has
+	// rendered and the heading this embed follows is known; leave a
+	// placeholder for splice.
+	r.ctx.fragments = append(r.ctx.fragments, html)
+	fmt.Fprintf(w, "<section class=\"embed\" data-entity=\"%s\">%s</section>\n",
+		template.HTMLEscapeString(target.ID), embedPlaceholder(len(r.ctx.fragments)-1))
 	return nil
 }
 
@@ -97,12 +102,12 @@ func (r *resolver) MisplacedEmbed(w util.BufWriter, l markdown.Link) error {
 	return nil
 }
 
-func writeLink(w util.BufWriter, target *model.Entity, text string) {
+func writeLink(w util.BufWriter, base string, target *model.Entity, text string) {
 	title := ""
 	if t := target.Title(); t != "" {
 		title = fmt.Sprintf(` title="%s"`, template.HTMLEscapeString(t))
 	}
-	fmt.Fprintf(w, `<a class="ref" href="%s.html"%s>%s</a>`,
+	fmt.Fprintf(w, `<a class="ref" href="%s%s.html"%s>%s</a>`, template.HTMLEscapeString(base),
 		template.HTMLEscapeString(target.ID), title, template.HTMLEscapeString(text))
 }
 
