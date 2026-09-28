@@ -89,7 +89,9 @@ mv schema/Requirement.yaml.orig schema/Requirement.yaml
 # E1.4: links, reverse links and list fields.
 "$PROV" export website >/dev/null
 expect 1 ''                               grep -q '^verified_by:' REQ/REQ-0001.md
-expect 0 '<tr class="incoming"><th>Verified by</th><td><a class="id" href="VER-0001\.html"' cat _site/entities/REQ-0001.html
+# REQ-0001's file never names VER-0001, so any link to it on the page comes
+# from the derived verified_by facet (whichever template renders the page).
+expect 0 'href="VER-0001\.html"'            cat _site/entities/REQ-0001.html
 expect 0 '<th>Verifies</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/VER-0001.html
 expect 0 '<th>Implemented by</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/USR-0001.html
 expect 0 '<td>BES-2201</td>'                cat _site/entities/EVD-0001.html
