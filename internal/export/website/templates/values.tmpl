@@ -13,7 +13,7 @@
 {{- else if eq $k "boolean" -}}
 {{if .Bool}}true{{else}}false{{end}}
 {{- else if eq $k "text" -}}
-<span class="text">{{.Str}}</span>
+<div class="text">{{markdown .Str}}</div>
 {{- else if eq $k "link" -}}
 {{range $i, $id := .IDs}}{{if $i}}, {{end}}{{template "ref" (ref $id (index $.Targets $i))}}{{end}}
 {{- else if eq $k "list" -}}

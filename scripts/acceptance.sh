@@ -97,6 +97,18 @@ expect 0 '^exported website to _site$'    "$PROV" export website
 expect 0 'REQ-9999</span> <span class="unresolved">unresolved</span>' cat _site/entities/DES-0001.html
 mv DES/DES-0001.md.orig DES/DES-0001.md
 
+# E1.5: Markdown and wikilinks.
+"$PROV" export website >/dev/null
+expect 0 'Editing <a class="ref" href="REQ-0001\.html"[^>]*>REQ-0001</a> anywhere' cat _site/entities/DOC-0001.html
+expect 0 'ceiling is <a class="ref" href="REQ-0002\.html"[^>]*>Single-fault amplitude ceiling</a>' cat _site/entities/DOC-0001.html
+expect 0 '<section class="embed" data-entity="REQ-0003">' cat _site/entities/DOC-0001.html
+expect 0 'The pulse-generator ASIC shall enforce' cat _site/entities/DOC-0001.html
+expect 0 '<h2>Scope</h2>'                   cat _site/entities/DOC-0001.html
+cp DOC/DOC-0001.md "$WORK/DOC-0001.md"
+printf '\n![[DOC-0001]]\n' >> DOC/DOC-0001.md
+expect 2 '^export: DOC/DOC-0001\.md: embed cycle DOC-0001 → DOC-0001$' "$PROV" export website
+cp "$WORK/DOC-0001.md" DOC/DOC-0001.md
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null

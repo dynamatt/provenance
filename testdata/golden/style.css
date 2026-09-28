@@ -42,7 +42,14 @@ thead th { width: auto; background: var(--shade); color: var(--ink); }
 .entity-type { margin: 0 0 4px; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; }
 h1 .id { font-size: 0.75em; margin-right: 8px; }
 
-.body-source, .text { white-space: pre-wrap; }
+.text > p:first-child, .body > p:first-child { margin-top: 0; }
+.text > p:last-child { margin-bottom: 0; }
+pre { background: var(--shade); padding: 10px 12px; overflow-x: auto; }
+code { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 0.9em; }
+.body table { width: auto; }
+
+section.embed { margin: 16px 0; padding: 4px 16px; border-left: 3px solid var(--rule); }
+.embed-missing { color: var(--muted); }
 .placeholder, .absent { color: var(--muted); font-style: italic; }
 .invalid, .unresolved { color: #a4262c; font-size: 0.85em; }
 .unresolved::before { content: "("; }
