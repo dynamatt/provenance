@@ -314,9 +314,12 @@ the built-in. The underscore prefix keeps them from colliding with a type
 template, since CamelCase type names cannot start with `_`. A project template
 that fails to parse or execute exits 2 naming the file and line. The layout and
 index data contracts are recorded in Detailed Design §7. Template functions:
-`markdown`, `heading N` with relative depth resolved at render time, link
-helpers. Data model per Detailed Design §7. **Example-repo PR:** rename
-`Requirement.tmpl.illustrative` → `Requirement.tmpl`; add a
+`markdown` and link helpers. **Relative heading depth (changed 2026-09-28,
+Matt):** templates and Markdown write ordinary `<h1>`–`<h6>`, and the engine
+shifts headings by render depth after rendering, keeping attributes (Detailed
+Design §7). There is no `heading N` function. Data model per Detailed Design
+§7. **Example-repo PR:** rename `Requirement.tmpl.illustrative` →
+`Requirement.tmpl`, rewritten to plain `<h1>`/`<h2>` and link helpers; add a
 `templates/style.css`, `templates/_layout.tmpl` and `templates/_index.tmpl` so
 the example exercises every override; update `templates/README.md` and the
 README's "nothing in templates is functional" note; bump the pin. The built-in
@@ -455,7 +458,10 @@ Detailed task breakdowns are written when the preceding epic closes. Proposed
 order, with the reason it comes where it does:
 
 1. **`validate`** — the merge gate, and it reuses Epic 1's schema and query
-   core. Schema meta-validation first, then one task per rule type, each proven
+   core. First decide what a field's `default:` means (read-time vs
+   creation-time, Detailed Design §5 OPEN, deferred by Matt 2026-09-28), since
+   Required Field and the other rule types depend on it. Then schema
+   meta-validation, then one task per rule type, each proven
    by locally breaking one example entity to trigger its existing rule file.
    `--format json|junit|sarif` (settled in S0.4). Adds a CI job in
    `provenance-example` that runs the gate. Signature Presence and Content
