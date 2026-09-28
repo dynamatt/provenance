@@ -68,6 +68,34 @@ type Type struct {
 	// is freeform.
 	BodyField *Field
 	File      string
+	// Facets are the incoming link facets other types' reverse_name
+	// declarations give this type, in name order.
+	Facets []*Facet
+}
+
+// Facet is an incoming link facet: every link field, on any type, whose
+// reverse_name is Name and whose targets include the facet's type.
+type Facet struct {
+	Name    string
+	Sources []FacetSource
+}
+
+// FacetSource is one link field feeding a facet. List marks a link declared
+// inside a list's rows; the facet then comes from the entity holding the row.
+type FacetSource struct {
+	Type  *Type
+	Field *Field
+	List  *Field
+}
+
+// Field returns the named top-level field, or nil.
+func (t *Type) Field(name string) *Field {
+	for _, f := range t.Fields {
+		if f.Name == name {
+			return f
+		}
+	}
+	return nil
 }
 
 // EnumType is a named enum.
@@ -151,7 +179,71 @@ func Load(root string) (*Schema, error) {
 			t.BodyField = f
 		}
 	}
+	if err := s.facets(); err != nil {
+		return nil, err
+	}
 	return s, nil
+}
+
+// facets derives every type's incoming facets from reverse_name
+// declarations. A link is declared once, on its source side (Detailed Design
+// §6), so a reverse_name that repeats a field declared on the target type is
+// a load error: the same relationship would be stored twice. Targets naming
+// no declared type are left to validate.
+func (s *Schema) facets() error {
+	names := make([]string, 0, len(s.Types))
+	for n := range s.Types {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+
+	for _, n := range names {
+		src := s.Types[n]
+		var links []FacetSource
+		for _, f := range src.Fields {
+			switch f.Kind {
+			case Link:
+				links = append(links, FacetSource{Type: src, Field: f})
+			case List:
+				for _, sub := range f.Fields {
+					if sub.Kind == Link {
+						links = append(links, FacetSource{Type: src, Field: sub, List: f})
+					}
+				}
+			}
+		}
+		for _, l := range links {
+			if l.Field.ReverseName == "" {
+				continue
+			}
+			for _, tn := range l.Field.Target {
+				target := s.Types[tn]
+				if target == nil {
+					continue
+				}
+				if clash := target.Field(l.Field.ReverseName); clash != nil {
+					return &Error{Path: src.File, Line: l.Field.Line, Msg: fmt.Sprintf(
+						"field %q: reverse_name %q repeats the field %s declared on %s (%s:%d); declare a link once, on its source side",
+						l.Field.Name, l.Field.ReverseName, clash.Name, target.Name, target.File, clash.Line)}
+				}
+				target.addFacet(l.Field.ReverseName, l)
+			}
+		}
+	}
+	for _, t := range s.Types {
+		sort.Slice(t.Facets, func(i, j int) bool { return t.Facets[i].Name < t.Facets[j].Name })
+	}
+	return nil
+}
+
+func (t *Type) addFacet(name string, src FacetSource) {
+	for _, f := range t.Facets {
+		if f.Name == name {
+			f.Sources = append(f.Sources, src)
+			return
+		}
+	}
+	t.Facets = append(t.Facets, &Facet{Name: name, Sources: []FacetSource{src}})
 }
 
 // yamlFiles lists *.yaml directly in root/dir, slash-separated and relative to

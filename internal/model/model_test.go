@@ -181,3 +181,79 @@ func TestUnknownTypeFails(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func buildRepo(t *testing.T, files map[string]string) []*Entity {
+	t.Helper()
+	root := t.TempDir()
+	for rel, content := range files {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s, err := schema.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := entity.Discover(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	built, err := Build(s, parsed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return built
+}
+
+func TestLinksResolveAndDeriveFacets(t *testing.T) {
+	es := buildRepo(t, map[string]string{
+		"schema/Req.yaml": `type: Req
+fields:
+  - {name: verified_by, type: link, target: [Ver], cardinality: many, reverse_name: verifies}
+  - {name: parent, type: link, target: [Req], cardinality: one, reverse_name: children}
+`,
+		"schema/Ver.yaml": `type: Ver
+fields:
+  - name: steps
+    type: list
+    fields:
+      - {name: checks, type: link, target: [Req], cardinality: one, reverse_name: checked_in}
+`,
+		"R/R-2.md": "---\nid: R-2\ntype: Req\nverified_by: [V-1, V-404]\nparent: R-1\n---\n",
+		"R/R-1.md": "---\nid: R-1\ntype: Req\nverified_by: [V-1]\n---\n",
+		"R/R-3.md": "---\nid: R-3\ntype: Req\nparent: R-1\n---\n",
+		"V/V-1.md": "---\nid: V-1\ntype: Ver\nsteps:\n  - checks: R-1\n  - checks: R-1\n---\n",
+	})
+	byID := map[string]*Entity{}
+	for _, e := range es {
+		byID[e.ID] = e
+	}
+	ids := func(in *Incoming) string {
+		var out []string
+		for _, e := range in.From {
+			out = append(out, e.ID)
+		}
+		return strings.Join(out, ",")
+	}
+
+	vb := byID["R-2"].Field("verified_by")
+	if vb.Targets[0] != byID["V-1"] || vb.Targets[1] != nil {
+		t.Errorf("R-2 verified_by targets = %v (want V-1 resolved, V-404 unresolved)", vb.Targets)
+	}
+	if got := ids(byID["V-1"].Facet("verifies")); got != "R-1,R-2" {
+		t.Errorf("V-1 verifies = %s, want R-1,R-2 (sorted, from the Req side only)", got)
+	}
+	if got := ids(byID["R-1"].Facet("children")); got != "R-2,R-3" {
+		t.Errorf("R-1 children = %s", got)
+	}
+	if got := ids(byID["R-1"].Facet("checked_in")); got != "V-1" {
+		t.Errorf("R-1 checked_in = %s, want V-1 once (from two list rows)", got)
+	}
+	if got := byID["R-3"].Facet("children"); got == nil || len(got.From) != 0 {
+		t.Errorf("R-3 should have an empty children facet, got %+v", got)
+	}
+}
