@@ -286,9 +286,10 @@ derived from `reverse_name` and shown on target pages; unresolved targets
 render with a visible *unresolved* marker (not an error — Reference Validity is
 Epic 2). `list` fields render as tables.
 
-**Check it yourself:** VER-0001's page shows *verifies: REQ-0001* even though
-VER-0001's file never mentions it. EVD-0001 shows its equipment table. Change a
-link to `REQ-9999` → marked unresolved, exit 0.
+**Check it yourself:** REQ-0001's page shows *verified by: VER-0001* even
+though REQ-0001's file never mentions it (the link is declared on the protocol,
+the later artefact; changed 2026-09-28, Matt). EVD-0001 shows its equipment
+table. Change a link to `REQ-9999` → marked unresolved, exit 0.
 
 ### E1.5 Markdown and wikilinks
 
