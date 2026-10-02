@@ -122,12 +122,14 @@ var funcs = template.FuncMap{
 		}
 		return strings.ToUpper(s[:1]) + s[1:]
 	},
-	"rows": func(n int) string {
-		if n == 1 {
-			return "1 row"
-		}
-		return strconv.Itoa(n) + " rows"
-	},
+	// ref pairs a link target's ID with its entity (nil when unresolved)
+	// for the "ref" template.
+	"ref": func(id string, e *model.Entity) linkRef { return linkRef{ID: id, Entity: e} },
+}
+
+type linkRef struct {
+	ID     string
+	Entity *model.Entity
 }
 
 type site struct {

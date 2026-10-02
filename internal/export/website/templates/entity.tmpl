@@ -2,11 +2,16 @@
 {{- with .Data}}
 <p class="entity-type">{{.Type}}</p>
 <h1><span class="id">{{.ID}}</span> {{.Title}}</h1>
-{{- if .Fields}}
+{{- if or .Fields .Incoming}}
 <table class="fields">
 <tbody>
 {{- range .Fields}}
 <tr><th>{{humanize .Field.Name}}</th><td>{{template "value" .}}</td></tr>
+{{- end}}
+{{- range .Incoming}}
+<tr class="incoming"><th>{{humanize .Facet.Name}}</th><td>
+{{- range $i, $e := .From}}{{if $i}}, {{end}}{{template "ref" (ref $e.ID $e)}}{{else}}<span class="absent">—</span>{{end -}}
+</td></tr>
 {{- end}}
 </tbody>
 </table>

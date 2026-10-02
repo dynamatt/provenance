@@ -84,6 +84,19 @@ sed -i.orig '0,/type: string/s//type: strnig/' schema/Requirement.yaml
 expect 2 '^export: schema/Requirement\.yaml:[0-9]+: field "title": unknown type "strnig"' "$PROV" export website
 mv schema/Requirement.yaml.orig schema/Requirement.yaml
 
+# E1.4: links, reverse links and list fields.
+"$PROV" export website >/dev/null
+expect 1 ''                               grep -q '^verified_by:' REQ/REQ-0001.md
+expect 0 '<tr class="incoming"><th>Verified by</th><td><a class="id" href="VER-0001\.html"' cat _site/entities/REQ-0001.html
+expect 0 '<th>Verifies</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/VER-0001.html
+expect 0 '<th>Implemented by</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/USR-0001.html
+expect 0 '<td>BES-2201</td>'                cat _site/entities/EVD-0001.html
+expect 0 '<td>PCP-0087</td>'                cat _site/entities/EVD-0001.html
+sed -i.orig 's/^implements: \[REQ-0001, REQ-0002\]/implements: [REQ-9999, REQ-0002]/' DES/DES-0001.md
+expect 0 '^exported website to _site$'    "$PROV" export website
+expect 0 'REQ-9999</span> <span class="unresolved">unresolved</span>' cat _site/entities/DES-0001.html
+mv DES/DES-0001.md.orig DES/DES-0001.md
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null

@@ -17,7 +17,7 @@
 - [x] E1.1 Exporter interface and output folder
 - [x] E1.2 Entity discovery and parsing
 - [x] E1.3 Schema loading, default entity pages, golden test
-- [ ] E1.4 Links, reverse links and list fields
+- [x] E1.4 Links, reverse links and list fields
 - [ ] E1.5 Markdown and wikilinks
 - [ ] E1.6 Project templates and template functions
 - [ ] E1.7 Query engine spike (decision task)

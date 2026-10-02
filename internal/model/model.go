@@ -27,6 +27,25 @@ type Entity struct {
 	// Body is the freeform body when the type has no body field; empty
 	// otherwise (the body is then the body field's value).
 	Body string
+	// Incoming holds one entry per facet the schema gives this type, in
+	// facet name order, each listing the linking entities by ID.
+	Incoming []*Incoming
+}
+
+// Incoming is the entities linking to an entity through one facet.
+type Incoming struct {
+	Facet *schema.Facet
+	From  []*Entity
+}
+
+// Facet returns the incoming entities for the named facet, or nil.
+func (e *Entity) Facet(name string) *Incoming {
+	for _, in := range e.Incoming {
+		if in.Facet.Name == name {
+			return in
+		}
+	}
+	return nil
 }
 
 // Field returns the value of the named field, or nil.
@@ -69,7 +88,10 @@ type Value struct {
 	Num  float64  // number
 	Bool bool     // boolean
 	IDs  []string // link targets; one entry for cardinality one
-	Rows []Row    // list rows
+	// Targets parallels IDs: the linked entity, or nil when no entity has
+	// that ID (unresolved; reporting it is validate's job).
+	Targets []*Entity
+	Rows    []Row // list rows
 }
 
 // Row is one list row: a value per sub-field, in schema order.
@@ -109,7 +131,59 @@ func Build(s *schema.Schema, entities []*entity.Entity) ([]*Entity, error) {
 		}
 		out = append(out, m)
 	}
+	link(out)
 	return out, nil
+}
+
+// link resolves every link value to its target entity and fills each
+// entity's incoming facets. entities are sorted by ID, so every From list
+// is too.
+func link(entities []*Entity) {
+	byID := make(map[string]*Entity, len(entities))
+	for _, e := range entities {
+		byID[e.ID] = e
+		for _, f := range e.Schema.Facets {
+			e.Incoming = append(e.Incoming, &Incoming{Facet: f})
+		}
+	}
+	for _, src := range entities {
+		for _, v := range src.Fields {
+			switch v.Field.Kind {
+			case schema.Link:
+				resolve(byID, src, v)
+			case schema.List:
+				for _, row := range v.Rows {
+					for _, cell := range row {
+						if cell.Field.Kind == schema.Link {
+							resolve(byID, src, cell)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// resolve fills v.Targets and records src on each target's reverse facet.
+func resolve(byID map[string]*Entity, src *Entity, v *Value) {
+	if v.Invalid {
+		return
+	}
+	v.Targets = make([]*Entity, len(v.IDs))
+	for i, id := range v.IDs {
+		target := byID[id]
+		v.Targets[i] = target
+		if target == nil || v.Field.ReverseName == "" {
+			continue
+		}
+		in := target.Facet(v.Field.ReverseName)
+		if in == nil {
+			continue // target's type has no such facet: a wrong target type, left to validate
+		}
+		if n := len(in.From); n == 0 || in.From[n-1] != src {
+			in.From = append(in.From, src)
+		}
+	}
 }
 
 func bodyValue(f *schema.Field, body string) *Value {

@@ -151,3 +151,72 @@ func TestDuplicateTypeAcrossFiles(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func TestFacetsFromReverseNames(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/Requirement.yaml", `type: Requirement
+fields:
+  - {name: implements, type: link, target: [UserNeed], cardinality: many, reverse_name: implemented_by}
+  - {name: verified_by, type: link, target: [Protocol, Nowhere], cardinality: many, reverse_name: verifies}
+  - {name: parent, type: link, target: [Requirement], cardinality: one}
+`)
+	write(t, root, "schema/Design.yaml", `type: Design
+fields:
+  - {name: implements, type: link, target: [UserNeed], cardinality: many, reverse_name: implemented_by}
+`)
+	write(t, root, "schema/Risk.yaml", `type: Risk
+fields:
+  - name: modes
+    type: list
+    fields:
+      - {name: control, type: link, target: [Protocol], cardinality: one, reverse_name: controls}
+`)
+	write(t, root, "schema/UserNeed.yaml", "type: UserNeed\n")
+	write(t, root, "schema/Protocol.yaml", "type: Protocol\n")
+
+	s, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	facets := func(typ string) string {
+		var out []string
+		for _, f := range s.Types[typ].Facets {
+			var srcs []string
+			for _, src := range f.Sources {
+				name := src.Type.Name + "." + src.Field.Name
+				if src.List != nil {
+					name = src.Type.Name + "." + src.List.Name + "[]." + src.Field.Name
+				}
+				srcs = append(srcs, name)
+			}
+			out = append(out, f.Name+"<-"+strings.Join(srcs, "+"))
+		}
+		return strings.Join(out, " ")
+	}
+	if got := facets("UserNeed"); got != "implemented_by<-Design.implements+Requirement.implements" {
+		t.Errorf("UserNeed facets = %s", got)
+	}
+	if got := facets("Protocol"); got != "controls<-Risk.modes[].control verifies<-Requirement.verified_by" {
+		t.Errorf("Protocol facets = %s", got)
+	}
+	if got := facets("Requirement"); got != "" {
+		t.Errorf("a link without reverse_name gave facets: %s", got)
+	}
+}
+
+func TestReverseNameRepeatingATargetFieldFails(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/Requirement.yaml", `type: Requirement
+fields:
+  - {name: verified_by, type: link, target: [Protocol], cardinality: many, reverse_name: verifies}
+`)
+	write(t, root, "schema/Protocol.yaml", `type: Protocol
+fields:
+  - {name: verifies, type: link, target: [Requirement], cardinality: many}
+`)
+	_, err := Load(root)
+	want := `schema/Requirement.yaml:3: field "verified_by": reverse_name "verifies" repeats the field verifies declared on Protocol (schema/Protocol.yaml:3); declare a link once, on its source side`
+	if err == nil || err.Error() != want {
+		t.Errorf("err = %v\nwant %s", err, want)
+	}
+}

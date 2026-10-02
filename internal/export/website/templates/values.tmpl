@@ -1,4 +1,5 @@
-{{/* value renders one *model.Value by its field kind. */}}
+{{/* value renders one *model.Value by its field kind. Entity pages live in
+     entities/, so links to other entities are relative to that folder. */}}
 {{- define "value" -}}
 {{- $k := kind . -}}
 {{- if eq $k "calculated" -}}
@@ -14,10 +15,36 @@
 {{- else if eq $k "text" -}}
 <span class="text">{{.Str}}</span>
 {{- else if eq $k "link" -}}
-{{range $i, $id := .IDs}}{{if $i}}, {{end}}<span class="id">{{$id}}</span>{{end}}
+{{range $i, $id := .IDs}}{{if $i}}, {{end}}{{template "ref" (ref $id (index $.Targets $i))}}{{end}}
 {{- else if eq $k "list" -}}
-<span class="placeholder">{{rows (len .Rows)}}</span>
+{{template "list" .}}
 {{- else -}}
 {{.Str}}
+{{- end -}}
+{{- end -}}
+
+{{/* ref renders one link target: a hyperlink, or the bare ID marked
+     unresolved when no entity has it. */}}
+{{- define "ref" -}}
+{{- if .Entity -}}
+<a class="id" href="{{.ID}}.html"{{with .Entity.Title}} title="{{.}}"{{end}}>{{.ID}}</a>
+{{- else -}}
+<span class="id unresolved-id">{{.ID}}</span> <span class="unresolved">unresolved</span>
+{{- end -}}
+{{- end -}}
+
+{{/* list renders a list field's rows as a table, one column per sub-field. */}}
+{{- define "list" -}}
+{{- if .Rows -}}
+<table class="list">
+<thead><tr>{{range .Field.Fields}}<th>{{humanize .Name}}</th>{{end}}</tr></thead>
+<tbody>
+{{- range .Rows}}
+<tr>{{range .}}<td>{{template "value" .}}</td>{{end}}</tr>
+{{- end}}
+</tbody>
+</table>
+{{- else -}}
+<span class="absent">no rows</span>
 {{- end -}}
 {{- end -}}
