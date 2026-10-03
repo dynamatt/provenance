@@ -67,7 +67,7 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 	s := &site{
 		component: in.Repo.Component,
 		templates: ts,
-		data:      buildData(in.Schema, in.Entities),
+		data:      buildData(in.Schema, in.Entities, ts.captions),
 		graph:     graph,
 		scope:     in.Scope,
 		git:       in.Git,
@@ -103,7 +103,7 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := s.page("index.html", "", pageTitle(root), content, s.data.byID[root.ID]); err != nil {
+		if err := s.page("index.html", "", pageTitle(root), s.finalize(content, root), s.data.byID[root.ID]); err != nil {
 			return nil, err
 		}
 	} else {
@@ -115,7 +115,7 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		// change it.
 		last, revs := s.git.Page(history.Inputs{Prefixes: []string{""}})
 		stamps := entityData{"LastChangedSHA": last, "Revisions": revisionData(revs)}
-		if err := s.page("index.html", "", in.Repo.Component.Name, index, stamps); err != nil {
+		if err := s.page("index.html", "", in.Repo.Component.Name, s.finalize(index, nil), stamps); err != nil {
 			return nil, err
 		}
 	}
@@ -124,7 +124,7 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), content, s.data.byID[ent.ID]); err != nil {
+		if err := s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), s.finalize(content, ent), s.data.byID[ent.ID]); err != nil {
 			return nil, err
 		}
 	}
@@ -305,7 +305,9 @@ func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named, linkB
 		if err != nil {
 			return "", err
 		}
-		if err := t.ExecuteTemplate(&b, "entity", entityView(e)); err != nil {
+		view := entityView(e)
+		view.CaptionNumber, _ = s.data.byID[e.ID]["CaptionNumber"].(string)
+		if err := t.ExecuteTemplate(&b, "entity", view); err != nil {
 			return "", templateError(err)
 		}
 	}
@@ -419,6 +421,8 @@ func asRef(v any, fn string) (entityData, error) {
 // in schema order, then its body.
 type entityPage struct {
 	*model.Entity
+	// CaptionNumber is the caption placeholder of a captioned entity.
+	CaptionNumber string
 	// Fields excludes the body field, which is rendered below the table.
 	Fields    []*model.Value
 	BodyField *model.Value

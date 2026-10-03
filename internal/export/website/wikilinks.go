@@ -54,6 +54,13 @@ func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
 	if l.Label != "" {
 		text = l.Label
 	}
+	if _, captioned := r.ctx.site.captioned(target); captioned && l.Field == "" {
+		// Resolved to "Figure N" once the page is numbered (captions.go).
+		var b strings.Builder
+		r.ctx.anchor(&b, "ref", target, text)
+		_, _ = w.WriteString(xrefToken(target.ID, l.Label, b.String()))
+		return nil
+	}
 	r.ctx.anchor(w, "ref", target, text)
 	if marker != "" {
 		fmt.Fprintf(w, ` <span class="unresolved">%s</span>`, template.HTMLEscapeString(marker))

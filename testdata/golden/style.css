@@ -72,6 +72,11 @@ tr.incoming th { font-style: italic; }
 section.embed { margin: 20px 0; padding: 4px 20px; background: #fff; border: 1px solid var(--rule); border-left: 4px solid var(--brand); }
 pre { background: var(--brand-soft); padding: 10px 12px; overflow-x: auto; }
 
+/* Captioned figures (templates/Figure.tmpl). */
+.dhf-figure { margin: 16px 0; }
+.dhf-figure svg { max-width: 100%; height: auto; }
+.dhf-figure figcaption { font: 0.9rem system-ui, sans-serif; color: var(--muted); }
+
 /* Revision history and provenance stamps (Detailed Design §4). */
 .dhf-revisions { margin-top: 40px; font: 0.85rem system-ui, sans-serif; }
 .dhf-revisions table { border-collapse: collapse; }

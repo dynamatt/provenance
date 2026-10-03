@@ -27,5 +27,8 @@
 <div class="body">
 {{markdown .}}</div>
 {{- end}}
+{{- with .CaptionNumber}}
+<p class="caption"><span class="caption-number">{{.}}</span> {{$.Title}}</p>
+{{- end}}
 </article>
 {{end}}

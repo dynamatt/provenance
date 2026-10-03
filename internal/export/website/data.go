@@ -18,6 +18,8 @@ import (
 //
 //	.ID .Type .Title .Body .Resolved    engine baseline
 //	.LastChangedSHA .Revisions          git stamps (Detailed Design §4)
+//	.CaptionNumber                      "Figure 1" for a captioned entity
+//	                                    numbered on the page, else ""
 //	.<PascalCaseField>                  every declared field, calculated ones included
 //	.<PascalCaseFacet>                  every incoming facet, e.g. .ImplementedBy
 //
@@ -33,7 +35,7 @@ import (
 type entityData = map[string]any
 
 // baseline keys the engine provides on every entity map.
-var baseline = []string{"ID", "Type", "Title", "Body", "Resolved", "LastChangedSHA", "Revisions"}
+var baseline = []string{"ID", "Type", "Title", "Body", "Resolved", "LastChangedSHA", "Revisions", "CaptionNumber"}
 
 // templateName converts a snake_case field name to its template accessor:
 // verified_by -> VerifiedBy.
@@ -94,7 +96,10 @@ type dataModel struct {
 	byID   map[string]entityData
 }
 
-func buildData(s *schema.Schema, entities []*model.Entity) *dataModel {
+// buildData builds every entity's template data; captions maps captioned
+// types to their sequence (their .CaptionNumber is a placeholder resolved
+// per page).
+func buildData(s *schema.Schema, entities []*model.Entity, captions map[string]string) *dataModel {
 	d := &dataModel{schema: s, byID: make(map[string]entityData, len(entities))}
 	// Two passes: links point at other entities' maps.
 	for _, e := range entities {
@@ -103,6 +108,10 @@ func buildData(s *schema.Schema, entities []*model.Entity) *dataModel {
 	for _, e := range entities {
 		m := d.byID[e.ID]
 		m["ID"], m["Type"], m["Title"], m["Resolved"] = e.ID, e.Type, e.Title(), true
+		m["CaptionNumber"] = ""
+		if _, ok := captions[e.Type]; ok {
+			m["CaptionNumber"] = captionToken(e.ID)
+		}
 		m["Body"] = e.Body
 		for _, v := range e.Fields {
 			m[templateName(v.Field.Name)] = d.value(v)
@@ -184,7 +193,7 @@ func (d *dataModel) ref(id string, target *model.Entity, f *schema.Field) entity
 	if target != nil {
 		return d.byID[target.ID]
 	}
-	m := entityData{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false, "LastChangedSHA": "", "Revisions": []entityData{}}
+	m := entityData{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false, "LastChangedSHA": "", "Revisions": []entityData{}, "CaptionNumber": ""}
 	for _, tn := range f.Target {
 		t := d.schema.Types[tn]
 		if t == nil {
