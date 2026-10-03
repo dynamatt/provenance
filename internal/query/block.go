@@ -57,7 +57,8 @@ const (
 
 // Block is a parsed query block: a fenced ```query in Markdown.
 type Block struct {
-	From    *schema.Type
+	// From is the selected types: one, or several (Requirements Spec §4a).
+	From    []*schema.Type
 	Where   *Condition
 	OrderBy []string
 	Render  Render
@@ -83,11 +84,24 @@ func ParseBlock(src string, s *schema.Schema) (*Block, error) {
 	b := &Block{Render: Render{Mode: RenderFull}}
 	from := lookup(m, "from")
 	if from == nil {
-		return nil, errorf(m, "query block has no from: <type>")
+		return nil, errorf(m, "query block has no from: <type> or from: [<type>, …]")
 	}
-	b.From = s.Types[scalar(from)]
-	if b.From == nil {
-		return nil, errorf(from, "from: unknown type %q (types: %s)", from.Value, strings.Join(typeNames(s), ", "))
+	fromNodes := []*yaml.Node{from}
+	if from.Kind == yaml.SequenceNode {
+		fromNodes = from.Content
+		if len(fromNodes) == 0 {
+			return nil, errorf(from, "from: an empty list of types")
+		}
+	}
+	for _, n := range fromNodes {
+		t := s.Types[scalar(n)]
+		if t == nil {
+			return nil, errorf(n, "from: unknown type %q (types: %s)", n.Value, strings.Join(typeNames(s), ", "))
+		}
+		if slices.Contains(b.From, t) {
+			return nil, errorf(n, "from: %s is listed twice", t.Name)
+		}
+		b.From = append(b.From, t)
 	}
 
 	if where := lookup(m, "where"); where != nil {
@@ -126,8 +140,8 @@ func ParseBlock(src string, s *schema.Schema) (*Block, error) {
 			b.Render.Mode = RenderMode(strings.TrimSpace(mode))
 		case RenderField:
 			field = strings.TrimSpace(field)
-			if b.From.Field(field) == nil && facetOf(b.From, field) == nil {
-				return nil, errorf(r, "render: %s has no field %q (fields: %s)", b.From.Name, field, fieldNames(b.From))
+			if !slices.ContainsFunc(b.From, func(t *schema.Type) bool { return t.Field(field) != nil || facetOf(t, field) != nil }) {
+				return nil, errorf(r, "render: %s", noField(b.From, field))
 			}
 			b.Render = Render{Mode: RenderField, Field: field}
 		default:
@@ -137,22 +151,40 @@ func ParseBlock(src string, s *schema.Schema) (*Block, error) {
 	return b, nil
 }
 
-// checkOrderField accepts fields with at most one value: sorting by a list
-// or a many-link would have to pick one of its values.
-func checkOrderField(t *schema.Type, name string) error {
+// checkOrderField accepts a field that at least one selected type has, with
+// at most one value wherever it is declared: sorting by a list or a
+// many-link would have to pick one of its values.
+func checkOrderField(types []*schema.Type, name string) error {
 	if name == "id" {
 		return nil
 	}
-	f := t.Field(name)
-	switch {
-	case name == "":
+	if name == "" {
 		return fmt.Errorf("expected a field name")
-	case f == nil:
-		return fmt.Errorf("%s has no field %q (fields: %s)", t.Name, name, fieldNames(t))
-	case f.Kind == schema.List || (f.Kind == schema.Link && f.Cardinality != "one"):
-		return fmt.Errorf("%q has several values and cannot order entities", name)
+	}
+	found := false
+	for _, t := range types {
+		f := t.Field(name)
+		if f == nil {
+			continue
+		}
+		found = true
+		if f.Kind == schema.List || (f.Kind == schema.Link && f.Cardinality != "one") {
+			return fmt.Errorf("%q has several values and cannot order entities", name)
+		}
+	}
+	if !found {
+		return fmt.Errorf("%s", noField(types, name))
 	}
 	return nil
+}
+
+// noField says that no selected type has the field, listing the fields of a
+// single type.
+func noField(types []*schema.Type, name string) string {
+	if len(types) == 1 {
+		return fmt.Sprintf("%s has no field %q (fields: %s)", types[0].Name, name, fieldNames(types[0]))
+	}
+	return fmt.Sprintf("%s has a field %q", noneOf(types), name)
 }
 
 func typeNames(s *schema.Schema) []string {
@@ -203,10 +235,10 @@ func (g *Graph) Run(b *Block) ([]*model.Entity, error) {
 	return out, nil
 }
 
-// Match returns the IDs of the entities of type t satisfying cond (nil for
-// all), sorted.
-func (g *Graph) Match(t *schema.Type, cond *Condition) ([]string, error) {
-	prog, match, err := Compile(g.Schema, t, cond, "q_")
+// Match returns the IDs of the entities of the given types satisfying cond
+// (nil for all), sorted.
+func (g *Graph) Match(types []*schema.Type, cond *Condition) ([]string, error) {
+	prog, match, err := Compile(g.Schema, types, cond, "q_")
 	if err != nil {
 		return nil, err
 	}

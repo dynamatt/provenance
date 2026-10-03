@@ -64,7 +64,11 @@ func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 		return r.queryError(q, err)
 	}
 	if len(results) == 0 {
-		fmt.Fprintf(w, "<p class=\"query-empty\">No %s matches this query.</p>\n", template.HTMLEscapeString(b.From.Name))
+		names := make([]string, len(b.From))
+		for i, t := range b.From {
+			names[i] = t.Name
+		}
+		fmt.Fprintf(w, "<p class=\"query-empty\">No %s matches this query.</p>\n", template.HTMLEscapeString(strings.Join(names, " or ")))
 		return nil
 	}
 	switch b.Render.Mode {
@@ -81,8 +85,15 @@ func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 		for _, e := range results {
 			_, _ = w.WriteString("<li>")
 			l := markdown.Link{ID: e.ID}
-			if b.Render.Mode == query.RenderField {
-				l.Field = b.Render.Field
+			if f := b.Render.Field; b.Render.Mode == query.RenderField {
+				if e.Field(f) == nil && e.Facet(f) == nil {
+					// Another selected type has the field; this one's
+					// value is empty, as for an unset field.
+					writeLink(w, r.ctx.linkBase, e, e.ID+"#"+f)
+					_, _ = w.WriteString(" <span class=\"unresolved\">empty</span></li>\n")
+					continue
+				}
+				l.Field = f
 			}
 			if err := r.Reference(w, l); err != nil {
 				return err

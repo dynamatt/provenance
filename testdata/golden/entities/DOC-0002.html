@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DOC-0002 Risk Management Summary — NeuroPulse Stimulator — NEURO DHF</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="dhf-header">
+<a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
+<span class="dhf-label">Design History File · NEURO</span>
+</header>
+<main class="dhf-main">
+
+<article class="entity" id="DOC-0002">
+<p class="entity-type">Document</p>
+<h1><span class="id">DOC-0002</span> Risk Management Summary — NeuroPulse Stimulator</h1>
+<table class="fields">
+<tbody>
+<tr><th>Title</th><td>Risk Management Summary — NeuroPulse Stimulator</td></tr>
+<tr><th>Status</th><td>draft</td></tr>
+</tbody>
+</table>
+<div class="body">
+<h1>Risk Management Summary</h1>
+<p>This summary shows the identified risks and the requirements of the
+amplitude control function in one list, in author-assigned order, so a
+reviewer reads each risk beside the requirements written around it. One
+query block selects both types (Requirements Spec §4a); each entity still
+renders through its own type's template.</p>
+<h2>Risks and requirements</h2>
+<div class="query">
+<section class="embed" data-entity="REQ-0001">
+<article class="requirement" id="REQ-0001">
+<h3 class="requirement-title"><span class="req-id">REQ-0001</span> Closed-loop amplitude adjustment</h3>
+<p class="requirement-meta">
+<span class="status status-approved">approved</span> · verified by test
+</p>
+<div class="statement"><p>The system shall automatically adjust stimulation amplitude within a
+pre-configured safe range, using the measured evoked neural response as
+feedback, without requiring clinician intervention.</p>
+</div>
+<h4>Implements</h4>
+<ul>
+<li><a class="ref" href="USR-0001.html" title="Reduced need for in-clinic titration visits">USR-0001</a>: Reduced need for in-clinic titration visits</li>
+</ul>
+<h4>Verified by</h4>
+<ul>
+<li><a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>: Bench verification of closed-loop amplitude adjustment</li>
+</ul>
+</article>
+</section>
+<section class="embed" data-entity="RSK-0001">
+<article class="entity" id="RSK-0001">
+<p class="entity-type">Risk</p>
+<h3><span class="id">RSK-0001</span> Uncontrolled stimulation amplitude increase</h3>
+<table class="fields">
+<tbody>
+<tr><th>Title</th><td>Uncontrolled stimulation amplitude increase</td></tr>
+<tr><th>Hazard</th><td><div class="text"><p>Loss of closed-loop feedback signal integrity</p>
+</div></td></tr>
+<tr><th>Hazardous situation</th><td><div class="text"><p>Control algorithm compensates for an apparent drop in ECAP response by increasing drive amplitude</p>
+</div></td></tr>
+<tr><th>Harm</th><td><div class="text"><p>Painful over-stimulation; patient-perceived shock sensation</p>
+</div></td></tr>
+<tr><th>Residual acceptability</th><td>unacceptable</td></tr>
+<tr><th>Risk benefit analysis</th><td><div class="text"><p>Residual risk is not yet acceptable pending verification evidence for REQ-0002's hardware current-limit (<a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a>). This field is required by rules/risk-benefit-required.yaml while residual_acceptability is &quot;unacceptable&quot;.</p>
+</div></td></tr>
+<tr><th>Mitigated by</th><td><a class="id" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>, <a class="id" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a></td></tr>
+<tr><th>Status</th><td>in_review</td></tr>
+<tr><th>Failure modes</th><td><table class="list">
+<thead><tr><th>Description</th><th>Cause</th><th>Severity</th><th>Occurrence</th><th>Row rating</th></tr></thead>
+<tbody>
+<tr><td><div class="text"><p>Sense-electrode lead fracture causes signal loss</p>
+</div></td><td><div class="text"><p>Mechanical fatigue at the electrode-lead junction</p>
+</div></td><td><a class="id" href="SEV-0003.html" title="Critical">SEV-0003</a></td><td><a class="id" href="OCC-0001.html" title="Improbable">OCC-0001</a></td><td>5</td></tr>
+<tr><td><div class="text"><p>Firmware control-loop fault causes runaway amplitude command</p>
+</div></td><td><div class="text"><p>Undetected divide-by-zero in feedback gain calculation</p>
+</div></td><td><a class="id" href="SEV-0003.html" title="Critical">SEV-0003</a></td><td><a class="id" href="OCC-0002.html" title="Occasional">OCC-0002</a></td><td>15</td></tr>
+</tbody>
+</table></td></tr>
+<tr><th>Overall risk rating</th><td>15</td></tr>
+<tr><th>Order</th><td>1</td></tr>
+</tbody>
+</table>
+<div class="body">
+<p>Hazard analysis for the closed-loop amplitude control function, per ISO
+14971. <code>row_rating</code> and <code>overall_risk_rating</code> below are calculated fields
+(Detailed Design §5) — never hand-edited, always recomputed from the linked
+<a class="ref" href="SEV-0001.html" title="Negligible">SEV-0001</a>/<a class="ref" href="OCC-0001.html" title="Improbable">OCC-0001</a>-style severity/occurrence entities' <code>score</code> fields.</p>
+</div>
+</article>
+</section>
+<section class="embed" data-entity="REQ-0002">
+<article class="requirement" id="REQ-0002">
+<h3 class="requirement-title"><span class="req-id">REQ-0002</span> Single-fault amplitude ceiling</h3>
+<p class="requirement-meta">
+<span class="status status-approved">approved</span> · verified by test, analysis
+</p>
+<div class="statement"><p>The system shall not deliver a stimulation amplitude exceeding 8 mA under
+any single-fault condition, including loss of the sense-electrode feedback
+signal used by the closed-loop control algorithm (<a class="ref" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a>).</p>
+</div>
+<h4>Implements</h4>
+<ul>
+<li><a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>: No unexpected increases in stimulation intensity</li>
+</ul>
+<h4>Verified by</h4>
+<ul>
+<li><a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a>: Bench verification of single-fault amplitude ceiling</li>
+</ul>
+<h4>Refined by</h4>
+<ul>
+<li><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a>: Amplitude ceiling — subsystem allocation</li>
+</ul>
+</article>
+</section>
+<section class="embed" data-entity="REQ-0003">
+<article class="requirement" id="REQ-0003">
+<h3 class="requirement-title"><span class="req-id">REQ-0003</span> Amplitude ceiling — subsystem allocation</h3>
+<p class="requirement-meta">
+<span class="status status-draft">draft</span> · refines <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a> · verified by inspection, test
+</p>
+<div class="statement"><p>The pulse-generator ASIC shall enforce a hard current-limit circuit,
+independent of firmware, as the subsystem-level implementation of the
+system-level ceiling in <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</p>
+</div>
+<h4>Implements</h4>
+<p class="none">No user need linked.</p>
+<h4>Verified by</h4>
+<p class="none">Not yet verified.</p>
+</article>
+</section>
+</div>
+<p>Requirements that control a risk are listed on the risk as <em>mitigated by</em>,
+for example <a class="ref" href="RSK-0001.html" title="Uncontrolled stimulation amplitude increase">RSK-0001</a> is mitigated by <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</p>
+</div>
+</article>
+
+</main>
+<footer class="dhf-footer">
+Controlled content, generated from the design repository. Printed copies are uncontrolled.
+</footer>
+</body>
+</html>
