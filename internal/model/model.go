@@ -91,7 +91,8 @@ type Value struct {
 	// Targets parallels IDs: the linked entity, or nil when no entity has
 	// that ID (unresolved; reporting it is validate's job).
 	Targets []*Entity
-	Rows    []Row // list rows
+	Rows    []Row    // a list's rows, when it has sub-fields
+	Items   []*Value // a list's items, when it names an item type (Field.Elem)
 }
 
 // Row is one list row: a value per sub-field, in schema order.
@@ -248,6 +249,17 @@ func value(f *schema.Field, n *yaml.Node) *Value {
 		}
 		v.IDs = ids
 	case schema.List:
+		if f.Elem != nil {
+			if n.Kind != yaml.SequenceNode {
+				return invalid("not a list")
+			}
+			// An item that does not match the item type is marked on the
+			// item, like a cell in a row.
+			for _, item := range n.Content {
+				v.Items = append(v.Items, value(f.Elem, item))
+			}
+			break
+		}
 		if n.Kind != yaml.SequenceNode {
 			return invalid("not a list of rows")
 		}

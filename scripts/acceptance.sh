@@ -133,6 +133,17 @@ sed -i 's/{{template "content" .}}/{{template "content" .}/' templates/_layout.t
 expect 2 '^export: templates/_layout\.tmpl:[0-9]+: ' "$PROV" export website
 cp "$WORK/_layout.tmpl" templates/_layout.tmpl
 
+# Lists naming their type with of: — a built-in type, an enum or a record.
+"$PROV" export website >/dev/null
+expect 0 '<li>IEC 62304</li>'               cat _site/entities/DES-0001.html
+expect 0 'test, analysis'                   cat _site/entities/REQ-0002.html
+expect 0 '<th>Serial number</th>'           cat _site/entities/EVD-0001.html
+expect 0 '<td>BES-2201</td>'                cat _site/entities/EVD-0001.html
+expect 0 '<th>Cause</th>'                   cat _site/entities/RSK-0001.html
+sed -i.orig 's/of: Equipment/of: Equipmnet/' schema/VerificationEvidence.yaml
+expect 2 '^export: schema/VerificationEvidence\.yaml:[0-9]+: field "equipment_used": unknown list item type "Equipmnet"' "$PROV" export website
+mv schema/VerificationEvidence.yaml.orig schema/VerificationEvidence.yaml
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null

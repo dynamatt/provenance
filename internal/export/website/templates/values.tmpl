@@ -33,9 +33,20 @@
 {{- end -}}
 {{- end -}}
 
-{{/* list renders a list field's rows as a table, one column per sub-field. */}}
+{{/* list renders a list field's items as a bulleted list, or its rows as a
+     table, one column per sub-field. */}}
 {{- define "list" -}}
-{{- if .Rows -}}
+{{- if .Field.Elem -}}
+{{- if .Items -}}
+<ul class="items">
+{{- range .Items}}
+<li>{{template "value" .}}</li>
+{{- end}}
+</ul>
+{{- else -}}
+<span class="absent">no items</span>
+{{- end -}}
+{{- else if .Rows -}}
 <table class="list">
 <thead><tr>{{range .Field.Fields}}<th>{{humanize .Name}}</th>{{end}}</tr></thead>
 <tbody>

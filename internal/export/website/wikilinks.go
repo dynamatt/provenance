@@ -152,6 +152,13 @@ func valueText(v *model.Value) string {
 	case schema.Link:
 		return strings.Join(v.IDs, ", ")
 	case schema.List:
+		if v.Field.Elem != nil {
+			items := make([]string, len(v.Items))
+			for i, item := range v.Items {
+				items[i] = valueText(item)
+			}
+			return strings.Join(items, ", ")
+		}
 		if len(v.Rows) == 1 {
 			return "1 row"
 		}

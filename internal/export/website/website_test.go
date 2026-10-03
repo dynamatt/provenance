@@ -144,3 +144,38 @@ func TestSameEntityEmbeddedTwiceIsNotACycle(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func TestListItemsAndRecordRows(t *testing.T) {
+	files, err := exportRepo(t, map[string]string{
+		"schema/records/Probe.yaml": "record: Probe\nfields:\n  - {name: serial, type: string}\n",
+		"schema/Ev.yaml": `type: Ev
+fields:
+  - {name: title, type: string}
+  - {name: probes, type: list, of: Probe}
+  - {name: standards, type: list, of: string}
+  - {name: readings, type: list, of: number}
+  - {name: none, type: list, of: string}
+`,
+		"templates/_index.tmpl": `{{range .Types}}{{range .Entities}}{{range .Standards}}[{{.}}]{{end}}{{range .Readings}}({{.}}){{end}}{{range .Probes}}({{.Serial}}){{end}}{{len .None}}{{end}}{{end}}`,
+		"E/E-1.md":              "---\nid: E-1\ntype: Ev\ntitle: Run\nprobes: [{serial: P-1}]\nstandards: [IEC 60601-1, ISO 14971]\nreadings: [2, oops]\nnone: []\n---\nSee [[E-1#standards]].\n",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(files["entities/E-1.html"])
+	for _, want := range []string{
+		"<th>Serial</th>",
+		"<td>P-1</td>",
+		"<ul class=\"items\">\n<li>IEC 60601-1</li>\n<li>ISO 14971</li>\n</ul>",
+		`<li><span class="invalid-value">oops</span> <span class="invalid">not a number</span></li>`,
+		`<span class="absent">no items</span>`,
+		"IEC 60601-1, ISO 14971", // field reference text
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("E-1 page missing %q\n%s", want, page)
+		}
+	}
+	if got := string(files["index.html"]); !strings.Contains(got, "[IEC 60601-1][ISO 14971](2)(oops)(P-1)0") {
+		t.Errorf("index data model = %s", got)
+	}
+}
