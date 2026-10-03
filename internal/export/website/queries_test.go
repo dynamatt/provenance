@@ -147,3 +147,26 @@ func TestUnrenderedLanguagesAreMarked(t *testing.T) {
 		}
 	}
 }
+
+func TestMultiTypeQueryRendering(t *testing.T) {
+	files, err := exportRepo(t, map[string]string{
+		"schema/Note.yaml": rankedNoteSchema,
+		"schema/Task.yaml": "type: Task\nfields:\n  - {name: title, type: string}\n  - {name: rank, type: number}\n  - {name: owner, type: string}\n",
+		"N/N-1.md":         note("N-1", "title: Note one\nrank: 2\n", ""),
+		"T/T-1.md":         "---\nid: T-1\ntype: Task\ntitle: Task one\nrank: 1\nowner: Ann\n---\n",
+		"N/N-2.md": note("N-2", "title: Host\n", "```query\nfrom: [Note, Task]\nwhere: {field: rank, operator: exists}\norder_by: rank\nrender: field:owner\n```\n\n"+
+			"```query\nfrom: [Note, Task]\nwhere: {field: rank, operator: greater_than, value: 5}\n```\n"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(files["entities/N-2.html"])
+	for _, want := range []string{
+		"<li><a class=\"ref\" href=\"T-1.html\" title=\"Task one\">Ann</a></li>\n<li><a class=\"ref\" href=\"N-1.html\" title=\"Note one\">N-1#owner</a> <span class=\"unresolved\">empty</span></li>",
+		"<p class=\"query-empty\">No Note or Task matches this query.</p>",
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("N-2 page missing %q\n%s", want, page)
+		}
+	}
+}

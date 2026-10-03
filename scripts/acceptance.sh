@@ -66,7 +66,7 @@ cd ..
 # E1.2: entity discovery and parsing.
 "$PROV" export website >/dev/null
 for id in USR-0001 USR-0002 REQ-0001 REQ-0002 REQ-0003 DES-0001 SEV-0001 SEV-0002 SEV-0003 \
-	OCC-0001 OCC-0002 OCC-0003 RSK-0001 VER-0001 VER-0002 EVD-0001 EVD-0002 ECO-0001 DOC-0001; do
+	OCC-0001 OCC-0002 OCC-0003 RSK-0001 VER-0001 VER-0002 EVD-0001 EVD-0002 ECO-0001 DOC-0001 DOC-0002; do
 	expect 0 ">$id<"                      cat _site/index.html
 done
 expect 0 '<h2>VerificationEvidence</h2>' cat _site/index.html
@@ -174,6 +174,19 @@ sed -i.orig 's/^score: 3/score: 4/' OCC/OCC-0002.md
 expect 0 'OCC-0002</a></td><td>20</td></tr>' sh -c "$RSK_FLAT"
 expect 0 '<tr><th>Overall risk rating</th><td>20</td></tr>' sh -c "$RSK_FLAT"
 mv OCC/OCC-0002.md.orig OCC/OCC-0002.md
+
+# E1.9a: multi-type query blocks. DOC-0002 selects Risk and Requirement in
+# one block, ordered together by order (ties by ID); a field only Risk has
+# is empty on requirements; a field neither has fails at its line.
+"$PROV" export website >/dev/null
+DOC2_ORDER="grep -o 'data-entity=\"[A-Z]*-[0-9]*\"' _site/entities/DOC-0002.html | tr -d '\\n'"
+expect 0 '^data-entity="REQ-0001"data-entity="RSK-0001"data-entity="REQ-0002"data-entity="REQ-0003"$' sh -c "$DOC2_ORDER"
+sed -i.orig 's/^order_by: order/where: {field: hazard, operator: exists}\norder_by: order/' DOC/DOC-0002.md
+"$PROV" export website >/dev/null
+expect 0 '^data-entity="RSK-0001"$' sh -c "$DOC2_ORDER"
+sed -i 's/field: hazard,/field: hazrd,/' DOC/DOC-0002.md
+expect 2 '^export: DOC/DOC-0002\.md:[0-9]+: query block: neither Risk nor Requirement has a field "hazrd"$' "$PROV" export website
+mv DOC/DOC-0002.md.orig DOC/DOC-0002.md
 
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).

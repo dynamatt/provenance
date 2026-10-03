@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/dynamatt/provenance/internal/schema"
 )
 
 // graph builds a query graph over exampleGraph plus extra entities.
@@ -137,7 +139,7 @@ func TestNestedAnyOfInAssertions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := g.Match(g.Schema.Types["Requirement"], cond)
+	got, err := g.Match([]*schema.Type{g.Schema.Types["Requirement"]}, cond)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,5 +163,52 @@ func TestRender(t *testing.T) {
 		if b.Render != want {
 			t.Errorf("%q: render %+v, want %+v", src, b.Render, want)
 		}
+	}
+}
+
+func TestMultiTypeQueryBlocks(t *testing.T) {
+	g := graph(t, evidence)
+	for _, tc := range []struct{ name, src, want string }{
+		{"one list, ordered together", "from: [Evidence, Requirement]\norder_by: [execution_date, id]\n", "EVD-1 EVD-2 EVD-3 REQ-0001 REQ-0002 REQ-0003"},
+		{"order field on one type", "from: [Requirement, Evidence]\norder_by: order\n", "REQ-0001 REQ-0002 REQ-0003 EVD-1 EVD-2 EVD-3"},
+		{"field on one type: empty on the other", "from: [Requirement, Evidence]\nwhere: {field: passed, operator: exists}\n", "EVD-1 EVD-2"},
+		{"not_equals holds where the field is missing", "from: [Requirement, Evidence]\nwhere: {field: status, operator: not_equals, value: approved}\n", "EVD-1 EVD-2 EVD-3 REQ-0003"},
+		{"shared field", "from: [Requirement, UserNeed]\nwhere: {field: status, operator: equals, value: deprecated}\n", "USR-0002"},
+		{"any_of across types", "from: [Requirement, Evidence]\nwhere:\n  any_of:\n    - {field: order, operator: equals, value: 1}\n    - {field: passed, operator: equals, value: false}\n", "EVD-2 REQ-0001"},
+		{"rows on one type", "from: [Requirement, Evidence]\nwhere: {field: {list: equipment_used, subfield: serial}, operator: equals, value: C}\n", "EVD-2"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := ids(t, g, tc.src); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestMultiTypeQueryBlockErrors(t *testing.T) {
+	g := graph(t, evidence)
+	for _, tc := range []struct{ name, src, want string }{
+		{"on neither type", "from: [Requirement, Evidence]\nwhere: {field: hazrd, operator: exists}\n", `line 2: neither Requirement nor Evidence has a field "hazrd"`},
+		{"on none of three", "from: [Requirement, Evidence, UserNeed]\norder_by: rank\n", `line 2: order_by: none of Requirement, Evidence, UserNeed has a field "rank"`},
+		{"render field on neither", "from: [Requirement, Evidence]\nrender: field:label\n", `line 2: render: neither Requirement nor Evidence has a field "label"`},
+		{"link on one type only", "from: [Requirement, Evidence]\nwhere: {field: verifies, operator: exists}\n", ""},
+		{"different value types", "from: [Requirement, Evidence]\nwhere: {field: title, operator: exists}\n", "line 2: title is text on Requirement but a date on Evidence"},
+		{"listed twice", "from: [Requirement, Requirement]\n", "line 1: from: Requirement is listed twice"},
+		{"empty list", "from: []\n", "line 1: from: an empty list of types"},
+		{"unknown type in list", "from: [Requirement, Rsk]\n", `line 1: from: unknown type "Rsk"`},
+		{"wrong literal on the type that has it", "from: [Requirement, Evidence]\nwhere: {field: passed, operator: equals, value: yes please}\n", "line 2: passed is true or false"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := ParseBlock(tc.src, g.Schema)
+			if tc.want == "" {
+				if err != nil {
+					t.Fatalf("unexpected error %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.HasPrefix(err.Error(), tc.want) {
+				t.Fatalf("got  %v\nwant %s…", err, tc.want)
+			}
+		})
 	}
 }

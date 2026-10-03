@@ -352,6 +352,9 @@ type compiler struct {
 	s    *schema.Schema
 	t    *schema.Type
 	prog *datalog.Program
+	// lenient compiles a test naming something t lacks as never true: the
+	// value is empty on t (several types in from; checked by checkAcross).
+	lenient bool
 	// prefix keeps this compilation's relations apart from any other
 	// program evaluated alongside.
 	prefix string
@@ -563,23 +566,120 @@ func checkTest(t *Test, left target, right *target) error {
 	return nil
 }
 
-// Compile turns a condition on entities of type t into rules deriving the
-// matching entities as the unary relation it returns. Relation names start
-// with prefix.
-func Compile(s *schema.Schema, t *schema.Type, cond *Condition, prefix string) (*datalog.Program, string, error) {
-	c := &compiler{s: s, t: t, prog: &datalog.Program{}, prefix: prefix}
-	match := prefix + "match"
-	E := datalog.Var("E")
-	body := []datalog.Literal{datalog.P(RelEntity, E, datalog.Const(datalog.String(t.Name)))}
-	if cond != nil {
-		lits, err := c.conjunction(cond, E)
-		if err != nil {
+// Compile turns a condition on entities of the given types into rules
+// deriving the matching entities as the unary relation it returns. Relation
+// names start with prefix.
+//
+// With several types (Requirements Spec §4a), a field, facet, list or link
+// a test names must exist on at least one of them, with the same type of
+// value wherever it does; on an entity whose type lacks it, the field is
+// empty, exactly like an unset field.
+func Compile(s *schema.Schema, types []*schema.Type, cond *Condition, prefix string) (*datalog.Program, string, error) {
+	if len(types) > 1 && cond != nil {
+		if err := checkAcross(s, types, cond); err != nil {
 			return nil, "", err
 		}
-		body = append(body, lits...)
 	}
-	c.prog.Add(datalog.Rule{Head: datalog.NewAtom(match, E), Body: body})
-	return c.prog, match, nil
+	prog := &datalog.Program{}
+	match := prefix + "match"
+	E := datalog.Var("E")
+	for _, t := range types {
+		c := &compiler{s: s, t: t, prog: prog, prefix: prefix + t.Name + "_", lenient: len(types) > 1}
+		body := []datalog.Literal{datalog.P(RelEntity, E, datalog.Const(datalog.String(t.Name)))}
+		if cond != nil {
+			lits, err := c.conjunction(cond, E)
+			if err != nil {
+				return nil, "", err
+			}
+			body = append(body, lits...)
+		}
+		prog.Add(datalog.Rule{Head: datalog.NewAtom(match, E), Body: body})
+	}
+	return prog, match, nil
+}
+
+// hasRef reports whether t has what r starts from: the field or facet, the
+// list, or the link it crosses.
+func hasRef(t *schema.Type, r Ref) bool {
+	name := r.Field
+	switch {
+	case r.List != "":
+		name = r.List
+	case r.Via != "":
+		name = r.Via
+	case name == "id" || name == "type":
+		return true
+	}
+	return t.Field(name) != nil || facetOf(t, name) != nil
+}
+
+// checkAcross checks every reference in cond against several types: at
+// least one must have it, and every type that has it must give it the same
+// type of value.
+func checkAcross(s *schema.Schema, types []*schema.Type, cond *Condition) error {
+	var refs []Ref
+	var walk func(*Condition)
+	walk = func(c *Condition) {
+		switch {
+		case c.Test != nil:
+			refs = append(refs, c.Test.Field)
+			if c.Test.Value != nil && c.Test.Value.Field != nil {
+				refs = append(refs, *c.Test.Value.Field)
+			}
+		default:
+			for _, sub := range append(slices.Clone(c.AllOf), c.AnyOf...) {
+				walk(sub)
+			}
+		}
+	}
+	walk(cond)
+	for _, r := range refs {
+		var first *target
+		var firstType *schema.Type
+		for _, t := range types {
+			if !hasRef(t, r) {
+				continue
+			}
+			tg, err := (&compiler{s: s, t: t}).resolve(r)
+			if err != nil {
+				return err
+			}
+			if first == nil {
+				first, firstType = &tg, t
+				continue
+			}
+			if tg.class != first.class || tg.rows != first.rows || (tg.enum != nil) != (first.enum != nil) || (tg.enum != nil && tg.enum != first.enum) {
+				return &Error{Line: r.Line, Msg: fmt.Sprintf("%s is %s on %s but %s on %s", r, first.class, firstType.Name, tg.class, t.Name)}
+			}
+		}
+		if first == nil {
+			return &Error{Line: r.Line, Msg: noField(types, refName(r))}
+		}
+	}
+	return nil
+}
+
+func refName(r Ref) string {
+	switch {
+	case r.List != "":
+		return r.List
+	case r.Via != "":
+		return r.Via
+	}
+	return r.Field
+}
+
+// noneOf names types as the subject of "has no …": "neither Risk nor
+// Requirement", "none of Risk, Requirement, Design".
+func noneOf(types []*schema.Type) string {
+	names := make([]string, len(types))
+	for i, t := range types {
+		names[i] = t.Name
+	}
+	if len(names) == 2 {
+		return "neither " + names[0] + " nor " + names[1]
+	}
+	return "none of " + strings.Join(names, ", ")
 }
 
 // conjunction compiles cond, a test or an all-of group, to body literals
@@ -639,6 +739,15 @@ func (c *compiler) conjunction(cond *Condition, E datalog.Term) ([]datalog.Liter
 // returns the literal reading it: negated for not_equals, which holds when
 // no value equals (so it also holds when the field is empty).
 func (c *compiler) test(t *Test, E datalog.Term, rowVar func(string) datalog.Term) (datalog.Literal, error) {
+	if c.lenient && (!hasRef(c.t, t.Field) || (t.Value != nil && t.Value.Field != nil && !hasRef(c.t, *t.Value.Field))) {
+		// Nothing derives this relation, so the test never holds, and
+		// not_equals, its negation, always does.
+		absent := c.rel("absent")
+		if t.Operator == NotEquals {
+			return datalog.N(absent, E), nil
+		}
+		return datalog.P(absent, E), nil
+	}
 	left, err := c.resolve(t.Field)
 	if err != nil {
 		return datalog.Literal{}, err

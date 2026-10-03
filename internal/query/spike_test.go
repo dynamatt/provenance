@@ -33,6 +33,7 @@ fields:
 `,
 	"schema/Evidence.yaml": `type: Evidence
 fields:
+  - {name: title, type: date}
   - {name: execution_date, type: date}
   - {name: passed, type: boolean}
   - {name: verifies, type: link, target: [Requirement], cardinality: one, reverse_name: evidenced_by}
