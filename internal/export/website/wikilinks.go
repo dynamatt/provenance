@@ -69,11 +69,12 @@ func (r *resolver) Embed(w util.BufWriter, l markdown.Link) error {
 		_, _ = w.WriteString("</p>\n")
 		return nil
 	}
-	return r.embed(w, target)
+	return r.embed(w, target, "")
 }
 
-// embed renders target in full, wrapped in an embed section.
-func (r *resolver) embed(w util.BufWriter, target *model.Entity) error {
+// embed renders target in full, through the named template if one is
+// given, wrapped in an embed section.
+func (r *resolver) embed(w util.BufWriter, target *model.Entity, named string) error {
 	for i, e := range r.ctx.chain {
 		if e == target {
 			chain := []string{}
@@ -84,7 +85,7 @@ func (r *resolver) embed(w util.BufWriter, target *model.Entity) error {
 		}
 	}
 	chain := append(append([]*model.Entity{}, r.ctx.chain...), target)
-	html, err := r.ctx.site.renderEntity(target, chain)
+	html, err := r.ctx.site.renderEntity(target, chain, named)
 	if err != nil {
 		return err
 	}

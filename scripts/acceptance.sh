@@ -188,6 +188,24 @@ sed -i 's/field: hazard,/field: hazrd,/' DOC/DOC-0002.md
 expect 2 '^export: DOC/DOC-0002\.md:[0-9]+: query block: neither Risk nor Requirement has a field "hazrd"$' "$PROV" export website
 mv DOC/DOC-0002.md.orig DOC/DOC-0002.md
 
+# E1.9b: per-query templates. DOC-0002 shows requirements through the named
+# requirement-checklist template and RSK-0001 through risk-summary, while
+# DOC-0001 keeps the full Requirement template; a missing template fails at
+# the block's line; without templates: every result uses its default.
+"$PROV" export website >/dev/null
+DOC2_FLAT="tr -d '\\n' < _site/entities/DOC-0002.html"
+expect 0 '<section class="embed" data-entity="REQ-0001"><div class="checklist-item" id="REQ-0001">' sh -c "$DOC2_FLAT"
+expect 0 '<section class="embed" data-entity="RSK-0001"><article class="risk-summary" id="RSK-0001">' sh -c "$DOC2_FLAT"
+expect 0 '<h3 class="requirement-title"><span class="req-id">REQ-0001</span>' cat _site/entities/DOC-0001.html
+mv templates/risk-summary.tmpl "$WORK/risk-summary.tmpl"
+expect 2 '^export: DOC/DOC-0002\.md:[0-9]+: query block: unknown template "risk-summary": there is no templates/risk-summary\.tmpl' "$PROV" export website
+mv "$WORK/risk-summary.tmpl" templates/risk-summary.tmpl
+sed -i.orig '/^templates:/d; /^  Requirement: requirement-checklist/d; /^  Risk: risk-summary/d' DOC/DOC-0002.md
+"$PROV" export website >/dev/null
+expect 1 '' grep -q 'checklist-item' _site/entities/DOC-0002.html
+expect 0 '<h3 class="requirement-title"><span class="req-id">REQ-0001</span>' cat _site/entities/DOC-0002.html
+mv DOC/DOC-0002.md.orig DOC/DOC-0002.md
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null

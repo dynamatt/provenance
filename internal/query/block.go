@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -62,9 +63,39 @@ type Block struct {
 	Where   *Condition
 	OrderBy []string
 	Render  Render
+	// Templates are the named presentation templates the block chooses
+	// (Requirements Spec §7): one for every result (Type ""), from
+	// template:, or one per type, from templates:.
+	Templates []TemplateChoice
 }
 
-var blockKeys = []string{"from", "where", "order_by", "render"}
+// TemplateChoice is a named template chosen for a block's results of Type,
+// or all of them when Type is "". Line is where the name is written.
+type TemplateChoice struct {
+	Type, Name string
+	Line       int
+}
+
+// TemplateFor returns the named template chosen for results of type typ,
+// or "" when they use their type's default.
+func (b *Block) TemplateFor(typ string) TemplateChoice {
+	for _, c := range b.Templates {
+		if c.Type == typ || c.Type == "" {
+			return c
+		}
+	}
+	return TemplateChoice{}
+}
+
+// templateName is the form of a named template's name, and of its file
+// templates/<name>.tmpl: lower-case kebab-case, so it cannot be mistaken
+// for a CamelCase type template or an _-prefixed site override.
+var templateName = regexp.MustCompile(`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`)
+
+// IsTemplateName reports whether name is a valid named template name.
+func IsTemplateName(name string) bool { return templateName.MatchString(name) }
+
+var blockKeys = []string{"from", "where", "order_by", "render", "template", "templates"}
 
 // ParseBlock reads a query block's YAML against the schema. Error lines
 // count from the block's first line.
@@ -148,7 +179,62 @@ func ParseBlock(src string, s *schema.Schema) (*Block, error) {
 			return nil, errorf(r, "render: unknown mode %q (expected full, id or field:<name>)", r.Value)
 		}
 	}
+	if err := b.parseTemplates(m); err != nil {
+		return nil, err
+	}
 	return b, nil
+}
+
+// parseTemplates reads template: or templates:.
+func (b *Block) parseTemplates(m *yaml.Node) error {
+	one, perType := lookup(m, "template"), lookup(m, "templates")
+	switch {
+	case one == nil && perType == nil:
+		return nil
+	case one != nil && perType != nil:
+		return errorf(perType, "use template: (every result) or templates: (per type), not both")
+	}
+	key := "template"
+	if perType != nil {
+		key = "templates"
+	}
+	if b.Render.Mode != RenderFull {
+		return errorf(lookup(m, "render"), "%s: applies only to render: full, which embeds each result through a template", key)
+	}
+	name := func(n *yaml.Node) (string, error) {
+		v := scalar(n)
+		if n.Kind != yaml.ScalarNode || !IsTemplateName(v) {
+			return "", errorf(n, "%s: %q is not a template name: named templates are lower-case kebab-case, as in templates/requirement-checklist.tmpl", key, v)
+		}
+		return v, nil
+	}
+	if one != nil {
+		v, err := name(one)
+		if err != nil {
+			return err
+		}
+		b.Templates = []TemplateChoice{{Name: v, Line: one.Line}}
+		return nil
+	}
+	if perType.Kind != yaml.MappingNode || len(perType.Content) == 0 {
+		return errorf(perType, "templates: expected a mapping of type to template name, e.g. {Requirement: requirement-checklist}")
+	}
+	var selected []string
+	for _, t := range b.From {
+		selected = append(selected, t.Name)
+	}
+	for i := 0; i+1 < len(perType.Content); i += 2 {
+		k, v := perType.Content[i], perType.Content[i+1]
+		if !slices.Contains(selected, k.Value) {
+			return errorf(k, "templates: %s is not selected by from (%s)", k.Value, strings.Join(selected, ", "))
+		}
+		n, err := name(v)
+		if err != nil {
+			return err
+		}
+		b.Templates = append(b.Templates, TemplateChoice{Type: k.Value, Name: n, Line: v.Line})
+	}
+	return nil
 }
 
 // checkOrderField accepts a field that at least one selected type has, with

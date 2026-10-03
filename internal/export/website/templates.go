@@ -2,6 +2,7 @@ package website
 
 import (
 	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/schema"
 )
 
@@ -16,6 +18,9 @@ import (
 // folder. Each replaces its built-in counterpart independently:
 //
 //	templates/<TypeName>.tmpl   one entity type's rendering
+//	templates/<name>.tmpl       a named presentation template, used where a
+//	                            query block chooses it; <name> is lower-case
+//	                            kebab-case (query.IsTemplateName)
 //	templates/_layout.tmpl      the layout wrapping every page
 //	templates/_index.tmpl       the site's main page
 //	templates/style.css         the stylesheet
@@ -33,6 +38,7 @@ type source struct {
 type templateSet struct {
 	layout, index source
 	types         map[string]source // project type templates by type name
+	named         map[string]source // named presentation templates by name
 	style         []byte
 	// Project reports whether any project template or stylesheet was found.
 	project bool
@@ -54,6 +60,7 @@ func loadTemplates(root string, s *schema.Schema) (*templateSet, error) {
 		layout: builtin("layout.tmpl"),
 		index:  builtin("index.tmpl"),
 		types:  map[string]source{},
+		named:  map[string]source{},
 		style:  styleCSS,
 	}
 	dir := filepath.Join(root, templatesDir)
@@ -104,6 +111,13 @@ func loadTemplates(root string, s *schema.Schema) (*templateSet, error) {
 			}
 			ts.types[strings.TrimSuffix(name, ".tmpl")] = source{rel, text}
 			ts.project = true
+		case strings.HasSuffix(name, ".tmpl") && query.IsTemplateName(strings.TrimSuffix(name, ".tmpl")):
+			text, err := read()
+			if err != nil {
+				return nil, err
+			}
+			ts.named[strings.TrimSuffix(name, ".tmpl")] = source{rel, text}
+			ts.project = true
 		}
 	}
 	// Parse everything now for early, file-named errors.
@@ -111,12 +125,24 @@ func loadTemplates(root string, s *schema.Schema) (*templateSet, error) {
 	for _, name := range sortedKeys(ts.types) {
 		check = append(check, ts.types[name])
 	}
+	for _, name := range sortedKeys(ts.named) {
+		check = append(check, ts.named[name])
+	}
 	for _, src := range check {
 		if _, err := parse(src, placeholderFuncs); err != nil {
 			return nil, err
 		}
 	}
 	return ts, nil
+}
+
+// unknownNamed explains a named template that does not exist.
+func (ts *templateSet) unknownNamed(name string) string {
+	msg := fmt.Sprintf("unknown template %q: there is no %s/%s.tmpl", name, templatesDir, name)
+	if names := sortedKeys(ts.named); len(names) > 0 {
+		msg += " (named templates: " + strings.Join(names, ", ") + ")"
+	}
+	return msg
 }
 
 func sortedKeys(m map[string]source) []string {
