@@ -71,7 +71,7 @@ func (e *Error) Error() string {
 // Parse parses one Markdown file. It returns nil, nil when the file is not an
 // entity: no frontmatter, or frontmatter without both id and type.
 // Frontmatter that is not valid YAML is an error — the file might be an
-// entity, and silently leaving it out of an export would drop a record.
+// entity, and silently leaving it out of an export would lose it.
 func Parse(path string, raw []byte) (*Entity, error) {
 	front, body, bodyLine, ok := split(raw)
 	if !ok {
