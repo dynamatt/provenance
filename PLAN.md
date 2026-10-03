@@ -23,6 +23,8 @@
 - [ ] E1.7 Query engine spike (decision task)
 - [ ] E1.8 Query blocks
 - [ ] E1.9 Calculated fields
+- [ ] E1.9a Multi-type query blocks
+- [ ] E1.9b Per-query templates
 - [ ] E1.10 `--scope` and Document export
 - [ ] E1.11 Git context and content hash
 - [ ] E1.12 Captioned entities and cross-reference numbering
@@ -370,6 +372,54 @@ extraction, `calculated` sub-fields inside `list` rows.
 `overall_risk_rating` equal to the largest — check by hand from the linked
 SEV/OCC scores. Change an OCC score → both update.
 
+### E1.9a Multi-type query blocks (added 2026-10-03, Matt)
+
+**Deliverables:** a query block's `from` takes one type or a list of types
+(Requirements Spec §4a), and results of every type sort together by
+`order_by`, then ID. Decide how a field present on only some of the selected
+types behaves and record it in Detailed Design §6. Proposal: a name used in
+`where`, `order_by` or `render: field:` must exist on at least one selected
+type, with the same field type wherever it is declared (otherwise exit 2
+naming the types); on an entity whose type lacks it, the field is empty,
+exactly like an unset field (`exists` fails, `not_equals` holds, it sorts
+last, `render: field:` marks it *empty*). Embeds, heading shifts and cycle
+detection are unchanged. **Example-repo PR:** add DOC-0002 *Risk Management
+Summary* with a block `from: [Risk, Requirement]` ordered by `order`; bump
+the pin. **Website:** the query-block page documents the list form.
+
+**Check it yourself:** DOC-0002 interleaves RSK-0001 and the requirements by
+`order` (ties by ID). Add `where: {field: hazard, operator: exists}` → only
+RSK-0001, since Requirement has no `hazard`. Misspell it `hazrd` → exit 2
+naming Risk and Requirement.
+
+### E1.9b Per-query templates (added 2026-10-03, Matt)
+
+**Deliverables:** named presentation templates (Requirements Spec §7).
+Proposal, to record in Detailed Design §7: `templates/<name>.tmpl` where
+`<name>` is lower-case kebab-case (`requirement-checklist`), so it cannot
+collide with a CamelCase type template or an `_`-prefixed site override. A
+named template receives the same entity data as a type template and works
+the same way (functions, heading shift, embeds), and is parsed up front like
+every template. Query-block keys: `template: <name>` for every result, and
+`templates: {<Type>: <name>, …}` per type, unlisted types keeping their
+default. Exit 2 at the block's file and line for an unknown template, a
+`templates` key that is not one of the block's `from` types, `template` and
+`templates` together, or either with `render: id` or `field:`. A named
+template that fails to execute is reported at its own file and line, as type
+templates are. Choosing a template for `![[ID]]` embeds is out of scope;
+raise it if the example needs it. **Example-repo PR:** add
+`templates/requirement-checklist.tmpl` and `templates/risk-summary.tmpl`,
+used by DOC-0002 through `templates:`; DOC-0001 keeps the default
+Requirement template; bump the pin. **Website:** publish the query-block
+page's *Custom templates* section and the `template`/`templates` keys
+(drafted by Matt, 2026-10-03), checked against what shipped.
+
+**Check it yourself:** DOC-0002 shows requirements as checklist rows and
+RSK-0001 as a summary, while DOC-0001 still shows full requirements. Rename
+`templates/risk-summary.tmpl` → exit 2 naming DOC-0002's line and the
+missing template. Remove `templates:` → every result uses its type's
+default.
+
 ### E1.10 `--scope` and Document export
 
 **Deliverables:** scope resolution (Detailed Design §2): an entity file
@@ -442,8 +492,9 @@ diagram to DES-0001.
 ### E1.14 Epic close-out: docs and first binary release
 
 **Deliverables:** website `export` reference page complete (usage, scope
-files, template authoring (type templates, and the stylesheet, layout and
-index overrides) and template functions, context variables);
+files, template authoring (type templates, named presentation templates, and
+the stylesheet, layout and index overrides) and template functions, context
+variables);
 architecture page updated where implementation refined the design; example-repo
 README updated for what now works. GitHub release `v0.1.0-alpha` built by CI
 with a `SHA256SUMS` manifest (format recorded in Detailed Design §4 — it's what
