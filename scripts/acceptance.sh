@@ -74,10 +74,12 @@ cp REQ/REQ-0001.md REQ/copy.md
 expect 2 '^export: duplicate entity ID REQ-0001 in REQ/REQ-0001\.md and REQ/copy\.md$' "$PROV" export website
 rm REQ/copy.md
 
-# E1.3: schema loading and default entity pages.
+# E1.3: schema loading and default entity pages. (Requirement has a project
+# template since E1.6, so the built-in page is checked on a Design.)
 "$PROV" export website >/dev/null
-expect 0 '<tr><th>Status</th><td>approved</td></tr>'  cat _site/entities/REQ-0001.html
-expect 0 '<tr><th>Order</th><td>1</td></tr>'          cat _site/entities/REQ-0001.html
+expect 0 '<tr><th>Status</th><td>approved</td></tr>'  cat _site/entities/DES-0001.html
+expect 0 '<tr><th>Order</th><td>1</td></tr>'          cat _site/entities/DES-0001.html
+expect 0 'A control loop running on the implant'       cat _site/entities/DES-0001.html
 expect 0 'The system shall automatically adjust'       cat _site/entities/REQ-0001.html
 expect 0 'href="entities/REQ-0001.html"'               cat _site/index.html
 sed -i.orig '0,/type: string/s//type: strnig/' schema/Requirement.yaml
@@ -87,7 +89,9 @@ mv schema/Requirement.yaml.orig schema/Requirement.yaml
 # E1.4: links, reverse links and list fields.
 "$PROV" export website >/dev/null
 expect 1 ''                               grep -q '^verified_by:' REQ/REQ-0001.md
-expect 0 '<tr class="incoming"><th>Verified by</th><td><a class="id" href="VER-0001\.html"' cat _site/entities/REQ-0001.html
+# REQ-0001's file never names VER-0001, so any link to it on the page comes
+# from the derived verified_by facet (whichever template renders the page).
+expect 0 'href="VER-0001\.html"'            cat _site/entities/REQ-0001.html
 expect 0 '<th>Verifies</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/VER-0001.html
 expect 0 '<th>Implemented by</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/USR-0001.html
 expect 0 '<td>BES-2201</td>'                cat _site/entities/EVD-0001.html
@@ -108,6 +112,26 @@ cp DOC/DOC-0001.md "$WORK/DOC-0001.md"
 printf '\n![[DOC-0001]]\n' >> DOC/DOC-0001.md
 expect 2 '^export: DOC/DOC-0001\.md: embed cycle DOC-0001 → DOC-0001$' "$PROV" export website
 cp "$WORK/DOC-0001.md" DOC/DOC-0001.md
+
+# E1.6: project templates and site-level overrides.
+"$PROV" export website >/dev/null
+expect 0 '<article class="requirement" id="REQ-0001">' cat _site/entities/REQ-0001.html
+expect 0 '<h2>Implements</h2>'              cat _site/entities/REQ-0001.html
+expect 0 '<h1 class="requirement-title">'   cat _site/entities/REQ-0003.html
+expect 0 '<table class="fields">'           cat _site/entities/DES-0001.html
+expect 0 '<h3 class="requirement-title"><span class="req-id">REQ-0003</span>' cat _site/entities/DOC-0001.html
+expect 0 '<header class="dhf-header">'      cat _site/entities/DES-0001.html
+expect 0 'class="dhf-intro"'                cat _site/index.html
+expect 0 ''                                 sh -c "tr -d '\r' < templates/style.css | cmp - _site/style.css"
+mv templates/style.css "$WORK/style.css"
+expect 0 '^exported website to _site$'      "$PROV" export website
+expect 1 ''                                 cmp -s _site/style.css "$WORK/style.css"
+expect 0 '<header class="dhf-header">'      cat _site/index.html
+mv "$WORK/style.css" templates/style.css
+cp templates/_layout.tmpl "$WORK/_layout.tmpl"
+sed -i 's/{{template "content" .}}/{{template "content" .}/' templates/_layout.tmpl
+expect 2 '^export: templates/_layout\.tmpl:[0-9]+: ' "$PROV" export website
+cp "$WORK/_layout.tmpl" templates/_layout.tmpl
 
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).

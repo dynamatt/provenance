@@ -19,7 +19,7 @@
 - [x] E1.3 Schema loading, default entity pages, golden test
 - [x] E1.4 Links, reverse links and list fields
 - [x] E1.5 Markdown and wikilinks
-- [ ] E1.6 Project templates and template functions
+- [x] E1.6 Project templates and template functions
 - [ ] E1.7 Query engine spike (decision task)
 - [ ] E1.8 Query blocks
 - [ ] E1.9 Calculated fields
