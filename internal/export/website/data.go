@@ -21,6 +21,8 @@ import (
 //	.<PascalCaseFacet>                  every incoming facet, e.g. .ImplementedBy
 //
 // Values: text-like fields are strings, numbers float64, booleans bool; a
+// calculated field is its formula's value (a number, boolean or string), nil
+// when blank or when the formula cannot be evaluated; a
 // link with cardinality one is another entity's map (or nil), with
 // cardinality many a list of them; a list field is a list of row maps keyed
 // by PascalCase sub-field, or, when it names an item type with of:, a list of
@@ -122,7 +124,16 @@ func (d *dataModel) value(v *model.Value) any {
 	f := v.Field
 	switch {
 	case f.Kind == schema.Calculated:
-		return nil // evaluated from E1.9
+		if !v.Present || v.Invalid {
+			return nil // blank, or a formula that cannot be evaluated
+		}
+		switch v.Result {
+		case schema.Number:
+			return v.Num
+		case schema.Boolean:
+			return v.Bool
+		}
+		return v.Str
 	case f.Kind == schema.Link && f.Cardinality == "many":
 		refs := []entityData{}
 		if v.Present && !v.Invalid {

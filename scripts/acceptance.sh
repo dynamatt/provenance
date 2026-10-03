@@ -162,6 +162,19 @@ sed -i.orig 's/operator: equals/operator: "="/' DOC/DOC-0001.md
 expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: query block: unknown operator "=" \(valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists\)$' "$PROV" export website
 mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
 
+# E1.9: calculated fields. RSK-0001's row_rating is severity × occurrence
+# per failure mode (SEV-0003 = 5; OCC-0001 = 1, OCC-0002 = 3) and
+# overall_risk_rating their maximum; both follow a changed score.
+"$PROV" export website >/dev/null
+RSK_FLAT="tr -d '\\n' < _site/entities/RSK-0001.html"
+expect 0 'OCC-0001</a></td><td>5</td></tr>.*OCC-0002</a></td><td>15</td></tr>' sh -c "$RSK_FLAT"
+expect 0 '<tr><th>Overall risk rating</th><td>15</td></tr>' sh -c "$RSK_FLAT"
+sed -i.orig 's/^score: 3/score: 4/' OCC/OCC-0002.md
+"$PROV" export website >/dev/null
+expect 0 'OCC-0002</a></td><td>20</td></tr>' sh -c "$RSK_FLAT"
+expect 0 '<tr><th>Overall risk rating</th><td>20</td></tr>' sh -c "$RSK_FLAT"
+mv OCC/OCC-0002.md.orig OCC/OCC-0002.md
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null

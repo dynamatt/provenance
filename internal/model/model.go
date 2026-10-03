@@ -76,15 +76,18 @@ func (e *Entity) Title() string {
 type Value struct {
 	Field *schema.Field
 	// Present is false when the entity does not set the field (or sets it to
-	// null). Calculated fields are never present: they are never stored.
+	// null). A calculated field is never read from the file: it is present
+	// once its formula has been evaluated to a value (internal/query), and
+	// Result then says what kind of value it is.
 	Present bool
+	Result  schema.Kind // Number, Boolean or String, for a calculated value
 	// Invalid marks a value that does not match its declared type; Raw holds
 	// its source text and Problem says what is wrong.
 	Invalid bool
 	Raw     string
 	Problem string
 
-	Str  string   // string, text, enum, date (YYYY-MM-DD)
+	Str  string   // string, text, enum, date (YYYY-MM-DD), calculated text
 	Num  float64  // number
 	Bool bool     // boolean
 	IDs  []string // link targets; one entry for cardinality one

@@ -20,13 +20,17 @@ type Graph struct {
 	facts    *datalog.Database
 }
 
-// NewGraph prepares entities (sorted by ID) for queries.
-func NewGraph(s *schema.Schema, entities []*model.Entity) *Graph {
+// NewGraph prepares entities (sorted by ID) for queries. It evaluates every
+// calculated field, filling in its model value (see Calculate).
+func NewGraph(s *schema.Schema, entities []*model.Entity) (*Graph, error) {
 	g := &Graph{Schema: s, Entities: entities, byID: make(map[string]*model.Entity, len(entities)), facts: Facts(entities)}
 	for _, e := range entities {
 		g.byID[e.ID] = e
 	}
-	return g
+	if err := g.Calculate(); err != nil {
+		return nil, err
+	}
+	return g, nil
 }
 
 // Entity returns the entity with the ID, or nil.

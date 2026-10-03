@@ -24,6 +24,7 @@ import (
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
+	"github.com/dynamatt/provenance/internal/schema"
 )
 
 //go:embed templates/*.tmpl
@@ -53,11 +54,16 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 	if err != nil {
 		return nil, err
 	}
+	// The graph evaluates calculated fields, which the template data reads.
+	graph, err := query.NewGraph(in.Schema, in.Entities)
+	if err != nil {
+		return nil, err
+	}
 	s := &site{
 		component: in.Repo.Component,
 		templates: ts,
 		data:      buildData(in.Schema, in.Entities),
-		graph:     query.NewGraph(in.Schema, in.Entities),
+		graph:     graph,
 		byID:      make(map[string]*model.Entity, len(in.Entities)),
 		files:     export.Files{"style.css": ts.style},
 	}
@@ -305,7 +311,14 @@ func entityView(e *model.Entity) entityPage {
 }
 
 var fallbackFuncs = template.FuncMap{
-	"kind":   func(v *model.Value) string { return string(v.Field.Kind) },
+	// kind is the field's kind, or for a calculated value the kind of
+	// value its formula gave.
+	"kind": func(v *model.Value) string {
+		if v.Field.Kind == schema.Calculated && v.Result != "" {
+			return string(v.Result)
+		}
+		return string(v.Field.Kind)
+	},
 	"number": formatNumber,
 	// humanize turns a snake_case field name into a label: verified_by ->
 	// "Verified by".

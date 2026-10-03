@@ -82,3 +82,39 @@ func TestQueryBlockErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestCalculatedFieldsRender(t *testing.T) {
+	files, err := exportRepo(t, map[string]string{
+		"schema/Item.yaml": `type: Item
+fields:
+  - {name: title, type: string}
+  - {name: price, type: number}
+  - {name: total, type: calculated, formula: "price * 2"}
+  - {name: dear, type: calculated, formula: "total > 10"}
+  - {name: broken, type: calculated, formula: "price +"}
+`,
+		"templates/_index.tmpl": `{{range .Types}}{{range .Entities}}[{{.ID}} {{.Total}} {{.Dear}} {{.Broken}}]{{end}}{{end}}`,
+		"I/I-1.md":              "---\nid: I-1\ntype: Item\ntitle: Cheap\nprice: 4\n---\nTotal: [[I-1#total]], dear: [[I-1#dear]].\n",
+		"I/I-2.md":              "---\nid: I-2\ntype: Item\ntitle: Unpriced\n---\n",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(files["entities/I-1.html"])
+	for _, want := range []string{
+		"<tr><th>Total</th><td>8</td></tr>",
+		"<tr><th>Dear</th><td>false</td></tr>",
+		`<tr><th>Broken</th><td><span class="invalid-value">price &#43;</span> <span class="invalid">formula: column 8: unexpected end of formula</span></td></tr>`,
+		`Total: <a class="ref" href="I-1.html" title="Cheap">8</a>, dear: <a class="ref" href="I-1.html" title="Cheap">false</a>.`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("I-1 page missing %s\n%s", want, page)
+		}
+	}
+	if !strings.Contains(string(files["entities/I-2.html"]), `<tr><th>Total</th><td><span class="absent">—</span></td></tr>`) {
+		t.Error("blank calculated value is not shown as absent")
+	}
+	if got := string(files["index.html"]); !strings.Contains(got, "[I-1 8 false ][I-2   ]") {
+		t.Errorf("template data = %s", got)
+	}
+}

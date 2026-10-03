@@ -68,9 +68,13 @@ func load(t testing.TB, entities map[string]string) []*model.Entity {
 }
 
 func loadSchema(t testing.TB, entities map[string]string) (*schema.Schema, []*model.Entity) {
+	return loadWith(t, exampleSchema, entities)
+}
+
+func loadWith(t testing.TB, schemaFiles, entities map[string]string) (*schema.Schema, []*model.Entity) {
 	t.Helper()
 	root := t.TempDir()
-	for rel, content := range exampleSchema {
+	for rel, content := range schemaFiles {
 		p := filepath.Join(root, filepath.FromSlash(rel))
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 			t.Fatal(err)

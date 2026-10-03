@@ -21,6 +21,8 @@ import (
 //	                      incoming facet Name (a reverse link); T need not
 //	                      resolve
 //	row(E, List, R)       R is a row of entity E's list field List
+//	item(N, List, I, V)   item I (from 0) of a list that names an item
+//	                      type; field holds the same values, but as a set
 //
 // A node is an entity's ID (a string) or a list row (a datalog Node value),
 // so a row's sub-fields and links read exactly like an entity's. Values not
@@ -31,6 +33,7 @@ const (
 	RelField  = "field"
 	RelLink   = "link"
 	RelRow    = "row"
+	RelItem   = "item"
 )
 
 // RowNode names row i of entity id's list field list.
@@ -81,9 +84,10 @@ func addValue(db *datalog.Database, node datalog.Value, v *model.Value) {
 			db.MustAdd(RelLink, node, name, datalog.String(id))
 		}
 	case schema.List:
-		for _, item := range v.Items {
+		for i, item := range v.Items {
 			if val, ok := Scalar(item); ok {
 				db.MustAdd(RelField, node, name, val)
+				db.MustAdd(RelItem, node, name, datalog.Number(float64(i)), val)
 			}
 		}
 	default:
@@ -98,7 +102,11 @@ func Scalar(v *model.Value) (datalog.Value, bool) {
 	if !v.Present || v.Invalid {
 		return datalog.Value{}, false
 	}
-	switch v.Field.Kind {
+	kind := v.Field.Kind
+	if kind == schema.Calculated {
+		kind = v.Result
+	}
+	switch kind {
 	case schema.Number:
 		return datalog.Number(v.Num), true
 	case schema.Boolean:

@@ -14,7 +14,11 @@ func graph(t *testing.T, extra map[string]string) *Graph {
 	t.Helper()
 	all := maps.Clone(exampleGraph)
 	maps.Copy(all, extra)
-	return NewGraph(loadSchema(t, all))
+	g, err := NewGraph(loadSchema(t, all))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return g
 }
 
 func mustYAML(t *testing.T, src string) *yaml.Node {

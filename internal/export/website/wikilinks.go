@@ -138,15 +138,18 @@ func fieldText(e *model.Entity, name string) (string, bool) {
 }
 
 func valueText(v *model.Value) string {
+	kind := v.Field.Kind
 	switch {
-	case v.Field.Kind == schema.Calculated:
-		return "calculated"
 	case !v.Present:
 		return ""
+	case v.Invalid && kind == schema.Calculated:
+		return "" // the formula, not a value
 	case v.Invalid:
 		return v.Raw
+	case kind == schema.Calculated:
+		kind = v.Result
 	}
-	switch v.Field.Kind {
+	switch kind {
 	case schema.Number:
 		return formatNumber(v.Num)
 	case schema.Boolean:
