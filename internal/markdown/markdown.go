@@ -8,6 +8,7 @@ package markdown
 
 import (
 	"bytes"
+	"strconv"
 	"strings"
 
 	"github.com/yuin/goldmark"
@@ -31,8 +32,16 @@ type Link struct {
 	Embed bool
 }
 
-// Resolver renders wikilinks. It writes HTML directly; anything it writes is
-// trusted.
+// QueryBlock is a fenced ```query block (High-Level Design §4.3a).
+type QueryBlock struct {
+	// Source is the block's content, without the fences.
+	Source string
+	// Line is the line of Markdown source the content starts on, from 1.
+	Line int
+}
+
+// Resolver renders wikilinks and query blocks. It writes HTML directly;
+// anything it writes is trusted.
 type Resolver interface {
 	// Reference renders an inline [[ID]], [[ID|label]] or [[ID#field]].
 	Reference(w util.BufWriter, l Link) error
@@ -41,6 +50,8 @@ type Resolver interface {
 	// MisplacedEmbed renders ![[ID]] written inside running text, where a
 	// block cannot go.
 	MisplacedEmbed(w util.BufWriter, l Link) error
+	// Query renders a query block's results.
+	Query(w util.BufWriter, q QueryBlock) error
 }
 
 // Convert renders src to HTML, resolving wikilinks through r.
@@ -49,7 +60,10 @@ func Convert(src string, r Resolver) (string, error) {
 		goldmark.WithExtensions(extension.Table),
 		goldmark.WithParserOptions(
 			parser.WithInlineParsers(util.Prioritized(&wikilinkParser{}, 199)),
-			parser.WithASTTransformers(util.Prioritized(&embedTransformer{}, 100)),
+			parser.WithASTTransformers(
+				util.Prioritized(&embedTransformer{}, 100),
+				util.Prioritized(&queryTransformer{}, 101),
+			),
 		),
 		goldmark.WithRendererOptions(
 			html.WithUnsafe(), // raw HTML passes through (Detailed Design §7)
@@ -172,6 +186,45 @@ func soleEmbed(p *ast.Paragraph, source []byte) (Link, bool) {
 	return found.Link, true
 }
 
+// queryNode replaces a fenced code block whose info string is "query".
+type queryNode struct {
+	ast.BaseBlock
+	Query QueryBlock
+}
+
+var kindQuery = ast.NewNodeKind("QueryBlock")
+
+func (n *queryNode) Kind() ast.NodeKind { return kindQuery }
+
+func (n *queryNode) Dump(source []byte, level int) {
+	ast.DumpHelper(n, source, level, map[string]string{"Line": strconv.Itoa(n.Query.Line)}, nil)
+}
+
+type queryTransformer struct{}
+
+func (t *queryTransformer) Transform(doc *ast.Document, reader text.Reader, _ parser.Context) {
+	source := reader.Source()
+	var blocks []*ast.FencedCodeBlock
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if b, ok := n.(*ast.FencedCodeBlock); ok && entering && string(b.Language(source)) == "query" {
+			blocks = append(blocks, b)
+		}
+		return ast.WalkContinue, nil
+	})
+	for _, b := range blocks {
+		var src bytes.Buffer
+		lines := b.Lines()
+		for i := 0; i < lines.Len(); i++ {
+			seg := lines.At(i)
+			src.Write(seg.Value(source))
+		}
+		// Content starts on the line after the opening fence.
+		start := b.Info.Segment.Start
+		line := bytes.Count(source[:start], []byte("\n")) + 2
+		b.Parent().ReplaceChild(b.Parent(), b, &queryNode{Query: QueryBlock{Source: src.String(), Line: line}})
+	}
+}
+
 type wikilinkRenderer struct{ r Resolver }
 
 func (r *wikilinkRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
@@ -187,6 +240,12 @@ func (r *wikilinkRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer
 			err = r.r.Reference(w, l)
 		}
 		return ast.WalkSkipChildren, err
+	})
+	reg.Register(kindQuery, func(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		return ast.WalkSkipChildren, r.r.Query(w, n.(*queryNode).Query)
 	})
 	reg.Register(kindEmbed, func(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {

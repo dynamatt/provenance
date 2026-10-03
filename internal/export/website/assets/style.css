@@ -49,7 +49,7 @@ code { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 0.9
 .body table { width: auto; }
 
 section.embed { margin: 16px 0; padding: 4px 16px; border-left: 3px solid var(--rule); }
-.embed-missing { color: var(--muted); }
+.embed-missing, .query-empty { color: var(--muted); }
 .placeholder, .absent { color: var(--muted); font-style: italic; }
 .invalid, .unresolved { color: #a4262c; font-size: 0.85em; }
 .unresolved::before { content: "("; }

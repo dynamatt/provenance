@@ -181,3 +181,30 @@ func (db *Database) overlay(derived map[string]bool) *Database {
 	}
 	return out
 }
+
+// Lookup returns the tuples of rel whose first arguments equal prefix,
+// sorted, using an index.
+func (db *Database) Lookup(rel string, prefix ...Value) []Tuple {
+	r := db.rels[rel]
+	if r == nil || len(prefix) > r.Arity {
+		return nil
+	}
+	var mask uint64
+	for i := range prefix {
+		mask |= 1 << i
+	}
+	var key []byte
+	for _, v := range prefix {
+		key = appendKey(key, v)
+	}
+	var out []Tuple
+	if mask == 0 {
+		out = slices.Clone(r.tuples)
+	} else {
+		for _, i := range r.lookup(mask, key) {
+			out = append(out, r.tuples[i])
+		}
+	}
+	slices.SortFunc(out, compareTuples)
+	return out
+}

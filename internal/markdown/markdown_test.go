@@ -27,6 +27,11 @@ func (f fake) MisplacedEmbed(w util.BufWriter, l Link) error {
 	return nil
 }
 
+func (f fake) Query(w util.BufWriter, q QueryBlock) error {
+	fmt.Fprintf(w, "{query line %d: %q}\n", q.Line, q.Source)
+	return nil
+}
+
 func convert(t *testing.T, src string) string {
 	t.Helper()
 	out, err := Convert(src, fake{})
@@ -87,5 +92,19 @@ func TestEmbedErrorStopsConversion(t *testing.T) {
 	_, err := Convert("![[DOC-1]]", fake{err: boom})
 	if !errors.Is(err, boom) {
 		t.Errorf("err = %v", err)
+	}
+}
+
+func TestQueryBlocks(t *testing.T) {
+	src := "# Requirements\n\nAll approved:\n\n```query\nfrom: Requirement\norder_by: order\n```\n\n```yaml\nfrom: not a query\n```\n\n- item\n\n  ```query\n  from: Design\n  ```\n"
+	got := convert(t, src)
+	for _, want := range []string{
+		"{query line 6: \"from: Requirement\\norder_by: order\\n\"}",
+		"<pre><code class=\"language-yaml\">from: not a query\n</code></pre>",
+		"{query line 17: \"from: Design\\n\"}", // indentation inside the list item is removed
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %s in\n%s", want, got)
+		}
 	}
 }

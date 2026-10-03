@@ -22,6 +22,7 @@ import (
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/markdown"
 	"github.com/dynamatt/provenance/internal/model"
+	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
 )
 
@@ -56,6 +57,7 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		component: in.Repo.Component,
 		templates: ts,
 		data:      buildData(in.Schema, in.Entities),
+		graph:     query.NewGraph(in.Schema, in.Entities),
 		byID:      make(map[string]*model.Entity, len(in.Entities)),
 		files:     export.Files{"style.css": ts.style},
 	}
@@ -90,6 +92,7 @@ type site struct {
 	component repo.Component
 	templates *templateSet
 	data      *dataModel
+	graph     *query.Graph
 	byID      map[string]*model.Entity
 	files     export.Files
 }
@@ -167,12 +170,14 @@ func (s *site) renderIndex(entities []*model.Entity) (string, error) {
 
 // renderCtx is the state of rendering one entity: the chain of entities
 // being rendered, outermost first, for embed cycle detection; where links
-// point from; and the rendered embeds awaiting splicing.
+// point from; the rendered embeds awaiting splicing; and the Markdown being
+// converted, to place query errors in the file.
 type renderCtx struct {
 	site      *site
 	chain     []*model.Entity
 	linkBase  string
 	fragments []string
+	source    string
 }
 
 // renderEntity renders e through its project template or the built-in
@@ -221,7 +226,10 @@ func (ctx *renderCtx) markdown(v any) (template.HTML, error) {
 	if !ok {
 		return "", fmt.Errorf("markdown: want text, got %T", v)
 	}
+	prev := ctx.source
+	ctx.source = src
 	out, err := markdown.Convert(src, &resolver{ctx: ctx})
+	ctx.source = prev
 	return template.HTML(out), err
 }
 

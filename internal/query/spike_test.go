@@ -31,6 +31,17 @@ fields:
   - {name: implements, type: link, target: [UserNeed], cardinality: many, reverse_name: implemented_by}
   - {name: order, type: number}
 `,
+	"schema/Evidence.yaml": `type: Evidence
+fields:
+  - {name: execution_date, type: date}
+  - {name: passed, type: boolean}
+  - {name: verifies, type: link, target: [Requirement], cardinality: one, reverse_name: evidenced_by}
+  - name: equipment_used
+    type: list
+    fields:
+      - {name: serial, type: string}
+      - {name: calibration_due_date, type: date}
+`,
 	"schema/SeverityLevel.yaml":   "type: SeverityLevel\nfields:\n  - {name: score, type: number}\n",
 	"schema/OccurrenceLevel.yaml": "type: OccurrenceLevel\nfields:\n  - {name: score, type: number}\n",
 	"schema/Risk.yaml": `type: Risk
@@ -52,6 +63,11 @@ fields:
 
 // load builds the typed model from schema files and entity files.
 func load(t testing.TB, entities map[string]string) []*model.Entity {
+	_, built := loadSchema(t, entities)
+	return built
+}
+
+func loadSchema(t testing.TB, entities map[string]string) (*schema.Schema, []*model.Entity) {
 	t.Helper()
 	root := t.TempDir()
 	for rel, content := range exampleSchema {
@@ -81,7 +97,7 @@ func load(t testing.TB, entities map[string]string) []*model.Entity {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return built
+	return s, built
 }
 
 func sortByID(es []*entity.Entity) {

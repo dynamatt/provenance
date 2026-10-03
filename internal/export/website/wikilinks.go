@@ -69,6 +69,11 @@ func (r *resolver) Embed(w util.BufWriter, l markdown.Link) error {
 		_, _ = w.WriteString("</p>\n")
 		return nil
 	}
+	return r.embed(w, target)
+}
+
+// embed renders target in full, wrapped in an embed section.
+func (r *resolver) embed(w util.BufWriter, target *model.Entity) error {
 	for i, e := range r.ctx.chain {
 		if e == target {
 			chain := []string{}

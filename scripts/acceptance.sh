@@ -147,6 +147,21 @@ sed -i.orig 's/of: Equipment/of: Equipmnet/' schema/VerificationEvidence.yaml
 expect 2 '^export: schema/VerificationEvidence\.yaml:[0-9]+: field "equipment_used": unknown list item type "Equipmnet"' "$PROV" export website
 mv schema/VerificationEvidence.yaml.orig schema/VerificationEvidence.yaml
 
+# E1.8: query blocks. DOC-0001's Requirements section embeds the approved
+# requirements in order; the result is live, so an uncommitted status change
+# shows on the next export; a bad block fails at its file and line.
+"$PROV" export website >/dev/null
+DOC_FLAT="tr -d '\\n' < _site/entities/DOC-0001.html"
+expect 0 '<h2>Requirements</h2><p>[^<]*</p><div class="query"><section class="embed" data-entity="REQ-0001">.*</section><section class="embed" data-entity="REQ-0002">' sh -c "$DOC_FLAT"
+expect 0 '^1$' sh -c "grep -o 'data-entity=\"REQ-0003\"' _site/entities/DOC-0001.html | wc -l"  # only the ![[REQ-0003]] embed
+sed -i.orig 's/^status: approved/status: draft/' REQ/REQ-0002.md
+"$PROV" export website >/dev/null
+expect 1 '' grep -q 'data-entity="REQ-0002"' _site/entities/DOC-0001.html
+mv REQ/REQ-0002.md.orig REQ/REQ-0002.md
+sed -i.orig 's/operator: equals/operator: "="/' DOC/DOC-0001.md
+expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: query block: unknown operator "=" \(valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists\)$' "$PROV" export website
+mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null

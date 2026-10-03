@@ -36,13 +36,52 @@ for the NeuroPulse system, decomposed from the user needs in <a class="ref" href
 and <a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>.</p>
 <h2>Requirements</h2>
 <p>All approved requirements, in author-assigned order:</p>
-<pre><code class="language-query">from: Requirement
-where:
-  field: status
-  operator: equals
-  value: approved
-order_by: order
-</code></pre>
+<div class="query">
+<section class="embed" data-entity="REQ-0001">
+<article class="requirement" id="REQ-0001">
+<h3 class="requirement-title"><span class="req-id">REQ-0001</span> Closed-loop amplitude adjustment</h3>
+<p class="requirement-meta">
+<span class="status status-approved">approved</span> · verified by test
+</p>
+<div class="statement"><p>The system shall automatically adjust stimulation amplitude within a
+pre-configured safe range, using the measured evoked neural response as
+feedback, without requiring clinician intervention.</p>
+</div>
+<h4>Implements</h4>
+<ul>
+<li><a class="ref" href="USR-0001.html" title="Reduced need for in-clinic titration visits">USR-0001</a>: Reduced need for in-clinic titration visits</li>
+</ul>
+<h4>Verified by</h4>
+<ul>
+<li><a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>: Bench verification of closed-loop amplitude adjustment</li>
+</ul>
+</article>
+</section>
+<section class="embed" data-entity="REQ-0002">
+<article class="requirement" id="REQ-0002">
+<h3 class="requirement-title"><span class="req-id">REQ-0002</span> Single-fault amplitude ceiling</h3>
+<p class="requirement-meta">
+<span class="status status-approved">approved</span> · verified by test, analysis
+</p>
+<div class="statement"><p>The system shall not deliver a stimulation amplitude exceeding 8 mA under
+any single-fault condition, including loss of the sense-electrode feedback
+signal used by the closed-loop control algorithm (<a class="ref" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a>).</p>
+</div>
+<h4>Implements</h4>
+<ul>
+<li><a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>: No unexpected increases in stimulation intensity</li>
+</ul>
+<h4>Verified by</h4>
+<ul>
+<li><a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a>: Bench verification of single-fault amplitude ceiling</li>
+</ul>
+<h4>Refined by</h4>
+<ul>
+<li><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a>: Amplitude ceiling — subsystem allocation</li>
+</ul>
+</article>
+</section>
+</div>
 <h2>Amplitude Ceiling — Subsystem Detail</h2>
 <p>The system-level ceiling is <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">Single-fault amplitude ceiling</a>, allocated to the subsystem
 level as an independent hardware safeguard:</p>
