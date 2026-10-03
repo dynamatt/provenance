@@ -120,7 +120,28 @@ func TestLoadErrors(t *testing.T) {
 		{"link without cardinality", "schema/R.yaml", "type: R\nfields:\n  - {name: a, type: link, target: [R]}\n",
 			`schema/R.yaml:3: field "a": link cardinality must be one or many, got ""`},
 		{"list without fields", "schema/R.yaml", "type: R\nfields:\n  - {name: rows, type: list}\n",
-			`schema/R.yaml:3: field "rows": a list needs fields for its rows`},
+			`schema/R.yaml:3: field "rows": a list needs fields: for its rows, or of: naming its item type`},
+		{"list with fields and of", "schema/R.yaml", "type: R\nfields:\n  - name: rows\n    type: list\n    of: string\n    fields:\n      - {name: x, type: string}\n",
+			`schema/R.yaml:5: field "rows": a list takes fields: or of:, not both`},
+		{"of on a non-list", "schema/R.yaml", "type: R\nfields:\n  - {name: a, type: string, of: number}\n",
+			`schema/R.yaml:3: field "a": of: applies only to type: list`},
+		{"unknown item type", "schema/R.yaml", "type: R\nfields:\n  - {name: a, type: list, of: strnig}\n",
+			`schema/R.yaml:3: field "a": unknown list item type "strnig" (expected string, text, number, date, boolean, or an enum: ApprovalStatus, or a record: Equipment)`},
+		{"list of links", "schema/R.yaml", "type: R\nfields:\n  - {name: a, type: list, of: link}\n",
+			`schema/R.yaml:3: field "a": a list of links is declared as type: link with cardinality: many`},
+		{"list of entities", "schema/R.yaml", "type: R\nfields:\n  - {name: a, type: list, of: R}\n",
+			`schema/R.yaml:3: field "a": a list cannot hold R entities; link to them with type: link, target: [R], cardinality: many`},
+		{"record as a field type", "schema/R.yaml", "type: R\nfields:\n  - {name: a, type: Equipment}\n",
+			`schema/R.yaml:3: field "a": record Equipment holds a list's rows; declare type: list with of: Equipment`},
+		{"bad record field", "schema/records/Part.yaml", "record: Part\nfields:\n  - {name: x, type: nope}\n",
+			`schema/records/Part.yaml:3: field "x" in record "Part": unknown type "nope"`},
+		{"body in a record", "schema/records/Part.yaml", "record: Part\nfields:\n  - {name: x, type: text, body: true}\n",
+			`schema/records/Part.yaml:3: field "x" in record "Part": body: true is only allowed on a top-level text field`},
+		{"missing record name", "schema/records/Part.yaml", "fields: []\n", "schema/records/Part.yaml:1: missing record name (record: <Name>)"},
+		{"record named like builtin", "schema/records/Part.yaml", "record: date\n", "schema/records/Part.yaml:1: record date has the same name as a built-in field type"},
+		{"record named like enum", "schema/records/Part.yaml", "record: ApprovalStatus\n", "schema/records/Part.yaml:1: record ApprovalStatus has the same name as the enum declared in schema/enums/ApprovalStatus.yaml"},
+		{"duplicate record", "schema/records/Part.yaml", "record: Equipment\n", "schema/records/Part.yaml:1: record Equipment is already declared in schema/records/Equipment.yaml"},
+		{"type named like record", "schema/S.yaml", "type: Equipment\n", "schema/S.yaml:1: type Equipment has the same name as the record declared in schema/records/Equipment.yaml"},
 		{"bad sub-field", "schema/R.yaml", "type: R\nfields:\n  - name: rows\n    type: list\n    fields:\n      - {name: x, type: nope}\n",
 			`schema/R.yaml:6: field "x" in list "rows": unknown type "nope"`},
 		{"type is not a mapping", "schema/R.yaml", "- a\n", "schema/R.yaml: expected a mapping"},
@@ -133,12 +154,89 @@ func TestLoadErrors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
 			write(t, root, "schema/enums/ApprovalStatus.yaml", statusEnum)
+			write(t, root, "schema/records/Equipment.yaml", "record: Equipment\nfields:\n  - {name: name, type: string}\n")
 			write(t, root, tc.file, tc.content)
 			_, err := Load(root)
 			if err == nil || !strings.HasPrefix(err.Error(), tc.want) {
 				t.Errorf("err = %v\nwant prefix %s", err, tc.want)
 			}
 		})
+	}
+}
+
+func TestListOf(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/enums/ApprovalStatus.yaml", statusEnum)
+	write(t, root, "schema/records/Equipment.yaml", `record: Equipment
+fields:
+  - {name: name, type: string}
+  - {name: parts, type: list, of: Part}
+`)
+	write(t, root, "schema/records/Part.yaml", "record: Part\nfields:\n  - {name: serial, type: string}\n")
+	write(t, root, "schema/Evidence.yaml", `type: Evidence
+fields:
+  - {name: equipment_used, type: list, of: Equipment}
+  - {name: standards, type: list, of: string}
+  - {name: readings, type: list, of: number}
+  - {name: reviews, type: list, of: ApprovalStatus}
+`)
+	s, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ev := s.Types["Evidence"]
+	eq := ev.Field("equipment_used")
+	if eq.Kind != List || eq.Record != "Equipment" || eq.Elem != nil || len(eq.Fields) != 2 || eq.Fields[0] != s.Records["Equipment"].Fields[0] {
+		t.Errorf("equipment_used = %+v, want the Equipment record's rows", eq)
+	}
+	if parts := eq.Fields[1]; parts.Record != "Part" || len(parts.Fields) != 1 {
+		t.Errorf("record field parts = %+v, want the Part record's rows", parts)
+	}
+	for name, want := range map[string]string{"standards": "string:", "readings": "number:", "reviews": "enum:ApprovalStatus"} {
+		f := ev.Field(name)
+		if f.Kind != List || f.Elem == nil || f.Fields != nil {
+			t.Errorf("%s = %+v, want an item list", name, f)
+			continue
+		}
+		if got := string(f.Elem.Kind) + ":" + f.Elem.EnumName; got != want || f.Elem.Name != name {
+			t.Errorf("%s items = %s %q, want %s named %q", name, got, f.Elem.Name, want, name)
+		}
+	}
+}
+
+func TestRecordContainingItselfFails(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/records/A.yaml", "record: A\nfields:\n  - {name: bs, type: list, of: B}\n")
+	write(t, root, "schema/records/B.yaml", "record: B\nfields:\n  - {name: as, type: list, of: A}\n")
+	_, err := Load(root)
+	want := `schema/records/B.yaml:3: field "as" in record "B": record A contains itself (A → B → A)`
+	if err == nil || err.Error() != want {
+		t.Errorf("err = %v\nwant %s", err, want)
+	}
+}
+
+func TestFacetsFromRecordRows(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/records/Mode.yaml", `record: Mode
+fields:
+  - {name: control, type: link, target: [Protocol], cardinality: one, reverse_name: verifies}
+`)
+	write(t, root, "schema/Risk.yaml", "type: Risk\nfields:\n  - {name: modes, type: list, of: Mode}\n")
+	write(t, root, "schema/Protocol.yaml", "type: Protocol\n")
+	s, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := s.Types["Protocol"].Facets
+	if len(f) != 1 || f[0].Name != "verifies" || f[0].Sources[0].Type.Name != "Risk" || f[0].Sources[0].List.Name != "modes" {
+		t.Fatalf("Protocol facets = %+v", f)
+	}
+
+	// A clash is reported where the link is declared: in the record.
+	write(t, root, "schema/Protocol.yaml", "type: Protocol\nfields:\n  - {name: verifies, type: string}\n")
+	_, err = Load(root)
+	if err == nil || !strings.HasPrefix(err.Error(), `schema/records/Mode.yaml:3: field "control": reverse_name "verifies" repeats`) {
+		t.Errorf("err = %v", err)
 	}
 }
 

@@ -23,7 +23,8 @@ import (
 // Values: text-like fields are strings, numbers float64, booleans bool; a
 // link with cardinality one is another entity's map (or nil), with
 // cardinality many a list of them; a list field is a list of row maps keyed
-// by PascalCase sub-field. An unresolved link target is a map with Resolved
+// by PascalCase sub-field, or, when it names an item type with of:, a list of
+// item values. An unresolved link target is a map with Resolved
 // false and every field its declared target types have set to nil, so a
 // template written for resolved targets still renders.
 type entityData = map[string]any
@@ -130,6 +131,14 @@ func (d *dataModel) value(v *model.Value) any {
 			}
 		}
 		return refs
+	case f.Kind == schema.List && f.Elem != nil:
+		items := []any{}
+		if v.Present && !v.Invalid {
+			for _, item := range v.Items {
+				items = append(items, d.value(item))
+			}
+		}
+		return items
 	case f.Kind == schema.List:
 		rows := []entityData{}
 		if v.Present && !v.Invalid {

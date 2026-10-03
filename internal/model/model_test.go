@@ -257,3 +257,58 @@ fields:
 		t.Errorf("R-3 should have an empty children facet, got %+v", got)
 	}
 }
+
+func TestListItemsAndRecordRows(t *testing.T) {
+	es := buildRepo(t, map[string]string{
+		"schema/enums/Status.yaml":  "enum: Status\nvalues: [draft, approved]\n",
+		"schema/records/Probe.yaml": "record: Probe\nfields:\n  - {name: serial, type: string}\n  - {name: due, type: date}\n",
+		"schema/Ev.yaml": `type: Ev
+fields:
+  - {name: probes, type: list, of: Probe}
+  - {name: standards, type: list, of: string}
+  - {name: readings, type: list, of: number}
+  - {name: reviews, type: list, of: Status}
+  - {name: empty, type: list, of: string}
+  - {name: scalar, type: list, of: string}
+`,
+		"E/E-1.md": `---
+id: E-1
+type: Ev
+probes:
+  - {serial: P-1, due: 2026-11-01}
+standards: [IEC 60601-1, ISO 14971]
+readings: [1, 2.5, high]
+reviews: [draft, approved]
+empty: []
+scalar: IEC 62304
+---
+`,
+	})
+	e := es[0]
+	if rows := e.Field("probes").Rows; len(rows) != 1 || rows[0][0].Str != "P-1" || rows[0][1].Str != "2026-11-01" {
+		t.Errorf("probes rows = %+v", rows)
+	}
+	items := func(name string) []*Value {
+		v := e.Field(name)
+		if !v.Present || v.Invalid || v.Rows != nil {
+			t.Errorf("%s = %+v, want a valid item list", name, v)
+		}
+		return v.Items
+	}
+	if it := items("standards"); len(it) != 2 || it[0].Str != "IEC 60601-1" || it[1].Str != "ISO 14971" {
+		t.Errorf("standards = %+v", it)
+	}
+	if it := items("reviews"); len(it) != 2 || it[1].Str != "approved" || it[1].Field.Kind != schema.Enum {
+		t.Errorf("reviews = %+v", it)
+	}
+	// A bad item is marked on the item; the list stays valid.
+	if it := items("readings"); len(it) != 3 || it[1].Num != 2.5 || it[1].Invalid || !it[2].Invalid || it[2].Raw != "high" {
+		t.Errorf("readings = %+v", it)
+	}
+	if it := items("empty"); len(it) != 0 {
+		t.Errorf("empty = %+v", it)
+	}
+	if v := e.Field("scalar"); !v.Invalid || v.Problem != "not a list" || v.Raw != "IEC 62304" {
+		t.Errorf("scalar = %+v, want invalid: not a list", v)
+	}
+}
