@@ -59,6 +59,13 @@ func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 	if err != nil {
 		return r.queryError(q, err)
 	}
+	// Every chosen template must exist, whether or not anything matches:
+	// a typo must not wait for data to surface.
+	for _, c := range b.Templates {
+		if _, ok := r.ctx.site.templates.named[c.Name]; !ok {
+			return r.queryError(q, &query.Error{Line: c.Line, Msg: r.ctx.site.templates.unknownNamed(c.Name)})
+		}
+	}
 	results, err := g.Run(b)
 	if err != nil {
 		return r.queryError(q, err)
@@ -75,7 +82,7 @@ func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 	case query.RenderFull:
 		_, _ = w.WriteString("<div class=\"query\">\n")
 		for _, e := range results {
-			if err := r.embed(w, e); err != nil {
+			if err := r.embed(w, e, b.TemplateFor(e.Type).Name); err != nil {
 				return err
 			}
 		}

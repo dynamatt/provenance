@@ -79,7 +79,7 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		return nil, err
 	}
 	for _, ent := range in.Entities {
-		content, err := s.renderEntity(ent, []*model.Entity{ent})
+		content, err := s.renderEntity(ent, []*model.Entity{ent}, "")
 		if err != nil {
 			return nil, err
 		}
@@ -186,13 +186,18 @@ type renderCtx struct {
 	source    string
 }
 
-// renderEntity renders e through its project template or the built-in
-// fallback, with embeds spliced in. Headings are relative to e: <h1> is its
-// top level. chain ends with e.
-func (s *site) renderEntity(e *model.Entity, chain []*model.Entity) (string, error) {
+// renderEntity renders e through the named template (a query's choice,
+// already checked to exist), else its project type template, else the
+// built-in fallback, with embeds spliced in. Headings are relative to e:
+// <h1> is its top level. chain ends with e.
+func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named string) (string, error) {
 	ctx := &renderCtx{site: s, chain: chain}
 	var b bytes.Buffer
-	if src, ok := s.templates.types[e.Type]; ok {
+	src, ok := s.templates.types[e.Type]
+	if named != "" {
+		src, ok = s.templates.named[named]
+	}
+	if ok {
 		t, err := parse(src, ctx.funcs())
 		if err != nil {
 			return "", err

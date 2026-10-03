@@ -104,7 +104,7 @@ func TestQueryBlockErrors(t *testing.T) {
 			`line 4: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists)`},
 		{"no from", "where: {field: status, operator: exists}\n", "line 1: query block has no from: <type>"},
 		{"unknown type", "from: Requirment\n", `line 1: from: unknown type "Requirment" (types: Evidence, OccurrenceLevel, Requirement, Risk, SeverityLevel, UserNeed)`},
-		{"unknown key", "from: Requirement\nsort: order\n", `line 2: unknown key "sort" in a query block (expected from, where, order_by, render)`},
+		{"unknown key", "from: Requirement\nsort: order\n", `line 2: unknown key "sort" in a query block (expected from, where, order_by, render, template, templates)`},
 		{"unknown field", "from: Requirement\nwhere: {field: state, operator: exists}\n", `line 2: Requirement has no field "state" (fields: id, type, title, status, implements, order, evidenced_by)`},
 		{"enum value", "from: Requirement\nwhere: {field: status, operator: equals, value: aproved}\n", `line 2: "aproved" is not a value of ApprovalStatus (values: draft, in_review, approved, deprecated)`},
 		{"number as text", "from: Requirement\nwhere: {field: order, operator: equals, value: \"2\"}\n", `line 2: order is a number; "2" is not`},
@@ -206,6 +206,45 @@ func TestMultiTypeQueryBlockErrors(t *testing.T) {
 				}
 				return
 			}
+			if err == nil || !strings.HasPrefix(err.Error(), tc.want) {
+				t.Fatalf("got  %v\nwant %s…", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestQueryBlockTemplates(t *testing.T) {
+	g := graph(t, evidence)
+	b, err := ParseBlock("from: [Requirement, Evidence]\ntemplates:\n  Evidence: evidence-row\n", g.Schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := b.TemplateFor("Evidence"); got != (TemplateChoice{Type: "Evidence", Name: "evidence-row", Line: 3}) {
+		t.Errorf("Evidence: %+v", got)
+	}
+	if got := b.TemplateFor("Requirement"); got.Name != "" {
+		t.Errorf("Requirement should keep its default, got %+v", got)
+	}
+	b, err = ParseBlock("from: [Requirement, Evidence]\ntemplate: compact\n", g.Schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, typ := range []string{"Requirement", "Evidence"} {
+		if got := b.TemplateFor(typ).Name; got != "compact" {
+			t.Errorf("%s: template %q, want compact", typ, got)
+		}
+	}
+
+	for _, tc := range []struct{ name, src, want string }{
+		{"both keys", "from: Requirement\ntemplate: a\ntemplates: {Requirement: b}\n", "line 3: use template: (every result) or templates: (per type), not both"},
+		{"with render id", "from: Requirement\nrender: id\ntemplate: a\n", "line 2: template: applies only to render: full"},
+		{"type not selected", "from: Requirement\ntemplates: {Evidence: a}\n", "line 2: templates: Evidence is not selected by from (Requirement)"},
+		{"type template name", "from: Requirement\ntemplate: Requirement\n", `line 2: template: "Requirement" is not a template name: named templates are lower-case kebab-case`},
+		{"path", "from: Requirement\ntemplates: {Requirement: templates/a.tmpl}\n", `line 2: templates: "templates/a.tmpl" is not a template name`},
+		{"not a mapping", "from: Requirement\ntemplates: [a]\n", "line 2: templates: expected a mapping"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := ParseBlock(tc.src, g.Schema)
 			if err == nil || !strings.HasPrefix(err.Error(), tc.want) {
 				t.Fatalf("got  %v\nwant %s…", err, tc.want)
 			}

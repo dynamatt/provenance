@@ -170,3 +170,77 @@ func TestMultiTypeQueryRendering(t *testing.T) {
 		}
 	}
 }
+
+func namedTemplateRepo(t *testing.T, block string, extra map[string]string) (map[string]string, error) {
+	t.Helper()
+	files := map[string]string{
+		"schema/Note.yaml":          rankedNoteSchema,
+		"schema/Task.yaml":          "type: Task\nfields:\n  - {name: title, type: string}\n  - {name: rank, type: number}\n",
+		"N/N-1.md":                  note("N-1", "title: Note one\nrank: 2\n", "# Heading\n\nBody."),
+		"T/T-1.md":                  "---\nid: T-1\ntype: Task\ntitle: Task one\nrank: 1\n---\n",
+		"N/N-9.md":                  note("N-9", "title: Host\n", "## Section\n\n```query\n"+block+"```\n"),
+		"templates/note-line.tmpl":  `<p class="note-line">{{.ID}}: {{.Title}}</p><h1>{{.Rank}}</h1>`,
+		"templates/plain-card.tmpl": `<div class="card">{{.Title}}</div>`,
+	}
+	for k, v := range extra {
+		files[k] = v
+	}
+	out, err := exportRepo(t, files)
+	pages := map[string]string{}
+	for k, v := range out {
+		pages[k] = string(v)
+	}
+	return pages, err
+}
+
+func TestNamedTemplates(t *testing.T) {
+	pages, err := namedTemplateRepo(t, "from: [Note, Task]\nwhere: {field: rank, operator: exists}\norder_by: rank\ntemplates:\n  Note: note-line\n", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := pages["entities/N-9.html"]
+	for _, want := range []string{
+		// Task has no choice: its default (built-in) template.
+		"<section class=\"embed\" data-entity=\"T-1\">\n<article class=\"entity\" id=\"T-1\">",
+		// Note uses the named template, headings shifted under the section.
+		`<section class="embed" data-entity="N-1"><p class="note-line">N-1: Note one</p><h3>2</h3></section>`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("N-9 page missing %q\n%s", want, page)
+		}
+	}
+	// The note's own page keeps its type's default.
+	if strings.Contains(pages["entities/N-1.html"], "note-line") {
+		t.Error("N-1's own page used the named template")
+	}
+
+	pages, err = namedTemplateRepo(t, "from: [Note, Task]\nwhere: {field: rank, operator: exists}\ntemplate: plain-card\n", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Count(pages["entities/N-9.html"], `<div class="card">`); got != 2 {
+		t.Errorf("template: plain-card used %d times, want 2 (every result)", got)
+	}
+}
+
+func TestNamedTemplateErrors(t *testing.T) {
+	for name, tc := range map[string]struct {
+		block string
+		extra map[string]string
+		want  string
+	}{
+		"unknown, even with no results": {"from: Note\nwhere: {field: rank, operator: greater_than, value: 99}\ntemplate: note-lines\n", nil,
+			`N/N-9.md:11: query block: unknown template "note-lines": there is no templates/note-lines.tmpl (named templates: note-line, plain-card)`},
+		"fails at its own line": {"from: Note\ntemplate: broken-card\n", map[string]string{"templates/broken-card.tmpl": "<div>\n{{.Nope}}</div>"},
+			`templates/broken-card.tmpl:2:2: executing "templates/broken-card.tmpl" at <.Nope>: map has no entry for key "Nope"`},
+		"broken but unused": {"from: Note\n", map[string]string{"templates/broken-card.tmpl": "{{if}"},
+			"templates/broken-card.tmpl:1: "},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := namedTemplateRepo(t, tc.block, tc.extra)
+			if err == nil || !strings.HasPrefix(err.Error(), tc.want) {
+				t.Fatalf("got  %v\nwant %s…", err, tc.want)
+			}
+		})
+	}
+}
