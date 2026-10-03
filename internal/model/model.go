@@ -207,6 +207,28 @@ func (e *Entity) BodyFileLine(line int) int {
 	return e.BodyLine + lead + line - 1
 }
 
+// TextFileLine maps a line (from 1) of Markdown text rendered from e, its
+// body or a top-level text field, to its line in the file; 0 when text is
+// neither.
+func (e *Entity) TextFileLine(text string, line int) int {
+	if text == e.BodyText() {
+		return e.BodyFileLine(line)
+	}
+	for _, v := range e.Fields {
+		if v.Present && !v.Invalid && v.Field.Kind == schema.Text && v.Str == text {
+			n := entity.Lookup(e.Front, v.Field.Name)
+			if n == nil {
+				return 0
+			}
+			if n.Style&(yaml.LiteralStyle|yaml.FoldedStyle) != 0 {
+				return n.Line + line // content starts after the | or > line
+			}
+			return n.Line + line - 1
+		}
+	}
+	return 0
+}
+
 func bodyValue(f *schema.Field, body string) *Value {
 	text := bodyText(body)
 	return &Value{Field: f, Present: strings.TrimSpace(text) != "", Str: text}

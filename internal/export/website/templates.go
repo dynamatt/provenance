@@ -161,6 +161,7 @@ var placeholderFuncs = template.FuncMap{
 	"markdown": func(any) (template.HTML, error) { return "", nil },
 	"link":     func(any, ...any) (template.HTML, error) { return "", nil },
 	"href":     func(any) (string, error) { return "", nil },
+	"short":    func(string) string { return "" },
 }
 
 // parse parses src as a template set whose main template has src's name.

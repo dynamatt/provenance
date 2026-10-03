@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/dynamatt/provenance/internal/export"
+	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/markdown"
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/query"
@@ -69,11 +70,24 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		data:      buildData(in.Schema, in.Entities),
 		graph:     graph,
 		scope:     in.Scope,
+		git:       in.Git,
+		inputs:    map[string]history.Inputs{},
 		byID:      make(map[string]*model.Entity, len(in.Entities)),
 		files:     export.Files{"style.css": ts.style},
 	}
 	for _, ent := range in.Entities {
 		s.byID[ent.ID] = ent
+	}
+	// Every entity's data carries its git stamps, embedded or not: a
+	// template naming .LastChangedSHA must render wherever it is used.
+	for _, ent := range in.Entities {
+		in, err := s.pageInputs(ent)
+		if err != nil {
+			return nil, err
+		}
+		last, revs := s.git.Page(in)
+		m := s.data.byID[ent.ID]
+		m["LastChangedSHA"], m["Revisions"] = last, revisionData(revs)
 	}
 
 	var inScope []*model.Entity
@@ -89,7 +103,7 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := s.page("index.html", "", pageTitle(root), content); err != nil {
+		if err := s.page("index.html", "", pageTitle(root), content, s.data.byID[root.ID]); err != nil {
 			return nil, err
 		}
 	} else {
@@ -97,7 +111,11 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := s.page("index.html", "", in.Repo.Component.Name, index); err != nil {
+		// The index shows every entity in scope, so any content change can
+		// change it.
+		last, revs := s.git.Page(history.Inputs{Prefixes: []string{""}})
+		stamps := entityData{"LastChangedSHA": last, "Revisions": revisionData(revs)}
+		if err := s.page("index.html", "", in.Repo.Component.Name, index, stamps); err != nil {
 			return nil, err
 		}
 	}
@@ -106,11 +124,42 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), content); err != nil {
+		if err := s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), content, s.data.byID[ent.ID]); err != nil {
 			return nil, err
 		}
 	}
 	return s.files, nil
+}
+
+// pageInputs are what e's page renders from (Detailed Design §4): the files
+// of e and everything it pulls in, every entity of the types its query
+// blocks select, and the presentation (.component, schema/, templates/).
+func (s *site) pageInputs(e *model.Entity) (history.Inputs, error) {
+	if in, ok := s.inputs[e.ID]; ok {
+		return in, nil
+	}
+	deps, err := s.graph.Dependencies(e)
+	if err != nil {
+		return history.Inputs{}, err
+	}
+	in := history.Inputs{Paths: []string{".component"}, Prefixes: []string{"schema/", "templates/"}, Types: deps.Types}
+	for _, id := range deps.IDs {
+		in.Paths = append(in.Paths, s.byID[id].Path)
+	}
+	s.inputs[e.ID] = in
+	return in, nil
+}
+
+// revisionData is revision history as template data, newest first.
+func revisionData(revs []*history.Commit) []entityData {
+	out := []entityData{}
+	for _, c := range revs {
+		out = append(out, entityData{
+			"SHA": c.SHA, "Short": history.Short(c.SHA), "Date": c.Date,
+			"Author": c.Author, "Subject": c.Subject, "Tags": c.Tags,
+		})
+	}
+	return out
 }
 
 func pageTitle(e *model.Entity) string {
@@ -126,6 +175,8 @@ type site struct {
 	data      *dataModel
 	graph     *query.Graph
 	scope     *export.Scope
+	git       *export.Git
+	inputs    map[string]history.Inputs // page inputs by entity ID
 	byID      map[string]*model.Entity
 	files     export.Files
 }
@@ -140,10 +191,18 @@ type layoutData struct {
 	// Content is the page's rendered content, also available to the layout
 	// as {{template "content" .}}.
 	Content template.HTML
+	// Git stamps (Detailed Design §4), all empty outside a git repository:
+	// HEAD's commit, the DHF content hash, and for this page the last
+	// commit that changed what it shows and the commits that did.
+	GitSHA         string
+	ContentHash    string
+	LastChangedSHA string
+	Revisions      []entityData
 }
 
-// page wraps content in the layout and stores it at path.
-func (s *site) page(path, root, title, content string) error {
+// page wraps content in the layout and stores it at path. stamps holds the
+// page's LastChangedSHA and Revisions.
+func (s *site) page(path, root, title, content string, stamps entityData) error {
 	ctx := &renderCtx{site: s, linkBase: root + "entities/"}
 	t, err := parse(s.templates.layout, ctx.funcs())
 	if err == nil {
@@ -154,6 +213,11 @@ func (s *site) page(path, root, title, content string) error {
 	}
 	var b bytes.Buffer
 	d := layoutData{Title: title, Root: root, Component: s.component, Content: template.HTML(content)}
+	if s.git != nil {
+		d.GitSHA, d.ContentHash = s.git.SHA, s.git.ContentHash
+	}
+	d.LastChangedSHA, _ = stamps["LastChangedSHA"].(string)
+	d.Revisions, _ = stamps["Revisions"].([]entityData)
 	if err := t.Execute(&b, d); err != nil {
 		return templateError(err)
 	}
@@ -254,6 +318,7 @@ func (ctx *renderCtx) funcs() template.FuncMap {
 		"markdown": ctx.markdown,
 		"link":     ctx.link,
 		"href":     ctx.href,
+		"short":    history.Short,
 	}
 }
 

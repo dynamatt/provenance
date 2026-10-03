@@ -115,7 +115,6 @@ func TestStubsExitTwoWithNotImplemented(t *testing.T) {
 		{"sign verify", []string{"sign", "verify", "REQ-0001", "--commit", "abc123", "--json"}},
 		{"sign verify", []string{"sign", "verify", "--all", "--scope", "DOC/DOC-0001.md", "--json"}},
 		{"verify artifact", []string{"verify", "artifact", "--path", "bin/provenance"}},
-		{"verify content", []string{"verify", "content", "--commit", "abc123", "--expected", "sha256:00"}},
 	}
 	for _, tc := range cases {
 		t.Run(strings.Join(tc.args, " "), func(t *testing.T) {

@@ -219,6 +219,31 @@ expect 0 '' "$PROV" export website --scope scopes/approved-requirements.yaml --o
 expect 0 '^REQ-0001\.html REQ-0002\.html $' sh -c "ls '$WORK/_q/entities' | tr '\\n' ' '"
 expect 2 '^export: --scope nope\.yaml: no such file$' "$PROV" export website --scope nope.yaml --out "$WORK/_x"
 
+# E1.11: git context and content hash. The footer's content hash is the one
+# verify content prints; an uncommitted edit marks it -dirty. Committing an
+# edit to a requirement DOC-0001 shows moves DOC-0001's last-changed commit;
+# committing one to DES-0001, which it only references, does not. The
+# commits are made on a detached HEAD and dropped afterwards.
+"$PROV" export website >/dev/null
+HASH=$("$PROV" verify content)
+expect 0 '^sha256:[0-9a-f]{64}$' echo "$HASH"
+expect 0 "content hash <code>$HASH</code>" cat _site/entities/DOC-0001.html
+expect 0 '' "$PROV" verify content --expected "$HASH"
+expect 1 'does not match the expected sha256:0$' "$PROV" verify content --expected sha256:0
+echo " " >> DES/DES-0001.md
+expect 0 "^$HASH-dirty\$" "$PROV" verify content
+git checkout -q DES/DES-0001.md
+PIN=$(git rev-parse HEAD)
+last_changed() { "$PROV" export website >/dev/null && grep -o 'last changed in <code>[0-9a-f]*' _site/entities/DOC-0001.html; }
+BEFORE=$(last_changed)
+gitc() { git -c user.name=Acceptance -c user.email=acceptance@example.com -c commit.gpgsign=false "$@"; }
+sed -i 's/^order: 1/order: 1 /' DES/DES-0001.md && gitc commit -qam "Edit DES-0001"
+expect 0 "^$BEFORE\$" last_changed
+sed -i 's/^order: 1/order: 1 /' REQ/REQ-0001.md && gitc commit -qam "Edit REQ-0001"
+expect 0 "^last changed in <code>$(git rev-parse --short=7 HEAD)\$" last_changed
+expect 0 '<td>Edit REQ-0001</td>' cat _site/entities/DOC-0001.html
+git checkout -q --detach "$PIN"
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null

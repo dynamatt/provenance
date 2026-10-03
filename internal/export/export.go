@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
@@ -27,6 +28,41 @@ type Input struct {
 	Graph *query.Graph
 	// Scope limits the output; nil exports everything.
 	Scope *Scope
+	// Git is the repository's git context; nil outside a git repository,
+	// when outputs carry no commit or content hash.
+	Git *Git
+}
+
+// Git is what an export stamps into its output (Detailed Design §4).
+type Git struct {
+	// SHA is HEAD's full commit hash.
+	SHA string
+	// ContentHash is the DHF content hash of HEAD, suffixed -dirty when the
+	// working tree differs from HEAD.
+	ContentHash string
+	Log         *history.Log
+	Dirty       *history.Dirty
+}
+
+// Page is the git context of a page with the given inputs: the last commit
+// that changed any of them (suffixed -dirty when one differs in the
+// working tree; "uncommitted" when none is committed yet) and the commits
+// that changed them, newest first.
+func (g *Git) Page(in history.Inputs) (lastChanged string, revisions []*history.Commit) {
+	if g == nil {
+		return "", nil
+	}
+	revisions = g.Log.Revisions(in)
+	if len(revisions) > 0 {
+		lastChanged = revisions[0].SHA
+	}
+	if g.Dirty.Touches(in) {
+		if lastChanged == "" {
+			return "uncommitted", revisions
+		}
+		lastChanged += "-dirty"
+	}
+	return lastChanged, revisions
 }
 
 // Files is the content of an output folder: slash-separated relative path to

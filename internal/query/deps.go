@@ -130,26 +130,43 @@ type blockError struct {
 
 func (e *blockError) Error() string { return e.Err.Error() }
 
-// depError reports a query block problem at its file line when it is in
-// the body, as export would report it.
-func depError(e *model.Entity, text string, err error) error {
-	var be *blockError
-	if !errors.As(err, &be) {
-		return fmt.Errorf("%s: %w", e.Path, err)
+// FileError is a query block that cannot be run, at its file and line (0
+// when the line is not known). A document must not be published with a
+// section silently missing.
+type FileError struct {
+	Path string
+	Line int
+	Msg  string
+}
+
+func (e *FileError) Error() string {
+	if e.Line > 0 {
+		return fmt.Sprintf("%s:%d: query block: %s", e.Path, e.Line, e.Msg)
 	}
-	msg := be.Err.Error()
-	line := be.Line
+	return fmt.Sprintf("%s: query block: %s", e.Path, e.Msg)
+}
+
+// BlockFileError places err, from the query block starting at blockLine of
+// text rendered from e, in e's file. err's own line, if any, counts from the
+// block's first line.
+func BlockFileError(e *model.Entity, text string, blockLine int, err error) *FileError {
+	msg, line := err.Error(), blockLine
 	var qe *Error
-	if errors.As(be.Err, &qe) {
+	if errors.As(err, &qe) {
 		msg = qe.Msg
 		if qe.Line > 0 {
 			line += qe.Line - 1
 		}
 	}
-	if text == e.BodyText() {
-		return fmt.Errorf("%s:%d: query block: %s", e.Path, e.BodyFileLine(line), msg)
+	return &FileError{Path: e.Path, Line: e.TextFileLine(text, line), Msg: msg}
+}
+
+func depError(e *model.Entity, text string, err error) error {
+	var be *blockError
+	if !errors.As(err, &be) {
+		return fmt.Errorf("%s: %w", e.Path, err)
 	}
-	return fmt.Errorf("%s: query block in a text field: %s", e.Path, msg)
+	return BlockFileError(e, text, be.Line, be.Err)
 }
 
 func (r *recorder) query(_ util.BufWriter, f markdown.Fence) error {
