@@ -96,7 +96,7 @@ func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 				if e.Field(f) == nil && e.Facet(f) == nil {
 					// Another selected type has the field; this one's
 					// value is empty, as for an unset field.
-					writeLink(w, r.ctx.linkBase, e, e.ID+"#"+f)
+					r.ctx.anchor(w, "ref", e, e.ID+"#"+f)
 					_, _ = w.WriteString(" <span class=\"unresolved\">empty</span></li>\n")
 					continue
 				}
@@ -138,15 +138,8 @@ func (r *resolver) queryError(q markdown.Fence, err error) error {
 func (ctx *renderCtx) sourceLine(line int) int {
 	e := ctx.chain[len(ctx.chain)-1]
 	src := ctx.source
-	body := e.Body
-	if f := e.Schema.BodyField; f != nil {
-		body = e.Field(f.Name).Str
-	}
-	if src == body {
-		// The body as rendered had leading blank lines trimmed.
-		raw := strings.ReplaceAll(e.Entity.Body, "\r\n", "\n")
-		lead := len(raw) - len(strings.TrimLeft(raw, "\n"))
-		return e.BodyLine + lead + line - 1
+	if src == e.BodyText() {
+		return e.BodyFileLine(line)
 	}
 	for _, v := range e.Fields {
 		if v.Present && !v.Invalid && v.Str == src {

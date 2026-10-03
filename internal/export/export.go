@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/dynamatt/provenance/internal/model"
+	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/schema"
 )
@@ -21,6 +22,11 @@ type Input struct {
 	// Entities are all entities in the repository, typed against Schema and
 	// sorted by ID.
 	Entities []*model.Entity
+	// Graph is the entities prepared for queries, calculated fields
+	// evaluated; nil makes the exporter build it.
+	Graph *query.Graph
+	// Scope limits the output; nil exports everything.
+	Scope *Scope
 }
 
 // Files is the content of an output folder: slash-separated relative path to

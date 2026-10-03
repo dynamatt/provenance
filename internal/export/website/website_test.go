@@ -10,6 +10,7 @@ import (
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/model"
+	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/schema"
 )
@@ -24,6 +25,13 @@ fields:
 // export builds a synthetic repository (edge cases only; the example repo is
 // the main fixture) and exports it.
 func exportRepo(t *testing.T, files map[string]string) (export.Files, error) {
+	t.Helper()
+	return exportScoped(t, files, "")
+}
+
+// exportScoped exports with --scope scope (relative to the repository
+// root), or everything when scope is "".
+func exportScoped(t *testing.T, files map[string]string, scope string) (export.Files, error) {
 	t.Helper()
 	root := t.TempDir()
 	files[".component"] = "code: T\nname: Test\n"
@@ -52,7 +60,18 @@ func exportRepo(t *testing.T, files map[string]string) (export.Files, error) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return New().Export(&export.Input{Repo: r, Schema: s, Entities: built})
+	in := &export.Input{Repo: r, Schema: s, Entities: built}
+	if scope != "" {
+		g, err := query.NewGraph(s, built)
+		if err != nil {
+			t.Fatal(err)
+		}
+		in.Graph = g
+		if in.Scope, err = export.ResolveScope(g, root, root, scope); err != nil {
+			return nil, err
+		}
+	}
+	return New().Export(in)
 }
 
 func note(id, front, body string) string {

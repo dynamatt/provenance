@@ -190,6 +190,23 @@ func resolve(byID map[string]*Entity, src *Entity, v *Value) {
 	}
 }
 
+// BodyText is the body as rendered: the body field's text, or the freeform
+// body.
+func (e *Entity) BodyText() string {
+	if f := e.Schema.BodyField; f != nil {
+		return e.Field(f.Name).Str
+	}
+	return e.Body
+}
+
+// BodyFileLine maps a line of BodyText (from 1) to its line in the file.
+// The rendered body has leading blank lines trimmed (bodyText).
+func (e *Entity) BodyFileLine(line int) int {
+	raw := strings.ReplaceAll(e.Entity.Body, "\r\n", "\n")
+	lead := len(raw) - len(strings.TrimLeft(raw, "\n"))
+	return e.BodyLine + lead + line - 1
+}
+
 func bodyValue(f *schema.Field, body string) *Value {
 	text := bodyText(body)
 	return &Value{Field: f, Present: strings.TrimSpace(text) != "", Str: text}

@@ -43,6 +43,7 @@ fields:
       - {name: serial, type: string}
       - {name: calibration_due_date, type: date}
 `,
+	"schema/Document.yaml":        "type: Document\nfields:\n  - {name: title, type: string}\n  - {name: summary, type: text}\n",
 	"schema/SeverityLevel.yaml":   "type: SeverityLevel\nfields:\n  - {name: score, type: number}\n",
 	"schema/OccurrenceLevel.yaml": "type: OccurrenceLevel\nfields:\n  - {name: score, type: number}\n",
 	"schema/Risk.yaml": `type: Risk

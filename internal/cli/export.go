@@ -13,6 +13,7 @@ import (
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/export/website"
 	"github.com/dynamatt/provenance/internal/model"
+	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/schema"
 )
@@ -32,9 +33,6 @@ func exporters() *export.Registry {
 // Every failure exits 2: export never returns 1 (Detailed Design §2).
 func runExport(c *cobra.Command, args []string) error {
 	name := commandName(c)
-	if scope, _ := c.Flags().GetString("scope"); scope != "" {
-		return fmt.Errorf("%s: --scope is not implemented yet", name)
-	}
 
 	exp, err := exporters().Lookup(args[0])
 	if err != nil {
@@ -75,7 +73,19 @@ func runExport(c *cobra.Command, args []string) error {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 
-	files, err := exp.Export(&export.Input{Repo: r, Schema: s, Entities: entities})
+	// The graph evaluates calculated fields; scope resolution runs queries.
+	graph, err := query.NewGraph(s, entities)
+	if err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
+	var scope *export.Scope
+	if path, _ := c.Flags().GetString("scope"); path != "" {
+		if scope, err = export.ResolveScope(graph, r.Root, cwd, path); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+	}
+
+	files, err := exp.Export(&export.Input{Repo: r, Schema: s, Entities: entities, Graph: graph, Scope: scope})
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}

@@ -12,7 +12,7 @@
 {{- end}}
 {{- range .Incoming}}
 <tr class="incoming"><th>{{humanize .Facet.Name}}</th><td>
-{{- range $i, $e := .From}}{{if $i}}, {{end}}{{template "ref" (ref $e.ID $e)}}{{else}}<span class="absent">—</span>{{end -}}
+{{- range $i, $e := .From}}{{if $i}}, {{end}}{{ref $e.ID $e}}{{else}}<span class="absent">—</span>{{end -}}
 </td></tr>
 {{- end}}
 </tbody>

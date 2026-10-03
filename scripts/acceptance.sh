@@ -206,6 +206,19 @@ expect 1 '' grep -q 'checklist-item' _site/entities/DOC-0002.html
 expect 0 '<h3 class="requirement-title"><span class="req-id">REQ-0001</span>' cat _site/entities/DOC-0002.html
 mv DOC/DOC-0002.md.orig DOC/DOC-0002.md
 
+# E1.10: --scope. A Document scope renders that Document as the main page
+# with only what it pulls in; an entity with nothing to pull in is alone, its
+# links outside the scope plain IDs; a query file scopes to its results.
+expect 0 "^exported website to $WORK/_doc\$" "$PROV" export website --scope DOC/DOC-0001.md --out "$WORK/_doc"
+expect 0 '<h1>System Requirements Specification</h1>' cat "$WORK/_doc/index.html"
+expect 0 '^DOC-0001\.html REQ-0001\.html REQ-0002\.html REQ-0003\.html $' sh -c "ls '$WORK/_doc/entities' | tr '\\n' ' '"
+expect 0 '' "$PROV" export website --scope REQ/REQ-0001.md --out "$WORK/_req"
+expect 0 '^REQ-0001\.html$' ls "$WORK/_req/entities"
+expect 0 '<span class="ref out-of-scope">USR-0001</span>' cat "$WORK/_req/index.html"
+expect 0 '' "$PROV" export website --scope scopes/approved-requirements.yaml --out "$WORK/_q"
+expect 0 '^REQ-0001\.html REQ-0002\.html $' sh -c "ls '$WORK/_q/entities' | tr '\\n' ' '"
+expect 2 '^export: --scope nope\.yaml: no such file$' "$PROV" export website --scope nope.yaml --out "$WORK/_x"
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null

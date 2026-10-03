@@ -14,6 +14,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"io"
 	"regexp"
 	"sort"
 	"strconv"
@@ -55,15 +56,19 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		return nil, err
 	}
 	// The graph evaluates calculated fields, which the template data reads.
-	graph, err := query.NewGraph(in.Schema, in.Entities)
-	if err != nil {
-		return nil, err
+	graph := in.Graph
+	if graph == nil {
+		graph, err = query.NewGraph(in.Schema, in.Entities)
+		if err != nil {
+			return nil, err
+		}
 	}
 	s := &site{
 		component: in.Repo.Component,
 		templates: ts,
 		data:      buildData(in.Schema, in.Entities),
 		graph:     graph,
+		scope:     in.Scope,
 		byID:      make(map[string]*model.Entity, len(in.Entities)),
 		files:     export.Files{"style.css": ts.style},
 	}
@@ -71,27 +76,48 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		s.byID[ent.ID] = ent
 	}
 
-	index, err := s.renderIndex(in.Entities)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.page("index.html", "", in.Repo.Component.Name, index); err != nil {
-		return nil, err
-	}
+	var inScope []*model.Entity
 	for _, ent := range in.Entities {
-		content, err := s.renderEntity(ent, []*model.Entity{ent}, "")
+		if in.Scope.Has(ent.ID) {
+			inScope = append(inScope, ent)
+		}
+	}
+	// An entity scope's entity is the main page, rendered through its own
+	// template (Detailed Design §2); otherwise the index lists the scope.
+	if root := in.Scope.RootEntity(); root != nil {
+		content, err := s.renderEntity(root, []*model.Entity{root}, "", "entities/")
 		if err != nil {
 			return nil, err
 		}
-		title := ent.ID
-		if t := ent.Title(); t != "" {
-			title += " " + t
+		if err := s.page("index.html", "", pageTitle(root), content); err != nil {
+			return nil, err
 		}
-		if err := s.page("entities/"+ent.ID+".html", "../", title, content); err != nil {
+	} else {
+		index, err := s.renderIndex(inScope)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.page("index.html", "", in.Repo.Component.Name, index); err != nil {
+			return nil, err
+		}
+	}
+	for _, ent := range inScope {
+		content, err := s.renderEntity(ent, []*model.Entity{ent}, "", "")
+		if err != nil {
+			return nil, err
+		}
+		if err := s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), content); err != nil {
 			return nil, err
 		}
 	}
 	return s.files, nil
+}
+
+func pageTitle(e *model.Entity) string {
+	if t := e.Title(); t != "" {
+		return e.ID + " " + t
+	}
+	return e.ID
 }
 
 type site struct {
@@ -99,6 +125,7 @@ type site struct {
 	templates *templateSet
 	data      *dataModel
 	graph     *query.Graph
+	scope     *export.Scope
 	byID      map[string]*model.Entity
 	files     export.Files
 }
@@ -190,8 +217,11 @@ type renderCtx struct {
 // already checked to exist), else its project type template, else the
 // built-in fallback, with embeds spliced in. Headings are relative to e:
 // <h1> is its top level. chain ends with e.
-func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named string) (string, error) {
-	ctx := &renderCtx{site: s, chain: chain}
+//
+// linkBase is the relative path from the page to the entity pages: "" on an
+// entity page, "entities/" when rendered on the main page.
+func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named, linkBase string) (string, error) {
+	ctx := &renderCtx{site: s, chain: chain, linkBase: linkBase}
 	var b bytes.Buffer
 	src, ok := s.templates.types[e.Type]
 	if named != "" {
@@ -206,7 +236,7 @@ func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named string
 			return "", templateError(err)
 		}
 	} else {
-		t, err := template.New("").Funcs(fallbackFuncs).Funcs(ctx.funcs()).ParseFS(templateFS,
+		t, err := template.New("").Funcs(fallbackFuncs).Funcs(ctx.funcs()).Funcs(template.FuncMap{"ref": ctx.ref}).ParseFS(templateFS,
 			"templates/values.tmpl", "templates/entity-body.tmpl")
 		if err != nil {
 			return "", err
@@ -246,7 +276,8 @@ func (ctx *renderCtx) markdown(v any) (template.HTML, error) {
 }
 
 // link renders a link to an entity (template data), with optional text: the
-// ID by default. nil renders nothing; an unresolved target is marked.
+// ID by default. nil renders nothing; an unresolved target is marked; one
+// outside the export's scope is its text, unlinked.
 func (ctx *renderCtx) link(v any, text ...any) (template.HTML, error) {
 	ref, err := asRef(v, "link")
 	if ref == nil || err != nil {
@@ -257,29 +288,53 @@ func (ctx *renderCtx) link(v any, text ...any) (template.HTML, error) {
 	if len(text) > 0 {
 		label = fmt.Sprint(text[0])
 	}
-	var b bytes.Buffer
-	w := &b
 	if resolved, _ := ref["Resolved"].(bool); !resolved {
-		fmt.Fprintf(w, `<span class="id unresolved-id">%s</span> <span class="unresolved">unresolved</span>`, template.HTMLEscapeString(label))
-		return template.HTML(b.String()), nil
+		return template.HTML(fmt.Sprintf(`<span class="id unresolved-id">%s</span> <span class="unresolved">unresolved</span>`, template.HTMLEscapeString(label))), nil
 	}
-	title := ""
-	if t, _ := ref["Title"].(string); t != "" {
-		title = fmt.Sprintf(` title="%s"`, template.HTMLEscapeString(t))
-	}
-	fmt.Fprintf(w, `<a class="ref" href="%s"%s>%s</a>`,
-		template.HTMLEscapeString(ctx.linkBase+id+".html"), title, template.HTMLEscapeString(label))
+	var b strings.Builder
+	ctx.anchor(&b, "ref", ctx.site.byID[id], label)
 	return template.HTML(b.String()), nil
 }
 
-// href is the relative URL of an entity's page, for custom links.
+// anchor writes a link with the given class to target's page showing text,
+// or, when target is outside the export's scope, the text alone (Requirements
+// Spec §7: the plain citable ID for an ID).
+func (ctx *renderCtx) anchor(w io.StringWriter, class string, target *model.Entity, text string) {
+	if !ctx.site.scope.Has(target.ID) {
+		_, _ = w.WriteString(fmt.Sprintf(`<span class="%s out-of-scope">%s</span>`, class, template.HTMLEscapeString(text)))
+		return
+	}
+	title := ""
+	if t := target.Title(); t != "" {
+		title = fmt.Sprintf(` title="%s"`, template.HTMLEscapeString(t))
+	}
+	_, _ = w.WriteString(fmt.Sprintf(`<a class="%s" href="%s"%s>%s</a>`, class,
+		template.HTMLEscapeString(ctx.linkBase+target.ID+".html"), title, template.HTMLEscapeString(text)))
+}
+
+// href is the relative URL of an entity's page, for custom links; "" for an
+// entity outside the export's scope, which has no page.
 func (ctx *renderCtx) href(v any) (string, error) {
 	ref, err := asRef(v, "href")
 	if ref == nil || err != nil {
 		return "", err
 	}
 	id, _ := ref["ID"].(string)
+	if !ctx.site.scope.Has(id) {
+		return "", nil
+	}
 	return ctx.linkBase + id + ".html", nil
+}
+
+// ref renders one link target for the built-in templates: a link, the bare
+// ID marked unresolved, or the plain ID outside the scope.
+func (ctx *renderCtx) ref(id string, e *model.Entity) template.HTML {
+	if e == nil {
+		return template.HTML(fmt.Sprintf(`<span class="id unresolved-id">%s</span> <span class="unresolved">unresolved</span>`, template.HTMLEscapeString(id)))
+	}
+	var b strings.Builder
+	ctx.anchor(&b, "id", e, id)
+	return template.HTML(b.String())
 }
 
 func asRef(v any, fn string) (entityData, error) {
@@ -335,14 +390,6 @@ var fallbackFuncs = template.FuncMap{
 		}
 		return strings.ToUpper(s[:1]) + s[1:]
 	},
-	// ref pairs a link target's ID with its entity (nil when unresolved)
-	// for the "ref" template.
-	"ref": func(id string, e *model.Entity) linkRef { return linkRef{ID: id, Entity: e} },
 }
 
 func formatNumber(f float64) string { return strconv.FormatFloat(f, 'f', -1, 64) }
-
-type linkRef struct {
-	ID     string
-	Entity *model.Entity
-}
