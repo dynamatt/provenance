@@ -162,6 +162,10 @@ func templateError(err error) error {
 	if errors.As(err, &cycle) {
 		return cycle
 	}
+	var qe *QueryError
+	if errors.As(err, &qe) {
+		return qe
+	}
 	var inner *TemplateError
 	if errors.As(err, &inner) {
 		return inner

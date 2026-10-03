@@ -2,9 +2,7 @@
      entities/, so links to other entities are relative to that folder. */}}
 {{- define "value" -}}
 {{- $k := kind . -}}
-{{- if eq $k "calculated" -}}
-<span class="placeholder">calculated</span>
-{{- else if not .Present -}}
+{{- if not .Present -}}
 <span class="absent">—</span>
 {{- else if .Invalid -}}
 <span class="invalid-value">{{.Raw}}</span> <span class="invalid">{{.Problem}}</span>
