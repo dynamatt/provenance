@@ -2,8 +2,10 @@
 // CommonMark plus tables, raw HTML passed through, and Obsidian-style
 // wikilinks (High-Level Design §4.3a).
 //
-// The package only parses wikilinks. What a reference or an embed turns into
-// is decided by a Resolver, so rendering policy lives with the exporter.
+// The package parses; the caller decides. What a wikilink turns into is up
+// to a Resolver, and a fenced block is handed to the caller's FenceFunc for
+// its language (query blocks, diagrams), so rendering policy lives with the
+// exporter and a new block language never changes this package.
 package markdown
 
 import (
@@ -32,16 +34,29 @@ type Link struct {
 	Embed bool
 }
 
-// QueryBlock is a fenced ```query block (High-Level Design §4.3a).
-type QueryBlock struct {
+// Fence is a fenced code block handed to the caller to render.
+type Fence struct {
+	// Lang is the first word of the info string: "query", "mermaid", …
+	Lang string
 	// Source is the block's content, without the fences.
 	Source string
 	// Line is the line of Markdown source the content starts on, from 1.
 	Line int
 }
 
-// Resolver renders wikilinks and query blocks. It writes HTML directly;
-// anything it writes is trusted.
+// FenceFunc renders a fenced block. Like a Resolver, it writes trusted HTML.
+type FenceFunc func(w util.BufWriter, f Fence) error
+
+// RenderedLanguages are the fence languages the product renders instead of
+// showing as code (High-Level Design §4.3a, Requirements Spec §7). Every
+// exporter must give each one a FenceFunc, even if only to say it cannot
+// render it yet: falling back to a code listing would publish a query's or
+// diagram's source as if it were the content. The BlockLanguage rule
+// (Requirements Spec §6) reports the ones a binary cannot render.
+var RenderedLanguages = []string{"query", "mermaid", "drawio"}
+
+// Resolver renders wikilinks, the syntax this package adds to Markdown. It
+// writes HTML directly; anything it writes is trusted.
 type Resolver interface {
 	// Reference renders an inline [[ID]], [[ID|label]] or [[ID#field]].
 	Reference(w util.BufWriter, l Link) error
@@ -50,24 +65,24 @@ type Resolver interface {
 	// MisplacedEmbed renders ![[ID]] written inside running text, where a
 	// block cannot go.
 	MisplacedEmbed(w util.BufWriter, l Link) error
-	// Query renders a query block's results.
-	Query(w util.BufWriter, q QueryBlock) error
 }
 
-// Convert renders src to HTML, resolving wikilinks through r.
-func Convert(src string, r Resolver) (string, error) {
+// Convert renders src to HTML, resolving wikilinks through r. A fenced block
+// whose language has an entry in fences is rendered by it; any other fenced
+// block is shown as code.
+func Convert(src string, r Resolver, fences map[string]FenceFunc) (string, error) {
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.Table),
 		goldmark.WithParserOptions(
 			parser.WithInlineParsers(util.Prioritized(&wikilinkParser{}, 199)),
 			parser.WithASTTransformers(
 				util.Prioritized(&embedTransformer{}, 100),
-				util.Prioritized(&queryTransformer{}, 101),
+				util.Prioritized(&fenceTransformer{fences: fences}, 101),
 			),
 		),
 		goldmark.WithRendererOptions(
 			html.WithUnsafe(), // raw HTML passes through (Detailed Design §7)
-			renderer.WithNodeRenderers(util.Prioritized(&wikilinkRenderer{r: r}, 100)),
+			renderer.WithNodeRenderers(util.Prioritized(&wikilinkRenderer{r: r, fences: fences}, 100)),
 		),
 	)
 	var b bytes.Buffer
@@ -186,28 +201,32 @@ func soleEmbed(p *ast.Paragraph, source []byte) (Link, bool) {
 	return found.Link, true
 }
 
-// queryNode replaces a fenced code block whose info string is "query".
-type queryNode struct {
+// fenceNode replaces a fenced code block the caller renders.
+type fenceNode struct {
 	ast.BaseBlock
-	Query QueryBlock
+	Fence Fence
 }
 
-var kindQuery = ast.NewNodeKind("QueryBlock")
+var kindFence = ast.NewNodeKind("Fence")
 
-func (n *queryNode) Kind() ast.NodeKind { return kindQuery }
+func (n *fenceNode) Kind() ast.NodeKind { return kindFence }
 
-func (n *queryNode) Dump(source []byte, level int) {
-	ast.DumpHelper(n, source, level, map[string]string{"Line": strconv.Itoa(n.Query.Line)}, nil)
+func (n *fenceNode) Dump(source []byte, level int) {
+	ast.DumpHelper(n, source, level, map[string]string{"Lang": n.Fence.Lang, "Line": strconv.Itoa(n.Fence.Line)}, nil)
 }
 
-type queryTransformer struct{}
+// fenceTransformer replaces each fenced code block whose language has a
+// FenceFunc with a fenceNode.
+type fenceTransformer struct{ fences map[string]FenceFunc }
 
-func (t *queryTransformer) Transform(doc *ast.Document, reader text.Reader, _ parser.Context) {
+func (t *fenceTransformer) Transform(doc *ast.Document, reader text.Reader, _ parser.Context) {
 	source := reader.Source()
 	var blocks []*ast.FencedCodeBlock
 	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
-		if b, ok := n.(*ast.FencedCodeBlock); ok && entering && string(b.Language(source)) == "query" {
-			blocks = append(blocks, b)
+		if b, ok := n.(*ast.FencedCodeBlock); ok && entering {
+			if _, handled := t.fences[string(b.Language(source))]; handled {
+				blocks = append(blocks, b)
+			}
 		}
 		return ast.WalkContinue, nil
 	})
@@ -219,13 +238,16 @@ func (t *queryTransformer) Transform(doc *ast.Document, reader text.Reader, _ pa
 			src.Write(seg.Value(source))
 		}
 		// Content starts on the line after the opening fence.
-		start := b.Info.Segment.Start
-		line := bytes.Count(source[:start], []byte("\n")) + 2
-		b.Parent().ReplaceChild(b.Parent(), b, &queryNode{Query: QueryBlock{Source: src.String(), Line: line}})
+		line := bytes.Count(source[:b.Info.Segment.Start], []byte("\n")) + 2
+		f := Fence{Lang: string(b.Language(source)), Source: src.String(), Line: line}
+		b.Parent().ReplaceChild(b.Parent(), b, &fenceNode{Fence: f})
 	}
 }
 
-type wikilinkRenderer struct{ r Resolver }
+type wikilinkRenderer struct {
+	r      Resolver
+	fences map[string]FenceFunc
+}
 
 func (r *wikilinkRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	reg.Register(kindWikilink, func(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -241,11 +263,12 @@ func (r *wikilinkRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer
 		}
 		return ast.WalkSkipChildren, err
 	})
-	reg.Register(kindQuery, func(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
+	reg.Register(kindFence, func(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
-		return ast.WalkSkipChildren, r.r.Query(w, n.(*queryNode).Query)
+		f := n.(*fenceNode).Fence
+		return ast.WalkSkipChildren, r.fences[f.Lang](w, f)
 	})
 	reg.Register(kindEmbed, func(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {

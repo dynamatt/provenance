@@ -27,14 +27,17 @@ func (f fake) MisplacedEmbed(w util.BufWriter, l Link) error {
 	return nil
 }
 
-func (f fake) Query(w util.BufWriter, q QueryBlock) error {
-	fmt.Fprintf(w, "{query line %d: %q}\n", q.Line, q.Source)
-	return nil
+// fences records each handled block as a readable token.
+var fences = map[string]FenceFunc{
+	"query": func(w util.BufWriter, f Fence) error {
+		fmt.Fprintf(w, "{%s line %d: %q}\n", f.Lang, f.Line, f.Source)
+		return nil
+	},
 }
 
 func convert(t *testing.T, src string) string {
 	t.Helper()
-	out, err := Convert(src, fake{})
+	out, err := Convert(src, fake{}, fences)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,13 +92,13 @@ func TestTables(t *testing.T) {
 
 func TestEmbedErrorStopsConversion(t *testing.T) {
 	boom := errors.New("cycle")
-	_, err := Convert("![[DOC-1]]", fake{err: boom})
+	_, err := Convert("![[DOC-1]]", fake{err: boom}, nil)
 	if !errors.Is(err, boom) {
 		t.Errorf("err = %v", err)
 	}
 }
 
-func TestQueryBlocks(t *testing.T) {
+func TestFencesGoToTheirHandler(t *testing.T) {
 	src := "# Requirements\n\nAll approved:\n\n```query\nfrom: Requirement\norder_by: order\n```\n\n```yaml\nfrom: not a query\n```\n\n- item\n\n  ```query\n  from: Design\n  ```\n"
 	got := convert(t, src)
 	for _, want := range []string{
@@ -106,5 +109,13 @@ func TestQueryBlocks(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %s in\n%s", want, got)
 		}
+	}
+}
+
+func TestUnhandledFencesAreCode(t *testing.T) {
+	got := convert(t, "```mermaid\ngraph TD\n```\n\n```\nplain\n```\n")
+	want := "<pre><code class=\"language-mermaid\">graph TD\n</code></pre>\n<pre><code>plain\n</code></pre>\n"
+	if got != want {
+		t.Errorf("got  %q\nwant %q", got, want)
 	}
 }

@@ -50,6 +50,7 @@ code { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 0.9
 
 section.embed { margin: 16px 0; padding: 4px 16px; border-left: 3px solid var(--rule); }
 .embed-missing, .query-empty { color: var(--muted); }
+.unrendered-note { color: #a4262c; font-size: 0.85em; }
 .placeholder, .absent { color: var(--muted); font-style: italic; }
 .invalid, .unresolved { color: #a4262c; font-size: 0.85em; }
 .unresolved::before { content: "("; }

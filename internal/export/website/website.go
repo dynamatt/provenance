@@ -234,7 +234,8 @@ func (ctx *renderCtx) markdown(v any) (template.HTML, error) {
 	}
 	prev := ctx.source
 	ctx.source = src
-	out, err := markdown.Convert(src, &resolver{ctx: ctx})
+	r := &resolver{ctx: ctx}
+	out, err := markdown.Convert(src, r, r.fences())
 	ctx.source = prev
 	return template.HTML(out), err
 }

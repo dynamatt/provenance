@@ -29,10 +29,31 @@ func (e *QueryError) Error() string {
 	return fmt.Sprintf("%s: query block: %s", e.Path, e.Msg)
 }
 
-// Query renders a query block's results live (High-Level Design §4.3a):
+// fences are the website's renderers for fenced blocks, by language. Every
+// language in markdown.RenderedLanguages must have one (TestEveryRenderedLanguageHasAFence).
+func (r *resolver) fences() map[string]markdown.FenceFunc {
+	return map[string]markdown.FenceFunc{
+		"query":   r.query,
+		"mermaid": unrendered,
+		"drawio":  unrendered,
+	}
+}
+
+// unrendered shows a block in a language the product renders but this
+// version does not yet: its source, marked, rather than a plain code listing
+// that would read as the content itself. validate's BlockLanguage rule
+// reports these blocks.
+func unrendered(w util.BufWriter, f markdown.Fence) error {
+	lang := template.HTMLEscapeString(f.Lang)
+	fmt.Fprintf(w, "<div class=\"unrendered\"><p class=\"unrendered-note\">%s blocks are not rendered by this version of Provenance</p>\n<pre><code class=\"language-%s\">%s</code></pre></div>\n",
+		lang, lang, template.HTMLEscapeString(f.Source))
+	return nil
+}
+
+// query renders a query block's results live (High-Level Design §4.3a):
 // each matching entity embedded through its own template, or its linked ID,
 // or one field's value.
-func (r *resolver) Query(w util.BufWriter, q markdown.QueryBlock) error {
+func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 	g := r.ctx.site.graph
 	b, err := query.ParseBlock(q.Source, g.Schema)
 	if err != nil {
@@ -75,7 +96,7 @@ func (r *resolver) Query(w util.BufWriter, q markdown.QueryBlock) error {
 
 // queryError places err, whose line (if any) counts from the block's first
 // line, in the file being rendered.
-func (r *resolver) queryError(q markdown.QueryBlock, err error) error {
+func (r *resolver) queryError(q markdown.Fence, err error) error {
 	msg := err.Error()
 	offset := 0
 	var qe *query.Error

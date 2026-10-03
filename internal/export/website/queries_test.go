@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/dynamatt/provenance/internal/markdown"
 )
 
 const rankedNoteSchema = noteSchema + "  - {name: rank, type: number}\n"
@@ -116,5 +118,32 @@ fields:
 	}
 	if got := string(files["index.html"]); !strings.Contains(got, "[I-1 8 false ][I-2   ]") {
 		t.Errorf("template data = %s", got)
+	}
+}
+
+// A rendered language without a fence would fall back to a code listing,
+// publishing a query's or diagram's source as if it were the content.
+func TestEveryRenderedLanguageHasAFence(t *testing.T) {
+	fences := (&resolver{}).fences()
+	for _, lang := range markdown.RenderedLanguages {
+		if fences[lang] == nil {
+			t.Errorf("no fence registered for rendered language %q", lang)
+		}
+	}
+}
+
+func TestUnrenderedLanguagesAreMarked(t *testing.T) {
+	pages, err := queryRepo(t, "title: Host\n", "```mermaid\ngraph TD\n  A --> B\n```\n\n```yaml\nkey: value\n```\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := pages["entities/H-1.html"]
+	for _, want := range []string{
+		"<div class=\"unrendered\"><p class=\"unrendered-note\">mermaid blocks are not rendered by this version of Provenance</p>\n<pre><code class=\"language-mermaid\">graph TD\n  A --&gt; B\n</code></pre></div>",
+		"<pre><code class=\"language-yaml\">key: value\n</code></pre>", // not a rendered language: plain code
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("H-1 page missing %q\n%s", want, page)
+		}
 	}
 }
