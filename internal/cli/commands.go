@@ -21,8 +21,9 @@ reports/coverage viewer.
 
 The server binds to localhost only and has no authentication. It is a single-user
 editing surface and must not be exposed beyond the local machine.`,
-		Args: noArgs,
-		RunE: notImplemented,
+		Args:        noArgs,
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 }
 
@@ -33,8 +34,9 @@ func newInitCmd() *cobra.Command {
 		Long: `Scaffold a new project in path (default: the current directory): the folder structure
 and starter files — schema/, rules/, templates/, entity-type folders, .component and
 plugins.lock — from the default or a named starter template.`,
-		Args: maxArgs(1),
-		RunE: notImplemented,
+		Args:        maxArgs(1),
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	c.Flags().String("template", "", "starter template `name` (default: the built-in default template)")
 	return c
@@ -56,7 +58,8 @@ Exit codes: 0 no error-severity violations, 1 violations found, 2 tool or usage 
 		PreRunE: func(c *cobra.Command, _ []string) error {
 			return oneOf(c, "format", "text", "json", "junit", "sarif")
 		},
-		RunE: notImplemented,
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	c.Flags().String("path", "", "repository `path` to validate (default: the repository containing the current directory)")
 	c.Flags().String("format", "text", "report `format`: text, json, junit or sarif")
@@ -77,23 +80,26 @@ SUBCOMPONENTS/. Each operation produces an ordinary, reviewable commit.`,
 		Long: `Register the component repository at url as a git submodule under SUBCOMPONENTS/,
 checking its declared component code against the full transitive set of component
 codes already composed into this repository.`,
-		Args: exactArgs("url"),
-		RunE: notImplemented,
+		Args:        exactArgs("url"),
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	add.Flags().String("path", "", "submodule `dir` under SUBCOMPONENTS/")
 	update := &cobra.Command{
-		Use:   "update <path>",
-		Short: "Move a pinned component to a different commit",
-		Long:  `Update which commit the component submodule at path is pinned to.`,
-		Args:  exactArgs("path"),
-		RunE:  notImplemented,
+		Use:         "update <path>",
+		Short:       "Move a pinned component to a different commit",
+		Long:        `Update which commit the component submodule at path is pinned to.`,
+		Args:        exactArgs("path"),
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	remove := &cobra.Command{
-		Use:   "remove <path>",
-		Short: "Remove a component submodule",
-		Long:  `Remove the component submodule reference at path.`,
-		Args:  exactArgs("path"),
-		RunE:  notImplemented,
+		Use:         "remove <path>",
+		Short:       "Remove a component submodule",
+		Long:        `Remove the component submodule reference at path.`,
+		Args:        exactArgs("path"),
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	c.AddCommand(add, update, remove)
 	return c
@@ -107,8 +113,9 @@ func newRenameCmd() *cobra.Command {
 cross-references and query-block filters — across the repository, in one commit.
 
 Unavailable once the ID is frozen by appearing in a signed release tag.`,
-		Args: exactArgs("old-id", "new-id"),
-		RunE: notImplemented,
+		Args:        exactArgs("old-id", "new-id"),
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 }
 
@@ -121,7 +128,8 @@ serialization: stable frontmatter key order, one field per line, stable list-row
 block layout. Clean git merges depend on every file being in this form.
 
 --check verifies without writing; it runs at the merge gate alongside validate.`,
-		RunE: notImplemented,
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	c.Flags().Bool("check", false, "report files that are not canonical instead of rewriting them")
 	return c
@@ -133,8 +141,9 @@ func newDiffCmd() *cobra.Command {
 		Short: "Show a rendered, semantic diff between two git refs",
 		Long: `Produce a rendered/semantic diff between two git refs, for the whole repository or
 one entity.`,
-		Args: exactArgs("ref-a", "ref-b"),
-		RunE: notImplemented,
+		Args:        exactArgs("ref-a", "ref-b"),
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	c.Flags().String("entity", "", "limit the diff to the entity with this `id`")
 	return c
@@ -156,8 +165,9 @@ can never delete a folder it did not create.
 
 Exit codes: 0 output written, 2 anything else. Export never returns 1 — judging content
 is validate's job.`,
-		Args: exactArgs("format"),
-		RunE: notImplemented,
+		Args:        exactArgs("format"),
+		Annotations: inDevelopment,
+		RunE:        runExport,
 	}
 	c.Flags().String("scope", "", "`path` to a query file or entity file that limits what is exported")
 	c.Flags().String("out", "_site", "output folder `path`")
@@ -173,8 +183,9 @@ func newReportCmd() *cobra.Command {
 --scope takes a path to a standalone query file or an entity file and resolves it to an
 entity set; pointed at a Document, the Document's scoped entities become the reporting
 population.`,
-		Args: noArgs,
-		RunE: notImplemented,
+		Args:        noArgs,
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	c.Flags().String("metric", "", "report only the metric with this `name`")
 	c.Flags().String("scope", "", "`path` to a query file or entity file that limits the population")
@@ -198,8 +209,9 @@ The gate blocks on any error-severity violation. For a system composed of compon
 also requires every pinned component to point to a tagged release.
 
 Exit codes: 0 tag created, 1 gate blocked, 2 tool or usage error.`,
-		Args: exactArgs("name"),
-		RunE: notImplemented,
+		Args:        exactArgs("name"),
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	c.AddCommand(tag)
 	return c
@@ -217,7 +229,8 @@ passed to the plugin unchanged.`,
 			}
 			return nil
 		},
-		RunE: notImplemented,
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	// Flags after the plugin name belong to the plugin.
 	c.Flags().SetInterspersed(false)
@@ -234,8 +247,9 @@ against the current state of the entity or change request/ECO identified by id.
 Prompts for the configured signing provider (OIDC/SSO device-flow login, or a local
 platform certificate signature) and writes the resulting cryptographic proof to the
 signature ledger in .signatures/.`,
-		Args: exactArgs("id"),
-		RunE: notImplemented,
+		Args:        exactArgs("id"),
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	verify := &cobra.Command{
 		Use:   "verify (<id> | --all)",
@@ -263,7 +277,8 @@ Exit codes: 0 all signatures match, 1 mismatch or invalid record, 2 tool or usag
 			}
 			return exactArgs("id")(c, args)
 		},
-		RunE: notImplemented,
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	verify.Flags().String("commit", "", "verify against the content at this commit `hash` (default: the working tree)")
 	verify.Flags().Bool("all", false, "verify every record in the signature ledger")
@@ -287,8 +302,9 @@ independently rebuilt candidate — and check it against the published release m
 The file being checked is only read, never executed.
 
 Exit codes: 0 hash matches, 1 mismatch, 2 tool or usage error.`,
-		Args: noArgs,
-		RunE: notImplemented,
+		Args:        noArgs,
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	artifact.Flags().String("path", "", "`file` to check instead of the running binary")
 	content := &cobra.Command{
@@ -301,8 +317,9 @@ With --expected, compare against a known value and exit 1 on mismatch instead of
 printing it.
 
 Exit codes: 0 printed or matched, 1 mismatch against --expected, 2 tool or usage error.`,
-		Args: noArgs,
-		RunE: notImplemented,
+		Args:        noArgs,
+		Annotations: notImplementedYet,
+		RunE:        notImplemented,
 	}
 	content.Flags().String("commit", "", "compute the hash at this commit `hash` (default: HEAD)")
 	content.Flags().String("expected", "", "expected content `hash`; exit 1 if it differs")

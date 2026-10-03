@@ -2,12 +2,16 @@ package cli
 
 import (
 	"bytes"
+	"errors"
+	"reflect"
 	"runtime"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
+
+	"github.com/dynamatt/provenance/internal/exitcode"
 )
 
 func run(args ...string) (code int, stdout, stderr string) {
@@ -104,7 +108,6 @@ func TestStubsExitTwoWithNotImplemented(t *testing.T) {
 		{"rename", []string{"rename", "REQ-0001", "REQ-0100"}},
 		{"fmt", []string{"fmt", "--check", "REQ/REQ-0001.md", "REQ/REQ-0002.md"}},
 		{"diff", []string{"diff", "main", "HEAD", "--entity", "REQ-0001"}},
-		{"export", []string{"export", "website", "--scope", "DOC/DOC-0001.md", "--out", "_doc"}},
 		{"report", []string{"report", "--metric", "coverage", "--scope", "DOC/DOC-0001.md", "--json"}},
 		{"release tag", []string{"release", "tag", "v1.0.0"}},
 		{"plugin", []string{"plugin", "importer", "--anything", "goes"}},
@@ -198,5 +201,33 @@ func TestVersion(t *testing.T) {
 	}
 	if flagOut != out {
 		t.Errorf("--version output %q differs from version output %q", flagOut, out)
+	}
+}
+
+// The documentation generator trusts the not-implemented annotation, so it must
+// mark exactly the commands whose RunE is the stub.
+func TestNotImplementedAnnotationMatchesStubs(t *testing.T) {
+	var walk func(*cobra.Command)
+	walk = func(c *cobra.Command) {
+		for _, sub := range c.Commands() {
+			if sub.Name() == "help" {
+				continue
+			}
+			isStub := sub.RunE != nil &&
+				reflect.ValueOf(sub.RunE).Pointer() == reflect.ValueOf(notImplemented).Pointer()
+			if isStub != (CommandStatus(sub) == NotImplemented) {
+				t.Errorf("%s: stub = %v but status = %q", commandName(sub), isStub, CommandStatus(sub))
+			}
+			walk(sub)
+		}
+	}
+	walk(NewRootCmd())
+}
+
+func TestStubReturnsNotImplemented(t *testing.T) {
+	var ni *exitcode.NotImplementedError
+	err := notImplemented(NewRootCmd(), nil)
+	if !errors.As(err, &ni) {
+		t.Errorf("notImplemented returned %v", err)
 	}
 }

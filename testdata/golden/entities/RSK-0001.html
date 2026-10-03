@@ -1,0 +1,62 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RSK-0001 Uncontrolled stimulation amplitude increase — NEURO DHF</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="dhf-header">
+<a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
+<span class="dhf-label">Design History File · NEURO</span>
+</header>
+<main class="dhf-main">
+
+<article class="entity" id="RSK-0001">
+<p class="entity-type">Risk</p>
+<h1><span class="id">RSK-0001</span> Uncontrolled stimulation amplitude increase</h1>
+<table class="fields">
+<tbody>
+<tr><th>Title</th><td>Uncontrolled stimulation amplitude increase</td></tr>
+<tr><th>Hazard</th><td><div class="text"><p>Loss of closed-loop feedback signal integrity</p>
+</div></td></tr>
+<tr><th>Hazardous situation</th><td><div class="text"><p>Control algorithm compensates for an apparent drop in ECAP response by increasing drive amplitude</p>
+</div></td></tr>
+<tr><th>Harm</th><td><div class="text"><p>Painful over-stimulation; patient-perceived shock sensation</p>
+</div></td></tr>
+<tr><th>Residual acceptability</th><td>unacceptable</td></tr>
+<tr><th>Risk benefit analysis</th><td><div class="text"><p>Residual risk is not yet acceptable pending verification evidence for REQ-0002's hardware current-limit (<a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a>). This field is required by rules/risk-benefit-required.yaml while residual_acceptability is &quot;unacceptable&quot;.</p>
+</div></td></tr>
+<tr><th>Mitigated by</th><td><a class="id" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>, <a class="id" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a></td></tr>
+<tr><th>Status</th><td>in_review</td></tr>
+<tr><th>Failure modes</th><td><table class="list">
+<thead><tr><th>Description</th><th>Cause</th><th>Severity</th><th>Occurrence</th><th>Row rating</th></tr></thead>
+<tbody>
+<tr><td><div class="text"><p>Sense-electrode lead fracture causes signal loss</p>
+</div></td><td><div class="text"><p>Mechanical fatigue at the electrode-lead junction</p>
+</div></td><td><a class="id" href="SEV-0003.html" title="Critical">SEV-0003</a></td><td><a class="id" href="OCC-0001.html" title="Improbable">OCC-0001</a></td><td>5</td></tr>
+<tr><td><div class="text"><p>Firmware control-loop fault causes runaway amplitude command</p>
+</div></td><td><div class="text"><p>Undetected divide-by-zero in feedback gain calculation</p>
+</div></td><td><a class="id" href="SEV-0003.html" title="Critical">SEV-0003</a></td><td><a class="id" href="OCC-0002.html" title="Occasional">OCC-0002</a></td><td>15</td></tr>
+</tbody>
+</table></td></tr>
+<tr><th>Overall risk rating</th><td>15</td></tr>
+<tr><th>Order</th><td>1</td></tr>
+</tbody>
+</table>
+<div class="body">
+<p>Hazard analysis for the closed-loop amplitude control function, per ISO
+14971. <code>row_rating</code> and <code>overall_risk_rating</code> below are calculated fields
+(Detailed Design §5) — never hand-edited, always recomputed from the linked
+<a class="ref" href="SEV-0001.html" title="Negligible">SEV-0001</a>/<a class="ref" href="OCC-0001.html" title="Improbable">OCC-0001</a>-style severity/occurrence entities' <code>score</code> fields.</p>
+</div>
+</article>
+
+</main>
+<footer class="dhf-footer">
+Controlled content, generated from the design repository. Printed copies are uncontrolled.
+</footer>
+</body>
+</html>

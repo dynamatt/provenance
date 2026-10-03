@@ -1,0 +1,14 @@
+<h1>{{.Component.Name}} ({{.Component.Code}})</h1>
+{{range .Types}}
+<h2>{{.Type}}</h2>
+<table class="entity-list">
+<thead><tr><th>ID</th><th>Title</th></tr></thead>
+<tbody>
+{{- range .Entities}}
+<tr><td class="id">{{link .}}</td><td>{{.Title}}</td></tr>
+{{- end}}
+</tbody>
+</table>
+{{else}}
+<p class="placeholder">This repository has no entities yet.</p>
+{{end}}

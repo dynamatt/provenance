@@ -33,3 +33,7 @@ go.work.sum
 
 # Build output
 /bin/
+
+# Example-repo checkout used by acceptance tests (make example)
+/.cache/
+/dist/

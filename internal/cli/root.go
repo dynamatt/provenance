@@ -55,6 +55,7 @@ The same binary runs locally and as the CI merge gate. Exit codes are the CI con
 	}
 	// version.String contains no template actions, so it is used verbatim.
 	root.SetVersionTemplate(version.String())
+	root.Flags().BoolP("version", "v", false, "print the tool version, source commit and Go toolchain")
 	root.SetFlagErrorFunc(func(c *cobra.Command, err error) error {
 		return exitcode.Usage(fmt.Errorf("%s: %w", commandName(c), err))
 	})
@@ -86,6 +87,31 @@ func commandName(c *cobra.Command) string {
 	}
 	return path
 }
+
+// statusAnnotation records how complete a command is. The documentation
+// generator reads it, so the CLI reference marks exactly the commands that
+// still print "not implemented" and those whose epic is still in progress.
+// A command with no annotation is complete.
+const statusAnnotation = "provenance/status"
+
+// Status is a command's completeness, as shown in the CLI reference.
+type Status string
+
+const (
+	// NotImplemented commands run the notImplemented stub.
+	NotImplemented Status = "not-implemented"
+	// InDevelopment commands work in part; their epic has not landed yet.
+	InDevelopment Status = "in-development"
+	Complete      Status = ""
+)
+
+var (
+	notImplementedYet = map[string]string{statusAnnotation: string(NotImplemented)}
+	inDevelopment     = map[string]string{statusAnnotation: string(InDevelopment)}
+)
+
+// CommandStatus reports how complete c is in this build.
+func CommandStatus(c *cobra.Command) Status { return Status(c.Annotations[statusAnnotation]) }
 
 // notImplemented is the RunE for commands that exist in the CLI surface but
 // have no implementation in this build.

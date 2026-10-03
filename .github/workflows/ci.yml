@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # go.mod's toolchain directive pins the exact Go release.
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Lint
+        run: make lint
+
+      - name: Unit tests
+        run: make test
+
+      - name: Build
+        run: make build
+
+      - name: Check out example repository
+        run: make example
+
+      - name: Acceptance tests
+        run: make acceptance
+
+      - name: Record binary hash
+        run: |
+          {
+            echo "### bin/provenance (linux/amd64)"
+            echo
+            echo '```'
+            ./bin/provenance version
+            echo
+            sha256sum bin/provenance
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: provenance-linux-amd64
+          path: bin/provenance
+          if-no-files-found: error
+
+      # Acceptance edits and restores files in the example checkout, so start
+      # again from a clean checkout at the pinned commit before exporting.
+      - name: Export example website
+        run: |
+          make example
+          cd .cache/example
+          ../../bin/provenance export website --out "$RUNNER_TEMP/example-site"
+          {
+            echo "### Example website"
+            echo
+            echo "Exported from provenance-example \`$(cat ../../testdata/example-repo.ref)\`; download the \`example-site\` artifact and open \`index.html\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload example website
+        uses: actions/upload-artifact@v7
+        with:
+          name: example-site
+          path: ${{ runner.temp }}/example-site
+          include-hidden-files: true
+          if-no-files-found: error
+
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Run actionlint
+        uses: reviewdog/action-actionlint@v1
+        with:
+          fail_level: error

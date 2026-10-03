@@ -1,0 +1,116 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DOC-0001 System Requirements Specification — NeuroPulse Stimulator — NEURO DHF</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="dhf-header">
+<a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
+<span class="dhf-label">Design History File · NEURO</span>
+</header>
+<main class="dhf-main">
+
+<article class="entity" id="DOC-0001">
+<p class="entity-type">Document</p>
+<h1><span class="id">DOC-0001</span> System Requirements Specification — NeuroPulse Stimulator</h1>
+<table class="fields">
+<tbody>
+<tr><th>Title</th><td>System Requirements Specification — NeuroPulse Stimulator</td></tr>
+<tr><th>Status</th><td>in_review</td></tr>
+</tbody>
+</table>
+<div class="body">
+<h1>System Requirements Specification</h1>
+<p>This document is authored prose interleaved with live query blocks
+(High-Level Design §4.3a) — it stores only the queries below, never a copy
+of the entities they resolve. Editing <a class="ref" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a> anywhere in the
+repository updates what this document renders next time it's generated,
+with nothing to keep in sync by hand.</p>
+<h2>Scope</h2>
+<p>This specification covers the closed-loop stimulation control requirements
+for the NeuroPulse system, decomposed from the user needs in <a class="ref" href="USR-0001.html" title="Reduced need for in-clinic titration visits">USR-0001</a>
+and <a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>.</p>
+<h2>Requirements</h2>
+<p>All approved requirements, in author-assigned order:</p>
+<div class="query">
+<section class="embed" data-entity="REQ-0001">
+<article class="requirement" id="REQ-0001">
+<h3 class="requirement-title"><span class="req-id">REQ-0001</span> Closed-loop amplitude adjustment</h3>
+<p class="requirement-meta">
+<span class="status status-approved">approved</span> · verified by test
+</p>
+<div class="statement"><p>The system shall automatically adjust stimulation amplitude within a
+pre-configured safe range, using the measured evoked neural response as
+feedback, without requiring clinician intervention.</p>
+</div>
+<h4>Implements</h4>
+<ul>
+<li><a class="ref" href="USR-0001.html" title="Reduced need for in-clinic titration visits">USR-0001</a>: Reduced need for in-clinic titration visits</li>
+</ul>
+<h4>Verified by</h4>
+<ul>
+<li><a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>: Bench verification of closed-loop amplitude adjustment</li>
+</ul>
+</article>
+</section>
+<section class="embed" data-entity="REQ-0002">
+<article class="requirement" id="REQ-0002">
+<h3 class="requirement-title"><span class="req-id">REQ-0002</span> Single-fault amplitude ceiling</h3>
+<p class="requirement-meta">
+<span class="status status-approved">approved</span> · verified by test, analysis
+</p>
+<div class="statement"><p>The system shall not deliver a stimulation amplitude exceeding 8 mA under
+any single-fault condition, including loss of the sense-electrode feedback
+signal used by the closed-loop control algorithm (<a class="ref" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a>).</p>
+</div>
+<h4>Implements</h4>
+<ul>
+<li><a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>: No unexpected increases in stimulation intensity</li>
+</ul>
+<h4>Verified by</h4>
+<ul>
+<li><a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a>: Bench verification of single-fault amplitude ceiling</li>
+</ul>
+<h4>Refined by</h4>
+<ul>
+<li><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a>: Amplitude ceiling — subsystem allocation</li>
+</ul>
+</article>
+</section>
+</div>
+<h2>Amplitude Ceiling — Subsystem Detail</h2>
+<p>The system-level ceiling is <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">Single-fault amplitude ceiling</a>, allocated to the subsystem
+level as an independent hardware safeguard:</p>
+<section class="embed" data-entity="REQ-0003">
+<article class="requirement" id="REQ-0003">
+<h3 class="requirement-title"><span class="req-id">REQ-0003</span> Amplitude ceiling — subsystem allocation</h3>
+<p class="requirement-meta">
+<span class="status status-draft">draft</span> · refines <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a> · verified by inspection, test
+</p>
+<div class="statement"><p>The pulse-generator ASIC shall enforce a hard current-limit circuit,
+independent of firmware, as the subsystem-level implementation of the
+system-level ceiling in <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</p>
+</div>
+<h4>Implements</h4>
+<p class="none">No user need linked.</p>
+<h4>Verified by</h4>
+<p class="none">Not yet verified.</p>
+</article>
+</section>
+<h2>Traceability Note</h2>
+<p>Full traceability to design elements, risk controls, and verification
+evidence is generated separately as coverage reports (Requirements Spec
+§7a) rather than duplicated in this document's own query blocks.</p>
+</div>
+</article>
+
+</main>
+<footer class="dhf-footer">
+Controlled content, generated from the design repository. Printed copies are uncontrolled.
+</footer>
+</body>
+</html>

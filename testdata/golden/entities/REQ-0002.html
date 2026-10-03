@@ -1,0 +1,45 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REQ-0002 Single-fault amplitude ceiling — NEURO DHF</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="dhf-header">
+<a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
+<span class="dhf-label">Design History File · NEURO</span>
+</header>
+<main class="dhf-main">
+
+<article class="requirement" id="REQ-0002">
+<h1 class="requirement-title"><span class="req-id">REQ-0002</span> Single-fault amplitude ceiling</h1>
+<p class="requirement-meta">
+<span class="status status-approved">approved</span> · verified by test, analysis
+</p>
+<div class="statement"><p>The system shall not deliver a stimulation amplitude exceeding 8 mA under
+any single-fault condition, including loss of the sense-electrode feedback
+signal used by the closed-loop control algorithm (<a class="ref" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a>).</p>
+</div>
+<h2>Implements</h2>
+<ul>
+<li><a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>: No unexpected increases in stimulation intensity</li>
+</ul>
+<h2>Verified by</h2>
+<ul>
+<li><a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a>: Bench verification of single-fault amplitude ceiling</li>
+</ul>
+<h2>Refined by</h2>
+<ul>
+<li><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a>: Amplitude ceiling — subsystem allocation</li>
+</ul>
+</article>
+
+</main>
+<footer class="dhf-footer">
+Controlled content, generated from the design repository. Printed copies are uncontrolled.
+</footer>
+</body>
+</html>
