@@ -3,23 +3,21 @@ package website
 import (
 	"fmt"
 	"html/template"
+	"maps"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/yuin/goldmark/util"
-	"go.yaml.in/yaml/v3"
 
 	"github.com/dynamatt/provenance/internal/markdown"
-	"github.com/dynamatt/provenance/internal/schema"
 )
 
 // Captions (Requirements Spec §7, Detailed Design §7) are written where a
 // figure, table or equation is used, as a ```caption block after it
 // (markdown/captions.go). Each page numbers its captions in document order,
-// one sequence per label: a caption's kind names its label, and kinds with
-// the same label share a sequence.
+// one sequence per kind.
 //
 // A number is only known once the whole page is rendered, so rendering
 // leaves placeholders that finalize resolves (a two-pass render): the
@@ -35,67 +33,12 @@ type captionKind struct {
 	Above bool   // the caption goes above the captioned block (tables)
 }
 
-// defaultKinds apply unless templates/_captions.yaml says otherwise.
-func defaultKinds() map[string]captionKind {
-	return map[string]captionKind{
-		"figure":   {Label: "Figure"},
-		"table":    {Label: "Table", Above: true},
-		"equation": {Label: "Equation"},
-	}
-}
-
-// parseCaptions reads templates/_captions.yaml: each key is a caption kind,
-// mapped to its label, or to label and position (above or below, the
-// default). Kinds listed here are added to, or replace, the defaults.
-//
-//	diagram: Figure            # numbered in the same sequence as figure
-//	table: {label: Table, position: below}
-func parseCaptions(path, text string, _ *schema.Schema) (map[string]captionKind, error) {
-	kinds := defaultKinds()
-	fail := func(line int, format string, args ...any) error {
-		return &TemplateError{Msg: fmt.Sprintf("%s:%d: %s", path, line, fmt.Sprintf(format, args...))}
-	}
-	var doc yaml.Node
-	if err := yaml.Unmarshal([]byte(text), &doc); err != nil {
-		return nil, &TemplateError{Msg: path + ": " + strings.TrimPrefix(err.Error(), "yaml: ")}
-	}
-	if len(doc.Content) == 0 {
-		return kinds, nil
-	}
-	m := doc.Content[0]
-	if m.Kind != yaml.MappingNode {
-		return nil, fail(m.Line, "expected a mapping of caption kind to label, e.g. figure: Figure")
-	}
-	for i := 0; i+1 < len(m.Content); i += 2 {
-		k, v := m.Content[i], m.Content[i+1]
-		var ck captionKind
-		switch v.Kind {
-		case yaml.ScalarNode:
-			ck.Label = v.Value
-		case yaml.MappingNode:
-			for j := 0; j+1 < len(v.Content); j += 2 {
-				key, val := v.Content[j], v.Content[j+1]
-				switch key.Value {
-				case "label":
-					ck.Label = val.Value
-				case "position":
-					if val.Value != "above" && val.Value != "below" {
-						return nil, fail(val.Line, "%s: position is above or below, not %q", k.Value, val.Value)
-					}
-					ck.Above = val.Value == "above"
-				default:
-					return nil, fail(key.Line, "%s: unknown key %q (expected label, position)", k.Value, key.Value)
-				}
-			}
-		default:
-			return nil, fail(v.Line, "%s: expected a label, or {label, position}", k.Value)
-		}
-		if strings.TrimSpace(ck.Label) == "" {
-			return nil, fail(v.Line, "%s: needs a label", k.Value)
-		}
-		kinds[k.Value] = ck
-	}
-	return kinds, nil
+// captionKinds are fixed (decided 2026-10-04): how a caption looks is the
+// stylesheet's concern, through the captioned-<kind> class.
+var captionKinds = map[string]captionKind{
+	"figure":   {Label: "Figure"},
+	"table":    {Label: "Table", Above: true},
+	"equation": {Label: "Equation"},
 }
 
 const (
@@ -125,14 +68,9 @@ var (
 func anchorID(id string) string { return "caption-" + id }
 
 func (r *resolver) kind(c markdown.Caption) (captionKind, error) {
-	k, ok := r.ctx.site.templates.captions[c.Kind]
+	k, ok := captionKinds[c.Kind]
 	if !ok {
-		names := make([]string, 0, len(r.ctx.site.templates.captions))
-		for n := range r.ctx.site.templates.captions {
-			names = append(names, n)
-		}
-		slices.Sort(names)
-		return k, &markdown.Error{Line: c.Line, Msg: fmt.Sprintf("unknown caption kind %q (kinds: %s)", c.Kind, strings.Join(names, ", "))}
+		return k, &markdown.Error{Line: c.Line, Msg: fmt.Sprintf("unknown caption kind %q (kinds: %s)", c.Kind, strings.Join(slices.Sorted(maps.Keys(captionKinds)), ", "))}
 	}
 	return k, nil
 }

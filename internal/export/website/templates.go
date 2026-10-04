@@ -24,7 +24,6 @@ import (
 //	templates/_layout.tmpl      the layout wrapping every page
 //	templates/_index.tmpl       the site's main page
 //	templates/style.css         the stylesheet
-//	templates/_captions.yaml    caption kinds and how they are numbered
 //
 // Other files there (a README, drafts) are ignored, as is a type template
 // naming no declared type; validate reports those.
@@ -41,9 +40,6 @@ type templateSet struct {
 	types         map[string]source // project type templates by type name
 	named         map[string]source // named presentation templates by name
 	style         []byte
-	// captions are the caption kinds: the defaults, with
-	// templates/_captions.yaml's on top.
-	captions map[string]captionKind
 	// Project reports whether any project template or stylesheet was found.
 	project bool
 }
@@ -61,12 +57,11 @@ func builtin(file string) source {
 // page would use it.
 func loadTemplates(root string, s *schema.Schema) (*templateSet, error) {
 	ts := &templateSet{
-		layout:   builtin("layout.tmpl"),
-		index:    builtin("index.tmpl"),
-		types:    map[string]source{},
-		named:    map[string]source{},
-		style:    styleCSS,
-		captions: defaultKinds(),
+		layout: builtin("layout.tmpl"),
+		index:  builtin("index.tmpl"),
+		types:  map[string]source{},
+		named:  map[string]source{},
+		style:  styleCSS,
 	}
 	dir := filepath.Join(root, templatesDir)
 	entries, err := os.ReadDir(dir)
@@ -92,15 +87,6 @@ func loadTemplates(root string, s *schema.Schema) (*templateSet, error) {
 			return strings.ReplaceAll(string(b), "\r\n", "\n"), err
 		}
 		switch {
-		case name == "_captions.yaml":
-			text, err := read()
-			if err != nil {
-				return nil, err
-			}
-			if ts.captions, err = parseCaptions(templatesDir+"/"+name, text, s); err != nil {
-				return nil, err
-			}
-			ts.project = true
 		case name == "style.css":
 			text, err := read()
 			if err != nil {

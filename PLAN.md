@@ -470,9 +470,10 @@ render, then resolve inline references to them as "Figure N". **Captions at
 the point of use (changed 2026-10-04, Matt, from review):** a caption belongs
 to where a figure, table or equation is used, not to the asset, so it is a
 ` ```caption ` block (kind, id, Markdown text) right after the image, table,
-embed or fenced block it captions, referred to with `[[#id]]`;
-`templates/_captions.yaml` adds caption kinds to the built-in figure, table
-and equation (Requirements Spec §7's "stylesheet concern"). **Images (added
+embed or fenced block it captions, referred to with `[[#id]]`.
+**Caption kinds fixed (decided 2026-10-04, Matt, from review):** figure,
+table (captioned above) and equation, with no configuration file; how a
+caption looks is the stylesheet's concern (Requirements Spec §7). **Images (added
 2026-10-04, Matt):** image files (SVG, PNG, JPEG, GIF, WebP) referenced from
 Markdown are copied into the site; a URL or a missing file exits 2.
 Equations render with E1.13's bundled renderers. **Example-repo PR:** images

@@ -37,9 +37,6 @@ type Deps struct {
 	// Assets are the image files the content shows, as repository paths,
 	// sorted.
 	Assets []string
-	// Captions reports whether the content has caption blocks, whose
-	// numbering the caption configuration decides.
-	Captions bool
 }
 
 // Dependencies walks root's content.
@@ -66,7 +63,7 @@ func (g *Graph) Dependencies(root *model.Entity) (*Deps, error) {
 			}
 		}
 	}
-	d := &Deps{IDs: keys(w.ids), Full: keys(w.full), Types: keys(w.types), Templates: keys(w.templates), Assets: keys(w.assets), Captions: w.captions}
+	d := &Deps{IDs: keys(w.ids), Full: keys(w.full), Types: keys(w.types), Templates: keys(w.templates), Assets: keys(w.assets)}
 	read := map[string]bool{}
 	for _, id := range d.IDs {
 		for _, r := range g.FormulaInputs(g.Entity(id)) {
@@ -94,7 +91,6 @@ type walker struct {
 	types     map[string]bool
 	templates map[string]bool
 	assets    map[string]bool
-	captions  bool
 	// queue holds entities rendered in full whose content is not yet read.
 	queue []*model.Entity
 	full  map[string]bool
@@ -150,13 +146,10 @@ func markdownSources(e *model.Entity) []string {
 // recorder is a Markdown resolver that only notes what a text pulls in.
 type recorder struct{ w *walker }
 
-func (r *recorder) Reference(util.BufWriter, markdown.Link) error      { return nil }
-func (r *recorder) MisplacedEmbed(util.BufWriter, markdown.Link) error { return nil }
-func (r *recorder) CaptionStart(util.BufWriter, markdown.Caption) error {
-	r.w.captions = true
-	return nil
-}
-func (r *recorder) CaptionEnd(util.BufWriter, markdown.Caption) error { return nil }
+func (r *recorder) Reference(util.BufWriter, markdown.Link) error       { return nil }
+func (r *recorder) MisplacedEmbed(util.BufWriter, markdown.Link) error  { return nil }
+func (r *recorder) CaptionStart(util.BufWriter, markdown.Caption) error { return nil }
+func (r *recorder) CaptionEnd(util.BufWriter, markdown.Caption) error   { return nil }
 
 func (r *recorder) Embed(_ util.BufWriter, l markdown.Link) error {
 	if e := r.w.g.Entity(l.ID); e != nil {

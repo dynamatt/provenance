@@ -137,9 +137,7 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 // of the entities its dependency walk pulls in and of those their calculated
 // fields read, the images it shows, every entity of the types its queries
 // select, the schema of the types it renders, and the templates it renders
-// through: the layout, the caption kinds if it has captions, the type
-// template of each entity shown
-// in full (a path that does not exist yet still counts, so adding one is a
+// through: the layout, the type template of each entity shown in full (a path that does not exist yet still counts, so adding one is a
 // change) and the named templates its queries choose. The stylesheet is a
 // separate file, so it is not an input of any page.
 func (s *site) pageInputs(e *model.Entity) (history.Inputs, error) {
@@ -153,9 +151,6 @@ func (s *site) pageInputs(e *model.Entity) (history.Inputs, error) {
 	paths := map[string]bool{
 		".component":                   true,
 		templatesDir + "/_layout.tmpl": true,
-	}
-	if deps.Captions {
-		paths[templatesDir+"/_captions.yaml"] = true
 	}
 	for _, id := range append(slices.Clone(deps.IDs), deps.Read...) {
 		ent := s.byID[id]

@@ -278,8 +278,8 @@ PY
 "$PROV" export website >/dev/null
 expect 0 '<a class="ref xref" href="#caption-control-loop">Figure 2</a>' cat _site/entities/DOC-0001.html
 expect 0 '<a class="ref xref" href="#caption-ecap-response">Figure 3</a>' cat _site/entities/DOC-0001.html
-sed -i 's/^kind: diagram/kind: chart/' DOC/DOC-0001.md
-expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: unknown caption kind "chart" \(kinds: diagram, equation, figure, table\)$' "$PROV" export website
+sed -i 's/^kind: table/kind: chart/' DOC/DOC-0001.md
+expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: unknown caption kind "chart" \(kinds: equation, figure, table\)$' "$PROV" export website
 cp "$WORK/DOC-0001.md" DOC/DOC-0001.md
 sed -i.orig 's|(\.\./assets/control-loop\.svg)|(../assets/missing.svg)|' DOC/DOC-0001.md
 expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: image assets/missing\.svg does not exist$' "$PROV" export website

@@ -9,15 +9,14 @@ import (
 const captionDoc = "See [[#loop]], [[#loop|the loop]] and [[#limits]]; [[#nothing]] is not here.\n\n" +
 	"![Loop](../assets/loop.svg)\n\n```caption\nkind: figure\nid: loop\ntext: The *control* loop.\n```\n\n" +
 	"| Limit | mA |\n| - | - |\n| Ceiling | 8 |\n\n```caption\nkind: table\nid: limits\ntext: Limits.\n```\n\n" +
-	"![[N-2]]\n\n```caption\nkind: diagram\n```\n\n" +
+	"![[N-2]]\n\n```caption\nkind: figure\n```\n\n" +
 	"After: [[#loop]].\n"
 
 var captionRepo = map[string]string{
-	"schema/Note.yaml":         noteSchema,
-	"templates/_captions.yaml": "diagram: Figure\n",
-	"assets/loop.svg":          "<svg/>",
-	"N/N-1.md":                 note("N-1", "title: Doc\n", captionDoc),
-	"N/N-2.md":                 note("N-2", "title: Inner\n", "Inner body."),
+	"schema/Note.yaml": noteSchema,
+	"assets/loop.svg":  "<svg/>",
+	"N/N-1.md":         note("N-1", "title: Doc\n", captionDoc),
+	"N/N-2.md":         note("N-2", "title: Inner\n", "Inner body."),
 }
 
 func TestCaptionBlocks(t *testing.T) {
@@ -35,8 +34,8 @@ func TestCaptionBlocks(t *testing.T) {
 		"<figure class=\"captioned captioned-figure\" id=\"caption-loop\">\n<p><img src=\"../assets/loop.svg\" alt=\"Loop\"></p>\n<figcaption><span class=\"caption-number\">Figure 1</span> The <em>control</em> loop.</figcaption>\n</figure>",
 		// A table: caption above.
 		"<figure class=\"captioned captioned-table\" id=\"caption-limits\">\n<figcaption><span class=\"caption-number\">Table 1</span> Limits.</figcaption>\n<table>",
-		// A configured kind sharing the Figure sequence, on an embed.
-		"<figure class=\"captioned captioned-diagram\">\n<section class=\"embed\" data-entity=\"N-2\">",
+		// A figure captioning an embed.
+		"<figure class=\"captioned captioned-figure\">\n<section class=\"embed\" data-entity=\"N-2\">",
 		`<figcaption><span class="caption-number">Figure 2</span></figcaption>`,
 	} {
 		if !strings.Contains(page, want) {
@@ -80,15 +79,13 @@ func TestCaptionAndImageErrors(t *testing.T) {
 		want  string
 	}{
 		"unknown kind": {map[string]string{"N/N-1.md": note("N-1", "", "![a](../assets/loop.svg)\n\n```caption\nkind: chart\n```\n")},
-			`N/N-1.md:8: unknown caption kind "chart" (kinds: diagram, equation, figure, table)`},
+			`N/N-1.md:8: unknown caption kind "chart" (kinds: equation, figure, table)`},
 		"nothing to caption": {map[string]string{"N/N-1.md": note("N-1", "", "Just text.\n\n```caption\nkind: figure\n```\n")},
 			"N/N-1.md:7: a caption must come right after the figure, table, equation or embed it captions"},
 		"missing image": {map[string]string{"N/N-1.md": note("N-1", "", "Intro.\n\n![a](../assets/gone.png)\n")},
 			"N/N-1.md:7: image assets/gone.png does not exist"},
 		"remote image": {map[string]string{"N/N-1.md": note("N-1", "", "![a](https://example.com/a.png)\n")},
 			"N/N-1.md:5: image https://example.com/a.png: images must be files in the repository"},
-		"bad config": {map[string]string{"templates/_captions.yaml": "table: {label: Table, position: left}\n"},
-			`templates/_captions.yaml:1: table: position is above or below, not "left"`},
 	} {
 		t.Run(name, func(t *testing.T) {
 			repo := maps.Clone(captionRepo)
