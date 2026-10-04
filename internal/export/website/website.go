@@ -12,10 +12,13 @@ package website
 import (
 	"bytes"
 	"embed"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
+	"maps"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -66,8 +69,9 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 	}
 	s := &site{
 		component: in.Repo.Component,
+		root:      in.Repo.Root,
 		templates: ts,
-		data:      buildData(in.Schema, in.Entities, ts.captions),
+		data:      buildData(in.Schema, in.Entities),
 		graph:     graph,
 		scope:     in.Scope,
 		git:       in.Git,
@@ -103,7 +107,7 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := s.page("index.html", "", pageTitle(root), s.finalize(content, root), s.data.byID[root.ID]); err != nil {
+		if err := s.page("index.html", "", pageTitle(root), s.finalize(content), s.data.byID[root.ID]); err != nil {
 			return nil, err
 		}
 	} else {
@@ -111,11 +115,9 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		if err != nil {
 			return nil, err
 		}
-		// The index shows every entity in scope, so any content change can
-		// change it.
-		last, revs := s.git.Page(history.Inputs{Prefixes: []string{""}})
+		last, revs := s.git.Page(s.indexInputs(inScope))
 		stamps := entityData{"LastChangedSHA": last, "Revisions": revisionData(revs)}
-		if err := s.page("index.html", "", in.Repo.Component.Name, s.finalize(index, nil), stamps); err != nil {
+		if err := s.page("index.html", "", in.Repo.Component.Name, s.finalize(index), stamps); err != nil {
 			return nil, err
 		}
 	}
@@ -124,16 +126,22 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), s.finalize(content, ent), s.data.byID[ent.ID]); err != nil {
+		if err := s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), s.finalize(content), s.data.byID[ent.ID]); err != nil {
 			return nil, err
 		}
 	}
 	return s.files, nil
 }
 
-// pageInputs are what e's page renders from (Detailed Design §4): the files
-// of e and everything it pulls in, every entity of the types its query
-// blocks select, and the presentation (.component, schema/, templates/).
+// pageInputs are the files e's page shows (Detailed Design §4): the files
+// of the entities its dependency walk pulls in and of those their calculated
+// fields read, the images it shows, every entity of the types its queries
+// select, the schema of the types it renders, and the templates it renders
+// through: the layout, the caption kinds if it has captions, the type
+// template of each entity shown
+// in full (a path that does not exist yet still counts, so adding one is a
+// change) and the named templates its queries choose. The stylesheet is a
+// separate file, so it is not an input of any page.
 func (s *site) pageInputs(e *model.Entity) (history.Inputs, error) {
 	if in, ok := s.inputs[e.ID]; ok {
 		return in, nil
@@ -142,12 +150,58 @@ func (s *site) pageInputs(e *model.Entity) (history.Inputs, error) {
 	if err != nil {
 		return history.Inputs{}, err
 	}
-	in := history.Inputs{Paths: []string{".component"}, Prefixes: []string{"schema/", "templates/"}, Types: deps.Types}
-	for _, id := range deps.IDs {
-		in.Paths = append(in.Paths, s.byID[id].Path)
+	paths := map[string]bool{
+		".component":                   true,
+		templatesDir + "/_layout.tmpl": true,
 	}
+	if deps.Captions {
+		paths[templatesDir+"/_captions.yaml"] = true
+	}
+	for _, id := range append(slices.Clone(deps.IDs), deps.Read...) {
+		ent := s.byID[id]
+		paths[ent.Path] = true
+		s.schemaFiles(ent.Schema, paths)
+	}
+	for _, id := range deps.Full {
+		paths[templatesDir+"/"+s.byID[id].Type+".tmpl"] = true
+	}
+	for _, name := range deps.Templates {
+		paths[templatesDir+"/"+name+".tmpl"] = true
+	}
+	for _, a := range deps.Assets {
+		paths[a] = true
+	}
+	in := history.Inputs{Paths: slices.Sorted(maps.Keys(paths)), Types: deps.Types}
 	s.inputs[e.ID] = in
 	return in, nil
+}
+
+// schemaFiles adds the files declaring t: its own, and the records its lists
+// use.
+func (s *site) schemaFiles(t *schema.Type, paths map[string]bool) {
+	paths[t.File] = true
+	for _, f := range t.Fields {
+		if f.Record != "" {
+			if r := s.graph.Schema.Records[f.Record]; r != nil {
+				paths[r.File] = true
+			}
+		}
+	}
+}
+
+// indexInputs are what the index page shows: every entity in scope, with
+// the schema of their types, the index template and the layout.
+func (s *site) indexInputs(entities []*model.Entity) history.Inputs {
+	paths := map[string]bool{
+		".component":                   true,
+		templatesDir + "/_layout.tmpl": true,
+		templatesDir + "/_index.tmpl":  true,
+	}
+	for _, e := range entities {
+		paths[e.Path] = true
+		s.schemaFiles(e.Schema, paths)
+	}
+	return history.Inputs{Paths: slices.Sorted(maps.Keys(paths))}
 }
 
 // revisionData is revision history as template data, newest first.
@@ -171,12 +225,14 @@ func pageTitle(e *model.Entity) string {
 
 type site struct {
 	component repo.Component
+	root      string // the repository root, for images
 	templates *templateSet
 	data      *dataModel
 	graph     *query.Graph
 	scope     *export.Scope
 	git       *export.Git
 	inputs    map[string]history.Inputs // page inputs by entity ID
+	serial    int                       // numbers caption placeholders
 	byID      map[string]*model.Entity
 	files     export.Files
 }
@@ -305,9 +361,7 @@ func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named, linkB
 		if err != nil {
 			return "", err
 		}
-		view := entityView(e)
-		view.CaptionNumber, _ = s.data.byID[e.ID]["CaptionNumber"].(string)
-		if err := t.ExecuteTemplate(&b, "entity", view); err != nil {
+		if err := t.ExecuteTemplate(&b, "entity", entityView(e)); err != nil {
 			return "", templateError(err)
 		}
 	}
@@ -337,8 +391,13 @@ func (ctx *renderCtx) markdown(v any) (template.HTML, error) {
 	prev := ctx.source
 	ctx.source = src
 	r := &resolver{ctx: ctx}
-	out, err := markdown.Convert(src, r, r.fences())
+	out, err := markdown.Convert(src, r, r.options())
 	ctx.source = prev
+	var me *markdown.Error
+	if errors.As(err, &me) && len(ctx.chain) > 0 {
+		e := ctx.chain[len(ctx.chain)-1]
+		err = &ContentError{Path: e.Path, Line: e.TextFileLine(src, me.Line), Msg: me.Msg}
+	}
 	return template.HTML(out), err
 }
 
@@ -421,8 +480,6 @@ func asRef(v any, fn string) (entityData, error) {
 // in schema order, then its body.
 type entityPage struct {
 	*model.Entity
-	// CaptionNumber is the caption placeholder of a captioned entity.
-	CaptionNumber string
 	// Fields excludes the body field, which is rendered below the table.
 	Fields    []*model.Value
 	BodyField *model.Value

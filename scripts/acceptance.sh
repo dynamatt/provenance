@@ -66,7 +66,7 @@ cd ..
 # E1.2: entity discovery and parsing.
 "$PROV" export website >/dev/null
 for id in USR-0001 USR-0002 REQ-0001 REQ-0002 REQ-0003 DES-0001 SEV-0001 SEV-0002 SEV-0003 \
-	OCC-0001 OCC-0002 OCC-0003 RSK-0001 VER-0001 VER-0002 EVD-0001 EVD-0002 ECO-0001 DOC-0001 DOC-0002 FIG-0001; do
+	OCC-0001 OCC-0002 OCC-0003 RSK-0001 VER-0001 VER-0002 EVD-0001 EVD-0002 ECO-0001 DOC-0001 DOC-0002; do
 	expect 0 ">$id<"                      cat _site/index.html
 done
 expect 0 '<h2>VerificationEvidence</h2>' cat _site/index.html
@@ -211,7 +211,7 @@ mv DOC/DOC-0002.md.orig DOC/DOC-0002.md
 # links outside the scope plain IDs; a query file scopes to its results.
 expect 0 "^exported website to $WORK/_doc\$" "$PROV" export website --scope DOC/DOC-0001.md --out "$WORK/_doc"
 expect 0 '<h1>System Requirements Specification</h1>' cat "$WORK/_doc/index.html"
-expect 0 '^DOC-0001\.html FIG-0001\.html REQ-0001\.html REQ-0002\.html REQ-0003\.html $' sh -c "ls '$WORK/_doc/entities' | tr '\\n' ' '"
+expect 0 '^DOC-0001\.html REQ-0001\.html REQ-0002\.html REQ-0003\.html $' sh -c "ls '$WORK/_doc/entities' | tr '\\n' ' '"
 expect 0 '' "$PROV" export website --scope REQ/REQ-0001.md --out "$WORK/_req"
 expect 0 '^REQ-0001\.html$' ls "$WORK/_req/entities"
 expect 0 '<span class="ref out-of-scope">USR-0001</span>' cat "$WORK/_req/index.html"
@@ -242,25 +242,48 @@ expect 0 "^$BEFORE\$" last_changed
 sed -i 's/^order: 1/order: 1 /' REQ/REQ-0001.md && gitc commit -qam "Edit REQ-0001"
 expect 0 "^last changed in <code>$(git rev-parse --short=7 HEAD)\$" last_changed
 expect 0 '<td>Edit REQ-0001</td>' cat _site/entities/DOC-0001.html
+# Only what a page shows counts: the stylesheet is a separate file; a
+# severity score shows on RSK-0001 through its calculated ratings.
+AFTER=$(last_changed)
+echo "/* tweak */" >> templates/style.css && gitc commit -qam "Restyle"
+expect 0 "^$AFTER\$" last_changed
+rsk_changed() { "$PROV" export website >/dev/null && grep -o 'last changed in <code>[0-9a-f]*' _site/entities/RSK-0001.html; }
+sed -i 's/^label: Critical/label: Critical /' SEV/SEV-0003.md && gitc commit -qam "Edit SEV-0003"
+expect 0 "^last changed in <code>$(git rev-parse --short=7 HEAD)\$" rsk_changed
+echo "<!-- layout -->" >> templates/_layout.tmpl && gitc commit -qam "Edit layout"
+expect 0 "^last changed in <code>$(git rev-parse --short=7 HEAD)\$" last_changed
 git checkout -q --detach "$PIN"
 
-# E1.12: captioned entities and cross-reference numbering. DOC-0001 numbers
-# FIG-0001 "Figure 1" under the figure and in the sentence referring to it;
-# a second figure embedded above takes number 1 and the text follows.
+# E1.12: captions and images. DOC-0001 captions two figures and a table
+# where it uses them and refers to them with [[#id]]; the images are copied
+# into the site. A figure captioned above the first takes number 1, and the
+# references follow.
 "$PROV" export website >/dev/null
-expect 0 'shown in <a class="ref xref" href="#caption-FIG-0001"[^>]*>Figure 1</a>' cat _site/entities/DOC-0001.html
-expect 0 '<figcaption><strong>Figure 1</strong> Closed-loop amplitude control' cat _site/entities/DOC-0001.html
-sed 's/FIG-0001/FIG-0002/; s/^title: .*/title: Stimulation pathway/' FIG/FIG-0001.md > FIG/FIG-0002.md
-sed -i.orig 's/^!\[\[FIG-0001\]\]/![[FIG-0002]]\n\n![[FIG-0001]]/' DOC/DOC-0001.md
+expect 0 '<a class="ref xref" href="#caption-control-loop">Figure 1</a>' cat _site/entities/DOC-0001.html
+expect 0 '<a class="ref xref" href="#caption-ecap-response">Figure 2</a>' cat _site/entities/DOC-0001.html
+expect 0 '<span class="caption-number">Table 1</span> Stimulation amplitude limits by level\.' cat _site/entities/DOC-0001.html
+expect 0 '<img src="\.\./assets/control-loop\.svg"' cat _site/entities/DOC-0001.html
+expect 0 '<a class="ref xref" href="#caption-bench-setup">Figure 1</a>' cat _site/entities/EVD-0001.html
+expect 0 '^bench-setup\.jpg control-loop\.svg ecap-response\.png $' sh -c "ls _site/assets | tr '\\n' ' '"
+expect 0 '' cmp assets/ecap-response.png _site/assets/ecap-response.png
+cp DOC/DOC-0001.md "$WORK/DOC-0001.md"
+python3 - <<'PY'
+p = "DOC/DOC-0001.md"
+s = open(p, newline="").read()
+nl = "\r\n" if "\r\n" in s else "\n"
+first = "![Closed-loop amplitude control]"
+s = s.replace(first, nl.join(["![Bench](../assets/bench-setup.jpg)", "", "```caption", "kind: figure", "```", "", first]), 1)
+open(p, "w", newline="").write(s)
+PY
 "$PROV" export website >/dev/null
-expect 0 'shown in <a class="ref xref" href="#caption-FIG-0001"[^>]*>Figure 2</a>' cat _site/entities/DOC-0001.html
-expect 0 '<figcaption><strong>Figure 1</strong> Stimulation pathway' cat _site/entities/DOC-0001.html
+expect 0 '<a class="ref xref" href="#caption-control-loop">Figure 2</a>' cat _site/entities/DOC-0001.html
+expect 0 '<a class="ref xref" href="#caption-ecap-response">Figure 3</a>' cat _site/entities/DOC-0001.html
+sed -i 's/^kind: diagram/kind: chart/' DOC/DOC-0001.md
+expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: unknown caption kind "chart" \(kinds: diagram, equation, figure, table\)$' "$PROV" export website
+cp "$WORK/DOC-0001.md" DOC/DOC-0001.md
+sed -i.orig 's|(\.\./assets/control-loop\.svg)|(../assets/missing.svg)|' DOC/DOC-0001.md
+expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: image assets/missing\.svg does not exist$' "$PROV" export website
 mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
-rm FIG/FIG-0002.md
-cp templates/_captions.yaml "$WORK/_captions.yaml"
-echo 'Plate: [Figure]' >> templates/_captions.yaml
-expect 2 '^export: templates/_captions\.yaml:[0-9]+: Figure is already numbered as Figure$' "$PROV" export website
-cp "$WORK/_captions.yaml" templates/_captions.yaml
 
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).

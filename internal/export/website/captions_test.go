@@ -6,49 +6,45 @@ import (
 	"testing"
 )
 
+const captionDoc = "See [[#loop]], [[#loop|the loop]] and [[#limits]]; [[#nothing]] is not here.\n\n" +
+	"![Loop](../assets/loop.svg)\n\n```caption\nkind: figure\nid: loop\ntext: The *control* loop.\n```\n\n" +
+	"| Limit | mA |\n| - | - |\n| Ceiling | 8 |\n\n```caption\nkind: table\nid: limits\ntext: Limits.\n```\n\n" +
+	"![[N-2]]\n\n```caption\nkind: diagram\n```\n\n" +
+	"After: [[#loop]].\n"
+
 var captionRepo = map[string]string{
 	"schema/Note.yaml":         noteSchema,
-	"schema/Fig.yaml":          "type: Fig\nfields:\n  - {name: title, type: string}\n",
-	"schema/Tab.yaml":          "type: Tab\nfields:\n  - {name: title, type: string}\n",
-	"templates/Fig.tmpl":       `<figure>{{markdown .Body}}<figcaption>{{.CaptionNumber}}: {{.Title}}</figcaption></figure>`,
-	"templates/_captions.yaml": "Figure: [Fig]\nTable: [Tab]\n",
-	"F/F-1.md":                 "---\nid: F-1\ntype: Fig\ntitle: Loop\n---\nLoop drawing.\n",
-	"F/F-2.md":                 "---\nid: F-2\ntype: Fig\ntitle: Ceiling\n---\nCeiling drawing.\n",
-	"F/F-3.md":                 "---\nid: F-3\ntype: Fig\ntitle: Unused\n---\nNot embedded.\n",
-	"T/T-1.md":                 "---\nid: T-1\ntype: Tab\ntitle: Limits\n---\nA table.\n",
-	// References come before, between and after the figures; F-3 is only
-	// referenced.
-	"N/N-1.md": note("N-1", "title: Doc\n", "See [[F-2]], [[F-1|the loop]], [[F-1#title]] and [[F-3]].\n\n![[F-2]]\n\n![[T-1]]\n\n![[F-1]]\n\n![[F-2]]\n\nAgain [[F-2]] and [[T-1]].\n"),
+	"templates/_captions.yaml": "diagram: Figure\n",
+	"assets/loop.svg":          "<svg/>",
+	"N/N-1.md":                 note("N-1", "title: Doc\n", captionDoc),
+	"N/N-2.md":                 note("N-2", "title: Inner\n", "Inner body."),
 }
 
-func TestCaptionNumbering(t *testing.T) {
+func TestCaptionBlocks(t *testing.T) {
 	files, err := exportRepo(t, maps.Clone(captionRepo))
 	if err != nil {
 		t.Fatal(err)
 	}
 	page := string(files["entities/N-1.html"])
 	for _, want := range []string{
-		// Numbered in order of first embed, each sequence on its own.
-		`<section class="embed" data-entity="F-2" id="caption-F-2"><figure><p>Ceiling drawing.</p>
-<figcaption>Figure 1: Ceiling</figcaption></figure></section>`,
-		`<section class="embed" data-entity="F-1" id="caption-F-1"><figure><p>Loop drawing.</p>
-<figcaption>Figure 2: Loop</figcaption></figure></section>`,
-		`<p class="caption"><span class="caption-number">Table 1</span> Limits</p>`, // the built-in template
-		// References resolve to the numbers, even before the figure.
-		`See <a class="ref xref" href="#caption-F-2" title="Ceiling">Figure 1</a>, <a class="ref xref" href="#caption-F-1" title="Loop">the loop</a>, <a class="ref" href="F-1.html" title="Loop">Loop</a> and <a class="ref" href="F-3.html" title="Unused">F-3</a>.`,
-		`Again <a class="ref xref" href="#caption-F-2" title="Ceiling">Figure 1</a> and <a class="ref xref" href="#caption-T-1" title="Limits">Table 1</a>.`,
+		// References resolve to numbers, even before the caption.
+		`See <a class="ref xref" href="#caption-loop">Figure 1</a>, <a class="ref xref" href="#caption-loop">the loop</a> and <a class="ref xref" href="#caption-limits">Table 1</a>;`,
+		`<span class="id unresolved-id">#nothing</span> <span class="unresolved">no caption #nothing</span> is not here.`,
+		`After: <a class="ref xref" href="#caption-loop">Figure 1</a>.`,
+		// A figure: the image copied into the site, the caption below.
+		"<figure class=\"captioned captioned-figure\" id=\"caption-loop\">\n<p><img src=\"../assets/loop.svg\" alt=\"Loop\"></p>\n<figcaption><span class=\"caption-number\">Figure 1</span> The <em>control</em> loop.</figcaption>\n</figure>",
+		// A table: caption above.
+		"<figure class=\"captioned captioned-table\" id=\"caption-limits\">\n<figcaption><span class=\"caption-number\">Table 1</span> Limits.</figcaption>\n<table>",
+		// A configured kind sharing the Figure sequence, on an embed.
+		"<figure class=\"captioned captioned-diagram\">\n<section class=\"embed\" data-entity=\"N-2\">",
+		`<figcaption><span class="caption-number">Figure 2</span></figcaption>`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("N-1 page missing %q\n%s", want, page)
 		}
 	}
-	// The second embed of F-2 is not an anchor too.
-	if strings.Count(page, `id="caption-F-2"`) != 1 {
-		t.Error("F-2 anchored more than once")
-	}
-	// A figure's own page numbers it as the page's first figure.
-	if own := string(files["entities/F-3.html"]); !strings.Contains(own, "<figcaption>Figure 1: Unused</figcaption>") {
-		t.Errorf("F-3's own page:\n%s", own)
+	if string(files["assets/loop.svg"]) != "<svg/>" {
+		t.Error("the image was not copied into the site")
 	}
 	for name, content := range files {
 		if strings.ContainsAny(string(content), tokOpen+tokSep+tokBody+tokClose) {
@@ -57,31 +53,62 @@ func TestCaptionNumbering(t *testing.T) {
 	}
 }
 
-func TestCaptionsWithoutConfig(t *testing.T) {
-	repo := maps.Clone(captionRepo)
-	delete(repo, "templates/_captions.yaml")
-	files, err := exportRepo(t, repo)
+func TestCaptionsInEmbeddedEntities(t *testing.T) {
+	// Captions from embedded entities number in the host's sequence, in
+	// document order.
+	files, err := exportRepo(t, map[string]string{
+		"schema/Note.yaml": noteSchema,
+		"assets/a.png":     "png",
+		"N/N-1.md":         note("N-1", "title: Host\n", "![a](../assets/a.png)\n\n```caption\nkind: figure\n```\n\n![[N-2]]\n"),
+		"N/N-2.md":         note("N-2", "title: Inner\n", "![a](../assets/a.png)\n\n```caption\nkind: figure\nid: inner\n```\n\nThat is [[#inner]].\n"),
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	page := string(files["entities/N-1.html"])
-	if strings.Contains(page, "Figure 1") || !strings.Contains(page, `See <a class="ref" href="F-2.html" title="Ceiling">F-2</a>`) {
-		t.Errorf("nothing should be numbered:\n%s", page)
+	host := string(files["entities/N-1.html"])
+	if !strings.Contains(host, "Figure 2</span>") || !strings.Contains(host, `That is <a class="ref xref" href="#caption-inner">Figure 2</a>.`) {
+		t.Errorf("embedded caption not numbered after the host's:\n%s", host)
+	}
+	if inner := string(files["entities/N-2.html"]); !strings.Contains(inner, `That is <a class="ref xref" href="#caption-inner">Figure 1</a>.`) {
+		t.Errorf("N-2's own page:\n%s", inner)
 	}
 }
 
-func TestCaptionConfigErrors(t *testing.T) {
-	for config, want := range map[string]string{
-		"Figure: [Fgi]\n":               `templates/_captions.yaml:1: Figure: unknown type "Fgi"`,
-		"Figure: [Fig]\nPlate: [Fig]\n": "templates/_captions.yaml:2: Fig is already numbered as Figure",
-		"Figure: Fig\n":                 "templates/_captions.yaml:1: Figure: expected a list of entity types",
-		"- Fig\n":                       "templates/_captions.yaml:1: expected a mapping of sequence label to entity types",
+func TestCaptionAndImageErrors(t *testing.T) {
+	for name, tc := range map[string]struct {
+		files map[string]string
+		want  string
+	}{
+		"unknown kind": {map[string]string{"N/N-1.md": note("N-1", "", "![a](../assets/loop.svg)\n\n```caption\nkind: chart\n```\n")},
+			`N/N-1.md:8: unknown caption kind "chart" (kinds: diagram, equation, figure, table)`},
+		"nothing to caption": {map[string]string{"N/N-1.md": note("N-1", "", "Just text.\n\n```caption\nkind: figure\n```\n")},
+			"N/N-1.md:7: a caption must come right after the figure, table, equation or embed it captions"},
+		"missing image": {map[string]string{"N/N-1.md": note("N-1", "", "Intro.\n\n![a](../assets/gone.png)\n")},
+			"N/N-1.md:7: image assets/gone.png does not exist"},
+		"remote image": {map[string]string{"N/N-1.md": note("N-1", "", "![a](https://example.com/a.png)\n")},
+			"N/N-1.md:5: image https://example.com/a.png: images must be files in the repository"},
+		"bad config": {map[string]string{"templates/_captions.yaml": "table: {label: Table, position: left}\n"},
+			`templates/_captions.yaml:1: table: position is above or below, not "left"`},
 	} {
-		repo := maps.Clone(captionRepo)
-		repo["templates/_captions.yaml"] = config
-		_, err := exportRepo(t, repo)
-		if err == nil || !strings.HasPrefix(err.Error(), want) {
-			t.Errorf("%q: got %v, want %s", config, err, want)
-		}
+		t.Run(name, func(t *testing.T) {
+			repo := maps.Clone(captionRepo)
+			maps.Copy(repo, tc.files)
+			_, err := exportRepo(t, repo)
+			if err == nil || !strings.HasPrefix(err.Error(), tc.want) {
+				t.Fatalf("got  %v\nwant %s…", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestImagesOnTheMainPage(t *testing.T) {
+	// With an entity scope the entity is the main page, at the site root:
+	// its images are linked without ../.
+	files, err := exportScoped(t, maps.Clone(captionRepo), "N/N-1.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if index := string(files["index.html"]); !strings.Contains(index, `<img src="assets/loop.svg" alt="Loop">`) {
+		t.Errorf("main page image:\n%s", index)
 	}
 }

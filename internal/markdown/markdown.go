@@ -10,6 +10,7 @@ package markdown
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -25,7 +26,10 @@ import (
 
 // Link is one parsed wikilink.
 type Link struct {
-	ID string
+	// ID is the entity, or "" for a reference to a caption in the same
+	// document ([[#id]]), whose id is then Local.
+	ID    string
+	Local string
 	// Label is the text after '|', or "".
 	Label string
 	// Field is the field name after '#', or "".
@@ -65,28 +69,61 @@ type Resolver interface {
 	// MisplacedEmbed renders ![[ID]] written inside running text, where a
 	// block cannot go.
 	MisplacedEmbed(w util.BufWriter, l Link) error
+	// CaptionStart and CaptionEnd surround a captioned block (captions.go).
+	CaptionStart(w util.BufWriter, c Caption) error
+	CaptionEnd(w util.BufWriter, c Caption) error
 }
 
-// Convert renders src to HTML, resolving wikilinks through r. A fenced block
-// whose language has an entry in fences is rendered by it; any other fenced
-// block is shown as code.
-func Convert(src string, r Resolver, fences map[string]FenceFunc) (string, error) {
+// Options are the caller's rendering choices.
+type Options struct {
+	// Fences renders fenced blocks by language; a block in any other
+	// language is shown as code.
+	Fences map[string]FenceFunc
+	// Image, if set, maps every image's destination (![alt](dest)) to the
+	// one written out, or rejects it.
+	Image func(dest string) (string, error)
+}
+
+// Error is a problem in the Markdown at a line of src (0 when unknown).
+type Error struct {
+	Line int
+	Msg  string
+}
+
+func (e *Error) Error() string {
+	if e.Line > 0 {
+		return fmt.Sprintf("line %d: %s", e.Line, e.Msg)
+	}
+	return e.Msg
+}
+
+// Convert renders src to HTML, resolving wikilinks and captions through r
+// and fenced blocks and images as opts says.
+func Convert(src string, r Resolver, opts Options) (string, error) {
+	var errs []error
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.Table),
 		goldmark.WithParserOptions(
 			parser.WithInlineParsers(util.Prioritized(&wikilinkParser{}, 199)),
 			parser.WithASTTransformers(
 				util.Prioritized(&embedTransformer{}, 100),
-				util.Prioritized(&fenceTransformer{fences: fences}, 101),
+				util.Prioritized(&fenceTransformer{fences: opts.Fences}, 101),
+				util.Prioritized(&captionTransformer{errs: &errs}, 102),
+				util.Prioritized(&imageTransformer{rewrite: opts.Image, errs: &errs}, 103),
 			),
 		),
 		goldmark.WithRendererOptions(
 			html.WithUnsafe(), // raw HTML passes through (Detailed Design §7)
-			renderer.WithNodeRenderers(util.Prioritized(&wikilinkRenderer{r: r, fences: fences}, 100)),
+			renderer.WithNodeRenderers(util.Prioritized(&wikilinkRenderer{r: r, fences: opts.Fences}, 100)),
 		),
 	)
+	source := []byte(src)
+	doc := md.Parser().Parse(text.NewReader(source))
+	if len(errs) > 0 {
+		return "", errs[0]
+	}
 	var b bytes.Buffer
-	if err := md.Convert([]byte(src), &b); err != nil {
+	if err := md.Renderer().Render(&b, source, doc); err != nil {
 		return "", err
 	}
 	return b.String(), nil
@@ -149,7 +186,11 @@ func (p *wikilinkParser) Parse(_ ast.Node, block text.Reader, _ parser.Context) 
 	id, field, _ := strings.Cut(target, "#")
 	l.ID, l.Field = strings.TrimSpace(id), strings.TrimSpace(field)
 	if l.ID == "" {
-		return nil
+		// [[#id]]: a caption in this document. It cannot be embedded.
+		if l.Field == "" || embed {
+			return nil
+		}
+		l.Local, l.Field = l.Field, ""
 	}
 	block.Advance(start + end + 2)
 	return &wikilinkNode{Link: l}
@@ -262,6 +303,13 @@ func (r *wikilinkRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer
 			err = r.r.Reference(w, l)
 		}
 		return ast.WalkSkipChildren, err
+	})
+	reg.Register(kindCaption, func(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
+		c := n.(*captionNode).Caption
+		if entering {
+			return ast.WalkContinue, r.r.CaptionStart(w, c)
+		}
+		return ast.WalkContinue, r.r.CaptionEnd(w, c)
 	})
 	reg.Register(kindFence, func(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {

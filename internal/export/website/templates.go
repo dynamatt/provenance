@@ -10,8 +10,6 @@ import (
 	"sort"
 	"strings"
 
-	"go.yaml.in/yaml/v3"
-
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/schema"
 )
@@ -26,7 +24,7 @@ import (
 //	templates/_layout.tmpl      the layout wrapping every page
 //	templates/_index.tmpl       the site's main page
 //	templates/style.css         the stylesheet
-//	templates/_captions.yaml    how captioned entities are numbered
+//	templates/_captions.yaml    caption kinds and how they are numbered
 //
 // Other files there (a README, drafts) are ignored, as is a type template
 // naming no declared type; validate reports those.
@@ -43,9 +41,9 @@ type templateSet struct {
 	types         map[string]source // project type templates by type name
 	named         map[string]source // named presentation templates by name
 	style         []byte
-	// captions maps a captioned type to its sequence label ("Figure"),
-	// from templates/_captions.yaml.
-	captions map[string]string
+	// captions are the caption kinds: the defaults, with
+	// templates/_captions.yaml's on top.
+	captions map[string]captionKind
 	// Project reports whether any project template or stylesheet was found.
 	project bool
 }
@@ -63,11 +61,12 @@ func builtin(file string) source {
 // page would use it.
 func loadTemplates(root string, s *schema.Schema) (*templateSet, error) {
 	ts := &templateSet{
-		layout: builtin("layout.tmpl"),
-		index:  builtin("index.tmpl"),
-		types:  map[string]source{},
-		named:  map[string]source{},
-		style:  styleCSS,
+		layout:   builtin("layout.tmpl"),
+		index:    builtin("index.tmpl"),
+		types:    map[string]source{},
+		named:    map[string]source{},
+		style:    styleCSS,
+		captions: defaultKinds(),
 	}
 	dir := filepath.Join(root, templatesDir)
 	entries, err := os.ReadDir(dir)
@@ -208,6 +207,10 @@ func templateError(err error) error {
 	if errors.As(err, &qe) {
 		return qe
 	}
+	var ce *ContentError
+	if errors.As(err, &ce) {
+		return ce
+	}
 	var inner *TemplateError
 	if errors.As(err, &inner) {
 		return inner
@@ -217,47 +220,4 @@ func templateError(err error) error {
 		msg = rest
 	}
 	return &TemplateError{Msg: msg}
-}
-
-// parseCaptions reads templates/_captions.yaml (Detailed Design §7): each
-// key is a sequence's label, numbered on its own, and its value lists the
-// entity types numbered in it. Types listed together share one sequence.
-//
-//	Figure: [Figure, Diagram]
-//	Table: [DataTable]
-func parseCaptions(path, text string, s *schema.Schema) (map[string]string, error) {
-	var doc yaml.Node
-	fail := func(line int, format string, args ...any) error {
-		return &TemplateError{Msg: fmt.Sprintf("%s:%d: %s", path, line, fmt.Sprintf(format, args...))}
-	}
-	if err := yaml.Unmarshal([]byte(text), &doc); err != nil {
-		return nil, &TemplateError{Msg: path + ": " + strings.TrimPrefix(err.Error(), "yaml: ")}
-	}
-	out := map[string]string{}
-	if len(doc.Content) == 0 {
-		return out, nil
-	}
-	m := doc.Content[0]
-	if m.Kind != yaml.MappingNode {
-		return nil, fail(m.Line, "expected a mapping of sequence label to entity types, e.g. Figure: [Figure]")
-	}
-	for i := 0; i+1 < len(m.Content); i += 2 {
-		label, types := m.Content[i], m.Content[i+1]
-		if strings.TrimSpace(label.Value) == "" {
-			return nil, fail(label.Line, "a sequence needs a label")
-		}
-		if types.Kind != yaml.SequenceNode || len(types.Content) == 0 {
-			return nil, fail(types.Line, "%s: expected a list of entity types", label.Value)
-		}
-		for _, t := range types.Content {
-			if s.Types[t.Value] == nil {
-				return nil, fail(t.Line, "%s: unknown type %q", label.Value, t.Value)
-			}
-			if prev, dup := out[t.Value]; dup {
-				return nil, fail(t.Line, "%s is already numbered as %s", t.Value, prev)
-			}
-			out[t.Value] = label.Value
-		}
-	}
-	return out, nil
 }

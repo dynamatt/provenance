@@ -7,12 +7,49 @@ import (
 
 	"github.com/yuin/goldmark/util"
 
+	"github.com/dynamatt/provenance/internal/assets"
 	"github.com/dynamatt/provenance/internal/markdown"
 	"github.com/dynamatt/provenance/internal/query"
 )
 
 // QueryError is a query block that cannot be run, at its file and line.
 type QueryError = query.FileError
+
+// options are how the website renders entity Markdown: its fenced blocks,
+// and images copied into the site.
+func (r *resolver) options() markdown.Options {
+	return markdown.Options{Fences: r.fences(), Image: r.image}
+}
+
+// image copies an image file into the site, at its repository path, and
+// returns its URL relative to the page.
+func (r *resolver) image(dest string) (string, error) {
+	from := ""
+	if n := len(r.ctx.chain); n > 0 {
+		from = r.ctx.chain[n-1].Path
+	}
+	rel, inline, err := assets.Resolve(from, dest)
+	if err != nil || inline {
+		return dest, err
+	}
+	s := r.ctx.site
+	if _, done := s.files[rel]; !done {
+		data, err := assets.Read(s.root, rel)
+		if err != nil {
+			return "", err
+		}
+		s.files[rel] = data
+	}
+	rootRel := ""
+	if r.ctx.linkBase == "" {
+		rootRel = "../" // entity pages are in entities/
+	}
+	return assets.URL(rootRel, rel), nil
+}
+
+// ContentError is a problem in an entity's Markdown, such as a caption or
+// an image, at its file and line.
+type ContentError = query.ContentError
 
 // fences are the website's renderers for fenced blocks, by language. Every
 // language in markdown.RenderedLanguages must have one (TestEveryRenderedLanguageHasAFence).

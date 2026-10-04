@@ -33,21 +33,17 @@ with nothing to keep in sync by hand.</p>
 <h2>Scope</h2>
 <p>This specification covers the closed-loop stimulation control requirements
 for the NeuroPulse system, decomposed from the user needs in <a class="ref" href="USR-0001.html" title="Reduced need for in-clinic titration visits">USR-0001</a>
-and <a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>. The control loop they constrain is shown in <a class="ref xref" href="#caption-FIG-0001" title="Closed-loop amplitude control">Figure 1</a>.</p>
-<section class="embed" data-entity="FIG-0001" id="caption-FIG-0001">
-<figure class="dhf-figure" id="FIG-0001">
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 170" role="img" aria-label="Closed-loop amplitude control: the sense electrode measures the evoked response, the control algorithm sets the amplitude, the pulse generator stimulates.">
-<style>rect{fill:#fff;stroke:#2f5d8a;stroke-width:2}text{font:14px system-ui,sans-serif;fill:#1c2b3a}path{fill:none;stroke:#2f5d8a;stroke-width:2;marker-end:url(#arrow)}</style>
-<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:#2f5d8a;stroke:none"/></marker></defs>
-<rect x="10" y="20" width="170" height="50" rx="6"/><text x="95" y="50" text-anchor="middle">Sense electrode</text>
-<rect x="235" y="20" width="170" height="50" rx="6"/><text x="320" y="42" text-anchor="middle">ECAP measurement</text><text x="320" y="60" text-anchor="middle">(DES-0001)</text>
-<rect x="460" y="20" width="170" height="50" rx="6"/><text x="545" y="50" text-anchor="middle">Control algorithm</text>
-<rect x="235" y="110" width="170" height="50" rx="6"/><text x="320" y="132" text-anchor="middle">Pulse generator</text><text x="320" y="150" text-anchor="middle">≤ 8 mA (REQ-0002)</text>
-<path d="M180 45H233"/><path d="M405 45H458"/><path d="M545 70V135H407"/><path d="M235 135H95V72"/>
-</svg>
-<figcaption><strong>Figure 1</strong> Closed-loop amplitude control <span class="req-id">FIG-0001</span></figcaption>
+and <a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>. The control loop they constrain is shown in
+<a class="ref xref" href="#caption-control-loop">Figure 1</a>, and the evoked response it regulates on in
+<a class="ref xref" href="#caption-ecap-response">Figure 2</a>.</p>
+<figure class="captioned captioned-figure" id="caption-control-loop">
+<p><img src="../assets/control-loop.svg" alt="Closed-loop amplitude control"></p>
+<figcaption><span class="caption-number">Figure 1</span> Closed-loop amplitude control. The sense electrode's evoked response (<a class="ref" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a>) sets the next pulse's amplitude, within the ceiling of <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</figcaption>
 </figure>
-</section>
+<figure class="captioned captioned-diagram" id="caption-ecap-response">
+<p><img src="../assets/ecap-response.png" alt="Evoked compound action potential"></p>
+<figcaption><span class="caption-number">Figure 2</span> A typical evoked compound action potential, after the stimulus artefact. The control loop holds the <em>N1</em> trough's depth in its target band.</figcaption>
+</figure>
 <h2>Requirements</h2>
 <p>All approved requirements, in author-assigned order:</p>
 <div class="query">
@@ -98,7 +94,33 @@ signal used by the closed-loop control algorithm (<a class="ref" href="DES-0001.
 </div>
 <h2>Amplitude Ceiling — Subsystem Detail</h2>
 <p>The system-level ceiling is <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">Single-fault amplitude ceiling</a>, allocated to the subsystem
-level as an independent hardware safeguard:</p>
+level as an independent hardware safeguard. <a class="ref xref" href="#caption-amplitude-limits">Table 1</a> lists the
+limits at each level.</p>
+<figure class="captioned captioned-table" id="caption-amplitude-limits">
+<figcaption><span class="caption-number">Table 1</span> Stimulation amplitude limits by level.</figcaption>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Limit</th>
+<th>Enforced by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>System</td>
+<td>8 mA under any single fault</td>
+<td><a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a></td>
+</tr>
+<tr>
+<td>Subsystem</td>
+<td>Hard current limit in the ASIC</td>
+<td><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a></td>
+</tr>
+</tbody>
+</table>
+</figure>
+<p>The subsystem requirement in full:</p>
 <section class="embed" data-entity="REQ-0003">
 <article class="requirement" id="REQ-0003">
 <h3 class="requirement-title"><span class="req-id">REQ-0003</span> Amplitude ceiling — subsystem allocation</h3>
@@ -127,15 +149,12 @@ evidence is generated separately as coverage reports (Requirements Spec
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>44fa0e6</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Captions where figures are used; images as files</td></tr>
 <tr><td><code>d0f6cb5</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Add a captioned figure, FIG-0001, numbered in DOC-0001</td></tr>
 <tr><td><code>7afabd7</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Layout shows the git stamps and revision history</td></tr>
-<tr><td><code>29eb0b6</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Merge pull request #6 from dynamatt/named-templates</td></tr>
-<tr><td><code>54de84f</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Add ValidationEvidence, reusing the Equipment record</td></tr>
 <tr><td><code>b6dfc5c</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Lists that name their type: a record, an enum and a built-in type</td></tr>
-<tr><td><code>9016c19</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Index heading keeps the component code</td></tr>
 <tr><td><code>4cf41f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Make templates/ functional: Requirement page, layout, index, stylesheet</td></tr>
 <tr><td><code>7aee1f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link on the VerificationProtocol side instead</td></tr>
-<tr><td><code>f1c5fe4</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link once, on the Requirement side</td></tr>
 <tr><td><code>32bb0cb</code></td><td>2026-09-26</td><td>Matt Williams</td><td>Initial commit.</td></tr>
 </tbody>
 </table>
@@ -143,7 +162,7 @@ evidence is generated separately as coverage reports (Requirements Spec
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>d0f6cb5</code> · content hash <code>sha256:24efcaad660293312d2d041e249b324fef202fcb0a9f6a2ad31e9f434316711a</code> · this page last changed in <code>d0f6cb5</code></p>
+<p class="dhf-stamp">Generated from commit <code>44fa0e6</code> · content hash <code>sha256:23a6aeb3280e33b4e0c9d6d4c177fdee1632239abc02f487a1bbe296cdf0875d</code> · this page last changed in <code>44fa0e6</code></p>
 </footer>
 </body>
 </html>

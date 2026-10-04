@@ -7,6 +7,7 @@ import (
 
 	"github.com/yuin/goldmark/util"
 
+	"github.com/dynamatt/provenance/internal/assets"
 	"github.com/dynamatt/provenance/internal/markdown"
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/schema"
@@ -21,41 +22,79 @@ import (
 type Deps struct {
 	// IDs are the entities, sorted, the root included.
 	IDs []string
-	// Types are the types the query blocks select, sorted. Every entity of
-	// these types can change a result set, whether it is in it now or not.
+	// Full are those of IDs rendered in full (through a template), sorted.
+	Full []string
+	// Read are the other entities whose values the page shows through
+	// calculated fields (FormulaInputs), sorted. They are inputs of the
+	// page, not part of a scope.
+	Read []string
+	// Types are the types the query blocks select or read across links,
+	// sorted. Every entity of these types can change a result set, whether
+	// it is in it now or not.
 	Types []string
+	// Templates are the named templates the query blocks choose, sorted.
+	Templates []string
+	// Assets are the image files the content shows, as repository paths,
+	// sorted.
+	Assets []string
+	// Captions reports whether the content has caption blocks, whose
+	// numbering the caption configuration decides.
+	Captions bool
 }
 
 // Dependencies walks root's content.
 func (g *Graph) Dependencies(root *model.Entity) (*Deps, error) {
-	w := &walker{g: g, ids: map[string]bool{}, types: map[string]bool{}}
+	w := &walker{g: g, ids: map[string]bool{}, types: map[string]bool{}, templates: map[string]bool{}, assets: map[string]bool{}}
 	w.add(root, true)
 	for len(w.queue) > 0 {
 		e := w.queue[0]
 		w.queue = w.queue[1:]
 		for _, text := range markdownSources(e) {
 			r := &recorder{w: w}
-			if _, err := markdown.Convert(text, r, map[string]markdown.FenceFunc{"query": r.query}); err != nil {
+			opts := markdown.Options{
+				Fences: map[string]markdown.FenceFunc{"query": r.query},
+				Image: func(dest string) (string, error) {
+					rel, inline, err := assets.Resolve(e.Path, dest)
+					if err == nil && !inline {
+						w.assets[rel] = true
+					}
+					return dest, err
+				},
+			}
+			if _, err := markdown.Convert(text, r, opts); err != nil {
 				return nil, depError(e, text, err)
 			}
 		}
 	}
-	d := &Deps{}
-	for id := range w.ids {
-		d.IDs = append(d.IDs, id)
+	d := &Deps{IDs: keys(w.ids), Full: keys(w.full), Types: keys(w.types), Templates: keys(w.templates), Assets: keys(w.assets), Captions: w.captions}
+	read := map[string]bool{}
+	for _, id := range d.IDs {
+		for _, r := range g.FormulaInputs(g.Entity(id)) {
+			if !w.ids[r] {
+				read[r] = true
+			}
+		}
 	}
-	for t := range w.types {
-		d.Types = append(d.Types, t)
-	}
-	slices.Sort(d.IDs)
-	slices.Sort(d.Types)
+	d.Read = keys(read)
 	return d, nil
 }
 
+func keys(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	slices.Sort(out)
+	return out
+}
+
 type walker struct {
-	g     *Graph
-	ids   map[string]bool
-	types map[string]bool
+	g         *Graph
+	ids       map[string]bool
+	types     map[string]bool
+	templates map[string]bool
+	assets    map[string]bool
+	captions  bool
 	// queue holds entities rendered in full whose content is not yet read.
 	queue []*model.Entity
 	full  map[string]bool
@@ -113,6 +152,11 @@ type recorder struct{ w *walker }
 
 func (r *recorder) Reference(util.BufWriter, markdown.Link) error      { return nil }
 func (r *recorder) MisplacedEmbed(util.BufWriter, markdown.Link) error { return nil }
+func (r *recorder) CaptionStart(util.BufWriter, markdown.Caption) error {
+	r.w.captions = true
+	return nil
+}
+func (r *recorder) CaptionEnd(util.BufWriter, markdown.Caption) error { return nil }
 
 func (r *recorder) Embed(_ util.BufWriter, l markdown.Link) error {
 	if e := r.w.g.Entity(l.ID); e != nil {
@@ -161,9 +205,28 @@ func BlockFileError(e *model.Entity, text string, blockLine int, err error) *Fil
 	return &FileError{Path: e.Path, Line: e.TextFileLine(text, line), Msg: msg}
 }
 
+// ContentError is a problem in an entity's Markdown, such as a caption or
+// an image, at its file and line (0 when unknown).
+type ContentError struct {
+	Path string
+	Line int
+	Msg  string
+}
+
+func (e *ContentError) Error() string {
+	if e.Line > 0 {
+		return fmt.Sprintf("%s:%d: %s", e.Path, e.Line, e.Msg)
+	}
+	return fmt.Sprintf("%s: %s", e.Path, e.Msg)
+}
+
 func depError(e *model.Entity, text string, err error) error {
 	var be *blockError
 	if !errors.As(err, &be) {
+		var me *markdown.Error
+		if errors.As(err, &me) {
+			return &ContentError{Path: e.Path, Line: e.TextFileLine(text, me.Line), Msg: me.Msg}
+		}
 		return fmt.Errorf("%s: %w", e.Path, err)
 	}
 	return BlockFileError(e, text, be.Line, be.Err)
@@ -180,6 +243,12 @@ func (r *recorder) query(_ util.BufWriter, f markdown.Fence) error {
 	}
 	for _, t := range b.From {
 		r.w.types[t.Name] = true
+	}
+	for _, t := range viaTypes(b.From, b.Where) {
+		r.w.types[t] = true
+	}
+	for _, c := range b.Templates {
+		r.w.templates[c.Name] = true
 	}
 	for _, e := range results {
 		r.w.add(e, b.Render.Mode == RenderFull)

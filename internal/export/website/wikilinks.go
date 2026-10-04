@@ -33,6 +33,18 @@ type resolver struct{ ctx *renderCtx }
 var _ markdown.Resolver = (*resolver)(nil)
 
 func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
+	if l.Local != "" {
+		// A caption on this page; resolved once the page is numbered.
+		var b strings.Builder
+		text := "#" + l.Local
+		if l.Label != "" {
+			text = l.Label
+		}
+		fmt.Fprintf(&b, `<span class="id unresolved-id">%s</span> <span class="unresolved">no caption %s</span>`,
+			template.HTMLEscapeString(text), template.HTMLEscapeString("#"+l.Local))
+		_, _ = w.WriteString(xrefToken(l.Local, l.Label, b.String()))
+		return nil
+	}
 	target := r.ctx.site.byID[l.ID]
 	if target == nil {
 		writeUnresolved(w, l.ID, "unresolved")
@@ -53,13 +65,6 @@ func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
 	}
 	if l.Label != "" {
 		text = l.Label
-	}
-	if _, captioned := r.ctx.site.captioned(target); captioned && l.Field == "" {
-		// Resolved to "Figure N" once the page is numbered (captions.go).
-		var b strings.Builder
-		r.ctx.anchor(&b, "ref", target, text)
-		_, _ = w.WriteString(xrefToken(target.ID, l.Label, b.String()))
-		return nil
 	}
 	r.ctx.anchor(w, "ref", target, text)
 	if marker != "" {
