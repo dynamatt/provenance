@@ -20,15 +20,15 @@
 - [x] E1.4 Links, reverse links and list fields
 - [x] E1.5 Markdown and wikilinks
 - [x] E1.6 Project templates and template functions
-- [ ] E1.7 Query engine spike (decision task)
-- [ ] E1.8 Query blocks
-- [ ] E1.9 Calculated fields
-- [ ] E1.9a Multi-type query blocks
-- [ ] E1.9b Per-query templates
-- [ ] E1.10 `--scope` and Document export
-- [ ] E1.11 Git context and content hash
-- [ ] E1.12 Captions, cross-reference numbering and images
-- [ ] E1.13 Bundled Mermaid and offline guarantee
+- [x] E1.7 Query engine spike (decision task)
+- [x] E1.8 Query blocks
+- [x] E1.9 Calculated fields
+- [x] E1.9a Multi-type query blocks
+- [x] E1.9b Per-query templates
+- [x] E1.10 `--scope` and Document export
+- [x] E1.11 Git context and content hash
+- [x] E1.12 Captions, cross-reference numbering and images
+- [ ] E1.13 Bundled Mermaid and offline guarantee — *deferred 2026-10-04*
 - [ ] E1.13a Reference lists
 - [ ] E1.13b Citation templates
 - [ ] E1.14 Epic close-out: docs and first binary release
@@ -487,6 +487,11 @@ in the sentence referencing it, "Table 1" above the limits table. Caption a
 second image above the first → numbers move, text follows.
 
 ### E1.13 Bundled Mermaid and offline guarantee
+
+**Deferred (2026-10-04, Matt):** picked up when
+diagrams are needed. Until then `mermaid` blocks export as their marked
+source (validate's BlockLanguage rule reports them), and E1.14 does not wait
+for it.
 
 **Deliverables:** Mermaid JS checked in under an embedded asset folder with a
 pinned version and SHA-256 verified at build; copied into the site; `mermaid`
