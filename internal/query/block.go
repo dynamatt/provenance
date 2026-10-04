@@ -100,22 +100,32 @@ var blockKeys = []string{"from", "where", "order_by", "render", "template", "tem
 // ParseBlock reads a query block's YAML against the schema. Error lines
 // count from the block's first line.
 func ParseBlock(src string, s *schema.Schema) (*Block, error) {
+	return parseBlock(src, s, blockKeys, "query block")
+}
+
+// ParseScope reads a --scope query file (Detailed Design §2): from and an
+// optional where, nothing about presentation.
+func ParseScope(src string, s *schema.Schema) (*Block, error) {
+	return parseBlock(src, s, []string{"from", "where"}, "scope query file")
+}
+
+func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Block, error) {
 	var doc yaml.Node
 	if err := yaml.Unmarshal([]byte(src), &doc); err != nil {
 		return nil, yamlError(err)
 	}
 	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
-		return nil, &Error{Line: 1, Msg: "a query block is a mapping with " + strings.Join(blockKeys, ", ")}
+		return nil, &Error{Line: 1, Msg: "a " + what + " is a mapping with " + strings.Join(keys, ", ")}
 	}
 	m := doc.Content[0]
-	if err := onlyKeys(m, "a query block", blockKeys...); err != nil {
+	if err := onlyKeys(m, "a "+what, keys...); err != nil {
 		return nil, err
 	}
 
 	b := &Block{Render: Render{Mode: RenderFull}}
 	from := lookup(m, "from")
 	if from == nil {
-		return nil, errorf(m, "query block has no from: <type> or from: [<type>, …]")
+		return nil, errorf(m, "%s has no from: <type> or from: [<type>, …]", what)
 	}
 	fromNodes := []*yaml.Node{from}
 	if from.Kind == yaml.SequenceNode {

@@ -81,7 +81,7 @@ func TestExportErrorsExitTwo(t *testing.T) {
 		{[]string{"export", "docx"}, "export: docx is not available in this release"},
 		{[]string{"export", "latex"}, `export: unknown format "latex" (available: website)`},
 		{[]string{"export", "website", "--out", "notmine"}, "export: output folder notmine is not empty"},
-		{[]string{"export", "website", "--scope", "DOC/DOC-0001.md"}, "export: --scope is not implemented yet"},
+		{[]string{"export", "website", "--scope", "DOC/DOC-0001.md"}, "export: --scope DOC/DOC-0001.md: no such file"},
 	}
 	for _, tc := range cases {
 		code, _, errOut := run(tc.args...)

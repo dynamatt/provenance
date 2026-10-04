@@ -17,6 +17,7 @@ import (
 // rather than silently empty output.
 //
 //	.ID .Type .Title .Body .Resolved    engine baseline
+//	.LastChangedSHA .Revisions          git stamps (Detailed Design §4)
 //	.<PascalCaseField>                  every declared field, calculated ones included
 //	.<PascalCaseFacet>                  every incoming facet, e.g. .ImplementedBy
 //
@@ -32,7 +33,7 @@ import (
 type entityData = map[string]any
 
 // baseline keys the engine provides on every entity map.
-var baseline = []string{"ID", "Type", "Title", "Body", "Resolved"}
+var baseline = []string{"ID", "Type", "Title", "Body", "Resolved", "LastChangedSHA", "Revisions"}
 
 // templateName converts a snake_case field name to its template accessor:
 // verified_by -> VerifiedBy.
@@ -183,7 +184,7 @@ func (d *dataModel) ref(id string, target *model.Entity, f *schema.Field) entity
 	if target != nil {
 		return d.byID[target.ID]
 	}
-	m := entityData{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false}
+	m := entityData{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false, "LastChangedSHA": "", "Revisions": []entityData{}}
 	for _, tn := range f.Target {
 		t := d.schema.Types[tn]
 		if t == nil {

@@ -13,7 +13,21 @@ import (
 type fake struct{ err error }
 
 func (f fake) Reference(w util.BufWriter, l Link) error {
+	if l.Local != "" {
+		fmt.Fprintf(w, "{local %s|%s}", l.Local, l.Label)
+		return nil
+	}
 	fmt.Fprintf(w, "{ref %s|%s#%s}", l.ID, l.Label, l.Field)
+	return nil
+}
+
+func (f fake) CaptionStart(w util.BufWriter, c Caption) error {
+	fmt.Fprintf(w, "{caption %s %s line %d}\n", c.Kind, c.ID, c.Line)
+	return nil
+}
+
+func (f fake) CaptionEnd(w util.BufWriter, c Caption) error {
+	fmt.Fprintf(w, "{/caption %q}\n", c.Text)
 	return nil
 }
 
@@ -37,7 +51,7 @@ var fences = map[string]FenceFunc{
 
 func convert(t *testing.T, src string) string {
 	t.Helper()
-	out, err := Convert(src, fake{}, fences)
+	out, err := Convert(src, fake{}, Options{Fences: fences})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +106,7 @@ func TestTables(t *testing.T) {
 
 func TestEmbedErrorStopsConversion(t *testing.T) {
 	boom := errors.New("cycle")
-	_, err := Convert("![[DOC-1]]", fake{err: boom}, nil)
+	_, err := Convert("![[DOC-1]]", fake{err: boom}, Options{})
 	if !errors.Is(err, boom) {
 		t.Errorf("err = %v", err)
 	}
@@ -117,5 +131,55 @@ func TestUnhandledFencesAreCode(t *testing.T) {
 	want := "<pre><code class=\"language-mermaid\">graph TD\n</code></pre>\n<pre><code>plain\n</code></pre>\n"
 	if got != want {
 		t.Errorf("got  %q\nwant %q", got, want)
+	}
+}
+
+func TestCaptions(t *testing.T) {
+	src := "![Loop](loop.svg)\n\n```caption\nkind: figure\nid: loop\ntext: The *loop*.\n```\n\n| a |\n| - |\n| 1 |\n\n```caption\nkind: table\n```\n\nSee [[#loop]] and [[#loop|it]].\n"
+	got := convert(t, src)
+	for _, want := range []string{
+		"{caption figure loop line 4}\n<p><img src=\"loop.svg\" alt=\"Loop\"></p>\n{/caption \"The *loop*.\"}",
+		"{caption table  line 14}\n<table>",
+		"</table>\n{/caption \"\"}",
+		"See {local loop|} and {local loop|it}.",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q in\n%s", want, got)
+		}
+	}
+}
+
+func TestCaptionErrors(t *testing.T) {
+	for src, want := range map[string]string{
+		"Text.\n\n```caption\nkind: figure\n```\n":                      "line 3: a caption must come right after the figure, table, equation or embed it captions",
+		"```caption\nkind: figure\n```\n":                               "line 1: a caption must come right after",
+		"![x](x.png)\n\n```caption\nid: x\n```\n":                       "line 4: a caption needs a kind",
+		"![x](x.png)\n\n```caption\nkind: figure\nnumber: 2\n```\n":     `line 5: unknown key "number" in a caption`,
+		"![x](x.png)\n\n```caption\nkind: figure\nid: has space\n```\n": `line 5: caption id "has space"`,
+	} {
+		_, err := Convert(src, fake{}, Options{})
+		if err == nil || !strings.HasPrefix(err.Error(), want) {
+			t.Errorf("%q: got %v, want %s…", src, err, want)
+		}
+	}
+}
+
+func TestImageRewrite(t *testing.T) {
+	opts := Options{Image: func(dest string) (string, error) {
+		if dest == "bad.png" {
+			return "", errors.New("no such image")
+		}
+		return "site/" + dest, nil
+	}}
+	got, err := Convert("Text ![a](a.png) and [![b](b.png)](x).\n", fake{}, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, `src="site/a.png"`) || !strings.Contains(got, `src="site/b.png"`) {
+		t.Errorf("not rewritten: %s", got)
+	}
+	_, err = Convert("Intro.\n\nSee ![x](bad.png).\n", fake{}, opts)
+	if err == nil || err.Error() != "line 3: no such image" {
+		t.Errorf("err = %v", err)
 	}
 }

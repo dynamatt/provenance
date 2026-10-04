@@ -12,7 +12,9 @@ import (
 	"github.com/dynamatt/provenance/internal/exitcode"
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/export/website"
+	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/model"
+	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/schema"
 )
@@ -32,9 +34,6 @@ func exporters() *export.Registry {
 // Every failure exits 2: export never returns 1 (Detailed Design §2).
 func runExport(c *cobra.Command, args []string) error {
 	name := commandName(c)
-	if scope, _ := c.Flags().GetString("scope"); scope != "" {
-		return fmt.Errorf("%s: --scope is not implemented yet", name)
-	}
 
 	exp, err := exporters().Lookup(args[0])
 	if err != nil {
@@ -75,7 +74,24 @@ func runExport(c *cobra.Command, args []string) error {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 
-	files, err := exp.Export(&export.Input{Repo: r, Schema: s, Entities: entities})
+	// The graph evaluates calculated fields; scope resolution runs queries.
+	graph, err := query.NewGraph(s, entities)
+	if err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
+	var scope *export.Scope
+	if path, _ := c.Flags().GetString("scope"); path != "" {
+		if scope, err = export.ResolveScope(graph, r.Root, cwd, path); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+	}
+
+	git, err := gitContext(r.Root, outDir)
+	if err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
+
+	files, err := exp.Export(&export.Input{Repo: r, Schema: s, Entities: entities, Graph: graph, Scope: scope, Git: git})
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
@@ -83,5 +99,82 @@ func runExport(c *cobra.Command, args []string) error {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 	fmt.Fprintf(c.OutOrStdout(), "exported %s to %s\n", args[0], out)
+	return nil
+}
+
+// gitContext reads what an export stamps into its output (Detailed Design
+// §4). Outside a git repository there is nothing to stamp: export still
+// works, without commit or content hash.
+func gitContext(root, outDir string) (*export.Git, error) {
+	h, err := history.Open(root)
+	if errors.Is(err, history.ErrNotRepository) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer h.Close()
+	g := &export.Git{SHA: h.HEAD()}
+	if g.ContentHash, err = h.ContentHash(g.SHA); err != nil {
+		return nil, err
+	}
+	if g.Dirty, err = h.Status(outDir); err != nil {
+		return nil, err
+	}
+	if g.Dirty.Any() {
+		g.ContentHash += "-dirty"
+	}
+	if g.Log, err = h.Log(); err != nil {
+		return nil, err
+	}
+	return g, nil
+}
+
+// runVerifyContent prints the DHF content hash of HEAD (suffixed -dirty when
+// the working tree differs) or of --commit, and with --expected compares it:
+// exit 1 on a mismatch.
+func runVerifyContent(c *cobra.Command, _ []string) error {
+	name := commandName(c)
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
+	r, err := repo.Open(cwd)
+	if err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
+	h, err := history.Open(r.Root)
+	if err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
+	defer h.Close()
+
+	commit, _ := c.Flags().GetString("commit")
+	var hash string
+	if commit != "" {
+		sha, err := h.Resolve(commit)
+		if err != nil {
+			return exitcode.Usage(fmt.Errorf("%s: %w", name, err))
+		}
+		// A historical commit has no working tree to differ from.
+		if hash, err = h.ContentHash(sha); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+	} else {
+		if hash, err = h.ContentHash(h.HEAD()); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+		dirty, err := h.Status()
+		if err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+		if dirty.Any() {
+			hash += "-dirty"
+		}
+	}
+	fmt.Fprintln(c.OutOrStdout(), hash)
+	if expected, _ := c.Flags().GetString("expected"); expected != "" && expected != hash {
+		return exitcode.Failed(fmt.Errorf("%s: content hash %s does not match the expected %s", name, hash, expected))
+	}
 	return nil
 }

@@ -27,7 +27,7 @@
 - [ ] E1.9b Per-query templates
 - [ ] E1.10 `--scope` and Document export
 - [ ] E1.11 Git context and content hash
-- [ ] E1.12 Captioned entities and cross-reference numbering
+- [ ] E1.12 Captions, cross-reference numbering and images
 - [ ] E1.13 Bundled Mermaid and offline guarantee
 - [ ] E1.14 Epic close-out: docs and first binary release
 
@@ -463,18 +463,25 @@ prov verify content                           # ...-dirty
 Then commit an edit to REQ-0001 → DOC-0001's `last_changed_sha` moves; commit
 an edit to DES-0001 (not pulled into DOC-0001) → it doesn't.
 
-### E1.12 Captioned entities and cross-reference numbering
+### E1.12 Captions, cross-reference numbering and images
 
-**Deliverables:** two-pass render — number captioned entities in document
-order per render, then resolve inline references to in-scope captioned entities
-as "Figure N". Where the numbering scheme is configured (Requirements Spec §7
-calls it "a stylesheet concern") is not yet designed — propose and record it in
-Detailed Design §7. **Example-repo PR:** add a captioned-figure schema, one
-figure entity, and a reference to it from DOC-0001.
+**Deliverables:** two-pass render — number captions in document order per
+render, then resolve inline references to them as "Figure N". **Captions at
+the point of use (changed 2026-10-04, Matt, from review):** a caption belongs
+to where a figure, table or equation is used, not to the asset, so it is a
+` ```caption ` block (kind, id, Markdown text) right after the image, table,
+embed or fenced block it captions, referred to with `[[#id]]`;
+`templates/_captions.yaml` adds caption kinds to the built-in figure, table
+and equation (Requirements Spec §7's "stylesheet concern"). **Images (added
+2026-10-04, Matt):** image files (SVG, PNG, JPEG, GIF, WebP) referenced from
+Markdown are copied into the site; a URL or a missing file exits 2.
+Equations render with E1.13's bundled renderers. **Example-repo PR:** images
+in each format in `assets/`, two captioned figures and a captioned table in
+DOC-0001, a captioned photo in EVD-0001.
 
-**Check it yourself:** DOC-0001 shows "Figure 1" under the figure and in the
-sentence referencing it. Add a second figure above the first → numbers swap,
-text follows.
+**Check it yourself:** DOC-0001 shows "Figure 1" under the control loop and
+in the sentence referencing it, "Table 1" above the limits table. Caption a
+second image above the first → numbers move, text follows.
 
 ### E1.13 Bundled Mermaid and offline guarantee
 

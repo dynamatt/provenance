@@ -72,6 +72,19 @@ tr.incoming th { font-style: italic; }
 section.embed { margin: 20px 0; padding: 4px 20px; background: #fff; border: 1px solid var(--rule); border-left: 4px solid var(--brand); }
 pre { background: var(--brand-soft); padding: 10px 12px; overflow-x: auto; }
 
+/* Captioned figures, tables and equations (```caption blocks). */
+figure.captioned { margin: 20px 0; }
+figure.captioned img { max-width: 100%; height: auto; }
+figure.captioned figcaption { font: 0.9rem system-ui, sans-serif; color: var(--muted); margin: 6px 0; }
+.caption-number { font-weight: 600; color: var(--ink, inherit); margin-right: 4px; }
+
+/* Revision history and provenance stamps (Detailed Design §4). */
+.dhf-revisions { margin-top: 40px; font: 0.85rem system-ui, sans-serif; }
+.dhf-revisions table { border-collapse: collapse; }
+.dhf-revisions td, .dhf-revisions th { text-align: left; padding: 3px 12px 3px 0; border-bottom: 1px solid var(--rule); }
+.dhf-tag { background: var(--brand-soft); border-radius: 3px; padding: 0 5px; }
+.dhf-stamp { margin: 6px 0 0; word-break: break-all; }
+
 /* Named presentation templates (requirement-checklist, risk-summary). */
 .checklist-item { font-family: system-ui, sans-serif; }
 .checklist-item .checkbox { margin-right: 6px; }

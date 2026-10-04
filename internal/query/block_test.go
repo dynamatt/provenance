@@ -103,7 +103,7 @@ func TestQueryBlockErrors(t *testing.T) {
 		{"symbol operator", "from: Requirement\nwhere:\n  field: status\n  operator: \"=\"\n  value: approved\n",
 			`line 4: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists)`},
 		{"no from", "where: {field: status, operator: exists}\n", "line 1: query block has no from: <type>"},
-		{"unknown type", "from: Requirment\n", `line 1: from: unknown type "Requirment" (types: Evidence, OccurrenceLevel, Requirement, Risk, SeverityLevel, UserNeed)`},
+		{"unknown type", "from: Requirment\n", `line 1: from: unknown type "Requirment" (types: Document, Evidence, OccurrenceLevel, Requirement, Risk, SeverityLevel, UserNeed)`},
 		{"unknown key", "from: Requirement\nsort: order\n", `line 2: unknown key "sort" in a query block (expected from, where, order_by, render, template, templates)`},
 		{"unknown field", "from: Requirement\nwhere: {field: state, operator: exists}\n", `line 2: Requirement has no field "state" (fields: id, type, title, status, implements, order, evidenced_by)`},
 		{"enum value", "from: Requirement\nwhere: {field: status, operator: equals, value: aproved}\n", `line 2: "aproved" is not a value of ApprovalStatus (values: draft, in_review, approved, deprecated)`},

@@ -317,9 +317,8 @@ With --expected, compare against a known value and exit 1 on mismatch instead of
 printing it.
 
 Exit codes: 0 printed or matched, 1 mismatch against --expected, 2 tool or usage error.`,
-		Args:        noArgs,
-		Annotations: notImplementedYet,
-		RunE:        notImplemented,
+		Args: noArgs,
+		RunE: runVerifyContent,
 	}
 	content.Flags().String("commit", "", "compute the hash at this commit `hash` (default: HEAD)")
 	content.Flags().String("expected", "", "expected content `hash`; exit 1 if it differs")

@@ -33,7 +33,17 @@ with nothing to keep in sync by hand.</p>
 <h2>Scope</h2>
 <p>This specification covers the closed-loop stimulation control requirements
 for the NeuroPulse system, decomposed from the user needs in <a class="ref" href="USR-0001.html" title="Reduced need for in-clinic titration visits">USR-0001</a>
-and <a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>.</p>
+and <a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>. The control loop they constrain is shown in
+<a class="ref xref" href="#caption-control-loop">Figure 1</a>, and the evoked response it regulates on in
+<a class="ref xref" href="#caption-ecap-response">Figure 2</a>.</p>
+<figure class="captioned captioned-figure" id="caption-control-loop">
+<p><img src="../assets/control-loop.svg" alt="Closed-loop amplitude control"></p>
+<figcaption><span class="caption-number">Figure 1</span> Closed-loop amplitude control. The sense electrode's evoked response (<a class="ref" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a>) sets the next pulse's amplitude, within the ceiling of <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</figcaption>
+</figure>
+<figure class="captioned captioned-diagram" id="caption-ecap-response">
+<p><img src="../assets/ecap-response.png" alt="Evoked compound action potential"></p>
+<figcaption><span class="caption-number">Figure 2</span> A typical evoked compound action potential, after the stimulus artefact. The control loop holds the <em>N1</em> trough's depth in its target band.</figcaption>
+</figure>
 <h2>Requirements</h2>
 <p>All approved requirements, in author-assigned order:</p>
 <div class="query">
@@ -84,7 +94,33 @@ signal used by the closed-loop control algorithm (<a class="ref" href="DES-0001.
 </div>
 <h2>Amplitude Ceiling — Subsystem Detail</h2>
 <p>The system-level ceiling is <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">Single-fault amplitude ceiling</a>, allocated to the subsystem
-level as an independent hardware safeguard:</p>
+level as an independent hardware safeguard. <a class="ref xref" href="#caption-amplitude-limits">Table 1</a> lists the
+limits at each level.</p>
+<figure class="captioned captioned-table" id="caption-amplitude-limits">
+<figcaption><span class="caption-number">Table 1</span> Stimulation amplitude limits by level.</figcaption>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Limit</th>
+<th>Enforced by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>System</td>
+<td>8 mA under any single fault</td>
+<td><a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a></td>
+</tr>
+<tr>
+<td>Subsystem</td>
+<td>Hard current limit in the ASIC</td>
+<td><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a></td>
+</tr>
+</tbody>
+</table>
+</figure>
+<p>The subsystem requirement in full:</p>
 <section class="embed" data-entity="REQ-0003">
 <article class="requirement" id="REQ-0003">
 <h3 class="requirement-title"><span class="req-id">REQ-0003</span> Amplitude ceiling — subsystem allocation</h3>
@@ -108,9 +144,25 @@ evidence is generated separately as coverage reports (Requirements Spec
 </div>
 </article>
 
+<section class="dhf-revisions">
+<h2>Revision history</h2>
+<table>
+<thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td><code>44fa0e6</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Captions where figures are used; images as files</td></tr>
+<tr><td><code>d0f6cb5</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Add a captioned figure, FIG-0001, numbered in DOC-0001</td></tr>
+<tr><td><code>7afabd7</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Layout shows the git stamps and revision history</td></tr>
+<tr><td><code>b6dfc5c</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Lists that name their type: a record, an enum and a built-in type</td></tr>
+<tr><td><code>4cf41f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Make templates/ functional: Requirement page, layout, index, stylesheet</td></tr>
+<tr><td><code>7aee1f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link on the VerificationProtocol side instead</td></tr>
+<tr><td><code>32bb0cb</code></td><td>2026-09-26</td><td>Matt Williams</td><td>Initial commit.</td></tr>
+</tbody>
+</table>
+</section>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
+<p class="dhf-stamp">Generated from commit <code>44fa0e6</code> · content hash <code>sha256:23a6aeb3280e33b4e0c9d6d4c177fdee1632239abc02f487a1bbe296cdf0875d</code> · this page last changed in <code>44fa0e6</code></p>
 </footer>
 </body>
 </html>
