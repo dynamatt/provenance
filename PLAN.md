@@ -29,6 +29,8 @@
 - [ ] E1.11 Git context and content hash
 - [ ] E1.12 Captions, cross-reference numbering and images
 - [ ] E1.13 Bundled Mermaid and offline guarantee
+- [ ] E1.13a Reference lists
+- [ ] E1.13b Citation templates
 - [ ] E1.14 Epic close-out: docs and first binary release
 
 ## Shape of the plan
@@ -497,11 +499,79 @@ diagram to DES-0001.
 **Check it yourself:** turn networking off, open
 `_site/entities/DES-0001.html` → diagram renders.
 
+### E1.13a Reference lists (added 2026-10-04, Matt)
+
+**Deliverables:** a document lists every reference it makes, internal and
+external (`provenance-ddf` USR-0022, REQ-0127..0134, DES-0046, DES-0047).
+External sources are ordinary entities of a project-defined type (e.g.
+`Reference`, `REF-0001`), cited with `[[ID]]`; there is no new link syntax.
+How the list looks is the project's: the engine only collects. Proposal, to
+record in DES-0046:
+
+- **Citations** are the `[[ID]]`, `[[ID|label]]` and `[[ID#field]]`
+  wikilinks in Markdown rendered on the page, including inside embeds and
+  query results rendered in full. Not citations: `![[ID]]` embeds, link
+  fields rendered with `link`, and `[[#id]]` or a reference to a captioned
+  entity numbered on the page. An entity cited twice is listed once.
+- **Order and positions.** Cited entities in order of first citation on the
+  page. Each carries `.CitationIndex` (1-based position among all) and
+  `.TypeCitationIndex` (position among cited entities of its type), so a
+  template can number external sources `[1]`, `[2]` while internal ones keep
+  their IDs.
+- **` ```references ` block**, a new rendered language (DES-0036), placed by
+  the author, usually last. Its body must be empty (exit 2 at the line
+  otherwise); every block on a page lists the whole page's citations.
+  Resolved after the page is complete, like caption numbers, so it may come
+  before the citations it lists.
+- **`templates/_references.tmpl`** (site override) receives `.Citations`,
+  the list above as entity maps. The built-in renders one list:
+  linked ID and title. The layout also receives `.Citations`, so a project
+  may list references on every page without a block.
+- Out of scope: the plain ID, with title. Missing: marked *unresolved*.
+  Neither fails export (Reference Validity is `validate`'s job).
+
+**Example-repo PR:** `schema/Reference.yaml` (title, author, publisher, year,
+identifier, url, accessed); `REF/` with ISO 14971:2019, IEC 60601-1 and one
+journal paper; cite them in DOC-0001's prose and in REQ-0003 (which DOC-0001
+embeds, so collection through embeds is exercised); a ` ```references ` block
+at the end of DOC-0001; `templates/_references.tmpl` with *Internal* and
+*External* subsections (external = `Reference` type); add `references` to
+`rules/block-languages.yaml`; bump the pin. **DDF:** add the block to its
+documents and its own `_references.tmpl` once this ships.
+
+**Check it yourself:** DOC-0001 ends with *References* split into
+*Internal* (REQ-0001, USR-0001, USR-0002, …) and *External* (the three
+`REF-` entities), each in first-citation order; the citation inside the
+embedded REQ-0003 is listed. Cite REF-0002 again earlier in DOC-0001 → it
+moves up. Put text inside the block → exit 2 at its line. Export with
+`--scope` on DOC-0001 → out-of-scope entries show as plain IDs.
+
+### E1.13b Citation templates (added 2026-10-04, Matt)
+
+**Deliverables:** how an inline citation renders is the project's too
+(REQ-0132). `templates/_cite.tmpl` (site override) renders every `[[ID]]`
+and `[[ID|label]]`, receiving the cited entity with `.CitationIndex`,
+`.TypeCitationIndex` and `.Label` (empty when none). It is called in the
+same deferred pass as E1.12's caption references, so indexes are final.
+`[[ID#field]]` and references to captioned entities numbered on the page keep
+their current rendering. Without `_cite.tmpl`, citations render exactly as
+today, so existing golden output is unchanged. Record in DES-0046 and the
+template files design (DES-0031).
+
+**Example-repo PR:** `templates/_cite.tmpl` rendering a `Reference` as a
+bracketed number linked to its list entry (`[1]`), and anything else as its
+linked ID; bump the pin.
+
+**Check it yourself:** DOC-0001 shows `[1]`, `[2]`, `[3]` where it cites the
+`REF-` entities, matching the *External* list, and IDs everywhere else.
+Delete `_cite.tmpl` → citations show IDs again, output otherwise unchanged.
+
 ### E1.14 Epic close-out: docs and first binary release
 
 **Deliverables:** website `export` reference page complete (usage, scope
-files, template authoring (type templates, named presentation templates, and
-the stylesheet, layout and index overrides) and template functions, context
+files, template authoring (type templates, named presentation templates,
+citation and reference-list templates, and the stylesheet, layout and index
+overrides) and template functions, context
 variables);
 architecture page updated where implementation refined the design; example-repo
 README updated for what now works. GitHub release `v0.1.0-alpha` built by CI
