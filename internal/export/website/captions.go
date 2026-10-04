@@ -24,8 +24,8 @@ import (
 // number in each caption, and every [[#id]] reference, which becomes a link
 // to the caption showing "Figure 1" (or its label), even when it comes
 // before the caption. Placeholders are delimited by Unicode private-use
-// characters, which neither Markdown, html/template nor the heading shift
-// changes.
+// characters (U+E000 to U+E003, invisible in an editor), which neither
+// Markdown, html/template nor the heading shift changes.
 
 // captionKind is how one kind of caption is numbered and placed.
 type captionKind struct {
@@ -42,10 +42,10 @@ var captionKinds = map[string]captionKind{
 }
 
 const (
-	tokOpen  = ""
-	tokSep   = ""
-	tokBody  = ""
-	tokClose = ""
+	tokOpen  = "\uE000"
+	tokSep   = "\uE001"
+	tokBody  = "\uE002"
+	tokClose = "\uE003"
 )
 
 // numberToken stands for the number of caption serial in sequence label;

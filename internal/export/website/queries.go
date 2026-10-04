@@ -3,6 +3,8 @@ package website
 import (
 	"fmt"
 	"html/template"
+	"path"
+	"slices"
 	"strings"
 
 	"github.com/yuin/goldmark/util"
@@ -21,6 +23,9 @@ func (r *resolver) options() markdown.Options {
 	return markdown.Options{Fences: r.fences(), Image: r.image}
 }
 
+// imageTypes are the image formats a browser shows, by file extension.
+var imageTypes = []string{".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
+
 // image copies an image file into the site, at its repository path, and
 // returns its URL relative to the page.
 func (r *resolver) image(dest string) (string, error) {
@@ -31,6 +36,9 @@ func (r *resolver) image(dest string) (string, error) {
 	rel, inline, err := assets.Resolve(from, dest)
 	if err != nil || inline {
 		return dest, err
+	}
+	if !slices.Contains(imageTypes, strings.ToLower(path.Ext(rel))) {
+		return "", fmt.Errorf("image %s: the website export does not support this format (supported: %s)", rel, strings.Join(imageTypes, ", "))
 	}
 	s := r.ctx.site
 	if _, done := s.files[rel]; !done {

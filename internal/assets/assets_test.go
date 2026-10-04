@@ -13,6 +13,7 @@ func TestResolve(t *testing.T) {
 		"loop.PNG":             "DOC/loop.PNG",
 		"/assets/a%20b.jpg":    "assets/a b.jpg",
 		"./img/x.jpeg#section": "DOC/img/x.jpeg",
+		"../assets/notes.pdf":  "assets/notes.pdf",
 	} {
 		got, inline, err := Resolve("DOC/DOC-1.md", dest)
 		if err != nil || inline || got != want {
@@ -26,7 +27,6 @@ func TestResolve(t *testing.T) {
 		"https://example.com/x.png": "images must be files in the repository",
 		"//cdn.example.com/x.png":   "images must be files in the repository",
 		"../../x.png":               "is outside the repository",
-		"../assets/notes.pdf":       "not a supported image type",
 	} {
 		if _, _, err := Resolve("DOC/DOC-1.md", dest); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s: err %v, want %q", dest, err, want)

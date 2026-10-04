@@ -84,6 +84,8 @@ func TestCaptionAndImageErrors(t *testing.T) {
 			"N/N-1.md:7: a caption must come right after the figure, table, equation or embed it captions"},
 		"missing image": {map[string]string{"N/N-1.md": note("N-1", "", "Intro.\n\n![a](../assets/gone.png)\n")},
 			"N/N-1.md:7: image assets/gone.png does not exist"},
+		"unsupported image": {map[string]string{"assets/notes.pdf": "pdf", "N/N-1.md": note("N-1", "", "Intro.\n\n![a](../assets/notes.pdf)\n")},
+			"N/N-1.md:7: image assets/notes.pdf: the website export does not support this format (supported: .gif, .jpeg, .jpg, .png, .svg, .webp)"},
 		"remote image": {map[string]string{"N/N-1.md": note("N-1", "", "![a](https://example.com/a.png)\n")},
 			"N/N-1.md:5: image https://example.com/a.png: images must be files in the repository"},
 	} {

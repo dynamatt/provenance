@@ -13,19 +13,16 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"slices"
 	"strings"
 )
-
-// Types are the image file extensions an export copies.
-var Types = []string{".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp"}
 
 // Resolve maps an image destination written in the Markdown of the entity
 // file at entityPath (slash-separated, relative to the repository root) to
 // the image's repository path. A relative destination is relative to the
 // entity file, as in any Markdown viewer; one starting with / is relative
 // to the repository root. inline is true for a data: URI, which needs no
-// file and is kept as written.
+// file and is kept as written. Which formats are supported is up to each
+// exporter.
 func Resolve(entityPath, dest string) (rel string, inline bool, err error) {
 	if strings.HasPrefix(dest, "data:") {
 		return "", true, nil
@@ -47,9 +44,6 @@ func Resolve(entityPath, dest string) (rel string, inline bool, err error) {
 	}
 	if rel == ".." || strings.HasPrefix(rel, "../") {
 		return "", false, fmt.Errorf("image %s is outside the repository", dest)
-	}
-	if !slices.Contains(Types, strings.ToLower(path.Ext(rel))) {
-		return "", false, fmt.Errorf("image %s: not a supported image type (%s)", dest, strings.Join(Types, ", "))
 	}
 	return rel, false, nil
 }
