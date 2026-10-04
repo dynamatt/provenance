@@ -5,6 +5,7 @@
 package assets
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -53,11 +54,17 @@ func Resolve(entityPath, dest string) (rel string, inline bool, err error) {
 	return rel, false, nil
 }
 
-// Read reads a resolved image from the repository at root.
+// Read reads a resolved image from the repository at root. SVG is text:
+// its line endings are normalized to LF, as entity bodies and templates
+// are, so a Windows core.autocrlf checkout exports the same bytes.
+// Binary formats are read as they are.
 func Read(root, rel string) ([]byte, error) {
 	b, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("image %s does not exist", rel)
+	}
+	if err == nil && strings.EqualFold(path.Ext(rel), ".svg") {
+		b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
 	}
 	return b, err
 }

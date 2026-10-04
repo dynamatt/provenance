@@ -52,3 +52,13 @@ func TestReadAndURL(t *testing.T) {
 		t.Errorf("URL = %s", got)
 	}
 }
+
+func TestSVGLineEndings(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "a.svg"), []byte("<svg>\r\n</svg>\r\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := Read(root, "a.svg"); string(b) != "<svg>\n</svg>\n" {
+		t.Errorf("CRLF kept: %q", b)
+	}
+}
