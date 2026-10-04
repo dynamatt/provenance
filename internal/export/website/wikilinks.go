@@ -33,6 +33,18 @@ type resolver struct{ ctx *renderCtx }
 var _ markdown.Resolver = (*resolver)(nil)
 
 func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
+	if l.Local != "" {
+		// A caption on this page; resolved once the page is numbered.
+		var b strings.Builder
+		text := "#" + l.Local
+		if l.Label != "" {
+			text = l.Label
+		}
+		fmt.Fprintf(&b, `<span class="id unresolved-id">%s</span> <span class="unresolved">no caption %s</span>`,
+			template.HTMLEscapeString(text), template.HTMLEscapeString("#"+l.Local))
+		_, _ = w.WriteString(xrefToken(l.Local, l.Label, b.String()))
+		return nil
+	}
 	target := r.ctx.site.byID[l.ID]
 	if target == nil {
 		writeUnresolved(w, l.ID, "unresolved")
@@ -54,7 +66,7 @@ func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
 	if l.Label != "" {
 		text = l.Label
 	}
-	writeLink(w, r.ctx.linkBase, target, text)
+	r.ctx.anchor(w, "ref", target, text)
 	if marker != "" {
 		fmt.Fprintf(w, ` <span class="unresolved">%s</span>`, template.HTMLEscapeString(marker))
 	}
@@ -85,7 +97,7 @@ func (r *resolver) embed(w util.BufWriter, target *model.Entity, named string) e
 		}
 	}
 	chain := append(append([]*model.Entity{}, r.ctx.chain...), target)
-	html, err := r.ctx.site.renderEntity(target, chain, named)
+	html, err := r.ctx.site.renderEntity(target, chain, named, r.ctx.linkBase)
 	if err != nil {
 		return err
 	}
@@ -106,15 +118,6 @@ func (r *resolver) MisplacedEmbed(w util.BufWriter, l markdown.Link) error {
 	}
 	_, _ = w.WriteString(` <span class="unresolved">embed must be on its own line</span>`)
 	return nil
-}
-
-func writeLink(w util.BufWriter, base string, target *model.Entity, text string) {
-	title := ""
-	if t := target.Title(); t != "" {
-		title = fmt.Sprintf(` title="%s"`, template.HTMLEscapeString(t))
-	}
-	fmt.Fprintf(w, `<a class="ref" href="%s%s.html"%s>%s</a>`, template.HTMLEscapeString(base),
-		template.HTMLEscapeString(target.ID), title, template.HTMLEscapeString(text))
 }
 
 func writeUnresolved(w util.BufWriter, id, marker string) {

@@ -190,6 +190,45 @@ func resolve(byID map[string]*Entity, src *Entity, v *Value) {
 	}
 }
 
+// BodyText is the body as rendered: the body field's text, or the freeform
+// body.
+func (e *Entity) BodyText() string {
+	if f := e.Schema.BodyField; f != nil {
+		return e.Field(f.Name).Str
+	}
+	return e.Body
+}
+
+// BodyFileLine maps a line of BodyText (from 1) to its line in the file.
+// The rendered body has leading blank lines trimmed (bodyText).
+func (e *Entity) BodyFileLine(line int) int {
+	raw := strings.ReplaceAll(e.Entity.Body, "\r\n", "\n")
+	lead := len(raw) - len(strings.TrimLeft(raw, "\n"))
+	return e.BodyLine + lead + line - 1
+}
+
+// TextFileLine maps a line (from 1) of Markdown text rendered from e, its
+// body or a top-level text field, to its line in the file; 0 when text is
+// neither.
+func (e *Entity) TextFileLine(text string, line int) int {
+	if text == e.BodyText() {
+		return e.BodyFileLine(line)
+	}
+	for _, v := range e.Fields {
+		if v.Present && !v.Invalid && v.Field.Kind == schema.Text && v.Str == text {
+			n := entity.Lookup(e.Front, v.Field.Name)
+			if n == nil {
+				return 0
+			}
+			if n.Style&(yaml.LiteralStyle|yaml.FoldedStyle) != 0 {
+				return n.Line + line // content starts after the | or > line
+			}
+			return n.Line + line - 1
+		}
+	}
+	return 0
+}
+
 func bodyValue(f *schema.Field, body string) *Value {
 	text := bodyText(body)
 	return &Value{Field: f, Present: strings.TrimSpace(text) != "", Str: text}

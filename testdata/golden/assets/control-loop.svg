@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 170" role="img" aria-label="Closed-loop amplitude control: the sense electrode measures the evoked response, the control algorithm sets the amplitude, the pulse generator stimulates.">
+<style>rect{fill:#fff;stroke:#2f5d8a;stroke-width:2}text{font:14px system-ui,sans-serif;fill:#1c2b3a}path{fill:none;stroke:#2f5d8a;stroke-width:2;marker-end:url(#arrow)}</style>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:#2f5d8a;stroke:none"/></marker></defs>
+<rect x="10" y="20" width="170" height="50" rx="6"/><text x="95" y="50" text-anchor="middle">Sense electrode</text>
+<rect x="235" y="20" width="170" height="50" rx="6"/><text x="320" y="42" text-anchor="middle">ECAP measurement</text><text x="320" y="60" text-anchor="middle">(DES-0001)</text>
+<rect x="460" y="20" width="170" height="50" rx="6"/><text x="545" y="50" text-anchor="middle">Control algorithm</text>
+<rect x="235" y="110" width="170" height="50" rx="6"/><text x="320" y="132" text-anchor="middle">Pulse generator</text><text x="320" y="150" text-anchor="middle">≤ 8 mA (REQ-0002)</text>
+<path d="M180 45H233"/><path d="M405 45H458"/><path d="M545 70V135H407"/><path d="M235 135H95V72"/>
+</svg>

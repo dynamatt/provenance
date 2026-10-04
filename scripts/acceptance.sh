@@ -206,6 +206,85 @@ expect 1 '' grep -q 'checklist-item' _site/entities/DOC-0002.html
 expect 0 '<h3 class="requirement-title"><span class="req-id">REQ-0001</span>' cat _site/entities/DOC-0002.html
 mv DOC/DOC-0002.md.orig DOC/DOC-0002.md
 
+# E1.10: --scope. A Document scope renders that Document as the main page
+# with only what it pulls in; an entity with nothing to pull in is alone, its
+# links outside the scope plain IDs; a query file scopes to its results.
+expect 0 "^exported website to $WORK/_doc\$" "$PROV" export website --scope DOC/DOC-0001.md --out "$WORK/_doc"
+expect 0 '<h1>System Requirements Specification</h1>' cat "$WORK/_doc/index.html"
+expect 0 '^DOC-0001\.html REQ-0001\.html REQ-0002\.html REQ-0003\.html $' sh -c "ls '$WORK/_doc/entities' | tr '\\n' ' '"
+expect 0 '' "$PROV" export website --scope REQ/REQ-0001.md --out "$WORK/_req"
+expect 0 '^REQ-0001\.html$' ls "$WORK/_req/entities"
+expect 0 '<span class="ref out-of-scope">USR-0001</span>' cat "$WORK/_req/index.html"
+expect 0 '' "$PROV" export website --scope scopes/approved-requirements.yaml --out "$WORK/_q"
+expect 0 '^REQ-0001\.html REQ-0002\.html $' sh -c "ls '$WORK/_q/entities' | tr '\\n' ' '"
+expect 2 '^export: --scope nope\.yaml: no such file$' "$PROV" export website --scope nope.yaml --out "$WORK/_x"
+
+# E1.11: git context and content hash. The footer's content hash is the one
+# verify content prints; an uncommitted edit marks it -dirty. Committing an
+# edit to a requirement DOC-0001 shows moves DOC-0001's last-changed commit;
+# committing one to DES-0001, which it only references, does not. The
+# commits are made on a detached HEAD and dropped afterwards.
+"$PROV" export website >/dev/null
+HASH=$("$PROV" verify content)
+expect 0 '^sha256:[0-9a-f]{64}$' echo "$HASH"
+expect 0 "content hash <code>$HASH</code>" cat _site/entities/DOC-0001.html
+expect 0 '' "$PROV" verify content --expected "$HASH"
+expect 1 'does not match the expected sha256:0$' "$PROV" verify content --expected sha256:0
+echo " " >> DES/DES-0001.md
+expect 0 "^$HASH-dirty\$" "$PROV" verify content
+git checkout -q DES/DES-0001.md
+PIN=$(git rev-parse HEAD)
+last_changed() { "$PROV" export website >/dev/null && grep -o 'last changed in <code>[0-9a-f]*' _site/entities/DOC-0001.html; }
+BEFORE=$(last_changed)
+gitc() { git -c user.name=Acceptance -c user.email=acceptance@example.com -c commit.gpgsign=false "$@"; }
+sed -i 's/^order: 1/order: 1 /' DES/DES-0001.md && gitc commit -qam "Edit DES-0001"
+expect 0 "^$BEFORE\$" last_changed
+sed -i 's/^order: 1/order: 1 /' REQ/REQ-0001.md && gitc commit -qam "Edit REQ-0001"
+expect 0 "^last changed in <code>$(git rev-parse --short=7 HEAD)\$" last_changed
+expect 0 '<td>Edit REQ-0001</td>' cat _site/entities/DOC-0001.html
+# Only what a page shows counts: the stylesheet is a separate file; a
+# severity score shows on RSK-0001 through its calculated ratings.
+AFTER=$(last_changed)
+echo "/* tweak */" >> templates/style.css && gitc commit -qam "Restyle"
+expect 0 "^$AFTER\$" last_changed
+rsk_changed() { "$PROV" export website >/dev/null && grep -o 'last changed in <code>[0-9a-f]*' _site/entities/RSK-0001.html; }
+sed -i 's/^label: Critical/label: Critical /' SEV/SEV-0003.md && gitc commit -qam "Edit SEV-0003"
+expect 0 "^last changed in <code>$(git rev-parse --short=7 HEAD)\$" rsk_changed
+echo "<!-- layout -->" >> templates/_layout.tmpl && gitc commit -qam "Edit layout"
+expect 0 "^last changed in <code>$(git rev-parse --short=7 HEAD)\$" last_changed
+git checkout -q --detach "$PIN"
+
+# E1.12: captions and images. DOC-0001 captions two figures and a table
+# where it uses them and refers to them with [[#id]]; the images are copied
+# into the site. A figure captioned above the first takes number 1, and the
+# references follow.
+"$PROV" export website >/dev/null
+expect 0 '<a class="ref xref" href="#caption-control-loop">Figure 1</a>' cat _site/entities/DOC-0001.html
+expect 0 '<a class="ref xref" href="#caption-ecap-response">Figure 2</a>' cat _site/entities/DOC-0001.html
+expect 0 '<span class="caption-number">Table 1</span> Stimulation amplitude limits by level\.' cat _site/entities/DOC-0001.html
+expect 0 '<img src="\.\./assets/control-loop\.svg"' cat _site/entities/DOC-0001.html
+expect 0 '<a class="ref xref" href="#caption-bench-setup">Figure 1</a>' cat _site/entities/EVD-0001.html
+expect 0 '^bench-setup\.jpg control-loop\.svg ecap-response\.png $' sh -c "ls _site/assets | tr '\\n' ' '"
+expect 0 '' cmp assets/ecap-response.png _site/assets/ecap-response.png
+cp DOC/DOC-0001.md "$WORK/DOC-0001.md"
+python3 - <<'PY'
+p = "DOC/DOC-0001.md"
+s = open(p, newline="").read()
+nl = "\r\n" if "\r\n" in s else "\n"
+first = "![Closed-loop amplitude control]"
+s = s.replace(first, nl.join(["![Bench](../assets/bench-setup.jpg)", "", "```caption", "kind: figure", "```", "", first]), 1)
+open(p, "w", newline="").write(s)
+PY
+"$PROV" export website >/dev/null
+expect 0 '<a class="ref xref" href="#caption-control-loop">Figure 2</a>' cat _site/entities/DOC-0001.html
+expect 0 '<a class="ref xref" href="#caption-ecap-response">Figure 3</a>' cat _site/entities/DOC-0001.html
+sed -i 's/^kind: table/kind: chart/' DOC/DOC-0001.md
+expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: unknown caption kind "chart" \(kinds: equation, figure, table\)$' "$PROV" export website
+cp "$WORK/DOC-0001.md" DOC/DOC-0001.md
+sed -i.orig 's|(\.\./assets/control-loop\.svg)|(../assets/missing.svg)|' DOC/DOC-0001.md
+expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: image assets/missing\.svg does not exist$' "$PROV" export website
+mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null
