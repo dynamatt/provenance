@@ -1,0 +1,116 @@
+name: Setup Provenance
+description: >-
+  Build the provenance binary from source and put it on PATH. Builds the
+  latest main unless a ref is given; reports the commit and SHA-256 it built,
+  and fails if they differ from an expected sha256.
+
+inputs:
+  ref:
+    description: >-
+      Commit SHA, tag or branch to build. Empty builds the latest main, which
+      is not reproducible: pin a commit and its sha256 for validated use.
+    required: false
+    default: ""
+  sha256:
+    description: Expected SHA-256 of the binary (hex). Empty skips the check.
+    required: false
+    default: ""
+  repository:
+    description: Repository holding the provenance source.
+    required: false
+    default: dynamatt/provenance
+  token:
+    description: Token that can read the repository (needed if it is private).
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  path:
+    description: Absolute path of the built binary.
+    value: ${{ steps.build.outputs.path }}
+  sha256:
+    description: SHA-256 of the built binary (hex).
+    value: ${{ steps.build.outputs.sha256 }}
+  commit:
+    description: Full commit SHA that was built.
+    value: ${{ steps.fetch.outputs.commit }}
+  version:
+    description: Version stamped into the binary, dev-<12-character commit>.
+    value: ${{ steps.fetch.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    # A plain git fetch rather than actions/checkout: the source goes in
+    # RUNNER_TEMP, outside the caller's workspace, so it can never be read as
+    # part of the repository being exported.
+    - id: fetch
+      shell: bash
+      env:
+        REF: ${{ inputs.ref }}
+        REPOSITORY: ${{ inputs.repository }}
+        TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        src="$RUNNER_TEMP/provenance-src"
+        rm -rf "$src" && mkdir -p "$src" && cd "$src"
+        git init -q
+        git remote add origin "https://github.com/$REPOSITORY.git"
+        auth=()
+        if [ -n "$TOKEN" ]; then
+          basic="$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+          echo "::add-mask::$basic"
+          auth=(-c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic")
+        fi
+        ref="${REF:-main}"
+        git "${auth[@]}" fetch -q --depth 1 origin "$ref"
+        git checkout -q FETCH_HEAD
+        commit="$(git rev-parse HEAD)"
+        # Fixed from the commit, so the hash never depends on clone depth or
+        # tags. A release-binary source will report the release's own version.
+        version="dev-${commit:0:12}"
+        if [ -z "$REF" ]; then
+          echo "::notice title=setup-provenance::No ref given: built latest main ($commit). Pin ref and sha256 for a reproducible, validated binary."
+        fi
+        {
+          echo "src=$src"
+          echo "commit=$commit"
+          echo "version=$version"
+        } >> "$GITHUB_OUTPUT"
+
+    - uses: actions/setup-go@v7
+      with:
+        go-version-file: ${{ steps.fetch.outputs.src }}/go.mod
+        cache-dependency-path: ${{ steps.fetch.outputs.src }}/go.sum
+
+    - id: build
+      shell: bash
+      working-directory: ${{ steps.fetch.outputs.src }}
+      env:
+        COMMIT: ${{ steps.fetch.outputs.commit }}
+        VERSION: ${{ steps.fetch.outputs.version }}
+        EXPECTED: ${{ inputs.sha256 }}
+      run: |
+        set -euo pipefail
+        make build VERSION="$VERSION" COMMIT="$COMMIT"
+        bindir="$RUNNER_TEMP/provenance-bin"
+        mkdir -p "$bindir"
+        install -m 0755 bin/provenance "$bindir/provenance"
+        sum="$(sha256sum "$bindir/provenance" | cut -d' ' -f1)"
+        {
+          echo "### setup-provenance"
+          echo
+          echo '```'
+          "$bindir/provenance" version
+          echo "sha256: $sum"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+        if [ -n "$EXPECTED" ] && [ "$sum" != "${EXPECTED,,}" ]; then
+          echo "::error title=setup-provenance::SHA-256 mismatch for $COMMIT: built $sum, expected $EXPECTED"
+          exit 1
+        fi
+        echo "$bindir" >> "$GITHUB_PATH"
+        {
+          echo "path=$bindir/provenance"
+          echo "sha256=$sum"
+        } >> "$GITHUB_OUTPUT"
