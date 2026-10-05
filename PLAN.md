@@ -525,8 +525,10 @@ there is no new link syntax.
   `.CitationIndex` (1-based position among all) and `.TypeCitationIndex`
   (position among cited entities of its type). It is empty when the entity
   is embedded or shown by a query, so a list in `Document.tmpl` appears once
-  per page. Built-in templates show no list, so existing output is
-  unchanged.
+  per page. The layout receives the same `.Citations` (empty on the main
+  page), so a project may list references on every page from
+  `_layout.tmpl` instead; a unit test covers this, the example does not use
+  it. Built-in templates show no list, so existing output is unchanged.
 - Out of scope: the plain ID, with title. Missing: marked *unresolved*.
   Neither fails export (Reference Validity is `validate`'s job).
 
