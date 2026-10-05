@@ -1,10 +1,10 @@
 # Implementation Plan
 
-> **Status: approved by Matt (2026-09-26).** Exported from the Notion
-> [Implementation Plan](https://app.notion.com/p/3e74f3521211810ba328edefa07e8528).
-> This file is Claude Code's working plan: task checkboxes are tracked here.
-> The Notion page stays the reviewed baseline and changes only when the plan
-> itself changes — update both together when it does.
+> **Status: approved by Matt (2026-09-26).** This file is the plan: tasks,
+> checkboxes and plan changes, all reviewed through pull requests. It began
+> as an export of the Notion
+> [Implementation Plan](https://app.notion.com/p/3e74f3521211810ba328edefa07e8528),
+> retired 2026-10-05 and kept for history only.
 
 ## Progress
 
@@ -65,9 +65,9 @@
    the example.
 5. **Design drift is written back, not left in code.** If implementation needs
    behaviour the design docs don't specify, contradicts them, or settles
-   something marked OPEN, the same PR (a) updates the relevant Notion page —
-   Requirements Spec, High-Level Design or Detailed Design — marking the item
-   DECIDED with a date, and (b) updates `provenance-website` where the change
+   something marked OPEN, the same PR (a) updates the design in
+   `provenance-ddf` (its requirement and design elements; the Notion design
+   pages are retired) marking the item DECIDED with a date, and (b) updates `provenance-website` where the change
    is user-visible (CLI reference, architecture page). The PR description lists
    these under *Design changes*. If the change is more than a clarification,
    stop and ask Matt before implementing.

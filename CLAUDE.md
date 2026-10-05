@@ -50,7 +50,7 @@ These are the plan's *Rules for Claude Code*; `PLAN.md` has the full text.
    `provenance-example`, add content there first (its own PR), then
    `make bump-example`. Synthetic fixtures only for edge cases.
 5. **Design drift is written back.** Behaviour the design doesn't specify,
-   contradicts, or settles from OPEN: update the Notion page (marked DECIDED
+   contradicts, or settles from OPEN: update `provenance-ddf` (marked DECIDED
    with a date) and `provenance-website` where user-visible, in the same PR,
    listed under *Design changes*. More than a clarification → ask Matt first.
 6. **Determinism.** No map-iteration order, wall-clock timestamps or absolute
@@ -64,14 +64,19 @@ reference in `provenance-website`.
 
 Tick the task off in `PLAN.md` in its own PR.
 
-## Design documents (Notion)
+## Design documents
 
-- [Requirements Spec](https://app.notion.com/p/3d64f35212118181b9c4c4609c04ee14)
-- [High-Level Design](https://app.notion.com/p/3d64f352121181f9a098c42b79ddea90)
-- [Detailed Design](https://app.notion.com/p/3dc4f352121181909d0acc01a327a3e7)
-  — §2 is the CLI surface and exit-code contract.
-- [Implementation Plan](https://app.notion.com/p/3e74f3521211810ba328edefa07e8528)
-  — the reviewed baseline for `PLAN.md`.
+- [`dynamatt/provenance-ddf`](https://github.com/dynamatt/provenance-ddf) —
+  user needs (`USR/`), requirements (`REQ/`) and design elements (`DES/`),
+  compiled with Provenance. The design home since 2026-10-04.
+- `PLAN.md` — the implementation plan, the only copy since 2026-10-05.
+- The Notion
+  [Requirements Spec](https://app.notion.com/p/3d64f35212118181b9c4c4609c04ee14),
+  [High-Level Design](https://app.notion.com/p/3d64f352121181f9a098c42b79ddea90),
+  [Detailed Design](https://app.notion.com/p/3dc4f352121181909d0acc01a327a3e7)
+  and [Implementation Plan](https://app.notion.com/p/3e74f3521211810ba328edefa07e8528)
+  are retired and kept for history; older code comments cite their sections
+  (e.g. Detailed Design §7).
 
 ## Related repositories
 
