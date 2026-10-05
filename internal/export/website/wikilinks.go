@@ -45,6 +45,9 @@ func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
 		_, _ = w.WriteString(xrefToken(l.Local, l.Label, b.String()))
 		return nil
 	}
+	if c := r.ctx.site.cites; c != nil {
+		c.add(l.ID)
+	}
 	target := r.ctx.site.byID[l.ID]
 	if target == nil {
 		writeUnresolved(w, l.ID, "unresolved")

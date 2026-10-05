@@ -14,15 +14,9 @@
 </header>
 <main class="dhf-main">
 
-<article class="entity" id="DOC-0001">
-<p class="entity-type">Document</p>
+<article class="document" id="DOC-0001">
 <h1><span class="id">DOC-0001</span> System Requirements Specification — NeuroPulse Stimulator</h1>
-<table class="fields">
-<tbody>
-<tr><th>Title</th><td>System Requirements Specification — NeuroPulse Stimulator</td></tr>
-<tr><th>Status</th><td>in_review</td></tr>
-</tbody>
-</table>
+<p class="document-meta"><span class="status status-in_review">in_review</span></p>
 <div class="body">
 <h1>System Requirements Specification</h1>
 <p>This document is authored prose interleaved with live query blocks
@@ -35,7 +29,8 @@ with nothing to keep in sync by hand.</p>
 for the NeuroPulse system, decomposed from the user needs in <a class="ref" href="USR-0001.html" title="Reduced need for in-clinic titration visits">USR-0001</a>
 and <a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>. The control loop they constrain is shown in
 <a class="ref xref" href="#caption-control-loop">Figure 1</a>, and the evoked response it regulates on in
-<a class="ref xref" href="#caption-ecap-response">Figure 2</a>.</p>
+<a class="ref xref" href="#caption-ecap-response">Figure 2</a>. Closed-loop control on the evoked response follows the
+approach evaluated clinically in <a class="ref" href="REF-0003.html" title="Long-term safety and efficacy of closed-loop spinal cord stimulation to treat chronic back and leg pain (Evoke): a double-blind, randomised, controlled trial">REF-0003</a>.</p>
 <figure class="captioned captioned-figure" id="caption-control-loop">
 <p><img src="../assets/control-loop.svg" alt="Closed-loop amplitude control"></p>
 <figcaption><span class="caption-number">Figure 1</span> Closed-loop amplitude control. The sense electrode's evoked response (<a class="ref" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a>) sets the next pulse's amplitude, within the ceiling of <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</figcaption>
@@ -129,7 +124,8 @@ limits at each level.</p>
 </p>
 <div class="statement"><p>The pulse-generator ASIC shall enforce a hard current-limit circuit,
 independent of firmware, as the subsystem-level implementation of the
-system-level ceiling in <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</p>
+system-level ceiling in <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>, so the ceiling holds under the
+single-fault conditions of <a class="ref" href="REF-0002.html" title="Medical electrical equipment — Part 1: General requirements for basic safety and essential performance">REF-0002</a>.</p>
 </div>
 <h4>Implements</h4>
 <p class="none">No user need linked.</p>
@@ -140,8 +136,27 @@ system-level ceiling in <a class="ref" href="REQ-0002.html" title="Single-fault 
 <h2>Traceability Note</h2>
 <p>Full traceability to design elements, risk controls, and verification
 evidence is generated separately as coverage reports (Requirements Spec
-§7a) rather than duplicated in this document's own query blocks.</p>
+§7a) rather than duplicated in this document's own query blocks. Risk
+controls follow the process of <a class="ref" href="REF-0001.html" title="Medical devices — Application of risk management to medical devices">REF-0001</a>.</p>
 </div>
+<section class="references">
+<h2>References</h2>
+<h3>Internal</h3>
+<ul>
+<li><a class="ref" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a>: Closed-loop amplitude adjustment</li>
+<li><a class="ref" href="USR-0001.html" title="Reduced need for in-clinic titration visits">USR-0001</a>: Reduced need for in-clinic titration visits</li>
+<li><a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>: No unexpected increases in stimulation intensity</li>
+<li><a class="ref" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a>: Closed-loop amplitude control algorithm</li>
+<li><a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>: Single-fault amplitude ceiling</li>
+<li><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a>: Amplitude ceiling — subsystem allocation</li>
+</ul>
+<h3>External</h3>
+<ol class="external-references">
+<li id="ref-1"><cite>Long-term safety and efficacy of closed-loop spinal cord stimulation to treat chronic back and leg pain (Evoke): a double-blind, randomised, controlled trial</cite>. Mekhail N, Levy RM, Deer TR, et al. (The Lancet Neurology, 2020). doi:10.1016/S1474-4422(19)30414-4. <a href="https://doi.org/10.1016/S1474-4422%2819%2930414-4">https://doi.org/10.1016/S1474-4422(19)30414-4</a> Accessed 2026-10-05. (<a class="ref" href="REF-0003.html" title="Long-term safety and efficacy of closed-loop spinal cord stimulation to treat chronic back and leg pain (Evoke): a double-blind, randomised, controlled trial">REF-0003</a>)</li>
+<li id="ref-2"><cite>Medical electrical equipment — Part 1: General requirements for basic safety and essential performance</cite>. IEC/TC 62 (International Electrotechnical Commission, 2020). IEC 60601-1:2005&#43;AMD1:2012&#43;AMD2:2020. (<a class="ref" href="REF-0002.html" title="Medical electrical equipment — Part 1: General requirements for basic safety and essential performance">REF-0002</a>)</li>
+<li id="ref-3"><cite>Medical devices — Application of risk management to medical devices</cite>. ISO/TC 210 (International Organization for Standardization, 2019). ISO 14971:2019. (<a class="ref" href="REF-0001.html" title="Medical devices — Application of risk management to medical devices">REF-0001</a>)</li>
+</ol>
+</section>
 </article>
 
 <section class="dhf-revisions">
@@ -149,10 +164,9 @@ evidence is generated separately as coverage reports (Requirements Spec
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
-<tr><td><code>f9ec14f</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Drop templates/_captions.yaml: caption kinds are fixed</td></tr>
-<tr><td><code>44fa0e6</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Captions where figures are used; images as files</td></tr>
-<tr><td><code>d0f6cb5</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Add a captioned figure, FIG-0001, numbered in DOC-0001</td></tr>
-<tr><td><code>7afabd7</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Layout shows the git stamps and revision history</td></tr>
+<tr><td><code>735c108</code></td><td>2026-10-05</td><td>Matt Williams</td><td>Document.tmpl: title first in external references, so an author ending in &#39;et al.&#39; reads cleanly</td></tr>
+<tr><td><code>9a567fe</code></td><td>2026-10-05</td><td>Matt Williams</td><td>Reference entities, citations and a Document template that lists them</td></tr>
+<tr><td><code>bd98829</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Merge pull request #7 from dynamatt/scope-git-captions</td></tr>
 <tr><td><code>b6dfc5c</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Lists that name their type: a record, an enum and a built-in type</td></tr>
 <tr><td><code>4cf41f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Make templates/ functional: Requirement page, layout, index, stylesheet</td></tr>
 <tr><td><code>7aee1f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link on the VerificationProtocol side instead</td></tr>
@@ -163,7 +177,7 @@ evidence is generated separately as coverage reports (Requirements Spec
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>f9ec14f</code> · content hash <code>sha256:98c469a699a72840e30c20e4998074a54a75e8e4e7014ec5df8e8d95377ea1b6</code> · this page last changed in <code>f9ec14f</code></p>
+<p class="dhf-stamp">Generated from commit <code>735c108</code> · content hash <code>sha256:81e45e76a9b33f52e1d164aa1d026e2b4c5996ed7c09e06eeca180abade2b50f</code> · this page last changed in <code>735c108</code></p>
 </footer>
 </body>
 </html>

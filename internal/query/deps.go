@@ -37,11 +37,15 @@ type Deps struct {
 	// Assets are the image files the content shows, as repository paths,
 	// sorted.
 	Assets []string
+	// Cited are the IDs the content cites with [[ID]] wikilinks, sorted,
+	// missing ones included. They are not part of a scope; they are inputs
+	// of a page only when its templates list the page's citations.
+	Cited []string
 }
 
 // Dependencies walks root's content.
 func (g *Graph) Dependencies(root *model.Entity) (*Deps, error) {
-	w := &walker{g: g, ids: map[string]bool{}, types: map[string]bool{}, templates: map[string]bool{}, assets: map[string]bool{}}
+	w := &walker{g: g, ids: map[string]bool{}, types: map[string]bool{}, templates: map[string]bool{}, assets: map[string]bool{}, cited: map[string]bool{}}
 	w.add(root, true)
 	for len(w.queue) > 0 {
 		e := w.queue[0]
@@ -63,7 +67,7 @@ func (g *Graph) Dependencies(root *model.Entity) (*Deps, error) {
 			}
 		}
 	}
-	d := &Deps{IDs: keys(w.ids), Full: keys(w.full), Types: keys(w.types), Templates: keys(w.templates), Assets: keys(w.assets)}
+	d := &Deps{IDs: keys(w.ids), Full: keys(w.full), Types: keys(w.types), Templates: keys(w.templates), Assets: keys(w.assets), Cited: keys(w.cited)}
 	read := map[string]bool{}
 	for _, id := range d.IDs {
 		for _, r := range g.FormulaInputs(g.Entity(id)) {
@@ -91,6 +95,7 @@ type walker struct {
 	types     map[string]bool
 	templates map[string]bool
 	assets    map[string]bool
+	cited     map[string]bool
 	// queue holds entities rendered in full whose content is not yet read.
 	queue []*model.Entity
 	full  map[string]bool
@@ -146,10 +151,21 @@ func markdownSources(e *model.Entity) []string {
 // recorder is a Markdown resolver that only notes what a text pulls in.
 type recorder struct{ w *walker }
 
-func (r *recorder) Reference(util.BufWriter, markdown.Link) error       { return nil }
-func (r *recorder) MisplacedEmbed(util.BufWriter, markdown.Link) error  { return nil }
 func (r *recorder) CaptionStart(util.BufWriter, markdown.Caption) error { return nil }
 func (r *recorder) CaptionEnd(util.BufWriter, markdown.Caption) error   { return nil }
+
+func (r *recorder) Reference(_ util.BufWriter, l markdown.Link) error {
+	if l.Local == "" {
+		r.w.cited[l.ID] = true
+	}
+	return nil
+}
+
+// MisplacedEmbed renders as a reference, so it is a citation too.
+func (r *recorder) MisplacedEmbed(_ util.BufWriter, l markdown.Link) error {
+	r.w.cited[l.ID] = true
+	return nil
+}
 
 func (r *recorder) Embed(_ util.BufWriter, l markdown.Link) error {
 	if e := r.w.g.Entity(l.ID); e != nil {

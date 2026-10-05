@@ -14,15 +14,9 @@
 </header>
 <main class="dhf-main">
 
-<article class="entity" id="DOC-0002">
-<p class="entity-type">Document</p>
+<article class="document" id="DOC-0002">
 <h1><span class="id">DOC-0002</span> Risk Management Summary — NeuroPulse Stimulator</h1>
-<table class="fields">
-<tbody>
-<tr><th>Title</th><td>Risk Management Summary — NeuroPulse Stimulator</td></tr>
-<tr><th>Status</th><td>draft</td></tr>
-</tbody>
-</table>
+<p class="document-meta"><span class="status status-draft">draft</span></p>
 <div class="body">
 <h1>Risk Management Summary</h1>
 <p>This summary shows the identified risks and the requirements of the
@@ -68,6 +62,17 @@ same requirements in full.</p>
 <p>Requirements that control a risk are listed on the risk as <em>mitigated by</em>,
 for example <a class="ref" href="RSK-0001.html" title="Uncontrolled stimulation amplitude increase">RSK-0001</a> is mitigated by <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</p>
 </div>
+<section class="references">
+<h2>References</h2>
+<h3>Internal</h3>
+<ul>
+<li><a class="ref" href="RSK-0001.html" title="Uncontrolled stimulation amplitude increase">RSK-0001</a>: Uncontrolled stimulation amplitude increase</li>
+<li><a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>: Single-fault amplitude ceiling</li>
+</ul>
+<h3>External</h3>
+<ol class="external-references">
+</ol>
+</section>
 </article>
 
 <section class="dhf-revisions">
@@ -75,12 +80,15 @@ for example <a class="ref" href="RSK-0001.html" title="Uncontrolled stimulation 
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
-<tr><td><code>7afabd7</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Layout shows the git stamps and revision history</td></tr>
+<tr><td><code>735c108</code></td><td>2026-10-05</td><td>Matt Williams</td><td>Document.tmpl: title first in external references, so an author ending in &#39;et al.&#39; reads cleanly</td></tr>
+<tr><td><code>9a567fe</code></td><td>2026-10-05</td><td>Matt Williams</td><td>Reference entities, citations and a Document template that lists them</td></tr>
+<tr><td><code>bd98829</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Merge pull request #7 from dynamatt/scope-git-captions</td></tr>
 <tr><td><code>29eb0b6</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Merge pull request #6 from dynamatt/named-templates</td></tr>
 <tr><td><code>2d9182e</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Add DOC-0002, a query block over two types</td></tr>
 <tr><td><code>b6dfc5c</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Lists that name their type: a record, an enum and a built-in type</td></tr>
 <tr><td><code>4cf41f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Make templates/ functional: Requirement page, layout, index, stylesheet</td></tr>
 <tr><td><code>7aee1f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link on the VerificationProtocol side instead</td></tr>
+<tr><td><code>f1c5fe4</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link once, on the Requirement side</td></tr>
 <tr><td><code>32bb0cb</code></td><td>2026-09-26</td><td>Matt Williams</td><td>Initial commit.</td></tr>
 </tbody>
 </table>
@@ -88,7 +96,7 @@ for example <a class="ref" href="RSK-0001.html" title="Uncontrolled stimulation 
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>f9ec14f</code> · content hash <code>sha256:98c469a699a72840e30c20e4998074a54a75e8e4e7014ec5df8e8d95377ea1b6</code> · this page last changed in <code>7afabd7</code></p>
+<p class="dhf-stamp">Generated from commit <code>735c108</code> · content hash <code>sha256:81e45e76a9b33f52e1d164aa1d026e2b4c5996ed7c09e06eeca180abade2b50f</code> · this page last changed in <code>735c108</code></p>
 </footer>
 </body>
 </html>
