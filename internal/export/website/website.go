@@ -103,11 +103,11 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 	// An entity scope's entity is the main page, rendered through its own
 	// template (Detailed Design §2); otherwise the index lists the scope.
 	if root := in.Scope.RootEntity(); root != nil {
-		content, err := s.renderEntity(root, []*model.Entity{root}, "", "entities/")
+		content, data, err := s.renderPage(root, "entities/")
 		if err != nil {
 			return nil, err
 		}
-		if err := s.page("index.html", "", pageTitle(root), s.finalize(content), s.data.byID[root.ID]); err != nil {
+		if err := s.page("index.html", "", pageTitle(root), s.finalize(content), data); err != nil {
 			return nil, err
 		}
 	} else {
@@ -122,11 +122,11 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		}
 	}
 	for _, ent := range inScope {
-		content, err := s.renderEntity(ent, []*model.Entity{ent}, "", "")
+		content, data, err := s.renderPage(ent, "")
 		if err != nil {
 			return nil, err
 		}
-		if err := s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), s.finalize(content), s.data.byID[ent.ID]); err != nil {
+		if err := s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), s.finalize(content), data); err != nil {
 			return nil, err
 		}
 	}
@@ -137,8 +137,10 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 // of the entities its dependency walk pulls in and of those their calculated
 // fields read, the images it shows, every entity of the types its queries
 // select, the schema of the types it renders, and the templates it renders
-// through: the layout, the type template of each entity shown in full (a path that does not exist yet still counts, so adding one is a
-// change) and the named templates its queries choose. The stylesheet is a
+// through: the layout, the type template of each entity shown in full (a
+// path that does not exist yet still counts, so adding one is a change) and
+// the named templates its queries choose. When the page lists its
+// citations, the entities it cites are inputs too. The stylesheet is a
 // separate file, so it is not an input of any page.
 func (s *site) pageInputs(e *model.Entity) (history.Inputs, error) {
 	if in, ok := s.inputs[e.ID]; ok {
@@ -165,6 +167,14 @@ func (s *site) pageInputs(e *model.Entity) (history.Inputs, error) {
 	}
 	for _, a := range deps.Assets {
 		paths[a] = true
+	}
+	if s.listsCitations(e) {
+		for _, id := range deps.Cited {
+			if ent := s.byID[id]; ent != nil {
+				paths[ent.Path] = true
+				s.schemaFiles(ent.Schema, paths)
+			}
+		}
 	}
 	in := history.Inputs{Paths: slices.Sorted(maps.Keys(paths)), Types: deps.Types}
 	s.inputs[e.ID] = in
@@ -230,6 +240,61 @@ type site struct {
 	serial    int                       // numbers caption placeholders
 	byID      map[string]*model.Entity
 	files     export.Files
+	// cites collects the citations of the page being rendered, during its
+	// first render; pageData is the page's own entity data, with its
+	// citations, during its second.
+	cites    *citations
+	pageData entityData
+}
+
+// citations are the IDs a page cites, in order of first citation.
+type citations struct {
+	ids  []string
+	seen map[string]bool
+}
+
+func (c *citations) add(id string) {
+	if !c.seen[id] {
+		c.seen[id] = true
+		c.ids = append(c.ids, id)
+	}
+}
+
+// citesField matches a template that may read .Citations; a false match
+// (a comment) only adds page inputs.
+var citesField = regexp.MustCompile(`\.Citations\b`)
+
+// listsCitations reports whether e's page may list its citations: its type
+// template or the layout reads .Citations. The built-in templates do not.
+func (s *site) listsCitations(e *model.Entity) bool {
+	if citesField.MatchString(s.templates.layout.text) {
+		return true
+	}
+	t, ok := s.templates.types[e.Type]
+	return ok && citesField.MatchString(t.text)
+}
+
+// renderPage renders e as the entity a page is about (DES-0046). A page
+// that cites anything is rendered twice: the first render collects its
+// citations, in order of first citation; the second renders with them
+// known, as e's .Citations. The data returned is e's, with .Citations, for
+// the layout.
+func (s *site) renderPage(e *model.Entity, linkBase string) (string, entityData, error) {
+	chain := []*model.Entity{e}
+	s.cites = &citations{seen: map[string]bool{}}
+	content, err := s.renderEntity(e, chain, "", linkBase)
+	cites := s.cites
+	s.cites = nil
+	data := s.data.byID[e.ID]
+	if err != nil || len(cites.ids) == 0 {
+		return content, data, err
+	}
+	data = maps.Clone(data)
+	data["Citations"] = s.data.citations(cites.ids)
+	s.pageData = data
+	content, err = s.renderEntity(e, chain, "", linkBase)
+	s.pageData = nil
+	return content, data, err
 }
 
 // layoutData is what the layout template receives.
@@ -249,10 +314,13 @@ type layoutData struct {
 	ContentHash    string
 	LastChangedSHA string
 	Revisions      []entityData
+	// Citations are what the page cites (DES-0046), as on its entity; none
+	// on the site index.
+	Citations []entityData
 }
 
 // page wraps content in the layout and stores it at path. stamps holds the
-// page's LastChangedSHA and Revisions.
+// page's LastChangedSHA, Revisions and Citations.
 func (s *site) page(path, root, title, content string, stamps entityData) error {
 	ctx := &renderCtx{site: s, linkBase: root + "entities/"}
 	t, err := parse(s.templates.layout, ctx.funcs())
@@ -269,6 +337,7 @@ func (s *site) page(path, root, title, content string, stamps entityData) error 
 	}
 	d.LastChangedSHA, _ = stamps["LastChangedSHA"].(string)
 	d.Revisions, _ = stamps["Revisions"].([]entityData)
+	d.Citations, _ = stamps["Citations"].([]entityData)
 	if err := t.Execute(&b, d); err != nil {
 		return templateError(err)
 	}
@@ -347,7 +416,11 @@ func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named, linkB
 		if err != nil {
 			return "", err
 		}
-		if err := t.Execute(&b, s.data.byID[e.ID]); err != nil {
+		data := s.data.byID[e.ID]
+		if len(chain) == 1 && s.pageData != nil {
+			data = s.pageData // the page's own entity, with its citations
+		}
+		if err := t.Execute(&b, data); err != nil {
 			return "", templateError(err)
 		}
 	} else {

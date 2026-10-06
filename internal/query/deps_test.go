@@ -26,6 +26,11 @@ func TestDependencies(t *testing.T) {
 	if got := strings.Join(d.Types, " "); got != "Requirement UserNeed" {
 		t.Errorf("Types: %s", got)
 	}
+	// Citations: DOC-1's own reference and its misplaced embed, which
+	// renders as one; nothing it embeds cites anything.
+	if got := strings.Join(d.Cited, " "); got != "DOC-2 SEV-0003" {
+		t.Errorf("Cited: %s", got)
+	}
 	// An embed inside running text (a misplaced embed) is not pulled in.
 	if strings.Contains(strings.Join(d.IDs, " "), "DOC-2") {
 		t.Error("a misplaced embed was followed")

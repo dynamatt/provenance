@@ -2,6 +2,7 @@ package website
 
 import (
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"unicode"
@@ -18,6 +19,8 @@ import (
 //
 //	.ID .Type .Title .Body .Resolved    engine baseline
 //	.LastChangedSHA .Revisions          git stamps (Detailed Design §4)
+//	.Citations                          on the entity a page is about, what the
+//	                                    page cites (DES-0046); empty elsewhere
 //	.<PascalCaseField>                  every declared field, calculated ones included
 //	.<PascalCaseFacet>                  every incoming facet, e.g. .ImplementedBy
 //
@@ -33,7 +36,10 @@ import (
 type entityData = map[string]any
 
 // baseline keys the engine provides on every entity map.
-var baseline = []string{"ID", "Type", "Title", "Body", "Resolved", "LastChangedSHA", "Revisions"}
+var baseline = []string{"ID", "Type", "Title", "Body", "Resolved", "LastChangedSHA", "Revisions", "Citations"}
+
+// citationKeys are added to each entity in a page's .Citations.
+var citationKeys = []string{"CitationIndex", "TypeCitationIndex"}
 
 // templateName converts a snake_case field name to its template accessor:
 // verified_by -> VerifiedBy.
@@ -64,6 +70,9 @@ func checkTemplateNames(s *schema.Schema) error {
 		seen := map[string]string{}
 		for _, b := range baseline {
 			seen[b] = "the engine baseline"
+		}
+		for _, b := range citationKeys {
+			seen[b] = "the engine's citations"
 		}
 		delete(seen, "Title")
 		check := func(name, what string, line int) error {
@@ -103,7 +112,7 @@ func buildData(s *schema.Schema, entities []*model.Entity) *dataModel {
 	for _, e := range entities {
 		m := d.byID[e.ID]
 		m["ID"], m["Type"], m["Title"], m["Resolved"] = e.ID, e.Type, e.Title(), true
-		m["Body"] = e.Body
+		m["Body"], m["Citations"] = e.Body, []entityData{}
 		for _, v := range e.Fields {
 			m[templateName(v.Field.Name)] = d.value(v)
 			if v.Field == e.Schema.BodyField {
@@ -184,7 +193,7 @@ func (d *dataModel) ref(id string, target *model.Entity, f *schema.Field) entity
 	if target != nil {
 		return d.byID[target.ID]
 	}
-	m := entityData{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false, "LastChangedSHA": "", "Revisions": []entityData{}}
+	m := entityData{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false, "LastChangedSHA": "", "Revisions": []entityData{}, "Citations": []entityData{}}
 	for _, tn := range f.Target {
 		t := d.schema.Types[tn]
 		if t == nil {
@@ -198,4 +207,27 @@ func (d *dataModel) ref(id string, target *model.Entity, f *schema.Field) entity
 		}
 	}
 	return m
+}
+
+// citations is the template data of a page's citations (DES-0046), in order
+// of first citation: each cited entity's map with .CitationIndex, its 1-based
+// position among them all, and .TypeCitationIndex, its position among those
+// of its type. A missing entity is a map with Resolved false, like an
+// unresolved link target.
+func (d *dataModel) citations(ids []string) []entityData {
+	out := make([]entityData, len(ids))
+	perType := map[string]int{}
+	for i, id := range ids {
+		var m entityData
+		if e, ok := d.byID[id]; ok {
+			m = maps.Clone(e)
+		} else {
+			m = d.ref(id, nil, &schema.Field{})
+		}
+		t, _ := m["Type"].(string)
+		perType[t]++
+		m["CitationIndex"], m["TypeCitationIndex"] = i+1, perType[t]
+		out[i] = m
+	}
+	return out
 }

@@ -222,7 +222,8 @@ expect 2 '^export: --scope nope\.yaml: no such file$' "$PROV" export website --s
 # E1.11: git context and content hash. The footer's content hash is the one
 # verify content prints; an uncommitted edit marks it -dirty. Committing an
 # edit to a requirement DOC-0001 shows moves DOC-0001's last-changed commit;
-# committing one to DES-0001, which it only references, does not. The
+# committing one to ECO-0001, which it neither shows nor cites, does not.
+# (DES-0001 is cited, and DOC-0001 lists its citations since E1.13a.) The
 # commits are made on a detached HEAD and dropped afterwards.
 "$PROV" export website >/dev/null
 HASH=$("$PROV" verify content)
@@ -237,7 +238,7 @@ PIN=$(git rev-parse HEAD)
 last_changed() { "$PROV" export website >/dev/null && grep -o 'last changed in <code>[0-9a-f]*' _site/entities/DOC-0001.html; }
 BEFORE=$(last_changed)
 gitc() { git -c user.name=Acceptance -c user.email=acceptance@example.com -c commit.gpgsign=false "$@"; }
-sed -i 's/^order: 1/order: 1 /' DES/DES-0001.md && gitc commit -qam "Edit DES-0001"
+sed -i 's/^order: 1/order: 1 /' ECO/ECO-0001.md && gitc commit -qam "Edit ECO-0001"
 expect 0 "^$BEFORE\$" last_changed
 sed -i 's/^order: 1/order: 1 /' REQ/REQ-0001.md && gitc commit -qam "Edit REQ-0001"
 expect 0 "^last changed in <code>$(git rev-parse --short=7 HEAD)\$" last_changed
@@ -284,6 +285,33 @@ cp "$WORK/DOC-0001.md" DOC/DOC-0001.md
 sed -i.orig 's|(\.\./assets/control-loop\.svg)|(../assets/missing.svg)|' DOC/DOC-0001.md
 expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: image assets/missing\.svg does not exist$' "$PROV" export website
 mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
+
+# E1.13a: reference lists. DOC-0001's Document template lists what the page
+# cites, with nothing added to its Markdown: internal entities, then the
+# Reference entities in first-citation order, REF-0002 being cited only inside
+# the embedded REQ-0003. REQ-0003's own page (Requirement template) lists
+# nothing. Citing REF-0002 earlier moves it up. With DOC-0001 as the scope the
+# REF- entities are outside it, listed as plain IDs. A cited entity is an
+# input only of pages that list citations: editing REF-0002 moves DOC-0001's
+# last-changed commit, not REQ-0003's.
+"$PROV" export website >/dev/null
+refs() { grep -o 'href="REF-000[0-9]\.html" title="[^"]*">REF-000[0-9]</a>)</li>' _site/entities/DOC-0001.html | grep -o 'REF-000[0-9]<' | tr -d '<' | tr '\n' ' '; }
+expect 0 '^REF-0003 REF-0002 REF-0001 $' refs
+expect 0 '<h3>Internal</h3>' cat _site/entities/DOC-0001.html
+expect 1 '' grep -q 'class="references"' _site/entities/REQ-0003.html
+sed -i.orig 's/^repository updates what/repository (or [[REF-0002]]) updates what/' DOC/DOC-0001.md
+"$PROV" export website >/dev/null
+expect 0 '^REF-0002 REF-0003 REF-0001 $' refs
+mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
+"$PROV" export website --scope DOC/DOC-0001.md --out "$WORK/doc" >/dev/null
+expect 0 '<span class="ref out-of-scope">REF-0003</span>\)</li>' cat "$WORK/doc/index.html"
+PIN=$(git rev-parse HEAD)
+req3_changed() { "$PROV" export website >/dev/null && grep -o 'last changed in <code>[0-9a-f]*' _site/entities/REQ-0003.html; }
+BEFORE=$(req3_changed)
+sed -i 's/^year: 2020/year: 2020 /' REF/REF-0002.md && gitc commit -qam "Edit REF-0002"
+expect 0 "^last changed in <code>$(git rev-parse --short=7 HEAD)\$" last_changed
+expect 0 "^$BEFORE\$" req3_changed
+git checkout -q --detach "$PIN"
 
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
