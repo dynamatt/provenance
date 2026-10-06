@@ -537,12 +537,13 @@ identifier, url, accessed); `REF/` with ISO 14971:2019, IEC 60601-1 and one
 journal paper; cite them in DOC-0001's prose and in REQ-0003 (which DOC-0001
 embeds, so collection through embeds is exercised); a new
 `templates/Document.tmpl` (the built-in page plus a *References* section at
-the end, with *Internal* and *External* subsections; external = `Reference`
-type); bump the pin. **DDF:** add the
+the end: *Internal* lists cited Documents, *External* cited `Reference`
+entities, each only when it has entries (changed 2026-10-06, Matt); DOC-0001
+cites DOC-0002); bump the pin. **DDF:** add the
 section to its own `Document.tmpl` once this ships.
 
 **Check it yourself:** DOC-0001 ends with *References* split into
-*Internal* (REQ-0001, USR-0001, USR-0002, …) and *External* (the three
+*Internal* (DOC-0002) and *External* (the three
 `REF-` entities), each in first-citation order, with nothing added to its
 Markdown; the citation inside the embedded REQ-0003 is listed. Cite REF-0002
 again earlier in DOC-0001 → it moves up. REQ-0003's own page has no list
