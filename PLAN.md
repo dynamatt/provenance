@@ -550,30 +550,39 @@ again earlier in DOC-0001 → it moves up. REQ-0003's own page has no list
 (Requirement.tmpl doesn't add one). Export with `--scope` on DOC-0001 →
 out-of-scope entries show as plain IDs.
 
-### E1.13b Citation templates (added 2026-10-04, Matt)
+### E1.13b Citation templates (added 2026-10-04, Matt; revised 2026-10-07)
 
 **Deliverables:** how an inline citation renders is the project's too
 (REQ-0132). `templates/_cite.tmpl` (site override) renders every `[[ID]]`
-and `[[ID|label]]`, receiving the cited entity with `.CitationIndex`,
-`.TypeCitationIndex` and `.Label` (empty when none), from E1.13a's first
-render. `[[ID#field]]` and references to captioned entities numbered on the
-page keep their current rendering. Without `_cite.tmpl`, citations render
+and `[[ID|label]]`, receiving the cited entity as in `.Citations`, with
+`.CitationIndex`, `.TypeCitationIndex` and `.CitationLabel` (the label, or
+empty), from E1.13a's first render, so it can render by type or by field.
+`.CitationLabel`, not `.Label`: entity maps carry a key per field, and the
+example's SeverityLevel and OccurrenceLevel already declare `label`; the
+three keys are reserved (decided 2026-10-07, Matt). `[[ID#field]]` and
+`[[#id]]` keep their current rendering. The file's final line break is not
+part of the citation. The site index has no citations and renders them as
+today. `_cite.tmpl` is an input of every page that cites anything, and with
+it the cited entities are too. Without `_cite.tmpl`, citations render
 exactly as today, so existing golden output is unchanged. Record in DES-0046
 and the template files design (DES-0031).
 
 **Example-repo PR:** `templates/_cite.tmpl` rendering a `Reference` as a
-bracketed number linked to its list entry (`[1]`), and anything else as its
-linked ID; bump the pin.
+bracketed number linked to its own page, not to its list entry, so it works
+on pages without a list (decided 2026-10-07, Matt), with a label as a
+locator (`[[REF-0001|clause 7]]` → `[3, clause 7]`), and anything else as
+its linked ID or label; DOC-0001 cites ISO 14971 by clause; bump the pin.
 
-**Check it yourself:** DOC-0001 shows `[1]`, `[2]`, `[3]` where it cites the
-`REF-` entities, matching the *External* list, and IDs everywhere else.
-Delete `_cite.tmpl` → citations show IDs again, output otherwise unchanged.
+**Check it yourself:** DOC-0001 shows `[1]`, `[2]`, `[3, clause 7]` where it
+cites the `REF-` entities, matching the *External* list, and IDs everywhere
+else. REQ-0003's own page shows `[1]` for REF-0002. Delete `_cite.tmpl` →
+citations show IDs again, output otherwise unchanged.
 
 ### E1.14 Epic close-out: docs and first binary release
 
 **Deliverables:** website `export` reference page complete (usage, scope
 files, template authoring (type templates, named presentation templates,
-citation templates and `.Citations`, and the stylesheet, layout and index
+citation templates (`_cite.tmpl`, `.CitationLabel`) and `.Citations`, and the stylesheet, layout and index
 overrides) and template functions, context
 variables);
 architecture page updated where implementation refined the design; example-repo

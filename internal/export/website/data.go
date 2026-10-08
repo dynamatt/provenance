@@ -38,8 +38,9 @@ type entityData = map[string]any
 // baseline keys the engine provides on every entity map.
 var baseline = []string{"ID", "Type", "Title", "Body", "Resolved", "LastChangedSHA", "Revisions", "Citations"}
 
-// citationKeys are added to each entity in a page's .Citations.
-var citationKeys = []string{"CitationIndex", "TypeCitationIndex"}
+// citationKeys are added to each entity in a page's .Citations, and
+// CitationLabel to the entity _cite.tmpl renders.
+var citationKeys = []string{"CitationIndex", "TypeCitationIndex", "CitationLabel"}
 
 // templateName converts a snake_case field name to its template accessor:
 // verified_by -> VerifiedBy.

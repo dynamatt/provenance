@@ -139,8 +139,9 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 // select, the schema of the types it renders, and the templates it renders
 // through: the layout, the type template of each entity shown in full (a
 // path that does not exist yet still counts, so adding one is a change) and
-// the named templates its queries choose. When the page lists its
-// citations, the entities it cites are inputs too. The stylesheet is a
+// the named templates its queries choose, and _cite.tmpl when it cites
+// anything. When the page lists its citations, or a _cite.tmpl renders
+// them, the entities it cites are inputs too. The stylesheet is a
 // separate file, so it is not an input of any page.
 func (s *site) pageInputs(e *model.Entity) (history.Inputs, error) {
 	if in, ok := s.inputs[e.ID]; ok {
@@ -168,7 +169,10 @@ func (s *site) pageInputs(e *model.Entity) (history.Inputs, error) {
 	for _, a := range deps.Assets {
 		paths[a] = true
 	}
-	if s.listsCitations(e) {
+	if len(deps.Cited) > 0 {
+		paths[templatesDir+"/_cite.tmpl"] = true
+	}
+	if s.listsCitations(e) || s.templates.cite != nil {
 		for _, id := range deps.Cited {
 			if ent := s.byID[id]; ent != nil {
 				paths[ent.Path] = true
@@ -242,9 +246,10 @@ type site struct {
 	files     export.Files
 	// cites collects the citations of the page being rendered, during its
 	// first render; pageData is the page's own entity data, with its
-	// citations, during its second.
+	// citations, and cited those citations by ID, during its second.
 	cites    *citations
 	pageData entityData
+	cited    map[string]entityData
 }
 
 // citations are the IDs a page cites, in order of first citation.
@@ -277,7 +282,7 @@ func (s *site) listsCitations(e *model.Entity) bool {
 // renderPage renders e as the entity a page is about (DES-0046). A page
 // that cites anything is rendered twice: the first render collects its
 // citations, in order of first citation; the second renders with them
-// known, as e's .Citations. The data returned is e's, with .Citations, for
+// known, as e's .Citations and to _cite.tmpl. The data returned is e's, with .Citations, for
 // the layout.
 func (s *site) renderPage(e *model.Entity, linkBase string) (string, entityData, error) {
 	chain := []*model.Entity{e}
@@ -290,10 +295,14 @@ func (s *site) renderPage(e *model.Entity, linkBase string) (string, entityData,
 		return content, data, err
 	}
 	data = maps.Clone(data)
-	data["Citations"] = s.data.citations(cites.ids)
-	s.pageData = data
+	list := s.data.citations(cites.ids)
+	data["Citations"] = list
+	s.pageData, s.cited = data, map[string]entityData{}
+	for _, c := range list {
+		s.cited[c["ID"].(string)] = c
+	}
 	content, err = s.renderEntity(e, chain, "", linkBase)
-	s.pageData = nil
+	s.pageData, s.cited = nil, nil
 	return content, data, err
 }
 
@@ -395,6 +404,7 @@ type renderCtx struct {
 	linkBase  string
 	fragments []string
 	source    string
+	cite      *template.Template // _cite.tmpl, parsed on first use
 }
 
 // renderEntity renders e through the named template (a query's choice,
