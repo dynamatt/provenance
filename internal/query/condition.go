@@ -10,9 +10,10 @@ import (
 
 	"github.com/dynamatt/provenance/internal/query/datalog"
 	"github.com/dynamatt/provenance/internal/schema"
+	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
-// The condition grammar (Detailed Design §6), shared by query blocks, rule
+// The condition grammar (DES-0015), shared by query blocks, rule
 // instances' where, --scope query files and the HTTP API:
 //
 //	where: {field: status, operator: equals, value: approved}   one condition
@@ -37,7 +38,7 @@ const (
 	Exists         Operator = "exists"
 )
 
-// Operators lists every operator, in the order Detailed Design §6 gives.
+// Operators lists every operator, in the order DES-0015 gives.
 var Operators = []Operator{Equals, NotEquals, GreaterOrEqual, LessOrEqual, GreaterThan, LessThan, Exists}
 
 var cmpOps = map[Operator]datalog.Op{
@@ -122,7 +123,7 @@ func errorf(n *yaml.Node, format string, args ...any) error {
 }
 
 // ParseCondition reads a where clause. nested allows any_of inside any_of,
-// which only Query Assertion's where permits (Detailed Design §6); elsewhere
+// which only Query Assertion's where permits (DES-0015, REQ-0049); elsewhere
 // a where is at most one level of OR-of-ANDs.
 func ParseCondition(n *yaml.Node, nested bool) (*Condition, error) {
 	return parseCondition(n, nested, false)
@@ -144,7 +145,7 @@ func parseCondition(n *yaml.Node, nested, inAny bool) (*Condition, error) {
 		}
 		return c, nil
 	case yaml.MappingNode:
-		if alts := lookup(n, "any_of"); alts != nil {
+		if alts := yamlnode.Lookup(n, "any_of"); alts != nil {
 			if len(n.Content) != 2 {
 				return nil, errorf(n, "any_of stands alone; put other conditions beside it in a list")
 			}
@@ -178,7 +179,7 @@ func parseTest(n *yaml.Node) (*Test, error) {
 		return nil, err
 	}
 	t := &Test{Line: n.Line}
-	fieldNode := lookup(n, "field")
+	fieldNode := yamlnode.Lookup(n, "field")
 	if fieldNode == nil {
 		return nil, errorf(n, "condition has no field")
 	}
@@ -188,7 +189,7 @@ func parseTest(n *yaml.Node) (*Test, error) {
 	}
 	t.Field = ref
 
-	opNode := lookup(n, "operator")
+	opNode := yamlnode.Lookup(n, "operator")
 	if opNode == nil {
 		return nil, errorf(n, "condition has no operator (valid operators: %s)", validOperators())
 	}
@@ -197,7 +198,7 @@ func parseTest(n *yaml.Node) (*Test, error) {
 		return nil, errorf(opNode, "unknown operator %q (valid operators: %s)", opNode.Value, validOperators())
 	}
 
-	valueNode := lookup(n, "value")
+	valueNode := yamlnode.Lookup(n, "value")
 	switch {
 	case t.Operator == Exists && valueNode != nil:
 		return nil, errorf(valueNode, "exists takes no value")
@@ -221,20 +222,20 @@ func parseRef(n *yaml.Node) (Ref, error) {
 		return r, nil
 	case yaml.MappingNode:
 		switch {
-		case lookup(n, "list") != nil:
+		case yamlnode.Lookup(n, "list") != nil:
 			if err := onlyKeys(n, "a list field reference", "list", "subfield"); err != nil {
 				return r, err
 			}
-			r.List, r.Field = scalar(lookup(n, "list")), scalar(lookup(n, "subfield"))
+			r.List, r.Field = scalar(yamlnode.Lookup(n, "list")), scalar(yamlnode.Lookup(n, "subfield"))
 			if r.List == "" || r.Field == "" {
 				return r, errorf(n, "a list field reference is {list: <list field>, subfield: <sub-field>}")
 			}
 			return r, nil
-		case lookup(n, "via") != nil:
+		case yamlnode.Lookup(n, "via") != nil:
 			if err := onlyKeys(n, "a field across a link", "via", "field"); err != nil {
 				return r, err
 			}
-			r.Via, r.Field = scalar(lookup(n, "via")), scalar(lookup(n, "field"))
+			r.Via, r.Field = scalar(yamlnode.Lookup(n, "via")), scalar(yamlnode.Lookup(n, "field"))
 			if r.Via == "" || r.Field == "" {
 				return r, errorf(n, "a field across a link is {via: <link field>, field: <field>}")
 			}
@@ -250,7 +251,7 @@ func parseOperand(n *yaml.Node) (*Operand, error) {
 		if err := onlyKeys(n, "a value", "field"); err != nil {
 			return nil, err
 		}
-		ref, err := parseRef(lookup(n, "field"))
+		ref, err := parseRef(yamlnode.Lookup(n, "field"))
 		if err != nil {
 			return nil, err
 		}
@@ -266,7 +267,7 @@ func parseOperand(n *yaml.Node) (*Operand, error) {
 }
 
 // literal reads a YAML scalar by its YAML type, as entity values are read
-// (Detailed Design §5): a quoted "2" is text, not a number.
+// (DES-0010): a quoted "2" is text, not a number.
 func literal(n *yaml.Node) (datalog.Value, bool) {
 	if n.Kind != yaml.ScalarNode {
 		return datalog.Value{}, false
@@ -288,18 +289,6 @@ func literal(n *yaml.Node) (datalog.Value, bool) {
 		return datalog.String(n.Value), true
 	}
 	return datalog.Value{}, false
-}
-
-func lookup(m *yaml.Node, key string) *yaml.Node {
-	if m == nil || m.Kind != yaml.MappingNode {
-		return nil
-	}
-	for i := 0; i+1 < len(m.Content); i += 2 {
-		if m.Content[i].Value == key {
-			return m.Content[i+1]
-		}
-	}
-	return nil
 }
 
 func scalar(n *yaml.Node) string {
@@ -570,7 +559,7 @@ func checkTest(t *Test, left target, right *target) error {
 // deriving the matching entities as the unary relation it returns. Relation
 // names start with prefix.
 //
-// With several types (Requirements Spec §4a), a field, facet, list or link
+// With several types (REQ-0082), a field, facet, list or link
 // a test names must exist on at least one of them, with the same type of
 // value wherever it does; on an entity whose type lacks it, the field is
 // empty, exactly like an unset field.

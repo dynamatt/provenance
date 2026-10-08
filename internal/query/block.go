@@ -11,6 +11,7 @@ import (
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/query/datalog"
 	"github.com/dynamatt/provenance/internal/schema"
+	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
 // Graph is the entity graph prepared for queries, built once per command.
@@ -37,12 +38,7 @@ func NewGraph(s *schema.Schema, entities []*model.Entity) (*Graph, error) {
 // Entity returns the entity with the ID, or nil.
 func (g *Graph) Entity(id string) *model.Entity { return g.byID[id] }
 
-// Facts are the graph's facts: the base relations, plus anything added
-// since (calculated values).
-func (g *Graph) Facts() *datalog.Database { return g.facts }
-
-// Render is how a query block shows each matching entity (High-Level Design
-// §4.3a).
+// Render is how a query block shows each matching entity (DES-0032).
 type Render struct {
 	Mode  RenderMode
 	Field string // for RenderField
@@ -58,13 +54,13 @@ const (
 
 // Block is a parsed query block: a fenced ```query in Markdown.
 type Block struct {
-	// From is the selected types: one, or several (Requirements Spec §4a).
+	// From is the selected types: one, or several (REQ-0082).
 	From    []*schema.Type
 	Where   *Condition
 	OrderBy []string
 	Render  Render
 	// Templates are the named presentation templates the block chooses
-	// (Requirements Spec §7): one for every result (Type ""), from
+	// (REQ-0079): one for every result (Type ""), from
 	// template:, or one per type, from templates:.
 	Templates []TemplateChoice
 }
@@ -103,7 +99,7 @@ func ParseBlock(src string, s *schema.Schema) (*Block, error) {
 	return parseBlock(src, s, blockKeys, "query block")
 }
 
-// ParseScope reads a --scope query file (Detailed Design §2): from and an
+// ParseScope reads a --scope query file (DES-0033): from and an
 // optional where, nothing about presentation.
 func ParseScope(src string, s *schema.Schema) (*Block, error) {
 	return parseBlock(src, s, []string{"from", "where"}, "scope query file")
@@ -123,7 +119,7 @@ func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Bloc
 	}
 
 	b := &Block{Render: Render{Mode: RenderFull}}
-	from := lookup(m, "from")
+	from := yamlnode.Lookup(m, "from")
 	if from == nil {
 		return nil, errorf(m, "%s has no from: <type> or from: [<type>, …]", what)
 	}
@@ -137,7 +133,7 @@ func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Bloc
 	for _, n := range fromNodes {
 		t := s.Types[scalar(n)]
 		if t == nil {
-			return nil, errorf(n, "from: unknown type %q (types: %s)", n.Value, strings.Join(typeNames(s), ", "))
+			return nil, errorf(n, "from: unknown type %q (types: %s)", n.Value, strings.Join(s.TypeNames(), ", "))
 		}
 		if slices.Contains(b.From, t) {
 			return nil, errorf(n, "from: %s is listed twice", t.Name)
@@ -145,7 +141,7 @@ func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Bloc
 		b.From = append(b.From, t)
 	}
 
-	if where := lookup(m, "where"); where != nil {
+	if where := yamlnode.Lookup(m, "where"); where != nil {
 		cond, err := ParseCondition(where, false)
 		if err != nil {
 			return nil, err
@@ -157,7 +153,7 @@ func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Bloc
 		}
 	}
 
-	if ob := lookup(m, "order_by"); ob != nil {
+	if ob := yamlnode.Lookup(m, "order_by"); ob != nil {
 		nodes := []*yaml.Node{ob}
 		if ob.Kind == yaml.SequenceNode {
 			nodes = ob.Content
@@ -171,7 +167,7 @@ func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Bloc
 		}
 	}
 
-	if r := lookup(m, "render"); r != nil {
+	if r := yamlnode.Lookup(m, "render"); r != nil {
 		mode, field, _ := strings.Cut(scalar(r), ":")
 		switch RenderMode(strings.TrimSpace(mode)) {
 		case RenderFull, RenderID:
@@ -197,7 +193,7 @@ func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Bloc
 
 // parseTemplates reads template: or templates:.
 func (b *Block) parseTemplates(m *yaml.Node) error {
-	one, perType := lookup(m, "template"), lookup(m, "templates")
+	one, perType := yamlnode.Lookup(m, "template"), yamlnode.Lookup(m, "templates")
 	switch {
 	case one == nil && perType == nil:
 		return nil
@@ -209,7 +205,7 @@ func (b *Block) parseTemplates(m *yaml.Node) error {
 		key = "templates"
 	}
 	if b.Render.Mode != RenderFull {
-		return errorf(lookup(m, "render"), "%s: applies only to render: full, which embeds each result through a template", key)
+		return errorf(yamlnode.Lookup(m, "render"), "%s: applies only to render: full, which embeds each result through a template", key)
 	}
 	name := func(n *yaml.Node) (string, error) {
 		v := scalar(n)
@@ -283,24 +279,9 @@ func noField(types []*schema.Type, name string) string {
 	return fmt.Sprintf("%s has a field %q", noneOf(types), name)
 }
 
-func typeNames(s *schema.Schema) []string {
-	names := make([]string, 0, len(s.Types))
-	for n := range s.Types {
-		names = append(names, n)
-	}
-	slices.Sort(names)
-	return names
-}
-
 func yamlError(err error) error {
-	msg := strings.TrimPrefix(err.Error(), "yaml: ")
-	msg = strings.TrimSpace(strings.TrimPrefix(msg, "unmarshal errors:"))
-	msg, _, _ = strings.Cut(msg, "\n")
-	var line int
-	if n, _ := fmt.Sscanf(msg, "line %d:", &line); n == 1 {
-		return &Error{Line: line, Msg: strings.TrimSpace(strings.TrimPrefix(msg, fmt.Sprintf("line %d:", line)))}
-	}
-	return &Error{Msg: msg}
+	line, msg := yamlnode.ErrorLine(err)
+	return &Error{Line: line, Msg: msg}
 }
 
 // Run returns the entities matching b, in order: by each order_by field

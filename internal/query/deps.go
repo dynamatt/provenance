@@ -3,6 +3,7 @@ package query
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/yuin/goldmark/util"
@@ -13,8 +14,8 @@ import (
 	"github.com/dynamatt/provenance/internal/schema"
 )
 
-// Deps is what an entity's rendering pulls content from (Detailed Design §2
-// scope resolution, §4 last-changed SHA): the entity itself, every entity it
+// Deps is what an entity's rendering pulls content from (DES-0033 scope
+// resolution, DES-0023 last-changed commit): the entity itself, every entity it
 // embeds with ![[ID]], every result of its query blocks, and the same for
 // each entity rendered in full inside it. A wikilink reference ([[ID]]) is
 // not a dependency: it shows only the target's ID or one field, and out of
@@ -67,7 +68,7 @@ func (g *Graph) Dependencies(root *model.Entity) (*Deps, error) {
 			}
 		}
 	}
-	d := &Deps{IDs: keys(w.ids), Full: keys(w.full), Types: keys(w.types), Templates: keys(w.templates), Assets: keys(w.assets), Cited: keys(w.cited)}
+	d := &Deps{IDs: sortedKeys(w.ids), Full: sortedKeys(w.full), Types: sortedKeys(w.types), Templates: sortedKeys(w.templates), Assets: sortedKeys(w.assets), Cited: sortedKeys(w.cited)}
 	read := map[string]bool{}
 	for _, id := range d.IDs {
 		for _, r := range g.FormulaInputs(g.Entity(id)) {
@@ -76,17 +77,13 @@ func (g *Graph) Dependencies(root *model.Entity) (*Deps, error) {
 			}
 		}
 	}
-	d.Read = keys(read)
+	d.Read = sortedKeys(read)
 	return d, nil
 }
 
-func keys(m map[string]bool) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	slices.Sort(out)
-	return out
+// sortedKeys lists a set's members in order, empty rather than nil.
+func sortedKeys(m map[string]bool) []string {
+	return append([]string{}, slices.Sorted(maps.Keys(m))...)
 }
 
 type walker struct {

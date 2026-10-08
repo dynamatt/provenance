@@ -10,7 +10,8 @@ const captionDoc = "See [[#loop]], [[#loop|the loop]] and [[#limits]]; [[#nothin
 	"![Loop](../assets/loop.svg)\n\n```caption\nkind: figure\nid: loop\ntext: The *control* loop.\n```\n\n" +
 	"| Limit | mA |\n| - | - |\n| Ceiling | 8 |\n\n```caption\nkind: table\nid: limits\ntext: Limits.\n```\n\n" +
 	"![[N-2]]\n\n```caption\nkind: figure\n```\n\n" +
-	"After: [[#loop]].\n"
+	"<p class=\"math\">E = IR</p>\n\n```caption\nkind: equation\nid: ohm\n```\n\n" +
+	"After: [[#loop]] and [[#ohm]].\n"
 
 var captionRepo = map[string]string{
 	"schema/Note.yaml": noteSchema,
@@ -29,7 +30,9 @@ func TestCaptionBlocks(t *testing.T) {
 		// References resolve to numbers, even before the caption.
 		`See <a class="ref xref" href="#caption-loop">Figure 1</a>, <a class="ref xref" href="#caption-loop">the loop</a> and <a class="ref xref" href="#caption-limits">Table 1</a>;`,
 		`<span class="id unresolved-id">#nothing</span> <span class="unresolved">no caption #nothing</span> is not here.`,
-		`After: <a class="ref xref" href="#caption-loop">Figure 1</a>.`,
+		`After: <a class="ref xref" href="#caption-loop">Figure 1</a> and <a class="ref xref" href="#caption-ohm">Equation 1</a>.`,
+		// An equation (raw HTML here): its own sequence, caption below.
+		"<figure class=\"captioned captioned-equation\" id=\"caption-ohm\">\n<p class=\"math\">E = IR</p>\n<figcaption><span class=\"caption-number\">Equation 1</span></figcaption>\n</figure>",
 		// A figure: the image copied into the site, the caption below.
 		"<figure class=\"captioned captioned-figure\" id=\"caption-loop\">\n<p><img src=\"../assets/loop.svg\" alt=\"Loop\"></p>\n<figcaption><span class=\"caption-number\">Figure 1</span> The <em>control</em> loop.</figcaption>\n</figure>",
 		// A table: caption above.

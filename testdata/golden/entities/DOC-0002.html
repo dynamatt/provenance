@@ -22,8 +22,9 @@
 <p>This summary shows the identified risks and the requirements of the
 amplitude control function in one list, in author-assigned order, so a
 reviewer reads each risk beside the requirements written around it. One
-query block selects both types (Requirements Spec §4a). Each type is shown
-through a named presentation template chosen for this document (Section 7):
+query block selects both types (provenance-ddf REQ-0082). Each type is
+shown through a named presentation template chosen for this document
+(REQ-0079):
 requirements as checklist lines, risks as summaries. DOC-0001 shows the
 same requirements in full.</p>
 <h2>Risks and requirements</h2>
@@ -61,6 +62,20 @@ same requirements in full.</p>
 </div>
 <p>Requirements that control a risk are listed on the risk as <em>mitigated by</em>,
 for example <a class="ref" href="RSK-0001.html" title="Uncontrolled stimulation amplitude increase">RSK-0001</a> is mitigated by <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</p>
+<h2>Open items</h2>
+<p>Requirements not yet approved, listed by ID:</p>
+<ul class="query">
+<li><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a></li>
+</ul>
+<h2>Sources</h2>
+<p>The standards and literature the risk file draws on, by their identifier.
+A query block lists entities rather than citing them, so these are not
+numbered and this summary has no reference list of its own:</p>
+<ul class="query">
+<li><a class="ref" href="REF-0001.html" title="Medical devices — Application of risk management to medical devices">ISO 14971:2019</a></li>
+<li><a class="ref" href="REF-0002.html" title="Medical electrical equipment — Part 1: General requirements for basic safety and essential performance">IEC 60601-1:2005+AMD1:2012+AMD2:2020</a></li>
+<li><a class="ref" href="REF-0003.html" title="Long-term safety and efficacy of closed-loop spinal cord stimulation to treat chronic back and leg pain (Evoke): a double-blind, randomised, controlled trial">doi:10.1016/S1474-4422(19)30414-4</a></li>
+</ul>
 </div>
 </article>
 
@@ -69,7 +84,8 @@ for example <a class="ref" href="RSK-0001.html" title="Uncontrolled stimulation 
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
-<tr><td><code>df05772</code></td><td>2026-10-07</td><td>Matt Williams</td><td>Citation template: references as [1], with a clause as [3, clause 7]</td></tr>
+<tr><td><code>18f35a5</code></td><td>2026-10-08</td><td>Matt Williams</td><td>Cite provenance-ddf, not the retired Notion pages; list by ID and field; an equation</td></tr>
+<tr><td><code>1b28c4c</code></td><td>2026-10-08</td><td>Matt Williams</td><td>Merge pull request #9 from dynamatt/cite-template</td></tr>
 <tr><td><code>b617654</code></td><td>2026-10-06</td><td>Matt Williams</td><td>Merge pull request #8 from dynamatt/references</td></tr>
 <tr><td><code>bd98829</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Merge pull request #7 from dynamatt/scope-git-captions</td></tr>
 <tr><td><code>29eb0b6</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Merge pull request #6 from dynamatt/named-templates</td></tr>
@@ -85,7 +101,7 @@ for example <a class="ref" href="RSK-0001.html" title="Uncontrolled stimulation 
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>df05772</code> · content hash <code>sha256:65a76150379a0c252ddd5f865f8a92f64ee4389ec53d7136ad3b863a0701f56c</code> · this page last changed in <code>df05772</code></p>
+<p class="dhf-stamp">Generated from commit <code>18f35a5</code> · content hash <code>sha256:19f027e80b61e37310bbd76535d309961b183ad2e810c51f7394b03a103c0a49</code> · this page last changed in <code>18f35a5</code></p>
 </footer>
 </body>
 </html>

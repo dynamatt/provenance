@@ -198,3 +198,15 @@ fields:
 		t.Errorf("index data model = %s", got)
 	}
 }
+
+func TestIDsMustBeUsableAsPageNames(t *testing.T) {
+	// An ID becomes a file name, entities/<ID>.html, on every platform.
+	_, err := exportRepo(t, map[string]string{
+		"schema/Note.yaml": noteSchema,
+		"N/N-1.md":         note("N 1", "title: Spaced\n", "Body."),
+	})
+	want := `N/N-1.md: ID "N 1" cannot be used as a page name (letters, digits, '.', '_' and '-' only)`
+	if err == nil || err.Error() != want {
+		t.Fatalf("got  %v\nwant %s", err, want)
+	}
+}

@@ -128,26 +128,6 @@ func (db *Database) MustAdd(rel string, args ...Value) {
 // Relation returns the named relation, or nil.
 func (db *Database) Relation(name string) *Relation { return db.rels[name] }
 
-// Query returns the tuples of rel matching pattern, sorted; a zero Value in
-// pattern matches anything.
-func (db *Database) Query(rel string, pattern ...Value) []Tuple {
-	r := db.rels[rel]
-	if r == nil {
-		return nil
-	}
-	var out []Tuple
-	for _, t := range r.Tuples() {
-		match := len(pattern) == len(t)
-		for i := 0; match && i < len(pattern); i++ {
-			match = pattern[i].Kind == 0 || pattern[i] == t[i]
-		}
-		if match {
-			out = append(out, t)
-		}
-	}
-	return out
-}
-
 func (db *Database) relation(name string, arity int) (*Relation, error) {
 	r := db.rels[name]
 	if r == nil {

@@ -13,8 +13,17 @@ identity, so builds must be reproducible.
 | Path | Contents |
 | --- | --- |
 | `cmd/provenance/` | Entry point; only calls `cli.Execute`. |
-| `internal/cli/` | The cobra command tree: every command from Detailed Design §2 with its arguments, flags and help text. Stubs carry the `notImplementedYet` annotation and return `exitcode.NotImplementedError`. |
+| `internal/cli/` | The cobra command tree: every command from DES-0019 with its arguments, flags and help text. Stubs carry the `notImplementedYet` annotation and return `exitcode.NotImplementedError`. |
 | `internal/exitcode/` | The only place exit codes are decided (`0` success, `1` expected failure via `exitcode.Failed`, `2` everything else). |
+| `internal/repo/` | Finds the repository and reads `.component`. |
+| `internal/entity/` | Parses entity files (frontmatter and body) and discovers them. |
+| `internal/schema/` | Loads `schema/`: types, fields, enums, records, facets. |
+| `internal/model/` | Entities typed against the schema: values, resolved links, incoming facets. |
+| `internal/query/` | Condition grammar, query blocks, calculated fields and the dependency walk, over the Datalog engine in `query/datalog/`. |
+| `internal/markdown/` | Markdown to HTML with wikilinks, embeds, captions and fenced blocks; the caller resolves them. |
+| `internal/assets/` | Resolves and reads the image files Markdown refers to. |
+| `internal/history/` | Git via go-git: content hash, dirty state, first-parent log, revisions. |
+| `internal/export/` | Exporter registry, `--scope`, git stamps and the output folder; `export/website/` is the website exporter and its built-in templates. |
 | `internal/version/` | Version and commit, injected by `make build` through `-ldflags`. |
 | `tools/gendocs/` | Generates the website's CLI reference from the command tree. |
 | `scripts/acceptance.sh` | Acceptance steps run against the example repo. |
@@ -75,8 +84,9 @@ Tick the task off in `PLAN.md` in its own PR.
   [High-Level Design](https://app.notion.com/p/3d64f352121181f9a098c42b79ddea90),
   [Detailed Design](https://app.notion.com/p/3dc4f352121181909d0acc01a327a3e7)
   and [Implementation Plan](https://app.notion.com/p/3e74f3521211810ba328edefa07e8528)
-  are retired and kept for history; older code comments cite their sections
-  (e.g. Detailed Design §7).
+  are retired and kept for history. Code comments cite the DDF's IDs
+  (e.g. DES-0031, REQ-0073); completed tasks in `PLAN.md` still name the
+  Notion sections they worked from.
 
 ## Related repositories
 

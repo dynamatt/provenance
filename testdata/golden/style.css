@@ -1,5 +1,5 @@
 /* NeuroPulse DHF stylesheet. Replaces Provenance's built-in stylesheet
-   (Detailed Design §7), so it also styles the classes Provenance's built-in
+   (provenance-ddf DES-0031), so it also styles the classes Provenance's built-in
    entity pages use: .fields, .list, .items, .id, .ref, .absent, .unresolved,
    .embed, .entity-type, .body, .text. */
 
@@ -78,7 +78,7 @@ figure.captioned img { max-width: 100%; height: auto; }
 figure.captioned figcaption { font: 0.9rem system-ui, sans-serif; color: var(--muted); margin: 6px 0; }
 .caption-number { font-weight: 600; color: var(--ink, inherit); margin-right: 4px; }
 
-/* Revision history and provenance stamps (Detailed Design §4). */
+/* Revision history and provenance stamps (provenance-ddf DES-0023). */
 .dhf-revisions { margin-top: 40px; font: 0.85rem system-ui, sans-serif; }
 .dhf-revisions table { border-collapse: collapse; }
 .dhf-revisions td, .dhf-revisions th { text-align: left; padding: 3px 12px 3px 0; border-bottom: 1px solid var(--rule); }

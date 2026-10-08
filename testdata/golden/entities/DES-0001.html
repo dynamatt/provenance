@@ -38,6 +38,13 @@ evoked compound action potential (ECAP) amplitude from the sense electrode
 once per stimulation cycle and adjusts the delivered pulse amplitude to hold
 the ECAP response within a clinician-configured target band, subject to the
 hardware current-limit described in <a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a>.</p>
+<p>Each cycle moves the amplitude toward the target band by a fixed fraction
+of the error, as <a class="ref xref" href="#caption-control-law">Equation 1</a> states, then clamps it to the ceiling:</p>
+<figure class="captioned captioned-equation" id="caption-control-law">
+<pre><code class="language-text">A[n+1] = min( A[n] + k · (N1_target − N1[n]),  A_max )
+</code></pre>
+<figcaption><span class="caption-number">Equation 1</span> The amplitude update, with gain <em>k</em> and ceiling <em>A_max</em> from <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</figcaption>
+</figure>
 </div>
 </article>
 
@@ -46,7 +53,8 @@ hardware current-limit described in <a class="ref" href="REQ-0003.html" title="A
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
-<tr><td><code>df05772</code></td><td>2026-10-07</td><td>Matt Williams</td><td>Citation template: references as [1], with a clause as [3, clause 7]</td></tr>
+<tr><td><code>18f35a5</code></td><td>2026-10-08</td><td>Matt Williams</td><td>Cite provenance-ddf, not the retired Notion pages; list by ID and field; an equation</td></tr>
+<tr><td><code>1b28c4c</code></td><td>2026-10-08</td><td>Matt Williams</td><td>Merge pull request #9 from dynamatt/cite-template</td></tr>
 <tr><td><code>b617654</code></td><td>2026-10-06</td><td>Matt Williams</td><td>Merge pull request #8 from dynamatt/references</td></tr>
 <tr><td><code>bd98829</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Merge pull request #7 from dynamatt/scope-git-captions</td></tr>
 <tr><td><code>b6dfc5c</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Lists that name their type: a record, an enum and a built-in type</td></tr>
@@ -59,7 +67,7 @@ hardware current-limit described in <a class="ref" href="REQ-0003.html" title="A
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>df05772</code> · content hash <code>sha256:65a76150379a0c252ddd5f865f8a92f64ee4389ec53d7136ad3b863a0701f56c</code> · this page last changed in <code>df05772</code></p>
+<p class="dhf-stamp">Generated from commit <code>18f35a5</code> · content hash <code>sha256:19f027e80b61e37310bbd76535d309961b183ad2e810c51f7394b03a103c0a49</code> · this page last changed in <code>18f35a5</code></p>
 </footer>
 </body>
 </html>

@@ -1,4 +1,4 @@
-// Package website is the static DHF website exporter (Requirements Spec §7).
+// Package website is the static DHF website exporter (REQ-0073).
 // Every link in the output is relative, so the site works from any host path
 // or straight from disk, with no network access.
 //
@@ -19,7 +19,6 @@ import (
 	"maps"
 	"regexp"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -101,7 +100,7 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		}
 	}
 	// An entity scope's entity is the main page, rendered through its own
-	// template (Detailed Design §2); otherwise the index lists the scope.
+	// template (DES-0033); otherwise the index lists the scope.
 	if root := in.Scope.RootEntity(); root != nil {
 		content, data, err := s.renderPage(root, "entities/")
 		if err != nil {
@@ -133,7 +132,7 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 	return s.files, nil
 }
 
-// pageInputs are the files e's page shows (Detailed Design §4): the files
+// pageInputs are the files e's page shows (DES-0023): the files
 // of the entities its dependency walk pulls in and of those their calculated
 // fields read, the images it shows, every entity of the types its queries
 // select, the schema of the types it renders, and the templates it renders
@@ -316,7 +315,7 @@ type layoutData struct {
 	// Content is the page's rendered content, also available to the layout
 	// as {{template "content" .}}.
 	Content template.HTML
-	// Git stamps (Detailed Design §4), all empty outside a git repository:
+	// Git stamps (DES-0021, DES-0023), all empty outside a git repository:
 	// HEAD's commit, the DHF content hash, and for this page the last
 	// commit that changed what it shows and the commits that did.
 	GitSHA         string
@@ -372,13 +371,8 @@ func (s *site) renderIndex(entities []*model.Entity) (string, error) {
 	for _, e := range entities {
 		byType[e.Type] = append(byType[e.Type], s.data.byID[e.ID])
 	}
-	types := make([]string, 0, len(byType))
-	for t := range byType {
-		types = append(types, t)
-	}
-	sort.Strings(types)
 	d := indexData{Component: s.component}
-	for _, t := range types {
+	for _, t := range slices.Sorted(maps.Keys(byType)) {
 		d.Types = append(d.Types, typeGroup{Type: t, Entities: byType[t]})
 	}
 
@@ -405,6 +399,16 @@ type renderCtx struct {
 	fragments []string
 	source    string
 	cite      *template.Template // _cite.tmpl, parsed on first use
+}
+
+// entity is the entity being rendered, whose Markdown is being converted:
+// the last in the chain. It is nil on the index and in the layout, which
+// render no entity.
+func (ctx *renderCtx) entity() *model.Entity {
+	if len(ctx.chain) == 0 {
+		return nil
+	}
+	return ctx.chain[len(ctx.chain)-1]
 }
 
 // renderEntity renders e through the named template (a query's choice,
@@ -472,8 +476,7 @@ func (ctx *renderCtx) markdown(v any) (template.HTML, error) {
 	out, err := markdown.Convert(src, r, r.options())
 	ctx.source = prev
 	var me *markdown.Error
-	if errors.As(err, &me) && len(ctx.chain) > 0 {
-		e := ctx.chain[len(ctx.chain)-1]
+	if e := ctx.entity(); errors.As(err, &me) && e != nil {
 		err = &ContentError{Path: e.Path, Line: e.TextFileLine(src, me.Line), Msg: me.Msg}
 	}
 	return template.HTML(out), err
@@ -493,7 +496,7 @@ func (ctx *renderCtx) link(v any, text ...any) (template.HTML, error) {
 		label = fmt.Sprint(text[0])
 	}
 	if resolved, _ := ref["Resolved"].(bool); !resolved {
-		return template.HTML(fmt.Sprintf(`<span class="id unresolved-id">%s</span> <span class="unresolved">unresolved</span>`, template.HTMLEscapeString(label))), nil
+		return template.HTML(unresolvedHTML(label, "unresolved")), nil
 	}
 	var b strings.Builder
 	ctx.anchor(&b, "ref", ctx.site.byID[id], label)
@@ -534,7 +537,7 @@ func (ctx *renderCtx) href(v any) (string, error) {
 // ID marked unresolved, or the plain ID outside the scope.
 func (ctx *renderCtx) ref(id string, e *model.Entity) template.HTML {
 	if e == nil {
-		return template.HTML(fmt.Sprintf(`<span class="id unresolved-id">%s</span> <span class="unresolved">unresolved</span>`, template.HTMLEscapeString(id)))
+		return template.HTML(unresolvedHTML(id, "unresolved"))
 	}
 	var b strings.Builder
 	ctx.anchor(&b, "id", e, id)

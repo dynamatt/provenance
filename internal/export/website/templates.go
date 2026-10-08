@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -14,7 +16,7 @@ import (
 	"github.com/dynamatt/provenance/internal/schema"
 )
 
-// Project templates (Detailed Design §7) live in the repository's templates/
+// Project templates (DES-0031) live in the repository's templates/
 // folder. Each replaces its built-in counterpart independently:
 //
 //	templates/<TypeName>.tmpl   one entity type's rendering
@@ -137,10 +139,10 @@ func loadTemplates(root string, s *schema.Schema) (*templateSet, error) {
 	if ts.cite != nil {
 		check = append(check, *ts.cite)
 	}
-	for _, name := range sortedKeys(ts.types) {
+	for _, name := range slices.Sorted(maps.Keys(ts.types)) {
 		check = append(check, ts.types[name])
 	}
-	for _, name := range sortedKeys(ts.named) {
+	for _, name := range slices.Sorted(maps.Keys(ts.named)) {
 		check = append(check, ts.named[name])
 	}
 	for _, src := range check {
@@ -154,19 +156,10 @@ func loadTemplates(root string, s *schema.Schema) (*templateSet, error) {
 // unknownNamed explains a named template that does not exist.
 func (ts *templateSet) unknownNamed(name string) string {
 	msg := fmt.Sprintf("unknown template %q: there is no %s/%s.tmpl", name, templatesDir, name)
-	if names := sortedKeys(ts.named); len(names) > 0 {
+	if names := slices.Sorted(maps.Keys(ts.named)); len(names) > 0 {
 		msg += " (named templates: " + strings.Join(names, ", ") + ")"
 	}
 	return msg
-}
-
-func sortedKeys(m map[string]source) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 // Functions available to project templates. They are bound per render (links

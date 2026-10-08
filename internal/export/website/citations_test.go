@@ -183,3 +183,55 @@ func TestCitationLabelIsReserved(t *testing.T) {
 		t.Fatalf("got  %v\nwant %s", err, want)
 	}
 }
+
+func TestQueryResultsAreNotCitations(t *testing.T) {
+	// A query block lists entities, by ID or one field; it does not cite
+	// them, so they are neither in .Citations nor rendered by _cite.tmpl.
+	repo := maps.Clone(citationRepo)
+	repo["templates/_cite.tmpl"] = citeTemplate
+	repo["D/D-3.md"] = doc("D-3", "See [[N-1]].\n\n```query\nfrom: Note\nrender: id\n```\n\n```query\nfrom: Note\nrender: field:title\n```\n")
+	files, err := exportRepo(t, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(files["entities/D-3.html"])
+	for _, want := range []string{
+		"See <cite>N-1/1/1//true</cite>.",
+		`<li><a class="ref" href="N-2.html" title="Two">N-2</a></li>`,
+		`<li><a class="ref" href="N-2.html" title="Two">Two</a></li>`,
+		"<ol class=\"cites\">\n<li><a class=\"ref\" href=\"N-1.html\" title=\"One\">N-1</a> 1 1</li>\n</ol>",
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("D-3 missing %q\n%s", want, page)
+		}
+	}
+}
+
+func TestCiteTemplateEdgeCases(t *testing.T) {
+	// A citation in a caption and a misplaced embed (rendered as a
+	// reference) go through _cite.tmpl too; one outside the export's scope
+	// gets its data all the same, and link shows it unlinked.
+	repo := maps.Clone(citationRepo)
+	repo["templates/_cite.tmpl"] = "[{{link . .CitationIndex}}]\n"
+	repo["D/D-3.md"] = doc("D-3", "Inline ![[N-1]] here.\n\n| A |\n| - |\n| 1 |\n\n```caption\nkind: table\ntext: From [[N-2]].\n```\n")
+	files, err := exportRepo(t, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(files["entities/D-3.html"])
+	for _, want := range []string{
+		`Inline [<a class="ref" href="N-1.html" title="One">1</a>] <span class="unresolved">embed must be on its own line</span> here.`,
+		`From [<a class="ref" href="N-2.html" title="Two">2</a>].</figcaption>`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("D-3 missing %q\n%s", want, page)
+		}
+	}
+	files, err = exportScoped(t, repo, "D/D-2.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if index := string(files["index.html"]); !strings.Contains(index, `See [<span class="ref out-of-scope">1</span>].`) {
+		t.Errorf("out-of-scope citation:\n%s", index)
+	}
+}

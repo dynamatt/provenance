@@ -33,17 +33,17 @@ type resolver struct{ ctx *renderCtx }
 
 var _ markdown.Resolver = (*resolver)(nil)
 
+// Reference renders an inline wikilink: [[#id]], a caption on this page,
+// or a citation (DES-0046), which the page collects and a project
+// _cite.tmpl, if any, renders.
 func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
 	if l.Local != "" {
 		// A caption on this page; resolved once the page is numbered.
-		var b strings.Builder
 		text := "#" + l.Local
 		if l.Label != "" {
 			text = l.Label
 		}
-		fmt.Fprintf(&b, `<span class="id unresolved-id">%s</span> <span class="unresolved">no caption %s</span>`,
-			template.HTMLEscapeString(text), template.HTMLEscapeString("#"+l.Local))
-		_, _ = w.WriteString(xrefToken(l.Local, l.Label, b.String()))
+		_, _ = w.WriteString(xrefToken(l.Local, l.Label, unresolvedHTML(text, "no caption #"+l.Local)))
 		return nil
 	}
 	if c := r.ctx.site.cites; c != nil {
@@ -54,10 +54,18 @@ func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
 			return err
 		}
 	}
+	r.link(w, l)
+	return nil
+}
+
+// link renders a link to l's entity showing its ID, its label or one of its
+// fields: a citation's built-in rendering, and how query results list
+// entities, which are not citations.
+func (r *resolver) link(w util.BufWriter, l markdown.Link) {
 	target := r.ctx.site.byID[l.ID]
 	if target == nil {
-		writeUnresolved(w, l.ID, "unresolved")
-		return nil
+		_, _ = w.WriteString(unresolvedHTML(l.ID, "unresolved"))
+		return
 	}
 	text := l.ID
 	marker := ""
@@ -77,9 +85,8 @@ func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
 	}
 	r.ctx.anchor(w, "ref", target, text)
 	if marker != "" {
-		fmt.Fprintf(w, ` <span class="unresolved">%s</span>`, template.HTMLEscapeString(marker))
+		_, _ = w.WriteString(unresolvedNote(marker))
 	}
-	return nil
 }
 
 // cite renders an [[ID]] or [[ID|label]] citation through the project's
@@ -113,8 +120,7 @@ func (r *resolver) cite(w util.BufWriter, l markdown.Link) (bool, error) {
 func (r *resolver) Embed(w util.BufWriter, l markdown.Link) error {
 	target := r.ctx.site.byID[l.ID]
 	if target == nil {
-		_, _ = w.WriteString(`<p class="embed-missing">`)
-		writeUnresolved(w, l.ID, "unresolved")
+		_, _ = w.WriteString(`<p class="embed-missing">` + unresolvedHTML(l.ID, "unresolved"))
 		_, _ = w.WriteString("</p>\n")
 		return nil
 	}
@@ -153,13 +159,19 @@ func (r *resolver) MisplacedEmbed(w util.BufWriter, l markdown.Link) error {
 	if err := r.Reference(w, markdown.Link{ID: l.ID}); err != nil {
 		return err
 	}
-	_, _ = w.WriteString(` <span class="unresolved">embed must be on its own line</span>`)
+	_, _ = w.WriteString(unresolvedNote("embed must be on its own line"))
 	return nil
 }
 
-func writeUnresolved(w util.BufWriter, id, marker string) {
-	fmt.Fprintf(w, `<span class="id unresolved-id">%s</span> <span class="unresolved">%s</span>`,
-		template.HTMLEscapeString(id), template.HTMLEscapeString(marker))
+// unresolvedHTML shows text, an ID or reference the export could not
+// resolve, marked with why.
+func unresolvedHTML(text, marker string) string {
+	return fmt.Sprintf(`<span class="id unresolved-id">%s</span>`, template.HTMLEscapeString(text)) + unresolvedNote(marker)
+}
+
+// unresolvedNote marks what precedes it as unresolved, saying why.
+func unresolvedNote(marker string) string {
+	return fmt.Sprintf(` <span class="unresolved">%s</span>`, template.HTMLEscapeString(marker))
 }
 
 // fieldText is a field's (or incoming facet's) value as plain text, for

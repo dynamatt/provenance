@@ -344,6 +344,22 @@ sed -i 's/^year: 2020/year: 2020 /' REF/REF-0002.md && gitc commit -qam "Edit RE
 expect 0 "^last changed in <code>$(git rev-parse --short=7 HEAD)\$" req3_changed
 git checkout -q --detach "$PIN"
 
+# E1 review: a query block lists entities without citing them, so DOC-0002's
+# References, listed by identifier, are not numbered and it has no reference
+# list. DES-0001 numbers its equation. Exporting from a linked worktree (git
+# worktree add), whose objects are in the main repository, gives the same
+# site.
+"$PROV" export website >/dev/null
+expect 0 '<li><a class="ref" href="REF-0001\.html" title="[^"]*">ISO 14971:2019</a></li>' cat _site/entities/DOC-0002.html
+expect 0 '<li><a class="ref" href="REQ-0003\.html" title="[^"]*">REQ-0003</a></li>' cat _site/entities/DOC-0002.html
+expect 1 '' grep -q 'class="references"' _site/entities/DOC-0002.html
+expect 0 'as <a class="ref xref" href="#caption-control-law">Equation 1</a>' cat _site/entities/DES-0001.html
+git worktree add -q --detach "$WORK/worktree" HEAD
+(cd "$WORK/worktree" && "$PROV" export website --out "$WORK/from-worktree" >/dev/null)
+"$PROV" export website --out "$WORK/from-checkout" >/dev/null
+expect 0 ''                               diff -r "$WORK/from-checkout" "$WORK/from-worktree"
+git worktree remove --force "$WORK/worktree"
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null

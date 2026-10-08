@@ -1,6 +1,6 @@
 name: Reproducible build
 
-# Proves the build recipe is reproducible (Detailed Design §4): every release
+# Proves the build recipe is reproducible (DES-0024): every release
 # platform is built on two different runners, from different checkout paths,
 # and the binaries must be byte-identical.
 

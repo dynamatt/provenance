@@ -1,6 +1,6 @@
 // Package schema loads entity type, enum and record declarations
 // (schema/*.yaml, schema/enums/*.yaml and schema/records/*.yaml) into the type
-// model of Detailed Design §5.
+// model of DES-0010.
 //
 // Only problems that prevent the schema from being interpreted are load
 // errors: YAML syntax, unknown field types, duplicate names, ambiguous body
@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,6 +22,8 @@ import (
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
 // Kind is a field's type category.
@@ -133,6 +136,9 @@ type Schema struct {
 	Enums   map[string]*EnumType
 	Records map[string]*RecordType
 }
+
+// TypeNames lists the declared types in name order.
+func (s *Schema) TypeNames() []string { return slices.Sorted(maps.Keys(s.Types)) }
 
 // Error is a schema problem, reported as path:line: message.
 type Error struct {
@@ -281,18 +287,12 @@ func (l *loader) record(name string) (*RecordType, error) {
 }
 
 // facets derives every type's incoming facets from reverse_name
-// declarations. A link is declared once, on its source side (Detailed Design
-// §6), so a reverse_name that repeats a field declared on the target type is
+// declarations. A link is declared once, on its source side (DES-0011),
+// so a reverse_name that repeats a field declared on the target type is
 // a load error: the same relationship would be stored twice. Targets naming
 // no declared type are left to validate.
 func (s *Schema) facets() error {
-	names := make([]string, 0, len(s.Types))
-	for n := range s.Types {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-
-	for _, n := range names {
+	for _, n := range s.TypeNames() {
 		src := s.Types[n]
 		var links []FacetSource
 		for _, f := range src.Fields {
@@ -381,25 +381,8 @@ func readMapping(root, rel string) (*yaml.Node, error) {
 }
 
 func yamlError(path string, err error) error {
-	msg := strings.TrimPrefix(err.Error(), "yaml: ")
-	// Type mismatches arrive as "unmarshal errors:\n  line N: ..."; report
-	// the first.
-	msg = strings.TrimSpace(strings.TrimPrefix(msg, "unmarshal errors:"))
-	msg, _, _ = strings.Cut(msg, "\n")
-	var line int
-	if n, _ := fmt.Sscanf(msg, "line %d:", &line); n == 1 {
-		return &Error{Path: path, Line: line, Msg: strings.TrimSpace(strings.TrimPrefix(msg, fmt.Sprintf("line %d:", line)))}
-	}
-	return &Error{Path: path, Msg: msg}
-}
-
-func lookup(m *yaml.Node, key string) *yaml.Node {
-	for i := 0; i+1 < len(m.Content); i += 2 {
-		if m.Content[i].Value == key {
-			return m.Content[i+1]
-		}
-	}
-	return nil
+	line, msg := yamlnode.ErrorLine(err)
+	return &Error{Path: path, Line: line, Msg: msg}
 }
 
 func (s *Schema) loadEnum(root, rel string) error {
@@ -417,7 +400,7 @@ func (s *Schema) loadEnum(root, rel string) error {
 	if raw.Enum == "" {
 		return &Error{Path: rel, Line: m.Line, Msg: "missing enum name (enum: <Name>)"}
 	}
-	line := lookup(m, "enum").Line
+	line := yamlnode.Lookup(m, "enum").Line
 	if isBuiltin(raw.Enum) {
 		return &Error{Path: rel, Line: line, Msg: fmt.Sprintf("enum %s has the same name as a built-in field type", raw.Enum)}
 	}
@@ -441,15 +424,15 @@ func readDecl(root, rel, key string) (*rawDecl, error) {
 	if err != nil {
 		return nil, err
 	}
-	name := lookup(m, key)
+	name := yamlnode.Lookup(m, key)
 	if name == nil || name.Kind != yaml.ScalarNode || name.Value == "" {
 		return nil, &Error{Path: rel, Line: m.Line, Msg: fmt.Sprintf("missing %s name (%s: <Name>)", key, key)}
 	}
 	rt := &rawDecl{path: rel, name: name.Value, nameLine: name.Line}
-	if p := lookup(m, "id_prefix"); p != nil {
+	if p := yamlnode.Lookup(m, "id_prefix"); p != nil {
 		rt.idPrefix = p.Value
 	}
-	if f := lookup(m, "fields"); f != nil {
+	if f := yamlnode.Lookup(m, "fields"); f != nil {
 		if f.Kind != yaml.SequenceNode {
 			return nil, &Error{Path: rel, Line: f.Line, Msg: "fields must be a list"}
 		}
@@ -507,7 +490,7 @@ func (l *loader) fields(path string, nodes []*yaml.Node, within string) ([]*Fiel
 			f.Default = &d
 		}
 		typeLine := n.Line
-		if tn := lookup(n, "type"); tn != nil {
+		if tn := yamlnode.Lookup(n, "type"); tn != nil {
 			typeLine = tn.Line
 		}
 		switch {
@@ -522,7 +505,7 @@ func (l *loader) fields(path string, nodes []*yaml.Node, within string) ([]*Fiel
 		default:
 			return nil, &Error{Path: path, Line: typeLine, Msg: fmt.Sprintf("%s: unknown type %q (expected %s)", label, rf.Type, l.expected())}
 		}
-		of := lookup(n, "of")
+		of := yamlnode.Lookup(n, "of")
 		if of != nil && f.Kind != List {
 			return nil, &Error{Path: path, Line: of.Line, Msg: label + ": of: applies only to type: list"}
 		}
@@ -536,7 +519,7 @@ func (l *loader) fields(path string, nodes []*yaml.Node, within string) ([]*Fiel
 				return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s: link cardinality must be one or many, got %q", label, f.Cardinality)}
 			}
 		case List:
-			sub := lookup(n, "fields")
+			sub := yamlnode.Lookup(n, "fields")
 			switch {
 			case of != nil && sub != nil:
 				return nil, &Error{Path: path, Line: of.Line, Msg: label + ": a list takes fields: or of:, not both"}
@@ -609,7 +592,7 @@ func (s *Schema) expected() string {
 	if len(s.Enums) == 0 {
 		return msg
 	}
-	return msg + ", or an enum: " + strings.Join(sortedKeys(s.Enums), ", ")
+	return msg + ", or an enum: " + strings.Join(slices.Sorted(maps.Keys(s.Enums)), ", ")
 }
 
 // expectedItems lists what a list's of: may name.
@@ -622,19 +605,10 @@ func (s *Schema) expectedItems() string {
 	for _, named := range []struct {
 		what  string
 		names []string
-	}{{"an enum", sortedKeys(s.Enums)}, {"a record", sortedKeys(s.Records)}} {
+	}{{"an enum", slices.Sorted(maps.Keys(s.Enums))}, {"a record", slices.Sorted(maps.Keys(s.Records))}} {
 		if len(named.names) > 0 {
 			msg += ", or " + named.what + ": " + strings.Join(named.names, ", ")
 		}
 	}
 	return msg
-}
-
-func sortedKeys[V any](m map[string]V) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/dynamatt/provenance/internal/version"
 )
 
-// Command surface from Detailed Design §2. Help text is written for users of
+// Command surface from DES-0019. Help text is written for users of
 // the tool; design-doc section references stay out of it.
 
 func newServeCmd() *cobra.Command {

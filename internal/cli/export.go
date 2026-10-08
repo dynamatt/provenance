@@ -20,7 +20,7 @@ import (
 )
 
 // exporters is the registry of export formats. PDF and Word are part of the
-// design but deferred past v1 (Requirements Spec §7).
+// design but deferred past v1 (DES-0029).
 func exporters() *export.Registry {
 	r := export.NewRegistry()
 	r.Register("website", website.New())
@@ -31,80 +31,87 @@ func exporters() *export.Registry {
 
 // runExport renders the whole output in memory first and only then replaces
 // the output folder, so a failed export never leaves a half-written site.
-// Every failure exits 2: export never returns 1 (Detailed Design §2).
+// Every failure exits 2: export never returns 1 (DES-0018).
 func runExport(c *cobra.Command, args []string) error {
-	name := commandName(c)
+	if err := exportFormat(c, args[0]); err != nil {
+		return fmt.Errorf("%s: %w", commandName(c), err)
+	}
+	return nil
+}
 
-	exp, err := exporters().Lookup(args[0])
+func exportFormat(c *cobra.Command, format string) error {
+	exp, err := exporters().Lookup(format)
 	if err != nil {
 		var unknown *export.UnknownFormatError
 		if errors.As(err, &unknown) {
-			return exitcode.Usage(fmt.Errorf("%s: %w", name, err))
+			return exitcode.Usage(err)
 		}
-		return fmt.Errorf("%s: %w", name, err)
+		return err
 	}
-
 	cwd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
+		return err
 	}
-	r, err := repo.Open(cwd)
-	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
-	}
-
 	out, _ := c.Flags().GetString("out")
 	outDir := out
 	if !filepath.IsAbs(outDir) {
 		outDir = filepath.Join(cwd, outDir)
 	}
-
 	// The output folder may sit inside the repository (the default ./_site
 	// usually does); never read it back as source.
-	parsed, err := entity.Discover(r.Root, outDir)
+	in, err := load(cwd, outDir)
 	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
+		return err
 	}
-	s, err := schema.Load(r.Root)
-	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
-	}
-	entities, err := model.Build(s, parsed)
-	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
-	}
-
-	// The graph evaluates calculated fields; scope resolution runs queries.
-	graph, err := query.NewGraph(s, entities)
-	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
-	}
-	var scope *export.Scope
 	if path, _ := c.Flags().GetString("scope"); path != "" {
-		if scope, err = export.ResolveScope(graph, r.Root, cwd, path); err != nil {
-			return fmt.Errorf("%s: %w", name, err)
+		if in.Scope, err = export.ResolveScope(in.Graph, in.Repo.Root, cwd, path); err != nil {
+			return err
 		}
 	}
-
-	git, err := gitContext(r.Root, outDir)
-	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
+	if in.Git, err = gitContext(in.Repo.Root, outDir); err != nil {
+		return err
 	}
-
-	files, err := exp.Export(&export.Input{Repo: r, Schema: s, Entities: entities, Graph: graph, Scope: scope, Git: git})
+	files, err := exp.Export(in)
 	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
+		return err
 	}
 	if err := export.WriteOutput(outDir, out, files); err != nil {
-		return fmt.Errorf("%s: %w", name, err)
+		return err
 	}
-	fmt.Fprintf(c.OutOrStdout(), "exported %s to %s\n", args[0], out)
+	fmt.Fprintf(c.OutOrStdout(), "exported %s to %s\n", format, out)
 	return nil
 }
 
-// gitContext reads what an export stamps into its output (Detailed Design
-// §4). Outside a git repository there is nothing to stamp: export still
-// works, without commit or content hash.
+// load reads the repository containing cwd: its entities, typed against the
+// schema, and the graph that evaluates their calculated fields and runs
+// queries. Folders under skip are not read.
+func load(cwd string, skip ...string) (*export.Input, error) {
+	r, err := repo.Open(cwd)
+	if err != nil {
+		return nil, err
+	}
+	parsed, err := entity.Discover(r.Root, skip...)
+	if err != nil {
+		return nil, err
+	}
+	s, err := schema.Load(r.Root)
+	if err != nil {
+		return nil, err
+	}
+	entities, err := model.Build(s, parsed)
+	if err != nil {
+		return nil, err
+	}
+	graph, err := query.NewGraph(s, entities)
+	if err != nil {
+		return nil, err
+	}
+	return &export.Input{Repo: r, Schema: s, Entities: entities, Graph: graph}, nil
+}
+
+// gitContext reads what an export stamps into its output (DES-0021,
+// DES-0023). Outside a git repository there is nothing to stamp: export
+// still works, without commit or content hash.
 func gitContext(root, outDir string) (*export.Git, error) {
 	h, err := history.Open(root)
 	if errors.Is(err, history.ErrNotRepository) {
@@ -115,14 +122,8 @@ func gitContext(root, outDir string) (*export.Git, error) {
 	}
 	defer h.Close()
 	g := &export.Git{SHA: h.HEAD()}
-	if g.ContentHash, err = h.ContentHash(g.SHA); err != nil {
+	if g.ContentHash, g.Dirty, err = h.WorkingContentHash(outDir); err != nil {
 		return nil, err
-	}
-	if g.Dirty, err = h.Status(outDir); err != nil {
-		return nil, err
-	}
-	if g.Dirty.Any() {
-		g.ContentHash += "-dirty"
 	}
 	if g.Log, err = h.Log(); err != nil {
 		return nil, err
@@ -160,17 +161,8 @@ func runVerifyContent(c *cobra.Command, _ []string) error {
 		if hash, err = h.ContentHash(sha); err != nil {
 			return fmt.Errorf("%s: %w", name, err)
 		}
-	} else {
-		if hash, err = h.ContentHash(h.HEAD()); err != nil {
-			return fmt.Errorf("%s: %w", name, err)
-		}
-		dirty, err := h.Status()
-		if err != nil {
-			return fmt.Errorf("%s: %w", name, err)
-		}
-		if dirty.Any() {
-			hash += "-dirty"
-		}
+	} else if hash, _, err = h.WorkingContentHash(); err != nil {
+		return fmt.Errorf("%s: %w", name, err)
 	}
 	fmt.Fprintln(c.OutOrStdout(), hash)
 	if expected, _ := c.Flags().GetString("expected"); expected != "" && expected != hash {

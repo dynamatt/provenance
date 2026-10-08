@@ -1,5 +1,5 @@
 // Package entity discovers and parses entity files: Markdown files whose YAML
-// frontmatter declares an id and a type (High-Level Design §4.3).
+// frontmatter declares an id and a type (DES-0004, DES-0006).
 package entity
 
 import (
@@ -13,11 +13,13 @@ import (
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
 // Entity is one parsed entity file. Raw keeps the file's exact bytes: the
 // content hash is computed over source as committed, never over a
-// re-serialized form (Detailed Design §4).
+// re-serialized form (DES-0022).
 type Entity struct {
 	ID   string
 	Type string
@@ -35,23 +37,10 @@ type Entity struct {
 
 // Scalar returns the string form of a top-level scalar frontmatter value.
 func (e *Entity) Scalar(key string) (string, bool) {
-	if v := Lookup(e.Front, key); v != nil && v.Kind == yaml.ScalarNode {
+	if v := yamlnode.Lookup(e.Front, key); v != nil && v.Kind == yaml.ScalarNode {
 		return v.Value, true
 	}
 	return "", false
-}
-
-// Lookup returns the value node for key in a mapping node, or nil.
-func Lookup(mapping *yaml.Node, key string) *yaml.Node {
-	if mapping == nil || mapping.Kind != yaml.MappingNode {
-		return nil
-	}
-	for i := 0; i+1 < len(mapping.Content); i += 2 {
-		if mapping.Content[i].Value == key {
-			return mapping.Content[i+1]
-		}
-	}
-	return nil
 }
 
 // Error is a problem with one file, reported as path:line: message.
@@ -86,7 +75,7 @@ func Parse(path string, raw []byte) (*Entity, error) {
 	}
 	m := doc.Content[0]
 	shiftLines(m, 1) // frontmatter starts on file line 2
-	idNode, typeNode := Lookup(m, "id"), Lookup(m, "type")
+	idNode, typeNode := yamlnode.Lookup(m, "id"), yamlnode.Lookup(m, "type")
 	if idNode == nil || typeNode == nil {
 		return nil, nil
 	}
@@ -142,19 +131,15 @@ func shiftLines(n *yaml.Node, by int) {
 // yamlError converts a YAML syntax error, whose line numbers count from the
 // start of the frontmatter, to file line numbers.
 func yamlError(path string, err error) error {
-	msg := strings.TrimPrefix(err.Error(), "yaml: ")
-	msg = strings.TrimSpace(strings.TrimPrefix(msg, "unmarshal errors:"))
-	msg, _, _ = strings.Cut(msg, "\n")
-	var line int
-	if n, _ := fmt.Sscanf(msg, "line %d:", &line); n == 1 {
-		msg = strings.TrimSpace(strings.TrimPrefix(msg, fmt.Sprintf("line %d:", line)))
-		return &Error{Path: path, Line: line + 1, Msg: "invalid frontmatter: " + msg}
+	line, msg := yamlnode.ErrorLine(err)
+	if line > 0 {
+		line++ // the opening ---
 	}
-	return &Error{Path: path, Msg: "invalid frontmatter: " + msg}
+	return &Error{Path: path, Line: line, Msg: "invalid frontmatter: " + msg}
 }
 
 // ConfigDirs are the repository-root folders that hold configuration rather
-// than entities (Detailed Design §1).
+// than entities (DES-0005).
 var ConfigDirs = []string{"schema", "rules", "templates", ".signatures", "assets"}
 
 // DuplicateIDError reports two files declaring the same ID.

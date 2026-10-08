@@ -9,7 +9,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-// Relative heading depth (Detailed Design §7): templates and Markdown write
+// Relative heading depth (DES-0035): templates and Markdown write
 // ordinary <h1>–<h6>, where <h1> is the top of the entity being rendered.
 // After an entity renders, embeds are spliced in shifted by the level of the
 // heading they follow, and a whole embedded entity is shifted by its own

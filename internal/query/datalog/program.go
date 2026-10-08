@@ -1,9 +1,9 @@
-// Package datalog is the query engine (High-Level Design §4.5, decided by
+// Package datalog is the query engine (DES-0013, DES-0014, decided by
 // spike E1.7): a small semi-naive Datalog evaluator with stratified negation,
 // arithmetic and comparison built-ins, and stratified aggregation.
 //
 // Programs are built as data, by the compilers for the condition grammar
-// (Detailed Design §6) and calculated-field formulas (§5), never parsed from
+// (DES-0015) and calculated-field formulas (DES-0012), never parsed from
 // user text. Termination is guaranteed by construction: there are no function
 // symbols; arithmetic, which is the only way to create a value not already in
 // the database, is rejected inside recursion; and negated or aggregated
@@ -12,6 +12,7 @@ package datalog
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -341,11 +342,7 @@ func stratify(p *Program) ([]stratum, error) {
 	for _, r := range p.Rules {
 		defined[r.Head.Rel] = true
 	}
-	var rels []string
-	for r := range defined {
-		rels = append(rels, r)
-	}
-	slices.Sort(rels)
+	rels := slices.Sorted(maps.Keys(defined))
 
 	type edge struct {
 		to     string

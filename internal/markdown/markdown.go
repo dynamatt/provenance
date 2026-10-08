@@ -1,6 +1,6 @@
-// Package markdown converts entity Markdown to HTML (Detailed Design §7):
+// Package markdown converts entity Markdown to HTML (DES-0035):
 // CommonMark plus tables, raw HTML passed through, and Obsidian-style
-// wikilinks (High-Level Design §4.3a).
+// wikilinks (DES-0032).
 //
 // The package parses; the caller decides. What a wikilink turns into is up
 // to a Resolver, and a fenced block is handed to the caller's FenceFunc for
@@ -52,11 +52,11 @@ type Fence struct {
 type FenceFunc func(w util.BufWriter, f Fence) error
 
 // RenderedLanguages are the fence languages the product renders instead of
-// showing as code (High-Level Design §4.3a, Requirements Spec §7). Every
+// showing as code (DES-0036). Every
 // exporter must give each one a FenceFunc, even if only to say it cannot
 // render it yet: falling back to a code listing would publish a query's or
 // diagram's source as if it were the content. The BlockLanguage rule
-// (Requirements Spec §6) reports the ones a binary cannot render.
+// (REQ-0052) reports the ones a binary cannot render.
 var RenderedLanguages = []string{"query", "mermaid", "drawio"}
 
 // Resolver renders wikilinks, the syntax this package adds to Markdown. It
@@ -113,7 +113,7 @@ func Convert(src string, r Resolver, opts Options) (string, error) {
 			),
 		),
 		goldmark.WithRendererOptions(
-			html.WithUnsafe(), // raw HTML passes through (Detailed Design §7)
+			html.WithUnsafe(), // raw HTML passes through (DES-0035)
 			renderer.WithNodeRenderers(util.Prioritized(&wikilinkRenderer{r: r, fences: opts.Fences}, 100)),
 		),
 	)
@@ -262,27 +262,35 @@ type fenceTransformer struct{ fences map[string]FenceFunc }
 
 func (t *fenceTransformer) Transform(doc *ast.Document, reader text.Reader, _ parser.Context) {
 	source := reader.Source()
+	for _, b := range fencedBlocks(doc, source, func(lang string) bool { _, ok := t.fences[lang]; return ok }) {
+		content, line := fenceContent(b, source)
+		f := Fence{Lang: string(b.Language(source)), Source: content, Line: line}
+		b.Parent().ReplaceChild(b.Parent(), b, &fenceNode{Fence: f})
+	}
+}
+
+// fencedBlocks lists doc's fenced code blocks whose language want accepts,
+// in document order, so they can be replaced after the walk.
+func fencedBlocks(doc ast.Node, source []byte, want func(lang string) bool) []*ast.FencedCodeBlock {
 	var blocks []*ast.FencedCodeBlock
 	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
-		if b, ok := n.(*ast.FencedCodeBlock); ok && entering {
-			if _, handled := t.fences[string(b.Language(source))]; handled {
-				blocks = append(blocks, b)
-			}
+		if b, ok := n.(*ast.FencedCodeBlock); ok && entering && want(string(b.Language(source))) {
+			blocks = append(blocks, b)
 		}
 		return ast.WalkContinue, nil
 	})
-	for _, b := range blocks {
-		var src bytes.Buffer
-		lines := b.Lines()
-		for i := 0; i < lines.Len(); i++ {
-			seg := lines.At(i)
-			src.Write(seg.Value(source))
-		}
-		// Content starts on the line after the opening fence.
-		line := bytes.Count(source[:b.Info.Segment.Start], []byte("\n")) + 2
-		f := Fence{Lang: string(b.Language(source)), Source: src.String(), Line: line}
-		b.Parent().ReplaceChild(b.Parent(), b, &fenceNode{Fence: f})
+	return blocks
+}
+
+// fenceContent is a fenced block's content, without the fences, and the
+// line of source it starts on: the line after the opening fence.
+func fenceContent(b *ast.FencedCodeBlock, source []byte) (string, int) {
+	var content bytes.Buffer
+	for i := 0; i < b.Lines().Len(); i++ {
+		seg := b.Lines().At(i)
+		content.Write(seg.Value(source))
 	}
+	return content.String(), bytes.Count(source[:b.Info.Segment.Start], []byte("\n")) + 2
 }
 
 type wikilinkRenderer struct {

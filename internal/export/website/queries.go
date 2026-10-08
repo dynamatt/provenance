@@ -30,8 +30,8 @@ var imageTypes = []string{".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
 // returns its URL relative to the page.
 func (r *resolver) image(dest string) (string, error) {
 	from := ""
-	if n := len(r.ctx.chain); n > 0 {
-		from = r.ctx.chain[n-1].Path
+	if e := r.ctx.entity(); e != nil {
+		from = e.Path
 	}
 	rel, inline, err := assets.Resolve(from, dest)
 	if err != nil || inline {
@@ -80,7 +80,7 @@ func unrendered(w util.BufWriter, f markdown.Fence) error {
 	return nil
 }
 
-// query renders a query block's results live (High-Level Design §4.3a):
+// query renders a query block's results live (DES-0032):
 // each matching entity embedded through its own template, or its linked ID,
 // or one field's value.
 func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
@@ -127,14 +127,13 @@ func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 					// Another selected type has the field; this one's
 					// value is empty, as for an unset field.
 					r.ctx.anchor(w, "ref", e, e.ID+"#"+f)
-					_, _ = w.WriteString(" <span class=\"unresolved\">empty</span></li>\n")
+					_, _ = w.WriteString(unresolvedNote("empty") + "</li>\n")
 					continue
 				}
 				l.Field = f
 			}
-			if err := r.Reference(w, l); err != nil {
-				return err
-			}
+			// A result is listed, not cited (DES-0046).
+			r.link(w, l)
 			_, _ = w.WriteString("</li>\n")
 		}
 		_, _ = w.WriteString("</ul>\n")
@@ -145,9 +144,9 @@ func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 // queryError places err, whose line (if any) counts from the block's first
 // line, in the file being rendered.
 func (r *resolver) queryError(q markdown.Fence, err error) error {
-	if len(r.ctx.chain) == 0 {
+	e := r.ctx.entity()
+	if e == nil {
 		return &QueryError{Path: "templates", Msg: err.Error()}
 	}
-	e := r.ctx.chain[len(r.ctx.chain)-1]
 	return query.BlockFileError(e, r.ctx.source, q.Line, err)
 }
