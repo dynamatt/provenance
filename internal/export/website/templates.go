@@ -23,6 +23,7 @@ import (
 //	                            kebab-case (query.IsTemplateName)
 //	templates/_layout.tmpl      the layout wrapping every page
 //	templates/_index.tmpl       the site's main page
+//	templates/_cite.tmpl        an inline citation (DES-0046)
 //	templates/style.css         the stylesheet
 //
 // Other files there (a README, drafts) are ignored, as is a type template
@@ -39,7 +40,10 @@ type templateSet struct {
 	layout, index source
 	types         map[string]source // project type templates by type name
 	named         map[string]source // named presentation templates by name
-	style         []byte
+	// cite renders inline citations; nil without a project _cite.tmpl,
+	// which has no built-in counterpart.
+	cite  *source
+	style []byte
 	// Project reports whether any project template or stylesheet was found.
 	project bool
 }
@@ -93,6 +97,14 @@ func loadTemplates(root string, s *schema.Schema) (*templateSet, error) {
 				return nil, err
 			}
 			ts.style, ts.project = []byte(text), true
+		case name == "_cite.tmpl":
+			text, err := read()
+			if err != nil {
+				return nil, err
+			}
+			// A citation is inline: the file's final line break is not
+			// part of it, so it does not put a space before punctuation.
+			ts.cite, ts.project = &source{rel, strings.TrimSuffix(text, "\n")}, true
 		case name == "_layout.tmpl" || name == "_index.tmpl":
 			text, err := read()
 			if err != nil {
@@ -122,6 +134,9 @@ func loadTemplates(root string, s *schema.Schema) (*templateSet, error) {
 	}
 	// Parse everything now for early, file-named errors.
 	check := []source{ts.layout, ts.index}
+	if ts.cite != nil {
+		check = append(check, *ts.cite)
+	}
 	for _, name := range sortedKeys(ts.types) {
 		check = append(check, ts.types[name])
 	}

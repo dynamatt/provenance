@@ -30,7 +30,7 @@ for the NeuroPulse system, decomposed from the user needs in <a class="ref" href
 and <a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>. The control loop they constrain is shown in
 <a class="ref xref" href="#caption-control-loop">Figure 1</a>, and the evoked response it regulates on in
 <a class="ref xref" href="#caption-ecap-response">Figure 2</a>. Closed-loop control on the evoked response follows the
-approach evaluated clinically in <a class="ref" href="REF-0003.html" title="Long-term safety and efficacy of closed-loop spinal cord stimulation to treat chronic back and leg pain (Evoke): a double-blind, randomised, controlled trial">REF-0003</a>.</p>
+approach evaluated clinically in [<a class="ref" href="REF-0003.html" title="Long-term safety and efficacy of closed-loop spinal cord stimulation to treat chronic back and leg pain (Evoke): a double-blind, randomised, controlled trial">1</a>].</p>
 <figure class="captioned captioned-figure" id="caption-control-loop">
 <p><img src="../assets/control-loop.svg" alt="Closed-loop amplitude control"></p>
 <figcaption><span class="caption-number">Figure 1</span> Closed-loop amplitude control. The sense electrode's evoked response (<a class="ref" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a>) sets the next pulse's amplitude, within the ceiling of <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</figcaption>
@@ -125,7 +125,7 @@ limits at each level.</p>
 <div class="statement"><p>The pulse-generator ASIC shall enforce a hard current-limit circuit,
 independent of firmware, as the subsystem-level implementation of the
 system-level ceiling in <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>, so the ceiling holds under the
-single-fault conditions of <a class="ref" href="REF-0002.html" title="Medical electrical equipment — Part 1: General requirements for basic safety and essential performance">REF-0002</a>.</p>
+single-fault conditions of [<a class="ref" href="REF-0002.html" title="Medical electrical equipment — Part 1: General requirements for basic safety and essential performance">2</a>].</p>
 </div>
 <h4>Implements</h4>
 <p class="none">No user need linked.</p>
@@ -137,7 +137,7 @@ single-fault conditions of <a class="ref" href="REF-0002.html" title="Medical el
 <p>Full traceability to design elements, risk controls, and verification
 evidence is generated separately as coverage reports (Requirements Spec
 §7a) rather than duplicated in this document's own query blocks. Risk
-controls follow the process of <a class="ref" href="REF-0001.html" title="Medical devices — Application of risk management to medical devices">REF-0001</a> and are summarised in
+controls follow the process of [<a class="ref" href="REF-0001.html" title="Medical devices — Application of risk management to medical devices">3</a>, clause 7] and are summarised in
 <a class="ref" href="DOC-0002.html" title="Risk Management Summary — NeuroPulse Stimulator">DOC-0002</a>.</p>
 </div>
 <section class="references">
@@ -160,9 +160,8 @@ controls follow the process of <a class="ref" href="REF-0001.html" title="Medica
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
-<tr><td><code>c49909f</code></td><td>2026-10-06</td><td>Matt Williams</td><td>Document.tmpl: internal references are cited Documents only</td></tr>
-<tr><td><code>735c108</code></td><td>2026-10-05</td><td>Matt Williams</td><td>Document.tmpl: title first in external references, so an author ending in &#39;et al.&#39; reads cleanly</td></tr>
-<tr><td><code>9a567fe</code></td><td>2026-10-05</td><td>Matt Williams</td><td>Reference entities, citations and a Document template that lists them</td></tr>
+<tr><td><code>df05772</code></td><td>2026-10-07</td><td>Matt Williams</td><td>Citation template: references as [1], with a clause as [3, clause 7]</td></tr>
+<tr><td><code>b617654</code></td><td>2026-10-06</td><td>Matt Williams</td><td>Merge pull request #8 from dynamatt/references</td></tr>
 <tr><td><code>bd98829</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Merge pull request #7 from dynamatt/scope-git-captions</td></tr>
 <tr><td><code>29eb0b6</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Merge pull request #6 from dynamatt/named-templates</td></tr>
 <tr><td><code>2d9182e</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Add DOC-0002, a query block over two types</td></tr>
@@ -176,7 +175,7 @@ controls follow the process of <a class="ref" href="REF-0001.html" title="Medica
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>c49909f</code> · content hash <code>sha256:157acdf047694f0d927f05f6b84023ada3f96ea0a87decbffe63f45141a1e26c</code> · this page last changed in <code>c49909f</code></p>
+<p class="dhf-stamp">Generated from commit <code>df05772</code> · content hash <code>sha256:65a76150379a0c252ddd5f865f8a92f64ee4389ec53d7136ad3b863a0701f56c</code> · this page last changed in <code>df05772</code></p>
 </footer>
 </body>
 </html>

@@ -291,9 +291,9 @@ mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
 # Reference entities in first-citation order, REF-0002 being cited only inside
 # the embedded REQ-0003. REQ-0003's own page (Requirement template) lists
 # nothing. Citing REF-0002 earlier moves it up. With DOC-0001 as the scope the
-# REF- entities are outside it, listed as plain IDs. A cited entity is an
-# input only of pages that list citations: editing REF-0002 moves DOC-0001's
-# last-changed commit, not REQ-0003's.
+# REF- entities are outside it, listed as plain IDs. Without a _cite.tmpl
+# (E1.13b), a cited entity is an input only of pages that list citations:
+# editing REF-0002 moves DOC-0001's last-changed commit, not REQ-0003's.
 "$PROV" export website >/dev/null
 refs() { grep -o 'href="REF-000[0-9]\.html" title="[^"]*">REF-000[0-9]</a>)</li>' _site/entities/DOC-0001.html | grep -o 'REF-000[0-9]<' | tr -d '<' | tr '\n' ' '; }
 expect 0 '^REF-0003 REF-0002 REF-0001 $' refs
@@ -306,11 +306,42 @@ mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
 "$PROV" export website --scope DOC/DOC-0001.md --out "$WORK/doc" >/dev/null
 expect 0 '<span class="ref out-of-scope">REF-0003</span>\)</li>' cat "$WORK/doc/index.html"
 PIN=$(git rev-parse HEAD)
+gitc rm -q templates/_cite.tmpl && gitc commit -qm "Drop _cite.tmpl"
 req3_changed() { "$PROV" export website >/dev/null && grep -o 'last changed in <code>[0-9a-f]*' _site/entities/REQ-0003.html; }
 BEFORE=$(req3_changed)
 sed -i 's/^year: 2020/year: 2020 /' REF/REF-0002.md && gitc commit -qam "Edit REF-0002"
 expect 0 "^last changed in <code>$(git rev-parse --short=7 HEAD)\$" last_changed
 expect 0 "^$BEFORE\$" req3_changed
+git checkout -q --detach "$PIN"
+
+# E1.13b: citation templates. The example's _cite.tmpl shows each Reference
+# as its number in DOC-0001's External list, linked to its page, and a label
+# as a locator; other citations and [[ID#field]] render as without it.
+# REQ-0003's own page numbers its own citations. Without _cite.tmpl the
+# citations show their IDs again. _cite.tmpl is an input of pages that cite
+# anything: editing it moves DOC-0001's last-changed commit, not REQ-0001's.
+# With it, a cited entity is an input of every page citing it: editing
+# REF-0002 moves REQ-0003's too.
+"$PROV" export website >/dev/null
+cites() { grep -o '\[<a class="ref" href="REF-000[0-9]\.html" title="[^"]*">[0-9]*</a>[^]]*\]' "_site/entities/$1.html" | sed 's/ title="[^"]*"//; s/<a class="ref" href="\(REF-000[0-9]\)\.html">/\1:/; s|</a>||' | tr '\n' ' '; }
+expect 0 '^\[REF-0003:1\] \[REF-0002:2\] \[REF-0001:3, clause 7\] $' cites DOC-0001
+expect 0 '^\[REF-0002:1\] $'          cites REQ-0003
+expect 0 'single-fault conditions of \[<a class="ref" href="REF-0002\.html"' cat _site/entities/DOC-0001.html
+expect 0 'The system-level ceiling is <a class="ref" href="REQ-0002\.html" title="[^"]*">Single-fault amplitude ceiling</a>' cat _site/entities/DOC-0001.html
+expect 0 'decomposed from the user needs in <a class="ref" href="USR-0001\.html"' cat _site/entities/DOC-0001.html
+mv templates/_cite.tmpl "$WORK/_cite.tmpl"
+"$PROV" export website >/dev/null
+expect 0 'approach evaluated clinically in <a class="ref" href="REF-0003\.html" title="[^"]*">REF-0003</a>\.' cat _site/entities/DOC-0001.html
+expect 1 '' grep -q '\[<a class="ref"' _site/entities/DOC-0001.html
+mv "$WORK/_cite.tmpl" templates/_cite.tmpl
+PIN=$(git rev-parse HEAD)
+req1_changed() { "$PROV" export website >/dev/null && grep -o 'last changed in <code>[0-9a-f]*' _site/entities/REQ-0001.html; }
+BEFORE=$(req1_changed)
+sed -i 's/^\[{{link/[{{- link/' templates/_cite.tmpl && gitc commit -qam "Edit _cite.tmpl"
+expect 0 "^last changed in <code>$(git rev-parse --short=7 HEAD)\$" last_changed
+expect 0 "^$BEFORE\$" req1_changed
+sed -i 's/^year: 2020/year: 2020 /' REF/REF-0002.md && gitc commit -qam "Edit REF-0002"
+expect 0 "^last changed in <code>$(git rev-parse --short=7 HEAD)\$" req3_changed
 git checkout -q --detach "$PIN"
 
 # Standing E1 acceptance: exporting twice gives an identical site, and the

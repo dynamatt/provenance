@@ -3,6 +3,7 @@ package website
 import (
 	"fmt"
 	"html/template"
+	"maps"
 	"strings"
 
 	"github.com/yuin/goldmark/util"
@@ -48,6 +49,11 @@ func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
 	if c := r.ctx.site.cites; c != nil {
 		c.add(l.ID)
 	}
+	if l.Field == "" {
+		if done, err := r.cite(w, l); done || err != nil {
+			return err
+		}
+	}
 	target := r.ctx.site.byID[l.ID]
 	if target == nil {
 		writeUnresolved(w, l.ID, "unresolved")
@@ -74,6 +80,34 @@ func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
 		fmt.Fprintf(w, ` <span class="unresolved">%s</span>`, template.HTMLEscapeString(marker))
 	}
 	return nil
+}
+
+// cite renders an [[ID]] or [[ID|label]] citation through the project's
+// _cite.tmpl (DES-0046), which receives the cited entity as in .Citations,
+// with .CitationLabel the label or "". It reports false, leaving the
+// citation to the built-in rendering, without a _cite.tmpl or before the
+// page's citations are known: during a page's first render, whose output
+// is discarded, and on the site index, which is about no entity.
+func (r *resolver) cite(w util.BufWriter, l markdown.Link) (bool, error) {
+	src, cited := r.ctx.site.templates.cite, r.ctx.site.cited[l.ID]
+	if src == nil || cited == nil {
+		return false, nil
+	}
+	if r.ctx.cite == nil {
+		t, err := parse(*src, r.ctx.funcs())
+		if err != nil {
+			return true, err
+		}
+		r.ctx.cite = t
+	}
+	data := maps.Clone(cited)
+	data["CitationLabel"] = l.Label
+	var b strings.Builder
+	if err := r.ctx.cite.Execute(&b, data); err != nil {
+		return true, templateError(err)
+	}
+	_, _ = w.WriteString(b.String())
+	return true, nil
 }
 
 func (r *resolver) Embed(w util.BufWriter, l markdown.Link) error {

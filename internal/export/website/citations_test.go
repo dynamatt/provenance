@@ -118,3 +118,68 @@ func TestCitationNamesAreReserved(t *testing.T) {
 		t.Fatalf("got  %v\nwant %s", err, want)
 	}
 }
+
+// citeTemplate shows everything _cite.tmpl receives. Its final line break
+// is not part of the citation.
+const citeTemplate = "<cite>{{.ID}}/{{.CitationIndex}}/{{.TypeCitationIndex}}/{{.CitationLabel}}/{{.Resolved}}</cite>\n"
+
+func TestCiteTemplate(t *testing.T) {
+	repo := maps.Clone(citationRepo)
+	repo["templates/_cite.tmpl"] = citeTemplate
+	files, err := exportRepo(t, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(files["entities/D-1.html"])
+	// Every [[ID]] and [[ID|label]], a missing one and one inside an embed
+	// included, with the page's positions; [[ID#field]] and [[#id]] render
+	// as before.
+	for _, want := range []string{
+		"<cite>N-2/1/1//true</cite>, <cite>N-1/2/2/one/true</cite>, <cite>D-3/3/1//true</cite>, " +
+			`<a class="ref" href="N-2.html" title="Two">Two</a>, <cite>N-404/4/1//false</cite> and ` +
+			`<span class="id unresolved-id">#nothing</span>`,
+		"See <cite>N-3/5/3//true</cite>.",
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("D-1 missing %q\n%s", want, page)
+		}
+	}
+	// D-2's own page numbers its own citations.
+	if d2 := string(files["entities/D-2.html"]); !strings.Contains(d2, "See <cite>N-3/1/1//true</cite>.") {
+		t.Errorf("D-2:\n%s", d2)
+	}
+}
+
+func TestCiteTemplateOnIndex(t *testing.T) {
+	// The site index is about no entity and has no citations: Markdown it
+	// renders cites with the built-in rendering.
+	repo := maps.Clone(citationRepo)
+	repo["templates/_cite.tmpl"] = citeTemplate
+	repo["templates/_index.tmpl"] = `{{range .Types}}{{range .Entities}}{{if eq .ID "D-2"}}{{markdown .Body}}{{end}}{{end}}{{end}}`
+	files, err := exportRepo(t, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if index := string(files["index.html"]); !strings.Contains(index, `See <a class="ref" href="entities/N-3.html" title="Three">N-3</a>.`) {
+		t.Errorf("index:\n%s", index)
+	}
+}
+
+func TestCiteTemplateError(t *testing.T) {
+	repo := maps.Clone(citationRepo)
+	repo["templates/_cite.tmpl"] = "[{{.Nope}}]\n"
+	_, err := exportRepo(t, repo)
+	if err == nil || !strings.HasPrefix(err.Error(), `templates/_cite.tmpl:1:3: executing "templates/_cite.tmpl" at <.Nope>: map has no entry for key "Nope"`) {
+		t.Fatalf("got %v", err)
+	}
+}
+
+func TestCitationLabelIsReserved(t *testing.T) {
+	repo := maps.Clone(citationRepo)
+	repo["schema/Doc.yaml"] = docSchema + "  - {name: citation_label, type: string}\n"
+	_, err := exportRepo(t, repo)
+	want := `schema/Doc.yaml:5: field "citation_label": its template name .CitationLabel is already used by the engine's citations`
+	if err == nil || err.Error() != want {
+		t.Fatalf("got  %v\nwant %s", err, want)
+	}
+}
