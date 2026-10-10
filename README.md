@@ -28,9 +28,17 @@ chmod +x provenance-linux-amd64
 ./provenance-linux-amd64 version
 ```
 
+The binaries aren't signed by Apple or Microsoft yet; the SHA-256 check is
+what proves a download is the published one. On macOS, clear the download
+quarantine before the first run with
+`xattr -d com.apple.quarantine provenance-darwin-arm64`; on Windows,
+SmartScreen may ask you to confirm with *More info › Run anyway*.
+
 Every release is built reproducibly (`CGO_ENABLED=0`, `-trimpath`, a pinned Go
 toolchain): `make dist VERSION=<tag>` at the tagged commit produces the same
-bytes, and `dist/SHA256SUMS` the same manifest.
+bytes, and `dist/SHA256SUMS` the same manifest. Before publishing, CI runs each
+binary on its own platform (Linux x86-64, macOS Apple silicon, Windows
+x86-64) and checks that it exports the example repository byte for byte.
 
 ## Build from source
 

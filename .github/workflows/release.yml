@@ -2,9 +2,9 @@ name: Release
 
 # Publishes a GitHub release for each v* tag (E1.14): the binaries of every
 # release platform, built by make dist with the reproducible recipe
-# (DES-0024), and their manifest SHA256SUMS (DES-0025). On a pull request
-# that changes the release recipe, it builds and checks everything but
-# publishes nothing.
+# (DES-0024), and their manifest SHA256SUMS (DES-0025). Each binary is first
+# run on its own platform (REQ-0135). On a pull request that changes the
+# release recipe, it builds and checks everything but publishes nothing.
 
 on:
   push:
@@ -18,10 +18,10 @@ permissions:
   contents: read
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    outputs:
+      version: ${{ steps.dist.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -43,44 +43,109 @@ jobs:
 
       # The version is the tag; on a pull request, the commit.
       - name: Build release platforms
+        id: dist
         env:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
           version=$(git rev-parse --short HEAD)
           if [ "$REF_TYPE" = tag ]; then version=$REF_NAME; fi
-          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
           make dist VERSION="$version"
-
-      - name: Check binaries and manifest
-        working-directory: dist
-        run: |
-          sha256sum -c SHA256SUMS
-          ./provenance-linux-amd64 version | tee version.txt
-          grep -qF "$VERSION" version.txt
-          rm version.txt
           {
-            echo "### Release $VERSION"
+            echo "### Release $version"
             echo
             echo '```'
-            cat SHA256SUMS
+            cat dist/SHA256SUMS
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload release files
         uses: actions/upload-artifact@v7
         with:
-          name: release-${{ env.VERSION }}
+          name: release-files
           path: dist
           if-no-files-found: error
 
-      # A tag with a hyphen (v0.1.0-alpha) is a pre-release.
+  # Each binary runs on its own platform (REQ-0135, ASA-0011): its hash
+  # matches the manifest, it reports the release version, and it exports
+  # the pinned example exactly as the golden site. The example is checked
+  # out with CRLF line endings everywhere, as a default Windows checkout
+  # is, which must not change a byte of the output.
+  smoke:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            binary: provenance-linux-amd64
+          - runner: macos-latest
+            binary: provenance-darwin-arm64
+          - runner: windows-latest
+            binary: provenance-windows-amd64.exe
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # The golden site is compared byte for byte, so it must not be
+      # converted to CRLF on Windows.
+      - name: Keep LF line endings
+        run: git config --global core.autocrlf false
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download release files
+        uses: actions/download-artifact@v8
+        with:
+          name: release-files
+          path: dist
+
+      - name: Check hash and version
+        working-directory: dist
+        env:
+          BINARY: ${{ matrix.binary }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          grep -F "  $BINARY" SHA256SUMS > mine.txt
+          if command -v sha256sum >/dev/null; then sha256sum -c mine.txt; else shasum -a 256 -c mine.txt; fi
+          chmod +x "$BINARY"
+          "./$BINARY" version | tee version.txt
+          grep -qF "provenance $VERSION" version.txt
+
+      - name: Export the example
+        env:
+          BINARY: ${{ matrix.binary }}
+        run: |
+          git clone -q -c core.autocrlf=true https://github.com/dynamatt/provenance-example.git "$RUNNER_TEMP/example"
+          cd "$RUNNER_TEMP/example"
+          git checkout -q --detach "$(cat "$GITHUB_WORKSPACE/testdata/example-repo.ref")"
+          "$GITHUB_WORKSPACE/dist/$BINARY" export website --out "$RUNNER_TEMP/site"
+          diff -r "$GITHUB_WORKSPACE/testdata/golden" "$RUNNER_TEMP/site"
+
+  # A tag with a hyphen (v0.1.0-alpha) is a pre-release.
+  publish:
+    if: github.ref_type == 'tag'
+    needs: [build, smoke]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release files
+        uses: actions/download-artifact@v8
+        with:
+          name: release-files
+          path: dist
+
       - name: Publish release
-        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
           flags=()
           case "$VERSION" in *-*) flags+=(--prerelease) ;; esac
           gh release create "$VERSION" dist/* --verify-tag --title "$VERSION" "${flags[@]}" \
-            --notes "Binaries for linux/amd64, darwin/arm64 and windows/amd64, built reproducibly from \`$GITHUB_SHA\`. Check a download with \`sha256sum -c SHA256SUMS --ignore-missing\`."
+            --notes "Binaries for linux/amd64, darwin/arm64 and windows/amd64, built reproducibly from \`$GITHUB_SHA\` and each run on its own platform. Check a download with \`sha256sum -c SHA256SUMS --ignore-missing\`."
