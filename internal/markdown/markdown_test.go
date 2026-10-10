@@ -156,6 +156,8 @@ func TestCaptionErrors(t *testing.T) {
 		"![x](x.png)\n\n```caption\nid: x\n```\n":                       "line 4: a caption needs a kind",
 		"![x](x.png)\n\n```caption\nkind: figure\nnumber: 2\n```\n":     `line 5: unknown key "number" in a caption`,
 		"![x](x.png)\n\n```caption\nkind: figure\nid: has space\n```\n": `line 5: caption id "has space"`,
+		"![x](x.png)\n\n```caption\nkind: figure\nid: x: y\n```\n":      "line 5: caption: mapping values are not allowed in this context",
+		"![x](x.png)\n\n```caption\n- kind\n```\n":                      "line 4: a caption is a mapping",
 	} {
 		_, err := Convert(src, fake{}, Options{})
 		if err == nil || !strings.HasPrefix(err.Error(), want) {

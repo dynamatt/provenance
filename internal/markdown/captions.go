@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
-	"strings"
 
 	"github.com/yuin/goldmark/ast"
 	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 	"go.yaml.in/yaml/v3"
+
+	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
-// Captions (Detailed Design §7) are written at the place a figure, table or
+// Captions (DES-0034) are written at the place a figure, table or
 // equation is used, as a ```caption block directly after it:
 //
 //	![Control loop](../assets/control-loop.svg)
@@ -59,21 +60,9 @@ type captionTransformer struct{ errs *[]error }
 
 func (t *captionTransformer) Transform(doc *ast.Document, reader text.Reader, _ parser.Context) {
 	source := reader.Source()
-	var blocks []*ast.FencedCodeBlock
-	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
-		if b, ok := n.(*ast.FencedCodeBlock); ok && entering && string(b.Language(source)) == "caption" {
-			blocks = append(blocks, b)
-		}
-		return ast.WalkContinue, nil
-	})
-	for _, b := range blocks {
-		var src bytes.Buffer
-		for i := 0; i < b.Lines().Len(); i++ {
-			seg := b.Lines().At(i)
-			src.Write(seg.Value(source))
-		}
-		line := bytes.Count(source[:b.Info.Segment.Start], []byte("\n")) + 2
-		c, err := parseCaption(src.String(), line)
+	for _, b := range fencedBlocks(doc, source, func(lang string) bool { return lang == "caption" }) {
+		content, line := fenceContent(b, source)
+		c, err := parseCaption(content, line)
 		if err != nil {
 			*t.errs = append(*t.errs, err)
 			continue
@@ -130,7 +119,8 @@ func parseCaption(src string, line int) (Caption, error) {
 	}
 	var doc yaml.Node
 	if err := yaml.Unmarshal([]byte(src), &doc); err != nil {
-		return c, &Error{Line: line, Msg: "caption: " + strings.TrimPrefix(err.Error(), "yaml: ")}
+		at, msg := yamlnode.ErrorLine(err)
+		return c, fail(max(at, 1), "caption: %s", msg)
 	}
 	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
 		return c, fail(1, "a caption is a mapping with kind, and optionally id and text")

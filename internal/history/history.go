@@ -1,9 +1,9 @@
-// Package history reads the repository's git history (Detailed Design §4):
+// Package history reads the repository's git history (DES-0022, DES-0023):
 // the DHF content hash, the working tree's dirty state, and which commit
 // last changed each file, for last_changed_sha and revision history.
 //
 // Git is read with go-git, never the git executable, so the host's git
-// version is not part of the validated configuration (Detailed Design §2).
+// version is not part of the validated configuration (DES-0026).
 package history
 
 import (
@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -20,6 +21,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -27,6 +29,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/filemode"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/filesystem"
+	"github.com/go-git/go-git/v5/storage/filesystem/dotgit"
 
 	"github.com/dynamatt/provenance/internal/entity"
 )
@@ -55,9 +58,13 @@ func Open(root string) (*Repo, error) {
 	if err != nil {
 		return nil, err
 	}
+	dotGit, err := gitFilesystem(gitDir)
+	if err != nil {
+		return nil, err
+	}
 	// Keeping pack files open avoids reopening one per object read, which
 	// is slow on network and VM-shared filesystems.
-	st := filesystem.NewStorageWithOptions(osfs.New(gitDir), cache.NewObjectLRUDefault(), filesystem.Options{KeepDescriptors: true})
+	st := filesystem.NewStorageWithOptions(dotGit, cache.NewObjectLRUDefault(), filesystem.Options{KeepDescriptors: true})
 	r, err := git.Open(st, osfs.New(work))
 	if err != nil {
 		st.Close()
@@ -127,6 +134,24 @@ func findGit(dir string) (work, gitDir string, err error) {
 	}
 }
 
+// gitFilesystem is the git directory gitDir. A linked worktree's (git
+// worktree add) holds only its own HEAD and index, and names the main
+// repository's, which holds the objects and refs, in its commondir file.
+func gitFilesystem(gitDir string) (billy.Filesystem, error) {
+	b, err := os.ReadFile(filepath.Join(gitDir, "commondir"))
+	if errors.Is(err, os.ErrNotExist) {
+		return osfs.New(gitDir), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	common := strings.TrimSpace(string(b))
+	if !filepath.IsAbs(common) {
+		common = filepath.Join(gitDir, common)
+	}
+	return dotgit.NewRepositoryFilesystem(osfs.New(gitDir), osfs.New(common)), nil
+}
+
 // HEAD is the full hash of the commit checked out.
 func (h *Repo) HEAD() string { return h.head.Hash.String() }
 
@@ -189,7 +214,7 @@ func (h *Repo) files(commit string) ([]file, error) {
 	return out, nil
 }
 
-// ContentHash computes the DHF content hash of commit (Detailed Design §4,
+// ContentHash computes the DHF content hash of commit (DES-0022,
 // algorithm provenance-content-v1):
 //
 //	SHA-256 over "provenance-content-v1\n", then for every file of the
@@ -255,15 +280,24 @@ func (d *Dirty) Touches(in Inputs) bool {
 	if d == nil {
 		return false
 	}
-	c := &Commit{Paths: d.Paths, Types: d.Types}
-	paths, types := map[string]bool{}, map[string]bool{}
-	for _, p := range in.Paths {
-		paths[p] = true
+	return in.sets().touches(&Commit{Paths: d.Paths, Types: d.Types})
+}
+
+// WorkingContentHash is HEAD's content hash, suffixed -dirty when the
+// working tree differs from it (Status, with skip), and how it differs.
+func (h *Repo) WorkingContentHash(skip ...string) (string, *Dirty, error) {
+	hash, err := h.ContentHash(h.HEAD())
+	if err != nil {
+		return "", nil, err
 	}
-	for _, t := range in.Types {
-		types[t] = true
+	dirty, err := h.Status(skip...)
+	if err != nil {
+		return "", nil, err
 	}
-	return in.touches(c, paths, types)
+	if dirty.Any() {
+		hash += "-dirty"
+	}
+	return hash, dirty, nil
 }
 
 // Status compares the working tree with HEAD: the content paths that
@@ -340,10 +374,7 @@ func (h *Repo) Status(skip ...string) (*Dirty, error) {
 			}
 		}
 	}
-	for t := range types {
-		d.Types = append(d.Types, t)
-	}
-	slices.Sort(d.Types)
+	d.Types = slices.Sorted(maps.Keys(types))
 	return d, nil
 }
 
@@ -489,10 +520,7 @@ func (h *Repo) changes(c, parent *object.Commit) (*Commit, error) {
 	}
 	slices.Sort(cm.Paths)
 	cm.Paths = slices.Compact(cm.Paths)
-	for t := range types {
-		cm.Types = append(cm.Types, t)
-	}
-	slices.Sort(cm.Types)
+	cm.Types = slices.Sorted(maps.Keys(types))
 	return cm, nil
 }
 
@@ -520,32 +548,35 @@ func (h *Repo) tagsByCommit() (map[plumbing.Hash][]string, error) {
 	return out, err
 }
 
-// Inputs are what a rendered page depends on: files; folders, as prefixes
-// such as "templates/", any file in which (deleted ones included) counts;
-// and entity types whose every entity can change a query result.
+// Inputs are what a rendered page depends on: files, and entity types whose
+// every entity can change a query result.
 type Inputs struct {
-	Paths    []string
-	Prefixes []string
-	Types    []string
+	Paths []string
+	Types []string
 }
 
-// touches reports whether c changed any of in.
-func (in Inputs) touches(c *Commit, paths, types map[string]bool) bool {
-	for _, p := range c.Paths {
-		if paths[p] {
-			return true
-		}
-		for _, pre := range in.Prefixes {
-			if strings.HasPrefix(p, pre) || p+"/" == pre {
-				return true
-			}
-		}
+// inputSets are Inputs as sets, to test many commits against.
+type inputSets struct{ paths, types map[string]bool }
+
+func (in Inputs) sets() inputSets {
+	s := inputSets{paths: map[string]bool{}, types: map[string]bool{}}
+	for _, p := range in.Paths {
+		s.paths[p] = true
 	}
-	return slices.ContainsFunc(c.Types, func(t string) bool { return types[t] })
+	for _, t := range in.Types {
+		s.types[t] = true
+	}
+	return s
 }
 
-// LastChanged is the newest commit that changed any of in (Detailed Design
-// §4, document-scoped last-changed SHA), or "" when none did.
+// touches reports whether c changed any of the inputs.
+func (s inputSets) touches(c *Commit) bool {
+	return slices.ContainsFunc(c.Paths, func(p string) bool { return s.paths[p] }) ||
+		slices.ContainsFunc(c.Types, func(t string) bool { return s.types[t] })
+}
+
+// LastChanged is the newest commit that changed any of in (DES-0023), or
+// "" when none did.
 func (l *Log) LastChanged(in Inputs) string {
 	if r := l.Revisions(in); len(r) > 0 {
 		return r[0].SHA
@@ -555,17 +586,10 @@ func (l *Log) LastChanged(in Inputs) string {
 
 // Revisions are the commits that changed any of in, newest first.
 func (l *Log) Revisions(in Inputs) []*Commit {
-	paths := map[string]bool{}
-	for _, p := range in.Paths {
-		paths[p] = true
-	}
-	types := map[string]bool{}
-	for _, t := range in.Types {
-		types[t] = true
-	}
+	s := in.sets()
 	var out []*Commit
 	for _, c := range l.Commits {
-		if in.touches(c, paths, types) {
+		if s.touches(c) {
 			out = append(out, c)
 		}
 	}

@@ -13,8 +13,7 @@ import (
 	"github.com/dynamatt/provenance/internal/query"
 )
 
-// Scope limits an export to part of the repository (Detailed Design §2,
-// scope resolution).
+// Scope limits an export to part of the repository (DES-0033).
 type Scope struct {
 	// Path is the scope file, slash-separated and relative to the
 	// repository root.

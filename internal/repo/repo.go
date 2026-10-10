@@ -1,5 +1,5 @@
 // Package repo finds the repository a command runs in and loads its
-// repo-level configuration (Detailed Design §1).
+// repo-level configuration (DES-0005).
 package repo
 
 import (

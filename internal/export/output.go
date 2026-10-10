@@ -3,16 +3,17 @@ package export
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 )
 
 // MarkerFile is written into every output folder. Export only clears a
 // non-empty folder that contains it, so it can never delete a folder it did
-// not create (Detailed Design §2).
+// not create (REQ-0093, DES-0028).
 const MarkerFile = ".provenance-export"
 
 const markerContent = "This folder was written by `provenance export`.\n" +
@@ -37,12 +38,7 @@ func WriteOutput(dir, display string, files Files) error {
 	if err := os.WriteFile(filepath.Join(dir, MarkerFile), []byte(markerContent), 0o644); err != nil {
 		return err
 	}
-	names := make([]string, 0, len(files))
-	for name := range files {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range names {
+	for _, name := range slices.Sorted(maps.Keys(files)) {
 		if err := checkRelative(name); err != nil {
 			return err
 		}

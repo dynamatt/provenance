@@ -20,7 +20,7 @@ func run(args ...string) (code int, stdout, stderr string) {
 	return code, out.String(), errOut.String()
 }
 
-// The command surface of Detailed Design §2, plus version.
+// The command surface of DES-0019, plus version.
 var wantCommands = []string{
 	"component",
 	"component add",

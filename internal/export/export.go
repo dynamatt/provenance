@@ -1,4 +1,4 @@
-// Package export defines the exporter abstraction (Requirements Spec §7): an
+// Package export defines the exporter abstraction (DES-0028): an
 // exporter takes the loaded repository and returns the complete content of an
 // output folder. Formats are registered by name, so no format is
 // special-cased by the CLI.
@@ -6,7 +6,8 @@ package export
 
 import (
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/dynamatt/provenance/internal/history"
@@ -33,7 +34,7 @@ type Input struct {
 	Git *Git
 }
 
-// Git is what an export stamps into its output (Detailed Design §4).
+// Git is what an export stamps into its output (DES-0021, DES-0023).
 type Git struct {
 	// SHA is HEAD's full commit hash.
 	SHA string
@@ -94,12 +95,7 @@ func (r *Registry) Defer(format string) { r.deferred[format] = true }
 
 // Formats lists the available formats in name order.
 func (r *Registry) Formats() []string {
-	var names []string
-	for name := range r.exporters {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return slices.Sorted(maps.Keys(r.exporters))
 }
 
 // UnknownFormatError reports a format that is neither available nor deferred.

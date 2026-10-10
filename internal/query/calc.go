@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/dynamatt/provenance/internal/schema"
 )
 
-// Calculated fields (Detailed Design §5) compile to Datalog rules, one
+// Calculated fields (DES-0012) compile to Datalog rules, one
 // relation per field holding (node, value), and are evaluated together. The
 // semantics are Excel's where they can be, with blank as the absence of a
 // fact:
@@ -484,7 +485,7 @@ func (c *fcomp) aggregate(r string, e *Call) error {
 // read them like stored fields.
 func (g *Graph) Calculate() error {
 	var fields []*calcField
-	for _, tn := range typeNames(g.Schema) {
+	for _, tn := range g.Schema.TypeNames() {
 		t := g.Schema.Types[tn]
 		for _, f := range t.Fields {
 			if f.Kind == schema.Calculated {
@@ -529,7 +530,7 @@ func (g *Graph) Calculate() error {
 	markCycles(fields, byRel)
 
 	prog := &datalog.Program{}
-	for _, name := range sortedShapeNames(shapes) {
+	for _, name := range slices.Sorted(maps.Keys(shapes)) {
 		prog.Add(shapes[name].nodeRules()...)
 	}
 	for _, cf := range fields {
@@ -565,15 +566,6 @@ func (g *Graph) Calculate() error {
 		}
 	}
 	return nil
-}
-
-func sortedShapeNames(m map[string]shape) []string {
-	names := make([]string, 0, len(m))
-	for n := range m {
-		names = append(names, n)
-	}
-	slices.Sort(names)
-	return names
 }
 
 // markCycles marks every field whose formula depends on itself, directly or

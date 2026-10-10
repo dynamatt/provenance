@@ -79,7 +79,7 @@ func (tr *testRepo) open(sub string) *Repo {
 }
 
 // referenceHash is provenance-content-v1 written out independently, from
-// the documented definition (Detailed Design §4).
+// the documented definition (DES-0022).
 func referenceHash(files map[string]string) string {
 	paths := make([]string, 0, len(files))
 	for p := range files {
@@ -154,6 +154,44 @@ func TestComponentInASubfolder(t *testing.T) {
 	}
 }
 
+func TestLinkedWorktree(t *testing.T) {
+	// The layout git worktree add writes: the checkout's .git file names a
+	// git directory holding its own HEAD, whose commondir names the main
+	// repository's, which holds the objects.
+	tr := newRepo(t)
+	sha := tr.commit("first", base)
+	gitDir := filepath.Join(tr.dir, ".git", "worktrees", "wt")
+	work := filepath.Join(t.TempDir(), "wt")
+	files := map[string]string{
+		filepath.Join(gitDir, "HEAD"):      sha + "\n",
+		filepath.Join(gitDir, "commondir"): "../..\n",
+		filepath.Join(work, ".git"):        "gitdir: " + gitDir + "\n",
+	}
+	for rel, content := range base {
+		files[filepath.Join(work, filepath.FromSlash(rel))] = content
+	}
+	for p, content := range files {
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	h, err := Open(work)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	got, dirty, err := h.WorkingContentHash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want, _ := tr.open("").ContentHash(sha); h.HEAD() != sha || got != want || dirty.Any() {
+		t.Errorf("worktree: HEAD %s, hash %s, dirty %v; want %s, %s, clean", h.HEAD(), got, dirty.Paths, sha, want)
+	}
+}
+
 func TestStatus(t *testing.T) {
 	tr := newRepo(t)
 	tr.commit("first", base)
@@ -188,7 +226,7 @@ func TestStatus(t *testing.T) {
 	if got := strings.Join(d.Types, " "); got != "Requirement UserNeed" {
 		t.Errorf("dirty types: %s", got)
 	}
-	if !d.Touches(Inputs{Prefixes: []string{"schema/"}}) || !d.Touches(Inputs{Types: []string{"UserNeed"}}) || d.Touches(Inputs{Paths: []string{"DOC/DOC-1.md"}}) {
+	if !d.Touches(Inputs{Paths: []string{"schema/Req.yaml"}}) || !d.Touches(Inputs{Types: []string{"UserNeed"}}) || d.Touches(Inputs{Paths: []string{"DOC/DOC-1.md"}}) {
 		t.Error("Touches does not match the dirty paths and types")
 	}
 }
@@ -222,9 +260,6 @@ func TestLog(t *testing.T) {
 	// A page querying requirements changes with any requirement.
 	if got := l.LastChanged(Inputs{Paths: []string{"DOC/DOC-1.md"}, Types: []string{"Requirement"}}); got != third {
 		t.Errorf("with Requirement inputs: %s, want the third commit", Short(got))
-	}
-	if got := len(l.Revisions(Inputs{Prefixes: []string{"schema/"}})); got != 1 {
-		t.Errorf("schema revisions: %d, want 1 (the first commit)", got)
 	}
 }
 

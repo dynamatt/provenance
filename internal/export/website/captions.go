@@ -14,7 +14,7 @@ import (
 	"github.com/dynamatt/provenance/internal/markdown"
 )
 
-// Captions (Requirements Spec §7, Detailed Design §7) are written where a
+// Captions (REQ-0087, DES-0034) are written where a
 // figure, table or equation is used, as a ```caption block after it
 // (markdown/captions.go). Each page numbers its captions in document order,
 // one sequence per kind.

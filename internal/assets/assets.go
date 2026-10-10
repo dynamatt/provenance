@@ -1,6 +1,6 @@
 // Package assets resolves the image files entity Markdown refers to
-// (Detailed Design §7). Images are repository files, copied into an export:
-// the website must work with no network access (Requirements Spec §7), so
+// (REQ-0016). Images are repository files, copied into an export: the
+// website must work with no network access (REQ-0073), so
 // a URL is not allowed.
 package assets
 

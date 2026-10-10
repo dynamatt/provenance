@@ -16,6 +16,7 @@ import (
 
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/schema"
+	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
 // Entity is a parsed entity with its type and typed field values.
@@ -118,7 +119,7 @@ func Build(s *schema.Schema, entities []*entity.Entity) ([]*Entity, error) {
 	for _, e := range entities {
 		t := s.Types[e.Type]
 		if t == nil {
-			return nil, &UnknownTypeError{Path: e.Path, Type: e.Type, Line: entity.Lookup(e.Front, "type").Line}
+			return nil, &UnknownTypeError{Path: e.Path, Type: e.Type, Line: yamlnode.Lookup(e.Front, "type").Line}
 		}
 		m := &Entity{Entity: e, Schema: t}
 		for _, f := range t.Fields {
@@ -126,7 +127,7 @@ func Build(s *schema.Schema, entities []*entity.Entity) ([]*Entity, error) {
 			if f == t.BodyField {
 				v = bodyValue(f, e.Body)
 			} else {
-				v = value(f, entity.Lookup(e.Front, f.Name))
+				v = value(f, yamlnode.Lookup(e.Front, f.Name))
 			}
 			m.Fields = append(m.Fields, v)
 		}
@@ -216,7 +217,7 @@ func (e *Entity) TextFileLine(text string, line int) int {
 	}
 	for _, v := range e.Fields {
 		if v.Present && !v.Invalid && v.Field.Kind == schema.Text && v.Str == text {
-			n := entity.Lookup(e.Front, v.Field.Name)
+			n := yamlnode.Lookup(e.Front, v.Field.Name)
 			if n == nil {
 				return 0
 			}
@@ -311,7 +312,7 @@ func value(f *schema.Field, n *yaml.Node) *Value {
 			}
 			row := make(Row, 0, len(f.Fields))
 			for _, sub := range f.Fields {
-				row = append(row, value(sub, entity.Lookup(rowNode, sub.Name)))
+				row = append(row, value(sub, yamlnode.Lookup(rowNode, sub.Name)))
 			}
 			v.Rows = append(v.Rows, row)
 		}

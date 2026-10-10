@@ -3,7 +3,6 @@ package website
 import (
 	"fmt"
 	"maps"
-	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -12,13 +11,13 @@ import (
 	"github.com/dynamatt/provenance/internal/schema"
 )
 
-// Template data model (Detailed Design §7): what a project template sees as
+// Template data model (DES-0030): what a project template sees as
 // "." for an entity. It is a map so that every declared field is present —
 // nil when the entity does not set it — and a misspelt field is an error
 // rather than silently empty output.
 //
 //	.ID .Type .Title .Body .Resolved    engine baseline
-//	.LastChangedSHA .Revisions          git stamps (Detailed Design §4)
+//	.LastChangedSHA .Revisions          git stamps (DES-0023)
 //	.Citations                          on the entity a page is about, what the
 //	                                    page cites (DES-0046); empty elsewhere
 //	.<PascalCaseField>                  every declared field, calculated ones included
@@ -35,8 +34,13 @@ import (
 // template written for resolved targets still renders.
 type entityData = map[string]any
 
-// baseline keys the engine provides on every entity map.
-var baseline = []string{"ID", "Type", "Title", "Body", "Resolved", "LastChangedSHA", "Revisions", "Citations"}
+// baseline is an entity map holding only the keys the engine provides on
+// every entity, empty: the start of every entity's data, and all of an
+// unresolved link target's but its declared fields.
+func baseline(id string) entityData {
+	return entityData{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false,
+		"LastChangedSHA": "", "Revisions": []entityData{}, "Citations": []entityData{}}
+}
 
 // citationKeys are added to each entity in a page's .Citations, and
 // CitationLabel to the entity _cite.tmpl renders.
@@ -61,15 +65,10 @@ func templateName(field string) string {
 // same accessor, or one hides a baseline accessor ("title" is allowed: the
 // field is the title).
 func checkTemplateNames(s *schema.Schema) error {
-	names := make([]string, 0, len(s.Types))
-	for n := range s.Types {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-	for _, n := range names {
+	for _, n := range s.TypeNames() {
 		t := s.Types[n]
 		seen := map[string]string{}
-		for _, b := range baseline {
+		for b := range baseline("") {
 			seen[b] = "the engine baseline"
 		}
 		for _, b := range citationKeys {
@@ -108,12 +107,11 @@ func buildData(s *schema.Schema, entities []*model.Entity) *dataModel {
 	d := &dataModel{schema: s, byID: make(map[string]entityData, len(entities))}
 	// Two passes: links point at other entities' maps.
 	for _, e := range entities {
-		d.byID[e.ID] = entityData{}
+		d.byID[e.ID] = baseline(e.ID)
 	}
 	for _, e := range entities {
 		m := d.byID[e.ID]
-		m["ID"], m["Type"], m["Title"], m["Resolved"] = e.ID, e.Type, e.Title(), true
-		m["Body"], m["Citations"] = e.Body, []entityData{}
+		m["Type"], m["Title"], m["Body"], m["Resolved"] = e.Type, e.Title(), e.Body, true
 		for _, v := range e.Fields {
 			m[templateName(v.Field.Name)] = d.value(v)
 			if v.Field == e.Schema.BodyField {
@@ -194,7 +192,7 @@ func (d *dataModel) ref(id string, target *model.Entity, f *schema.Field) entity
 	if target != nil {
 		return d.byID[target.ID]
 	}
-	m := entityData{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false, "LastChangedSHA": "", "Revisions": []entityData{}, "Citations": []entityData{}}
+	m := baseline(id)
 	for _, tn := range f.Target {
 		t := d.schema.Types[tn]
 		if t == nil {

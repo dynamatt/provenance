@@ -1,5 +1,5 @@
 // Package exitcode is the single place that maps command outcomes to process
-// exit codes, per the contract in Detailed Design §2:
+// exit codes, per the contract in DES-0018:
 //
 //	0  success
 //	1  expected failure condition reported (violations, mismatches, gate blocked)

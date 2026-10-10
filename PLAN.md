@@ -35,7 +35,7 @@
 
 ## Shape of the plan
 
-- **Stage 0 — Skeleton CLI.** Every command from Detailed Design §2 exists as a
+- **Stage 0 — Skeleton CLI.** Every command from DES-0019 exists as a
   stub with its real flags and help text.
 - **Stage 1 — CI.** GitHub Actions runs tests, lint, a reproducible-build check,
   and acceptance commands against the pinned example repo.
@@ -74,7 +74,7 @@
 6. **Determinism.** No map-iteration order, wall-clock timestamps or absolute
    paths in any output. Running the same command twice on the same commit
    produces byte-identical results.
-7. **Exit code contract from day one** (Detailed Design §2): `0` success, `1`
+7. **Exit code contract from day one** (DES-0018): `0` success, `1`
    expected failure reported, `2` tool/usage error.
 
 ## Decisions
@@ -587,7 +587,7 @@ overrides) and template functions, context
 variables);
 architecture page updated where implementation refined the design; example-repo
 README updated for what now works. GitHub release `v0.1.0-alpha` built by CI
-with a `SHA256SUMS` manifest (format recorded in Detailed Design §4 — it's what
+with a `SHA256SUMS` manifest (format recorded in DES-0025 — it's what
 `verify artifact` will check later).
 
 **Check it yourself:** download the release binary on a second machine,
@@ -601,7 +601,8 @@ order, with the reason it comes where it does:
 
 1. **`validate`** — the merge gate, and it reuses Epic 1's schema and query
    core. First decide what a field's `default:` means (read-time vs
-   creation-time, Detailed Design §5 OPEN, deferred by Matt 2026-09-28), since
+   creation-time, OPEN in the retired Detailed Design §5 and not yet in
+   `provenance-ddf`: record it in DES-0010 first; deferred by Matt 2026-09-28), since
    Required Field and the other rule types depend on it. Then schema
    meta-validation, then one task per rule type, each proven
    by locally breaking one example entity to trigger its existing rule file.
@@ -625,6 +626,6 @@ order, with the reason it comes where it does:
 10. **`release tag`** — gate plus bill-of-materials; unblocks Content Frozen
     After Release.
 11. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
-    fidelity spike deferred from High-Level Design §4.7. Last because it's a
+    fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
     thin client over everything above.
 12. **`plugin`**.

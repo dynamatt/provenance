@@ -2,12 +2,13 @@ package query
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
 )
 
-// Calculated-field formulas (Detailed Design §5) are Excel-style:
+// Calculated-field formulas (DES-0012) are Excel-style:
 //
 //	arithmetic   + - * /         comparison   = <> < > <= >=
 //	literals     2.5  "text"  TRUE  FALSE
@@ -211,57 +212,26 @@ func (p *parser) next() token {
 
 func (p *parser) isOp(ops ...string) bool {
 	t := p.peek()
-	if t.kind != "op" {
-		return false
-	}
-	for _, o := range ops {
-		if t.text == o {
-			return true
-		}
-	}
-	return false
+	return t.kind == "op" && slices.Contains(ops, t.text)
 }
 
+// The binary operators by precedence, loosest first: each level is its
+// operands, from the next level, joined left to right.
 func (p *parser) comparison() (Expr, error) {
-	l, err := p.additive()
-	if err != nil {
-		return nil, err
-	}
-	for p.isOp("=", "<>", "<", ">", "<=", ">=") {
-		t := p.next()
-		r, err := p.additive()
-		if err != nil {
-			return nil, err
-		}
-		l = &Binary{Pos: t.pos, Op: t.text, L: l, R: r}
-	}
-	return l, nil
+	return p.binary(p.additive, "=", "<>", "<", ">", "<=", ">=")
 }
+func (p *parser) additive() (Expr, error)       { return p.binary(p.multiplicative, "+", "-") }
+func (p *parser) multiplicative() (Expr, error) { return p.binary(p.unary, "*", "/") }
 
-func (p *parser) additive() (Expr, error) {
-	l, err := p.multiplicative()
+// binary parses operands joined by any of ops, left-associatively.
+func (p *parser) binary(operand func() (Expr, error), ops ...string) (Expr, error) {
+	l, err := operand()
 	if err != nil {
 		return nil, err
 	}
-	for p.isOp("+", "-") {
+	for p.isOp(ops...) {
 		t := p.next()
-		r, err := p.multiplicative()
-		if err != nil {
-			return nil, err
-		}
-		l = &Binary{Pos: t.pos, Op: t.text, L: l, R: r}
-	}
-	return l, nil
-}
-
-func (p *parser) multiplicative() (Expr, error) {
-	l, err := p.unary()
-	if err != nil {
-		return nil, err
-	}
-	for p.isOp("*", "/") {
-		t := p.next()
-		r, err := p.unary()
+		r, err := operand()
 		if err != nil {
 			return nil, err
 		}

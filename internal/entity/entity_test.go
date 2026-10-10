@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
 const req = "---\nid: REQ-0001\ntype: Requirement\ntitle: Closed-loop\n---\nThe system shall.\n"
@@ -27,7 +29,7 @@ func TestParseEntity(t *testing.T) {
 	if title, ok := e.Scalar("title"); !ok || title != "Closed-loop" {
 		t.Errorf("title = %q, %v", title, ok)
 	}
-	if n := Lookup(e.Front, "title"); n.Line != 4 {
+	if n := yamlnode.Lookup(e.Front, "title"); n.Line != 4 {
 		t.Errorf("title node line = %d, want file line 4", n.Line)
 	}
 }
