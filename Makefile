@@ -31,7 +31,9 @@ build:
 	CGO_ENABLED=0 go build $(GO_BUILD_FLAGS) -ldflags '$(GO_LDFLAGS)' -o $(BIN) ./cmd/provenance
 
 # Cross-compile the release platforms into dist/ with exactly the build recipe
-# above. The reproducible-build workflow runs this on two runners and compares.
+# above, and write the release manifest dist/SHA256SUMS (DES-0025). The
+# reproducible-build workflow runs this on two runners and compares; the
+# release workflow publishes its output.
 PLATFORMS ?= linux/amd64 darwin/arm64 windows/amd64
 
 dist:
@@ -43,6 +45,7 @@ dist:
 		echo "$$out"; \
 		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build $(GO_BUILD_FLAGS) -ldflags '$(GO_LDFLAGS)' -o $$out ./cmd/provenance; \
 	done
+	cd dist && LC_ALL=C sha256sum -- provenance-* | LC_ALL=C sort -k2 > SHA256SUMS
 
 test:
 	go test ./...
