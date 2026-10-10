@@ -29,8 +29,8 @@
 - [x] E1.11 Git context and content hash
 - [x] E1.12 Captions, cross-reference numbering and images
 - [ ] E1.13 Bundled Mermaid and offline guarantee — *deferred 2026-10-04*
-- [ ] E1.13a Reference lists
-- [ ] E1.13b Citation templates
+- [x] E1.13a Reference lists
+- [x] E1.13b Citation templates
 - [ ] E1.14 Epic close-out: docs and first binary release
 
 ## Shape of the plan
