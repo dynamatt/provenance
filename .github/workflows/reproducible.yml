@@ -44,10 +44,13 @@ jobs:
         working-directory: ${{ matrix.path }}
         run: make dist
 
+      # make dist writes the release manifest; the runners' manifests must
+      # match line for line.
       - name: Hash binaries
         working-directory: ${{ matrix.path }}/dist
         run: |
-          sha256sum -- * | tee "$RUNNER_TEMP/hashes-${{ matrix.runner }}.txt"
+          sha256sum -c SHA256SUMS
+          tee "$RUNNER_TEMP/hashes-${{ matrix.runner }}.txt" < SHA256SUMS
 
       - name: Upload hashes
         uses: actions/upload-artifact@v7

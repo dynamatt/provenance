@@ -1,0 +1,86 @@
+name: Release
+
+# Publishes a GitHub release for each v* tag (E1.14): the binaries of every
+# release platform, built by make dist with the reproducible recipe
+# (DES-0024), and their manifest SHA256SUMS (DES-0025). On a pull request
+# that changes the release recipe, it builds and checks everything but
+# publishes nothing.
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - Makefile
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # A release is the binary CI gates: the same checks as the CI workflow.
+      - name: Lint
+        run: make lint
+
+      - name: Unit tests
+        run: make test
+
+      - name: Acceptance tests
+        run: make acceptance
+
+      # The version is the tag; on a pull request, the commit.
+      - name: Build release platforms
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version=$(git rev-parse --short HEAD)
+          if [ "$REF_TYPE" = tag ]; then version=$REF_NAME; fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          make dist VERSION="$version"
+
+      - name: Check binaries and manifest
+        working-directory: dist
+        run: |
+          sha256sum -c SHA256SUMS
+          ./provenance-linux-amd64 version | tee version.txt
+          grep -qF "$VERSION" version.txt
+          rm version.txt
+          {
+            echo "### Release $VERSION"
+            echo
+            echo '```'
+            cat SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release files
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ env.VERSION }}
+          path: dist
+          if-no-files-found: error
+
+      # A tag with a hyphen (v0.1.0-alpha) is a pre-release.
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=()
+          case "$VERSION" in *-*) flags+=(--prerelease) ;; esac
+          gh release create "$VERSION" dist/* --verify-tag --title "$VERSION" "${flags[@]}" \
+            --notes "Binaries for linux/amd64, darwin/arm64 and windows/amd64, built reproducibly from \`$GITHUB_SHA\`. Check a download with \`sha256sum -c SHA256SUMS --ignore-missing\`."

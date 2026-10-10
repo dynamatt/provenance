@@ -37,6 +37,7 @@ identity, so builds must be reproducible.
 | Target | What it does |
 | --- | --- |
 | `make build` | Reproducible build to `bin/provenance` (`CGO_ENABLED=0`, `-trimpath`, `-buildvcs=false`, version and commit via `-ldflags`). |
+| `make dist` | The release platforms into `dist/` with the same recipe, and their manifest `dist/SHA256SUMS` (DES-0025). The release workflow publishes it for each `v*` tag. |
 | `make test` | `go test ./...` |
 | `make lint` | `gofmt -l`, `go vet`, `staticcheck` (pinned as a `go.mod` tool). |
 | `make example` | Checks out `provenance-example` at the pinned SHA into `.cache/example`. |
