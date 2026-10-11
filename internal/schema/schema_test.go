@@ -146,7 +146,7 @@ func TestLoadErrors(t *testing.T) {
 			`schema/R.yaml:6: field "x" in list "rows": unknown type "nope"`},
 		{"type is not a mapping", "schema/R.yaml", "- a\n", "schema/R.yaml: expected a mapping"},
 		{"syntax error", "schema/R.yaml", "type: R\nfields: [\n", "schema/R.yaml:"},
-		{"wrong value type", "schema/R.yaml", "type: R\nfields:\n  - {name: a, type: string, required: maybe}\n", "schema/R.yaml:3: cannot unmarshal"},
+		{"wrong value type", "schema/R.yaml", "type: R\nfields:\n  - {name: a, type: string, required: maybe}\n", "schema/R.yaml:3: cannot construct"},
 		{"enum named like builtin", "schema/enums/E.yaml", "enum: string\nvalues: [a]\n", "schema/enums/E.yaml:1: enum string has the same name as a built-in field type"},
 		{"type named like enum", "schema/S.yaml", "type: ApprovalStatus\n", "schema/S.yaml:1: type ApprovalStatus has the same name as the enum declared in schema/enums/ApprovalStatus.yaml"},
 	}
