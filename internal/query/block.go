@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/query/datalog"
