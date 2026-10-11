@@ -221,3 +221,31 @@ func TestParseFormulaErrors(t *testing.T) {
 		}
 	}
 }
+
+// FormulaProblems names, once, each calculated field every entity would
+// show as Invalid: the fields after "Formulas that cannot be evaluated".
+func TestFormulaProblems(t *testing.T) {
+	g := calcGraph(t)
+	got := map[string]string{}
+	for _, p := range FormulaProblems(g.Schema) {
+		got[p.Field.Name] = p.Msg
+	}
+	var bad []string
+	for _, f := range calcFormulas {
+		if _, ok := got[f.name]; ok {
+			bad = append(bad, f.name)
+		}
+	}
+	if want := "p1 p2 p3 p4 outside nofield cyc1 cyc2 self"; strings.Join(bad, " ") != want {
+		t.Errorf("problems for %s, want %s", strings.Join(bad, " "), want)
+	}
+	if !strings.HasPrefix(got["cyc1"], "formula depends on itself: ") {
+		t.Errorf("cyc1: %q", got["cyc1"])
+	}
+	// Every entity's value of a listed field is Invalid with the same message.
+	for _, e := range g.Entities {
+		if v := e.Field("nofield"); v != nil && (!v.Invalid || v.Problem != got["nofield"]) {
+			t.Errorf("%s nofield = %+v", e.ID, v)
+		}
+	}
+}

@@ -100,6 +100,9 @@ func Run(root string) (*Report, error) {
 	for _, p := range problems {
 		r.add(Violation{Rule: "schema/file", Severity: Error, Message: p.Msg, Path: p.Path, Line: p.Line})
 	}
+	for _, p := range s.KeyProblems {
+		r.add(Violation{Rule: "schema/unknown-key", Severity: Error, Message: p.Msg, Path: p.Path, Line: p.Line})
+	}
 	if len(problems) > 0 {
 		// Every type, field and rule is read against the schema: with part of
 		// it missing, they would report its absence over and over.
@@ -107,7 +110,11 @@ func Run(root string) (*Report, error) {
 			return nil, err
 		}
 	} else {
-		r.unknownTypes(s, sc.Entities)
+		known := r.unknownTypes(s, sc.Entities)
+		r.schemaChecks(s, sc.Entities)
+		if err := r.conformance(s, known); err != nil {
+			return nil, err
+		}
 	}
 	r.sort()
 	return r, nil
@@ -159,10 +166,12 @@ func (r *Report) entityProblems(sc *entity.Scanned) {
 	}
 }
 
-// unknownTypes reports entities whose type the schema does not declare.
-func (r *Report) unknownTypes(s *schema.Schema, entities []*entity.Entity) {
+// unknownTypes reports entities whose type the schema does not declare,
+// and returns the others.
+func (r *Report) unknownTypes(s *schema.Schema, entities []*entity.Entity) (known []*entity.Entity) {
 	for _, e := range entities {
 		if s.Types[e.Type] != nil {
+			known = append(known, e)
 			continue
 		}
 		msg := fmt.Sprintf("type %q is not declared in schema/", e.Type)
@@ -174,6 +183,7 @@ func (r *Report) unknownTypes(s *schema.Schema, entities []*entity.Entity) {
 			Path: e.Path, Line: yamlnode.Lookup(e.Front, "type").Line,
 		})
 	}
+	return known
 }
 
 // countRules counts the rule files in root/rules.
