@@ -101,7 +101,6 @@ func TestStubsExitTwoWithNotImplemented(t *testing.T) {
 	}{
 		{"serve", []string{"serve"}},
 		{"init", []string{"init", "--template", "medical", "newproj"}},
-		{"validate", []string{"validate", "--path", ".", "--format", "sarif"}},
 		{"component add", []string{"component", "add", "https://example.com/x.git", "--path", "SUBCOMPONENTS/x"}},
 		{"component update", []string{"component", "update", "SUBCOMPONENTS/x"}},
 		{"component remove", []string{"component", "remove", "SUBCOMPONENTS/x"}},

@@ -9,6 +9,7 @@ set -euo pipefail
 PROV=${PROV:?PROV must point at the provenance binary}
 EXAMPLE_DIR=${EXAMPLE_DIR:?EXAMPLE_DIR must point at the provenance-example checkout}
 GOLDEN_DIR=${GOLDEN_DIR:?GOLDEN_DIR must point at testdata/golden}
+VALIDATE_DIR=${VALIDATE_DIR:?VALIDATE_DIR must point at testdata/validate}
 
 failures=0
 
@@ -360,12 +361,51 @@ git worktree add -q --detach "$WORK/worktree" HEAD
 expect 0 ''                               diff -r "$WORK/from-checkout" "$WORK/from-worktree"
 git worktree remove --force "$WORK/worktree"
 
+# E2.2: validate reports every file it cannot load, each at its file and
+# line, and exits 1: unparsable frontmatter, an id without a type, every
+# copy of a duplicated ID, an unknown type, a schema problem (which skips
+# the rules). Tool and usage errors exit 2. --out writes the report to a
+# file; --path validates another repository.
+expect 0 '^0 errors, 0 warnings$'         "$PROV" validate
+cp REQ/REQ-0002.md REQ/copy.md
+sed -i '2s/.*/id: DES-0001: x/' DES/DES-0001.md
+printf -- '---\nid: REQ-0099\ntitle: no type\n---\n' > REQ/half.md
+expect 1 '^DES/DES-0001\.md:2: error \[content/frontmatter\] invalid frontmatter: mapping values are not allowed in this context$' "$PROV" validate
+expect 1 '^REQ/REQ-0002\.md:2: error \[content/duplicate-id\] duplicate entity ID REQ-0002, also in REQ/copy\.md \(REQ-0002\)$' "$PROV" validate
+expect 1 '^REQ/copy\.md:2: error \[content/duplicate-id\] duplicate entity ID REQ-0002, also in REQ/REQ-0002\.md \(REQ-0002\)$' "$PROV" validate
+expect 1 '^REQ/half\.md:2: error \[content/frontmatter\] frontmatter has an id but no type, so the file is not read as an entity$' "$PROV" validate
+expect 1 '^4 errors, 0 warnings$'         "$PROV" validate
+expect 1 '^validate: 4 errors, 0 warnings$' "$PROV" validate --out "$WORK/reports/v.txt"
+expect 0 '^4 errors, 0 warnings$'         tail -n 1 "$WORK/reports/v.txt"
+git checkout -q -- DES/DES-0001.md && rm REQ/copy.md REQ/half.md
+sed -i 's/^type: Risk/type: Rsk/' RSK/RSK-0001.md
+expect 1 '^RSK/RSK-0001\.md:3: error \[schema/unknown-type\] type "Rsk" is not declared in schema/ ' "$PROV" validate
+git checkout -q -- RSK/RSK-0001.md
+sed -i 's/type: ApprovalStatus/type: AprovalStatus/' schema/Requirement.yaml
+expect 1 '^schema/Requirement\.yaml:20: error \[schema/file\] field "status": unknown type "AprovalStatus"' "$PROV" validate
+expect 1 '^12 rules not run: the schema has errors$' "$PROV" validate
+git checkout -q -- schema/Requirement.yaml
+expect 2 '^validate: invalid --format "xml"' "$PROV" validate --format xml
+expect 2 '^validate --format sarif: not implemented yet$' "$PROV" validate --format sarif
+expect 2 '^validate: not inside a provenance repository' "$PROV" validate --path "$WORK"
+cd "$WORK"
+expect 0 '^0 errors, 0 warnings$'         "$PROV" validate --path "$EXAMPLE_DIR/REQ"
+cd "$EXAMPLE_DIR"
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null
 "$PROV" export website --out "$WORK/b" >/dev/null
 expect 0 ''                               diff -r "$WORK/a" "$WORK/b"
 expect 0 ''                               diff -ru "$GOLDEN_DIR" "$WORK/a"
+
+# Standing E2 acceptance: validating twice gives an identical report, and
+# the clean example's report matches testdata/validate/clean.txt (make
+# golden-update rewrites it).
+"$PROV" validate >"$WORK/v1.txt"
+"$PROV" validate >"$WORK/v2.txt"
+expect 0 ''                               diff "$WORK/v1.txt" "$WORK/v2.txt"
+expect 0 ''                               diff -u "$VALIDATE_DIR/clean.txt" "$WORK/v1.txt"
 
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"
