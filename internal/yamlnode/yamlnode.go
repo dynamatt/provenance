@@ -27,9 +27,24 @@ func Lookup(mapping *yaml.Node, key string) *yaml.Node {
 
 // Unmarshal is yaml.Unmarshal for text that starts on line first of its
 // file: node lines are file lines, and so is the line ErrorLine finds in a
-// syntax error. yaml leaves the line out of an error it places on the first
-// line it reads, so the text is read after two blank lines; an error yaml
+// syntax error. The text is read after two blank lines; an error yaml
 // places before the text is put on its first line.
+//
+// This works around a bug in go.yaml.in/yaml/v3 (v3.0.5), in parser.fail()
+// in decode.go, which formats an error's line from the parser's 0-based
+// marks:
+//   - it treats line 0 as "no line", so an error on the first line it reads
+//     (e.g. `id: a: b`) has no line at all; the blank lines keep every line
+//     above 0;
+//   - it adds 1 to scanner errors' lines but not to parser errors', and
+//     prefers the line where the construct began to the one where the
+//     problem was found, so an unclosed `[` is reported a line or more
+//     before the problem. This is not worked around.
+//
+// v4 (go.yaml.in/yaml/v4, at v4.0.0-rc.6 on 2026-10-11) fixes both with a
+// structured LoadError that carries the line and column of the problem
+// and of its context. Upgrade to v4 once it is released, drop this
+// workaround, and use the columns in reports (SARIF can show them).
 func Unmarshal(data []byte, first int, doc *yaml.Node) error {
 	if err := yaml.Unmarshal(append([]byte("\n\n"), data...), doc); err != nil {
 		return &fileError{err: err, first: first}
