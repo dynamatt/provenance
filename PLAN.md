@@ -35,16 +35,14 @@
 - [ ] E2.1 Validate design decisions
 - [ ] E2.2 `validate` command, report model and load errors
 - [ ] E2.3 Schema conformance (built-in)
-- [ ] E2.4 Content that would stop export (built-in)
-- [ ] E2.5 Rule files
-- [ ] E2.6 Required Field and Field Value In Set
-- [ ] E2.7 Reference Count
-- [ ] E2.8 Reference Validity
-- [ ] E2.9 Field comparisons
-- [ ] E2.10 Uniqueness and No Cycles
-- [ ] E2.11 Query Assertion and Block Language
-- [ ] E2.12 Report formats
-- [ ] E2.13 Epic close-out: gate in CI, docs, release
+- [ ] E2.4 Content and links (built-in)
+- [ ] E2.5 Grammar: sub-queries, `value_of`, `missing`, `not_in`
+- [ ] E2.6 Grammar: `aggregation` and `duplicated`
+- [ ] E2.7 Grammar: transitive links and `code_blocks`
+- [ ] E2.8 Rule files
+- [ ] E2.9 Report formats
+- [ ] E2.10 Report templates
+- [ ] E2.11 Epic close-out: gate in CI, docs, release
 
 ## Shape of the plan
 
@@ -961,19 +959,95 @@ order after Epic 2, with the reason it comes where it does:
    before the editor can write files.
 2. **`init`** — medical-device starter template embedded in the binary; a fresh
    `init` must pass `validate` and `export`.
-3. **`report`** — coverage metrics over the shared query engine.
-4. **`diff`** — rendered/semantic diff between refs.
-5. **`rename`** — ID rewrite across links, wikilinks and query filters.
-6. **`verify artifact`** — against the E1.14 manifest; includes deciding how
+3. **CSV-backed entity types** — rows of a CSV file loaded as entities of a
+   type the schema declares (see below). After `init`, so the starter
+   template can carry an example, and before `report` and `diff`, so both
+   cover imported rows from the start.
+4. **`report`** — coverage metrics over the shared query engine.
+5. **`diff`** — rendered/semantic diff between refs.
+6. **`rename`** — ID rewrite across links, wikilinks and query filters.
+7. **`verify artifact`** — against the E1.14 manifest; includes deciding how
    the manifest itself is signed.
-7. **`sign` / `sign verify`** — ledger format, then certificate provider, then
+8. **`sign` / `sign verify`** — ledger format, then certificate provider, then
    OIDC device flow; signatures become queryable facts, and the Signature
    Presence rules removed in E2.1 return as queries.
-8. **`component add/update/remove`** — submodules and composed-graph
+9. **`component add/update/remove`** — submodules and composed-graph
    validation.
-9. **`release tag`** — gate plus bill-of-materials; released content becomes
+10. **`release tag`** — gate plus bill-of-materials; released content becomes
    queryable, and Content Frozen After Release returns as a query.
-10. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
+11. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
    fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
    thin client over everything above.
-11. **`plugin`**.
+12. **`plugin`**.
+
+### CSV-backed entity types (proposed 2026-10-11, for Matt's review)
+
+**Goal:** a project can load entities from a CSV file. The schema declares
+a type backed by a file and maps the file's columns to the type's fields;
+each row is then an entity like any Markdown one: it has an ID, can be
+linked to and cited, is selected by queries and rules, has a page in the
+export, and counts in the content hash. The use case: a periodic dump of
+complaint records from the complaint-handling system, which Risk entities
+link to so that each failure mode's occurrence rating is justified by the
+complaints behind it, counted by a calculated field or a rule.
+
+```yaml
+# schema/Complaint.yaml
+type: Complaint
+id_prefix: CMP
+source:
+  csv: data/complaints.csv       # repository path
+  id: complaint_no               # the column holding each row's ID
+fields:
+  - name: received
+    type: date
+    column: Date Received        # the CSV header, when it differs
+  - name: product
+    type: string
+  - name: failure_mode
+    type: string
+  - name: harm_occurred
+    type: boolean
+  - name: summary
+    type: text
+```
+
+A Risk then links to its complaints (`complaints: [CMP-2026-0141, …]`, a
+link field targeting Complaint, reverse `cited_by_risks`), and
+`COUNT(complaints)` or a rule over the facet does the rest.
+
+**Why it needs its own epic:** a row is an entity without a file of its
+own, so every part of the product that assumes one file per entity
+(discovery, line numbers, last-changed commit, page inputs, the editor,
+`fmt`, `rename`, signing) has to say what it does with a row.
+
+**Decisions (for Matt, before the epic is detailed):**
+
+| # | Decision | Proposal | Why |
+| --- | --- | --- | --- |
+| C1 | Built in, or an import plugin (REQ-0070 allows import plugins) | **Built in.** The schema declares the source; there is no conversion step and no generated Markdown. Plugins remain for formats that need code (an eQMS API, XLSX). | CSV is the common denominator every system exports, and a built-in reader keeps the data's validation identity the binary's. Generating Markdown from the dump would create thousands of files no one reviews and that drift from the source. |
+| C2 | Row IDs | **The `id` column's value, used as written,** and checked to be unique within the file and across the repository. The `<id_prefix>-NNNN` form (DES-0007) applies to authored entities only; a CSV type's `id_prefix` is still required, and its IDs must start with it, so a link's type is still readable. | Complaint numbers are the identity the source system and the complaint handlers use; renumbering them would break traceability back to that system. |
+| C3 | Read-only | **Rows are read-only in Provenance.** `fmt`, `rename`, the editor and `sign` never write them; the file is replaced by the next dump. A row can't have a Markdown body; `text` columns render as Markdown. | The source system is the record; Provenance holds a dated copy. |
+| C4 | Which way links go | **CSV rows can't link out** in the first version; authored entities link to them (Risk → Complaint), and the facet gives the reverse. A column holding IDs as a link is a later addition. | Links are stored on the later artefact (DES-0011): the risk analysis is written after, and about, the complaints. |
+| C5 | File format | **RFC 4180, UTF-8 (a BOM is ignored), a header row, comma-separated** by default with `delimiter:` to override, CRLF or LF. Values are typed by the field: dates `YYYY-MM-DD` only, unless the field gives `format:`; booleans `true/false`, `yes/no`, `1/0`; an empty cell is an absent value. Columns the schema doesn't name are ignored, and reported as a warning so a renamed column is noticed. | What Excel and most systems export, with types as strict as for authored entities. |
+| C6 | Where a row's problems are placed | **The file and the row's line** (`data/complaints.csv:142`), for validate, export errors and SARIF. | The same contract as every other violation (D8/DES-0048). |
+| C7 | History | A row's last-changed commit is the **last commit that changed that row's line content**, not the file's; the file's commit and dump date are shown on every row's page. Page inputs list the file. | Re-importing the whole file every month mustn't make every complaint look changed. |
+| C8 | Pages | **A page per row by default,** with `pages: false` on the source for large dumps; rows are still listed by queries and cited by `[[ID]]` without a page, as an entity outside the scope is. | Thousands of near-identical pages make a site slow to build and browse. |
+| C9 | Provenance of the dump | The source declares **`system:` (the system it came from) and `exported:` (the dump's date)**, shown on each row's page and available to templates, so an auditor can tie the data to its export. The file is in the content hash like any other. | ISO 13485 §8.2.2, which the QMSR incorporates: complaint records are kept by the complaint-handling process, and the copy must be traceable to it. |
+
+**Rough shape:**
+
+1. **Design:** a user need, requirements (CSV-backed types, row IDs,
+   read-only, provenance of the dump) and a design element in the DDF,
+   with C1–C9 as decided.
+2. **Example repo:** a `Complaint` type with `data/complaints.csv` (a dozen
+   synthetic rows), RSK-0001's failure modes linking to them, and
+   `occurrence` justified by a `COUNT` over them.
+3. **Loading:** the CSV reader, `source:` in the schema, rows as entities
+   in discovery, the model and the graph; load errors at file and row.
+4. **validate:** schema conformance for CSV types and rows (C2, C5, C6),
+   unknown columns as warnings.
+5. **export:** row pages, `pages: false`, citations and queries over rows,
+   the dump's provenance on each page.
+6. **History:** per-row last-changed (C7), page inputs, content hash.
+7. **Close-out:** docs (a "Importing data" concept page), release.
