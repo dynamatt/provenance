@@ -31,7 +31,7 @@ fields:
     body: true
   - name: status
     type: ApprovalStatus
-    default: draft
+    required: true
   - name: implements
     type: link
     target: [UserNeed]
@@ -79,7 +79,7 @@ func TestLoad(t *testing.T) {
 		t.Errorf("BodyField = %+v", req.BodyField)
 	}
 	status := req.Fields[2]
-	if status.EnumName != "ApprovalStatus" || status.Default == nil || status.Default.Value != "draft" {
+	if status.EnumName != "ApprovalStatus" {
 		t.Errorf("status = %+v", status)
 	}
 	impl := req.Fields[3]

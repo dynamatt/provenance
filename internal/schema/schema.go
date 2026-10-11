@@ -69,9 +69,6 @@ type Field struct {
 	Record  string
 	Elem    *Field
 	Formula string
-	// Default is kept as declared. Whether it applies to entities that omit
-	// the field is not yet settled, so it is not applied when reading.
-	Default *yaml.Node
 	Line    int
 }
 
@@ -442,16 +439,15 @@ func readDecl(root, rel, key string) (*rawDecl, error) {
 }
 
 type rawField struct {
-	Name        string    `yaml:"name"`
-	Type        string    `yaml:"type"`
-	Required    bool      `yaml:"required"`
-	Body        bool      `yaml:"body"`
-	Help        string    `yaml:"help"`
-	Target      []string  `yaml:"target"`
-	Cardinality string    `yaml:"cardinality"`
-	ReverseName string    `yaml:"reverse_name"`
-	Formula     string    `yaml:"formula"`
-	Default     yaml.Node `yaml:"default"`
+	Name        string   `yaml:"name"`
+	Type        string   `yaml:"type"`
+	Required    bool     `yaml:"required"`
+	Body        bool     `yaml:"body"`
+	Help        string   `yaml:"help"`
+	Target      []string `yaml:"target"`
+	Cardinality string   `yaml:"cardinality"`
+	ReverseName string   `yaml:"reverse_name"`
+	Formula     string   `yaml:"formula"`
 }
 
 // fields converts field declarations. within names what encloses sub-fields
@@ -484,10 +480,6 @@ func (l *loader) fields(path string, nodes []*yaml.Node, within string) ([]*Fiel
 			Name: rf.Name, Required: rf.Required, Body: rf.Body, Help: rf.Help,
 			Target: rf.Target, Cardinality: rf.Cardinality, ReverseName: rf.ReverseName,
 			Formula: rf.Formula, Line: n.Line,
-		}
-		if rf.Default.Kind != 0 {
-			d := rf.Default
-			f.Default = &d
 		}
 		typeLine := n.Line
 		if tn := yamlnode.Lookup(n, "type"); tn != nil {
