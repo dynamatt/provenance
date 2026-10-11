@@ -609,17 +609,24 @@ matches the golden site.
 
 ## Epic 2 — `validate`
 
-> **Status: proposed 2026-10-10, for Matt's review.** Nothing below is
-> started until the plan PR is merged. The decisions table needs a yes, a no
-> or a change on each row.
+> **Status: decisions agreed with Matt 2026-10-11.** Nothing below is started
+> until the plan PR is merged.
 
 **Goal:** `provenance validate` is the merge gate (REQ-0054). It loads the
-repository, runs every rule instance in `rules/` and the schema's own
-checks, and reports every violation (REQ-0038) with its file and line, in
-text, JSON, JUnit or SARIF (REQ-0059). It exits `1` while any error-severity
-violation exists and `0` otherwise, warnings included (REQ-0055). The
-example repository runs it as a required check on its pull requests, from a
-released binary (REQ-0060).
+repository, runs the built-in checks and every rule in `rules/`, and reports
+every violation (REQ-0038) with its file and line, in text, JSON, JUnit or
+SARIF (REQ-0059), or through a project's own report template. It exits `1`
+while any error-severity violation exists and `0` otherwise, warnings
+included (REQ-0055). The example repository runs it as a required check on
+its pull requests, from a released binary (REQ-0060).
+
+**A rule is a query.** A rule file is a query block's `from` and `where`
+with a `severity` and a `message`; every entity, row or link the query
+matches is a violation. There are no hard-coded rule types: what the
+library of rule types did is done by extending the shared condition grammar
+(DES-0015), so query blocks, `--scope` files and rules all gain it, and a
+rule's violations are exactly what its query shows when embedded in a
+document.
 
 **Why next:** it is the product's reason to exist at the merge gate, and it
 reuses almost all of Epic 1: entity loading, the schema, the typed model,
@@ -638,47 +645,63 @@ already finds every wikilink, query block, caption and image.
 - Running it twice gives byte-identical reports. Violations are sorted by
   file, line, rule ID and message, never by map order.
 
-### Decisions (for Matt)
+### Decisions (agreed with Matt 2026-10-11)
 
-| # | Decision | Proposal | Why | Needed by |
-| --- | --- | --- | --- | --- |
-| D1 | What a field's `default:` means (OPEN since Detailed Design §5; deferred 2026-09-28) | **Creation-time.** A default is the value a new entity is given when it is created (`init`, the editor, a future `new`) and written into its file. When reading, an omitted field is absent, as export already treats it. `required: true` is satisfied only by a value in the file. | The file is the record: what a reviewer sees in the diff is the whole truth. With read-time defaults, changing a default in `schema/` would silently change the value of every entity that omits the field, such as a Risk's `residual_acceptability`, without any entity file changing. No example entity omits a defaulted field, so nothing in the fixture moves. | E2.1 |
-| D2 | Load errors (unparsable frontmatter, missing `id`/`type`, a duplicate ID, an unknown type, a broken schema or rule file) | **Violations, not tool errors:** reported with file and line, exit `1`. Exit `2` is kept for the tool and its invocation (bad flags, unreadable repository, I/O). Rules that need the graph are skipped when it can't be built, and the report says so. `export` keeps exiting `2` on the same problems. | The gate's job is to tell an author what is wrong with their change, and a broken file is the most common mistake. SARIF and JUnit can only show it as a violation. | E2.2 |
-| D3 | Checks that need no rule file | **Built in, always error severity, with IDs under `schema/…` and `content/…`** (listed in E2.3 and E2.4): conformance to the schema, ID format, and everything that would stop `export`. Rule instances can't turn them off. | Without them a repository could pass the gate and still fail to export. The fixed library (REQ-0035) is for project policy; well-formedness isn't policy. | E2.3 |
-| D4 | `required: true` versus the Required Field rule | `required: true` is the unconditional built-in check (D3). The Required Field rule is for conditional requirements, with a `where`. A Required Field instance without `where` is allowed but redundant: it is reported once as a warning on the rule file. | The two overlap today, and REQ-0042 makes the filter the rule's point. | E2.5 |
-| D5 | A rule file's name | **`rules/<id>.yaml`, enforced** (DES-0016 already says so). The example's `risk-benefit-required.yaml` (id `risk-benefit-required-if-unacceptable`) is renamed in E2.1's example PR. | One place to find a rule from its report line. | E2.1 |
-| D6 | The source filter of Reference Count (DDF rules mark its key an open point in DES-0016) | **`source_where`**, as the DDF's rules already write it, plus **`target_where`** to filter the counted targets. Both use the shared condition grammar (DES-0015). | It is already in use, and it matches the `<side>_type` naming. | E2.7 |
-| D7 | Field Comparison Within Entity's parameters | **One condition test that must hold:** `entity_type`, `field`, `operator`, `value` (with `value: {field: …}` for the other field), which reuses the condition parser. On a list sub-field it is checked, and reported, per row (REQ-0045). The example's two calibration rules, written today as Required Field with only a `where`, are rewritten to this form in E2.1's example PR. | A Required Field without a field to require has no clear meaning. This form is the comparison the comments already describe. | E2.1 |
-| D8 | Reference Validity's `link` parameter | `link: any` covers every link field and every inline reference (`[[ID]]`, `[[ID\|…]]`, `[[ID#field]]`, `![[ID]]`); `link: <field>` covers only that field; `link: inline` covers only inline references. "Disallowed" (REQ-0050) means a link field whose target has a type outside the field's `target:` list. `[[ID#field]]` naming a field the target's type lacks is reported too. | Matches the rule's comment in the example ("both are just links at the graph level") and gives a way to apply the check to one or the other. | E2.8 |
-| D9 | Rule types this version can't check (Signature Presence until `sign`, Content Frozen After Release until `release tag`) | The rule file is fully parameter-checked, then reported as a **warning on the rule file: "not checked by this version"**. It never fails the gate, but it is always visible. | A gate that silently skips a configured rule would be worse than one that says it can't check it. Both the example and the DDF have instances of each. | E2.5 |
-| D10 | Where a violation is placed | The line of the offending field, row or block when there is one. For an absence (a missing required field, a Reference Count below `min`), the line of the entity's `id:`. For a rule-file problem, the line in the rule file. | Every format needs a file and line; SARIF and JUnit show them inline in the pull request. | E2.2 |
-| D11 | Report formats | **text:** `path:line: error\|warning [rule-id] message (ENTITY-ID)`, then a one-line summary. **json:** one object with `version: 1`, `violations[]` (`rule`, `severity`, `message`, `entity`, `path`, `line`) and `summary`. **junit:** one test case per rule instance and built-in check, each failing with its violations. **sarif:** SARIF 2.1.0, one run, one result per violation, the rule's `message` as its short description. Field names are recorded in the DDF; only the exit code is guaranteed (DES-0018). | Each is the smallest form its consumers (CI summaries, GitHub code scanning, scripts) read. | E2.12 |
+| # | Decision | Agreed |
+| --- | --- | --- |
+| D1 | A field's `default:` (OPEN since Detailed Design §5) | **Removed from the schema DSL.** The file is the whole record: an omitted field is blank everywhere (export, queries, rules, editor). A field that must have a value says `required: true`. `default:` becomes an unknown schema key. The example's ten defaults go; the fields they were on become `required: true` (every example entity already sets them). |
+| D2 | Load errors (unparsable frontmatter, missing `id`/`type`, a duplicate ID, an unknown type, a broken schema or rule file) | **Violations, not tool errors:** reported with file and line, exit `1`. Exit `2` is kept for the tool and its invocation (bad flags, unreadable repository, I/O). A broken schema skips every rule, because rules are checked against it, and the report says so; a broken rule file skips only itself. `export` keeps exiting `2` on the same problems. |
+| D3 | Checks that need no rule file | **Built in, IDs under `schema/…`, `content/…` and `links/…`, not configurable.** Errors: schema conformance, ID format, everything that would stop `export`, a block this version can only show as source (DES-0036), and link integrity (unresolved links and inline references, a target type outside the field's `target:`, `[[ID#field]]` naming a field the target lacks), which replaces the Reference Validity rule type. Warnings, against clutter: an unused enum, record or entity type (no entities and no link field targeting it), an unused named template, a `_`-prefixed template that is no site override, a type template naming no declared type. |
+| D4 | Rules are queries (replaces the fixed rule-type library; REQ-0035 reworded) | **A rule file is `severity`, `message`, `from` and `where`; every match is a violation.** The grammar gains (D5): sub-queries on list and link fields, `value_of` and outer references, `missing`, `not_in`, `duplicated`, `aggregation`, transitive links, and a derived `code_blocks` list. REQ-0035 becomes "the rule language shall be built into the binary; projects configure rules in it and cannot extend it." REQ-0041–0047, REQ-0049 and REQ-0052 are reworded from rule types to what the language can express; REQ-0050 moves to the built-in checks (D3). Blanks never match a comparison, so a rule that must catch missing data says so with `missing`. |
+| D5 | The condition grammar (DES-0015) | A test is `field`, `operator` and `value` (a literal) or `value_of` (a field). Inside a sub-query, names are the item's; `^name` is the enclosing entity's field (`^^` two levels out). A list or link field may instead take `where:` (tested on each row or linked entity; `transitive: true` follows a link to any depth) and optionally `aggregation: {type: count\|sum\|min\|max\|avg, field: …}`, whose single value `operator` and `value`/`value_of` then test, with the formula language's blank semantics (DES-0012). `{list, subfield}` and `{via, field}` are removed in favour of sub-queries; conditions inside one sub-query are about one item. Nested `any_of` is allowed everywhere. New operators: `missing`, `not_in`, `duplicated` (among the entities `from` and `where` select). `code_blocks` is a derived list on every entity with `language` (`none` for a bare fence) and its line. |
+| D6 | A rule file's name and ID | **The file name is the ID:** `rules/<id>.yaml`, lower-case kebab-case; a rule file has no `id:` key. |
+| D7 | Rules this version can't check (Signature Presence, Content Frozen After Release) | **Removed from the example and the DDF until the `sign` and `release tag` epics,** which define the facts (signatures, released content) they query. REQ-0048 and REQ-0051 stay as they are. |
+| D8 | Where a violation is placed | The matched field's line; a `missing` field or absent aggregated field at the entity's `id:` line; a matched list row at the row; a matched link target at the line in the *source* entity where that link value is written; an `aggregation` at its field; `duplicated` on every member, naming the others; a cycle on each member's link field; an `any_of` at its first matching test in file order; a rule-file problem at its line in the rule file. A rule's violations are always in the matched entity's own file. |
+| D9 | Report formats | **text:** `path:line: error\|warning [rule-id] message (ENTITY-ID)`, a line for skipped rules, then `N errors, M warnings`. **json:** `version: 1`, `violations[]` (`rule`, `severity`, `message`, `entity`, `path`, `line`), `summary` (`errors`, `warnings`, `rules_skipped`). **junit:** one test case per rule and built-in check; errors fail it, warnings go to `system-out`. **sarif:** 2.1.0, one run, a rules entry per rule and built-in check, one result per violation, repository-relative locations. No timestamps, no absolute paths. Field names are recorded in the DDF; only the exit code is guaranteed (DES-0018). |
+| D10 | Custom reports | **`validate --report <name>`** renders `templates/reports/<name>.tmpl` (`html/template` when the name ends `.html`, otherwise `text/template`) with `.Violations`, `.Rules` (every rule and built-in check, with its violations, so passing ones can be listed), `.Summary` and the git stamps. The exit code is unchanged. |
+| D11 | Where reports go | **`--out <file>`** writes any `--format` or `--report` to a file, creating its folders, never emptying one. A report goes into the exported site by running `export` first (it empties its folder) and then `validate --out _site/…`. Several reports are several runs. |
 
 Not in this epic: composed-graph validation across components (REQ-0025,
 the `component` epic); live feedback in the editor (REQ-0053, `serve`);
-`fmt --check` at the gate (the `fmt` epic); stricter reviewers for schema
-and rules (REQ-0034, a host setting, documented in E2.13).
+`fmt --check` at the gate (the `fmt` epic); a validation page built by
+`export` itself; stricter reviewers for schema and rules (REQ-0034, a host
+setting, documented in E2.11).
+
+**Order:** the built-in checks first (E2.2–E2.4), then the grammar
+(E2.5–E2.7), then rule files (E2.8), so the gate never reads a rule written
+in grammar it doesn't have. Until E2.8 the example's rule files are not read;
+each grammar task proves itself through query blocks in a review document
+the example gains in E2.5.
 
 ### E2.1 Validate design decisions
 
-**Deliverables:** the decisions above, as approved, written into
-`provenance-ddf`, each marked DECIDED with a date:
+**Deliverables:** the decisions above written into `provenance-ddf`, each
+marked DECIDED 2026-10-11:
 
-- DES-0010: `default:`.
-- DES-0016: rule files, their parameters per rule type, `source_where`,
-  `target_where`, the Field Comparison Within Entity form, Reference
-  Validity's `link`, and how unavailable rule types are reported.
-- DES-0018: the load-error exit code.
-- A new design element for the built-in checks and the report formats.
+- DES-0010: no `default:`.
+- DES-0015: the grammar (D5).
+- DES-0016: rule files as queries (D4, D6), with one worked rule per former
+  rule type.
+- DES-0018: the load-error exit code (D2).
+- REQ-0035, REQ-0041–0047, REQ-0049, REQ-0050, REQ-0052 reworded (D4).
+- A new design element for the built-in checks (D3), the violation
+  placement (D8), the report formats (D9) and report templates (D10, D11).
+- The DDF's own `rules/` rewritten in the new form: the two Signature
+  Presence rules and `released-requirement-frozen` removed (D7),
+  `cross-references-resolve` removed (D3).
 
-`internal/schema`'s note on `Default` is updated to the decision. No
-`validate` behaviour yet: like S0.4, this task is design only.
+`internal/schema`'s `Default` field is removed (`default:` is then an
+unknown key; reporting it is E2.3's). No `validate` behaviour yet: like S0.4,
+this task is design only.
+
+**Website PR:** the schema page loses `default`; the query and condition
+pages describe the grammar as decided, marked as arriving in E2.5–E2.7.
 
 **Example-repo PR:**
-- Rename `rules/risk-benefit-required.yaml` to match its ID.
-- Rewrite `equipment-calibration-current.yaml` and
-  `validation-equipment-calibration-current.yaml` as Field Comparison Within
-  Entity.
+- Remove every `default:`; add `required: true` where one was.
+- Rewrite every rule file in the new form, without `id:`.
+- Remove `requirement-approval-signed`, `content-frozen-requirement` and
+  `cross-references-resolve`.
 - Bump the pin.
 
 **Check it yourself:** read the DDF diff, then
@@ -691,39 +714,43 @@ only the commit and content-hash stamps.
 - `validate` is implemented. Its stub annotation is removed and `make docs`
   is run.
 - An `internal/validate` package: `Violation{Rule, Severity, Message,
-  Entity, Path, Line}`, sorting, the text report and the exit code. Loading
-  collects every problem instead of stopping at the first (D2):
+  Entity, Path, Line}`, sorting, the text report (D9) and the exit code.
+  Loading collects every problem instead of stopping at the first (D2):
   - every entity file that fails to parse;
   - every duplicate ID, with both files;
   - every unknown type;
   - every schema file problem.
 
-  A schema or rule-file problem that leaves the graph unusable skips the
-  rules, with a report line saying so. `export` keeps its current behaviour
-  and messages.
-- `--path` works.
+  A schema problem that leaves the graph unusable skips the rules, with a
+  report line saying so. `export` keeps its current behaviour and messages.
+- `--path` and `--out` (D11) work.
 - The clean example's report is checked in as `testdata/validate/clean.txt`.
   At this stage it holds only the summary line.
 
 **Check it yourself:** `prov validate` → `0 errors, 0 warnings`, exit 0.
 Break two entities' frontmatter and give a third a duplicate ID →
 `prov validate` lists all three with file and line, exit 1.
+`prov validate --out v/report.txt` writes the same report there.
 `prov validate --format xml` → exit 2.
 
 ### E2.3 Schema conformance (built-in)
 
-**Deliverables:** the built-in checks on entity files (D3), each with its
-own rule ID:
+**Deliverables:** the built-in checks on schema and entity files (D3), each
+with its own rule ID:
+- `schema/unknown-key`: a schema key the DSL doesn't have, `default:`
+  included (D1).
 - `schema/unknown-field`: a frontmatter key the type doesn't declare.
 - `schema/invalid-value`: the model's existing *Invalid* values, such as
   "not a date".
 - `schema/enum-value`: a value its enum doesn't list, with the allowed
   values.
-- `schema/required`: `required: true` not set (D1, D4).
+- `schema/required`: `required: true` not set.
 - `schema/id-format`: an ID that isn't `<id_prefix>-NNNN` for its type
   (REQ-0013).
 - `schema/calculated-set`: a calculated field written in the file.
 - `schema/list-row`: a list row with an unknown sub-field.
+- Warnings: `schema/unused-enum`, `schema/unused-record`,
+  `schema/unused-type` (no entities and no link field targeting it).
 
 **Example-repo PR:** none needed; the example is conformant, which the
 clean report proves.
@@ -733,15 +760,17 @@ clean report proves.
   [schema/unknown-field] …`;
 - set its `status: aproved` → `[schema/enum-value]` listing the allowed
   values;
-- delete its `title:` → `[schema/required]`.
+- delete its `title:` → `[schema/required]`;
+- add `default: draft` back to a schema field → `[schema/unknown-key]`;
+- add `schema/enums/Unused.yaml` → `warning [schema/unused-enum]`, exit 0.
 
-Each exits 1.
+Each other step exits 1.
 
-### E2.4 Content that would stop export (built-in)
+### E2.4 Content and links (built-in)
 
 **Deliverables:** `validate` reports, per file and line, everything that
 makes `export website` exit 2, so passing the gate means the site can be
-built:
+built, plus link integrity and template clutter (D3):
 - `content/query`: a query block that can't be run.
 - `content/caption`: a misplaced or malformed caption, or a duplicate
   caption ID in a document.
@@ -749,132 +778,130 @@ built:
 - `content/embed-cycle`: an entity that embeds itself.
 - `content/template`: a template that doesn't parse, a field name collision,
   or a query naming a template that doesn't exist.
-- `content/template-name`, a warning: a type template naming no declared
-  type.
+- `content/unrendered-block`: a block in a language this version renders
+  only as source (`mermaid`, `drawio`, while E1.13 is deferred; DES-0036),
+  so a diagram is never published as its source text.
+- `links/unresolved`: a link field value, `[[ID]]`, `[[ID|…]]`,
+  `[[ID#field]]` or `![[ID]]` naming no entity, including inside query
+  results.
+- `links/target-type`: a link whose target's type isn't in the field's
+  `target:` list.
+- `links/unknown-field`: `[[ID#field]]` naming a field the target's type
+  lacks.
+- Warnings: `content/template-name` (a type template naming no declared
+  type), `content/unused-template` (a named template no query block
+  chooses), `content/unknown-override` (a `_`-prefixed template that is no
+  site override).
 
 The checks reuse the export's own code paths (the dependency walk and
 template parsing), not a second implementation. Every problem is reported,
 not just the first; export stays fail-fast.
 
 **Check it yourself:** in DOC-0001:
-- change a query operator to `"="`, and
-- point an image at `../assets/missing.png`.
+- change a query operator to `"="`,
+- point an image at `../assets/missing.png`, and
+- change a `[[REQ-0002]]` to `[[REQ-0999]]`, and
+- add a `mermaid` block.
 
-`prov validate` lists both with their lines, and `prov export website`
-still stops at the first.
+`prov validate` lists all four with their lines, and `prov export website`
+still stops at the first. Set REQ-0001's `implements: [REQ-0002]` →
+`[links/target-type]` (a Requirement isn't a UserNeed).
 
-### E2.5 Rule files
+### E2.5 Grammar: sub-queries, `value_of`, `missing`, `not_in`
 
-**Deliverables:** discovery and parameter checking of `rules/*.yaml`
-(DES-0016):
-- The common keys: `id` matching the file name (D5), `rule` from the fixed
-  library (REQ-0035), `severity` of `error` or `warning` (REQ-0037), and
-  `message`.
-- Each rule type's parameters, checked against the schema: types, fields,
-  links and facets must exist, and conditions parse.
-- The redundant Required Field warning (D4).
-- Unavailable rule types reported (D9).
+**Deliverables:** the core of D5 in `internal/query`, for query blocks and
+`--scope` files alike:
+- `where:` on a list field (each row) and a link field (each linked entity,
+  forward or incoming facet), nested to any depth; `^name` for an
+  enclosing entity's field.
+- `value_of` in place of `value: {field: …}`.
+- `missing` and `not_in`.
+- `{list, subfield}`, `{via, field}` and the implicit same-row rule
+  (`condition.go`'s "tests on the same list within one all-of group read
+  the same row") removed. Nested `any_of` allowed everywhere.
+- Every match carries what matched it: the entity, and the row or link
+  value with its line, ready for D8.
 
-Problems are reported at the rule file's line, as `rules/<problem>`
-violations. No rule is evaluated yet, so the clean report gains only the
-two "not checked by this version" warnings (Signature Presence and Content
-Frozen After Release).
-
-**Check it yourself:**
-- Set a rule's `rule: ReferenceCounts` → `rules/requirement-verified.yaml:6:
-  error [rules/unknown-type]` listing the library.
-- Set `link: verifed_by` → an error naming the type's links and facets.
-
-### E2.6 Required Field and Field Value In Set
-
-**Deliverables:** the two entity-level rule types (REQ-0042, REQ-0043),
-each with its `where` filter (DES-0015). Each one is compiled to the shared
-Datalog engine, so the filter means exactly what it means in a query
-block.
-
-**Check it yourself:**
-- Remove RSK-0001's `risk_benefit_analysis` (its
-  `residual_acceptability` is `unacceptable`) → `[risk-benefit-required-if-unacceptable]` at
-  its `id:` line.
-- Set ECO-0001's `change_type: cosmetic` →
-  `[eco-change-type-valid]` at that line.
-
-### E2.7 Reference Count
-
-**Deliverables:** REQ-0041 with `source_type`, `link` (a field or an
-incoming facet, DES-0011), `target_type`, `min`, `max`, `source_where` and
-`target_where` (D6). The message gives the count found against the bounds.
-
-**Example-repo PR:** none needed. `protocol-verifies-requirement` and
-`requirement-verified` cover both directions.
-
-**Check it yourself:** remove VER-0002's `verifies:` →
-`[protocol-verifies-requirement]` on VER-0002 and
-`warning [requirement-verified]` on the requirement it verified. Exit 1,
-because one of the two is an error.
-
-### E2.8 Reference Validity
-
-**Deliverables:** REQ-0050 per D8: unresolved and disallowed link targets,
-and unresolved inline references, including those inside query results.
-They are found by the same Markdown walk export uses, at the line of the
-reference.
+**Example-repo PR:**
+- The existing query blocks that use the old forms are rewritten.
+- A new review document, DOC-0003 *Design review checklist*, with one query
+  block per check the example's rules make, each expected to show no
+  results today. This task adds the ones the grammar can now express:
+  calibration not current (per row), evidence of a stale protocol version
+  (across `tests`), a Risk that needs a risk-benefit analysis, a change
+  type outside the approved set, a requirement implementing a deprecated
+  need, and a superseded requirement not deprecated.
+- Bump the pin and the golden site.
 
 **Check it yourself:**
-- Change a `[[REQ-0002]]` in DOC-0001 to `[[REQ-0999]]` → reported at that
-  line.
-- Set REQ-0001's `implements: [REQ-0002]` → disallowed (a Requirement
-  isn't a UserNeed).
+- Move one equipment row's `calibration_due_date` before `execution_date`
+  in EVD-0001 → `prov export website` shows that evidence in DOC-0003's
+  calibration table.
+- Set EVD-0002's `protocol_version` below VER-0002's `current_version` → it
+  appears in the stale-evidence table.
 
-### E2.9 Field comparisons
+### E2.6 Grammar: `aggregation` and `duplicated`
 
 **Deliverables:**
-- Field Comparison Across Link (REQ-0044): `source_type`, `link`,
-  `target_type`, `source_field`, `operator`, `target_field`. One violation
-  per failing source-target pair.
-- Field Comparison Within Entity (REQ-0045) per D7, per row for list
-  sub-fields. Each row's violation is placed at its row.
+- `aggregation: {type: count|sum|min|max|avg, field: …}` on a list or link
+  sub-query, sharing the calculated-field aggregates and their blank
+  semantics (DES-0012).
+- `duplicated`, compared as typed values over the entities `from` and
+  `where` select; an entity missing the field never collides. One or more
+  fields: `field: [a, b]`.
+
+**Example-repo PR:** DOC-0003 gains unverified requirements (`count` of
+`verified_by` below 1), protocols verifying no requirement, and duplicate
+requirement titles. Bump the pin.
 
 **Check it yourself:**
-- Set EVD-0002's `protocol_version` below VER-0002's `current_version` →
-  `[evidence-verified-latest-version]`.
-- Move one equipment row's `calibration_due_date` before
-  `execution_date` → `[equipment-calibration-current]` at that row.
+- Remove VER-0002's `verifies:` → the protocol and the requirement it
+  verified both appear in DOC-0003.
+- Give REQ-0003 REQ-0002's title → both appear in the duplicates table.
 
-### E2.10 Uniqueness and No Cycles
+### E2.7 Grammar: transitive links and `code_blocks`
 
 **Deliverables:**
-- Uniqueness (REQ-0047): `entity_type` and `fields` (one or more), compared
-  as typed values. Entities missing any of the fields never collide. Each
-  group of duplicates is reported once, on every member, naming the others.
-- No Cycles (REQ-0046) over one link field, of either cardinality. Each
-  cycle is reported once, from its smallest ID, listing the path.
+- `transitive: true` on a link sub-query: the link followed to any depth,
+  terminating on cycles (REQ-0040).
+- `code_blocks`: a derived list on every entity, `language` (`none` for a
+  bare fence) and the block's line, from the same Markdown walk export uses.
+
+**Example-repo PR:** DOC-0003 gains decomposition cycles and blocks in a
+language the project doesn't use. Bump the pin.
 
 **Check it yourself:**
-- Give REQ-0003 REQ-0002's title → `warning [requirement-title-unique]` on
-  both, exit 0, because the rule is a warning.
 - Set REQ-0002's `parent_requirement: REQ-0003` (REQ-0003 already refines
-  REQ-0002) → `REQ-0002 → REQ-0003 → REQ-0002`, exit 1.
+  REQ-0002) → both appear in the cycles table.
+- Add a `python` block to DES-0001 → it appears in the block-language table.
 
-### E2.11 Query Assertion and Block Language
+### E2.8 Rule files
 
 **Deliverables:**
-- Query Assertion (REQ-0049): `from` and `where` exactly as in a query
-  block, one violation per match.
-- Block Language (REQ-0052): `entity_type` and `allowed` (`none` for a
-  block without a language). A block in a language this version renders
-  only as source (`mermaid`, `drawio`, while E1.13 is deferred) is reported
-  even when it is allowed (DES-0036).
+- Discovery and checking of `rules/*.yaml` (D4, D6): the file name is the
+  ID, `severity` is `error` or `warning` (REQ-0037), `message`, `from` and
+  `where` parsed by the same code as a query block, against the schema.
+  Problems are `rules/…` violations at the rule file's line; a broken rule
+  file skips only itself.
+- Evaluation: every match is a violation, placed per D8.
+- The clean report is unchanged: the example's rules find nothing.
 
-**Check it yourself:**
-- Set USR-0001 to `deprecated` → `warning [no-implements-deprecated-need]`
-  on each requirement implementing it.
-- Add a `mermaid` block to DES-0001 → `[block-languages]` saying this
-  version can't render it.
+**Check it yourself:** every break from E2.5–E2.7, now through the gate:
+- Remove RSK-0001's `risk_benefit_analysis` → `error
+  [risk-benefit-required]` at its `id:` line.
+- Move one equipment row's `calibration_due_date` before `execution_date`
+  → `[equipment-calibration-current]` at that row.
+- Remove VER-0002's `verifies:` → `[protocol-verifies-requirement]` on
+  VER-0002 and `warning [requirement-verified]` on the requirement. Exit 1,
+  because one of the two is an error.
+- Set REQ-0002's `parent_requirement: REQ-0003` → a cycle on both.
+- Set a rule's `severity: fatal` → `rules/requirement-verified.yaml:<line>:
+  error [rules/severity] …`.
+- Add `id: requirement-verified` to that file → `[rules/unknown-key]`.
 
-### E2.12 Report formats
+### E2.9 Report formats
 
-**Deliverables:** `--format json|junit|sarif` per D11.
+**Deliverables:** `--format json|junit|sarif` per D9.
 - Golden files for each format, from the clean example and from one broken
   example.
 - The SARIF output is checked against the 2.1.0 JSON schema in a unit
@@ -883,18 +910,35 @@ reference.
   test reporters accept.
 
 **Check it yourself:** break two entities, then
-`prov validate --format sarif > v.sarif` and upload it with
+`prov validate --format sarif --out v.sarif` and upload it with
 `gh api … code-scanning/sarifs`, or open it in the SARIF viewer. Both
 violations appear at their lines.
 
-### E2.13 Epic close-out: gate in CI, docs, release
+### E2.10 Report templates
+
+**Deliverables:** `validate --report <name>` per D10: the template data,
+`html/template` or `text/template` by name, a report template that doesn't
+parse or names a missing field reported as `content/template`, and
+`templates/reports/` excluded from the unused-template warning.
+
+**Example-repo PR:** two report templates: `pr-summary.md` (Markdown, for a
+pull-request comment) and `validation.html` (a page listing every rule,
+passed or not, with its violations). Bump the pin.
+
+**Check it yourself:**
+`prov export website && prov validate --report validation.html --out
+_site/validation.html` → open it beside the site: every rule listed as
+passed. Break VER-0002's `verifies:` and rerun → the two violations, linked
+to their entities; exit 1.
+
+### E2.11 Epic close-out: gate in CI, docs, release
 
 **Deliverables:**
 - **Website:** the `validate` reference page gets the built-in checks, the
-  rule file format and every rule type's parameters (with the example's
-  instances), the report formats, and how to require the check on GitHub
-  and GitLab. That includes branch protection on `schema/` and `rules/`
-  for stricter review (REQ-0034).
+  rule file format with the example's rules as worked examples (one per
+  former rule type), the report formats and report templates, and how to
+  require the check on GitHub and GitLab. That includes branch protection
+  on `schema/` and `rules/` for stricter review (REQ-0034).
 - **Release:** `v0.2.0-alpha`, published with E1.14's workflow.
 - **Example-repo PR:** a `validate` workflow that downloads the pinned
   release binary, checks it against `SHA256SUMS` and runs `validate --format
@@ -922,11 +966,12 @@ order after Epic 2, with the reason it comes where it does:
 6. **`verify artifact`** — against the E1.14 manifest; includes deciding how
    the manifest itself is signed.
 7. **`sign` / `sign verify`** — ledger format, then certificate provider, then
-   OIDC device flow.
+   OIDC device flow; signatures become queryable facts, and the Signature
+   Presence rules removed in E2.1 return as queries.
 8. **`component add/update/remove`** — submodules and composed-graph
    validation.
-9. **`release tag`** — gate plus bill-of-materials; unblocks Content Frozen
-   After Release.
+9. **`release tag`** — gate plus bill-of-materials; released content becomes
+   queryable, and Content Frozen After Release returns as a query.
 10. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
    fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
    thin client over everything above.
