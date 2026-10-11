@@ -816,6 +816,7 @@ still stops at the first. Set REQ-0001's `implements: [REQ-0002]` →
   enclosing entity's field.
 - `value_of` in place of `value: {field: …}`.
 - `missing` and `not_in`.
+- `from: any`, every entity type (D5).
 - `{list, subfield}`, `{via, field}` and the implicit same-row rule
   (`condition.go`'s "tests on the same list within one all-of group read
   the same row") removed. Nested `any_of` allowed everywhere.
