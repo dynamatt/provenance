@@ -70,7 +70,12 @@ func anchorID(id string) string { return "caption-" + id }
 func (r *resolver) kind(c markdown.Caption) (captionKind, error) {
 	k, ok := captionKinds[c.Kind]
 	if !ok {
-		return k, &markdown.Error{Line: c.Line, Msg: fmt.Sprintf("unknown caption kind %q (kinds: %s)", c.Kind, strings.Join(slices.Sorted(maps.Keys(captionKinds)), ", "))}
+		err := &markdown.Error{Line: c.Line, Msg: fmt.Sprintf("unknown caption kind %q (kinds: %s)", c.Kind, strings.Join(slices.Sorted(maps.Keys(captionKinds)), ", "))}
+		if r.ctx.site.check != nil {
+			r.ctx.markdownProblem(err)
+			return captionKinds["figure"], nil
+		}
+		return k, err
 	}
 	return k, nil
 }
@@ -110,10 +115,26 @@ func (r *resolver) CaptionEnd(w util.BufWriter, c markdown.Caption) error {
 func (r *resolver) figcaption(w util.BufWriter, c markdown.Caption, k captionKind) error {
 	r.ctx.site.serial++
 	fmt.Fprintf(w, `<figcaption><span class="caption-number">%s</span>`, numberToken(k.Label, r.ctx.site.serial, c.ID))
+	check := r.ctx.site.check
+	if check != nil && c.ID != "" {
+		check.captions = append(check.captions, placed{id: c.ID, path: r.ctx.path(), line: r.ctx.fileLine(c.Line)})
+	}
 	if c.Text != "" {
-		text, err := markdown.Convert(c.Text, r, r.options())
-		if err != nil {
-			return err
+		var text string
+		if check != nil {
+			prev := r.ctx.lineAt
+			r.ctx.lineAt = r.ctx.fileLine(c.Line)
+			var errs []error
+			text, errs = markdown.ConvertAll(c.Text, r, r.options())
+			for _, err := range errs {
+				r.ctx.markdownProblem(err)
+			}
+			r.ctx.lineAt = prev
+		} else {
+			var err error
+			if text, err = markdown.Convert(c.Text, r, r.options()); err != nil {
+				return err
+			}
 		}
 		text = strings.TrimSpace(text)
 		if inner, ok := strings.CutPrefix(text, "<p>"); ok && strings.Count(text, "<p>") == 1 {

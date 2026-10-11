@@ -60,8 +60,9 @@ func builtin(file string) source {
 
 // loadTemplates reads the project's templates/ over the built-in defaults
 // and parses every one, so a broken template fails the export even when no
-// page would use it.
-func loadTemplates(root string, s *schema.Schema) (*templateSet, error) {
+// page would use it. With a checker, every broken template is recorded
+// instead, and err is only a failure to read one.
+func loadTemplates(root string, s *schema.Schema, check *checker) (*templateSet, error) {
 	ts := &templateSet{
 		layout: builtin("layout.tmpl"),
 		index:  builtin("index.tmpl"),
@@ -135,19 +136,22 @@ func loadTemplates(root string, s *schema.Schema) (*templateSet, error) {
 		}
 	}
 	// Parse everything now for early, file-named errors.
-	check := []source{ts.layout, ts.index}
+	sources := []source{ts.layout, ts.index}
 	if ts.cite != nil {
-		check = append(check, *ts.cite)
+		sources = append(sources, *ts.cite)
 	}
 	for _, name := range slices.Sorted(maps.Keys(ts.types)) {
-		check = append(check, ts.types[name])
+		sources = append(sources, ts.types[name])
 	}
 	for _, name := range slices.Sorted(maps.Keys(ts.named)) {
-		check = append(check, ts.named[name])
+		sources = append(sources, ts.named[name])
 	}
-	for _, src := range check {
+	for _, src := range sources {
 		if _, err := parse(src, placeholderFuncs); err != nil {
-			return nil, err
+			if check == nil {
+				return nil, err
+			}
+			check.record(err)
 		}
 	}
 	return ts, nil

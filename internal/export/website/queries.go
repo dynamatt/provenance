@@ -64,16 +64,20 @@ type ContentError = query.ContentError
 func (r *resolver) fences() map[string]markdown.FenceFunc {
 	return map[string]markdown.FenceFunc{
 		"query":   r.query,
-		"mermaid": unrendered,
-		"drawio":  unrendered,
+		"mermaid": r.unrendered,
+		"drawio":  r.unrendered,
 	}
 }
 
 // unrendered shows a block in a language the product renders but this
 // version does not yet: its source, marked, rather than a plain code listing
-// that would read as the content itself. validate's BlockLanguage rule
-// reports these blocks.
-func unrendered(w util.BufWriter, f markdown.Fence) error {
+// that would read as the content itself. A check reports it, so a diagram
+// is never published as its source unnoticed (DES-0036).
+func (r *resolver) unrendered(w util.BufWriter, f markdown.Fence) error {
+	if c := r.ctx.site.check; c != nil {
+		c.add(Problem{Rule: "content/unrendered-block", Path: r.ctx.path(), Line: r.ctx.fileLine(f.Line - 1),
+			Msg: fmt.Sprintf("%s block: this version of Provenance cannot render it, so it would be published as its source", f.Lang)})
+	}
 	lang := template.HTMLEscapeString(f.Lang)
 	fmt.Fprintf(w, "<div class=\"unrendered\"><p class=\"unrendered-note\">%s blocks are not rendered by this version of Provenance</p>\n<pre><code class=\"language-%s\">%s</code></pre></div>\n",
 		lang, lang, template.HTMLEscapeString(f.Source))
@@ -87,18 +91,26 @@ func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 	g := r.ctx.site.graph
 	b, err := query.ParseBlock(q.Source, g.Schema)
 	if err != nil {
-		return r.queryError(q, err)
+		return r.ctx.site.failed(r.queryError(q, err))
 	}
 	// Every chosen template must exist, whether or not anything matches:
 	// a typo must not wait for data to surface.
 	for _, c := range b.Templates {
+		if check := r.ctx.site.check; check != nil {
+			check.chosen[c.Name] = true
+		}
 		if _, ok := r.ctx.site.templates.named[c.Name]; !ok {
-			return r.queryError(q, &query.Error{Line: c.Line, Msg: r.ctx.site.templates.unknownNamed(c.Name)})
+			err := r.queryError(q, &query.Error{Line: c.Line, Msg: r.ctx.site.templates.unknownNamed(c.Name)})
+			if check := r.ctx.site.check; check != nil {
+				check.add(Problem{Rule: "content/template", Path: err.Path, Line: err.Line, Msg: "query block: " + err.Msg})
+				return nil
+			}
+			return err
 		}
 	}
 	results, err := g.Run(b)
 	if err != nil {
-		return r.queryError(q, err)
+		return r.ctx.site.failed(r.queryError(q, err))
 	}
 	if len(results) == 0 {
 		names := make([]string, len(b.From))
@@ -112,7 +124,7 @@ func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 	case query.RenderFull:
 		_, _ = w.WriteString("<div class=\"query\">\n")
 		for _, e := range results {
-			if err := r.embed(w, e, b.TemplateFor(e.Type).Name); err != nil {
+			if err := r.embed(w, e, b.TemplateFor(e.Type).Name, r.ctx.fileLine(q.Line-1)); err != nil {
 				return err
 			}
 		}
@@ -143,7 +155,7 @@ func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 
 // queryError places err, whose line (if any) counts from the block's first
 // line, in the file being rendered.
-func (r *resolver) queryError(q markdown.Fence, err error) error {
+func (r *resolver) queryError(q markdown.Fence, err error) *QueryError {
 	e := r.ctx.entity()
 	if e == nil {
 		return &QueryError{Path: "templates", Msg: err.Error()}
