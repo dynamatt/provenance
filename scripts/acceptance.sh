@@ -392,6 +392,34 @@ cd "$WORK"
 expect 0 '^0 errors, 0 warnings$'         "$PROV" validate --path "$EXAMPLE_DIR/REQ"
 cd "$EXAMPLE_DIR"
 
+# E2.3: schema conformance. Each entity is checked against its type and
+# the schema against the DSL: an undeclared field, a value outside its enum,
+# a required field not set, a key the DSL doesn't have (default: included),
+# a value not of its type, an ID not of its type's form. Each exits 1 at its
+# line; a declaration nothing uses is a warning only.
+sed -i 's/^order: 1/order: 1\ncolour: red/' REQ/REQ-0001.md
+expect 1 '^REQ/REQ-0001\.md:9: error \[schema/unknown-field\] Requirement has no field "colour" \(fields: ' "$PROV" validate
+git checkout -q -- REQ/REQ-0001.md
+sed -i 's/^status: approved/status: aproved/' REQ/REQ-0001.md
+expect 1 '^REQ/REQ-0001\.md:5: error \[schema/enum-value\] status: "aproved" is not one of ApprovalStatus: draft, in_review, approved, deprecated \(REQ-0001\)$' "$PROV" validate
+git checkout -q -- REQ/REQ-0001.md
+sed -i '/^title:/d' REQ/REQ-0001.md
+expect 1 '^REQ/REQ-0001\.md:2: error \[schema/required\] required field title is not set \(REQ-0001\)$' "$PROV" validate
+git checkout -q -- REQ/REQ-0001.md
+sed -i 's/^\(    type: ApprovalStatus\)/\1\n    default: draft/' schema/Design.yaml
+expect 1 '^schema/Design\.yaml:[0-9]+: error \[schema/unknown-key\] field "status": unknown key "default": fields have no defaults' "$PROV" validate
+git checkout -q -- schema/Design.yaml
+sed -i 's/^execution_date: .*/execution_date: 2026-13-04/' VER/EVD-0001.md
+expect 1 '^VER/EVD-0001\.md:7: error \[schema/invalid-value\] execution_date: not a date \(YYYY-MM-DD\), got 2026-13-04 \(EVD-0001\)$' "$PROV" validate
+git checkout -q -- VER/EVD-0001.md
+sed -i 's/^id: DES-0001/id: DES-01/' DES/DES-0001.md
+expect 1 '^DES/DES-0001\.md:2: error \[schema/id-format\] ID DES-01 is not DES-NNNN' "$PROV" validate
+git checkout -q -- DES/DES-0001.md
+printf 'enum: Unused\nvalues: [a]\n' > schema/enums/Unused.yaml
+expect 0 '^schema/enums/Unused\.yaml:1: warning \[schema/unused-enum\] enum Unused is not used by any field$' "$PROV" validate
+expect 0 '^0 errors, 1 warning$'               "$PROV" validate
+rm schema/enums/Unused.yaml
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null

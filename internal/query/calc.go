@@ -484,50 +484,10 @@ func (c *fcomp) aggregate(r string, e *Call) error {
 // problem), and adds the values to the graph's facts so queries and order_by
 // read them like stored fields.
 func (g *Graph) Calculate() error {
-	var fields []*calcField
-	for _, tn := range g.Schema.TypeNames() {
-		t := g.Schema.Types[tn]
-		for _, f := range t.Fields {
-			if f.Kind == schema.Calculated {
-				fields = append(fields, &calcField{typ: t, field: f, schema: g.Schema})
-			}
-			if f.Kind == schema.List && f.Elem == nil {
-				for _, sub := range f.Fields {
-					if sub.Kind == schema.Calculated {
-						fields = append(fields, &calcField{typ: t, list: f, field: sub, schema: g.Schema})
-					}
-				}
-			}
-		}
-	}
+	fields, shapes := compileCalc(g.Schema)
 	if len(fields) == 0 {
 		return nil
 	}
-
-	shapes := map[string]shape{}
-	byRel := map[string]*calcField{}
-	for _, cf := range fields {
-		cf.rel = calcRel(cf.typ, cf.list, cf.field)
-		byRel[cf.rel] = cf
-		home := shape{types: []*schema.Type{cf.typ}, list: cf.list}
-		expr, err := ParseFormula(cf.field.Formula)
-		if strings.TrimSpace(cf.field.Formula) == "" {
-			err = &FormulaError{Msg: "no formula"}
-		}
-		if err == nil {
-			c := &fcomp{cf: cf, home: home, shapes: shapes}
-			var top string
-			top, err = c.single(expr)
-			if err == nil {
-				c.add(datalog.NewAtom(cf.rel, vN, vV), datalog.P(top, vN, vV))
-			}
-		}
-		if err != nil {
-			cf.err = "formula: " + err.Error()
-			cf.rules, cf.deps = nil, nil
-		}
-	}
-	markCycles(fields, byRel)
 
 	prog := &datalog.Program{}
 	for _, name := range slices.Sorted(maps.Keys(shapes)) {
@@ -566,6 +526,75 @@ func (g *Graph) Calculate() error {
 		}
 	}
 	return nil
+}
+
+// FormulaProblem is a calculated field whose formula cannot be evaluated:
+// it does not parse, names a field that does not exist, or depends on
+// itself. Every entity's value of the field is then Invalid with Msg.
+type FormulaProblem struct {
+	Type  *schema.Type
+	List  *schema.Field // the list whose rows have the field, or nil
+	Field *schema.Field
+	Msg   string
+}
+
+// FormulaProblems lists the schema's calculated fields that cannot be
+// evaluated, in type, list and field order.
+func FormulaProblems(s *schema.Schema) []FormulaProblem {
+	fields, _ := compileCalc(s)
+	var out []FormulaProblem
+	for _, cf := range fields {
+		if cf.err != "" {
+			out = append(out, FormulaProblem{Type: cf.typ, List: cf.list, Field: cf.field, Msg: cf.err})
+		}
+	}
+	return out
+}
+
+// compileCalc compiles every calculated field of s to Datalog rules, in
+// type, list and field order, marking the ones that cannot be evaluated.
+func compileCalc(s *schema.Schema) ([]*calcField, map[string]shape) {
+	var fields []*calcField
+	for _, tn := range s.TypeNames() {
+		t := s.Types[tn]
+		for _, f := range t.Fields {
+			if f.Kind == schema.Calculated {
+				fields = append(fields, &calcField{typ: t, field: f, schema: s})
+			}
+			if f.Kind == schema.List && f.Elem == nil {
+				for _, sub := range f.Fields {
+					if sub.Kind == schema.Calculated {
+						fields = append(fields, &calcField{typ: t, list: f, field: sub, schema: s})
+					}
+				}
+			}
+		}
+	}
+	shapes := map[string]shape{}
+	byRel := map[string]*calcField{}
+	for _, cf := range fields {
+		cf.rel = calcRel(cf.typ, cf.list, cf.field)
+		byRel[cf.rel] = cf
+		home := shape{types: []*schema.Type{cf.typ}, list: cf.list}
+		expr, err := ParseFormula(cf.field.Formula)
+		if strings.TrimSpace(cf.field.Formula) == "" {
+			err = &FormulaError{Msg: "no formula"}
+		}
+		if err == nil {
+			c := &fcomp{cf: cf, home: home, shapes: shapes}
+			var top string
+			top, err = c.single(expr)
+			if err == nil {
+				c.add(datalog.NewAtom(cf.rel, vN, vV), datalog.P(top, vN, vV))
+			}
+		}
+		if err != nil {
+			cf.err = "formula: " + err.Error()
+			cf.rules, cf.deps = nil, nil
+		}
+	}
+	markCycles(fields, byRel)
+	return fields, shapes
 }
 
 // markCycles marks every field whose formula depends on itself, directly or
