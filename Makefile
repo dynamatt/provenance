@@ -21,6 +21,7 @@ EXAMPLE_REF  := $(shell cat testdata/example-repo.ref)
 
 # Snapshot of `export website` on the pinned example (E1 standing acceptance).
 GOLDEN_DIR := testdata/golden
+VALIDATE_DIR := testdata/validate
 
 # provenance-website checkout that receives the generated CLI reference.
 WEBSITE_DIR ?= ../provenance-website
@@ -77,14 +78,17 @@ bump-example:
 
 acceptance: build example
 	PROV=$(CURDIR)/$(BIN) EXAMPLE_DIR=$(CURDIR)/$(EXAMPLE_DIR) GOLDEN_DIR=$(CURDIR)/$(GOLDEN_DIR) \
-		bash scripts/acceptance.sh
+		VALIDATE_DIR=$(CURDIR)/$(VALIDATE_DIR) bash scripts/acceptance.sh
 
-# Rewrite the golden site from the pinned example. Commit the result with the
-# change that caused it, so the PR shows the rendering difference.
+# Rewrite the golden site and the clean validate report from the pinned
+# example. Commit the result with the change that caused it, so the PR shows
+# the difference. The example must validate without errors.
 golden-update: build example
 	rm -rf $(GOLDEN_DIR)
 	cd $(EXAMPLE_DIR) && $(CURDIR)/$(BIN) export website --out $(CURDIR)/$(GOLDEN_DIR) >/dev/null
-	@echo "golden site rewritten: review 'git diff $(GOLDEN_DIR)'"
+	mkdir -p $(VALIDATE_DIR)
+	cd $(EXAMPLE_DIR) && $(CURDIR)/$(BIN) validate --out $(CURDIR)/$(VALIDATE_DIR)/clean.txt
+	@echo "golden site and report rewritten: review 'git diff $(GOLDEN_DIR) $(VALIDATE_DIR)'"
 
 # Regenerate the website's CLI reference from the command definitions. Run it
 # whenever a command, flag or help text changes, and commit the result in

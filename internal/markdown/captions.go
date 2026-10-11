@@ -118,7 +118,7 @@ func parseCaption(src string, line int) (Caption, error) {
 		return &Error{Line: line + at - 1, Msg: fmt.Sprintf(format, args...)}
 	}
 	var doc yaml.Node
-	if err := yaml.Unmarshal([]byte(src), &doc); err != nil {
+	if err := yamlnode.Unmarshal([]byte(src), 1, &doc); err != nil {
 		at, msg := yamlnode.ErrorLine(err)
 		return c, fail(max(at, 1), "caption: %s", msg)
 	}

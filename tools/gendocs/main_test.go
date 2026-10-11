@@ -105,3 +105,11 @@ func TestProseKeepsLiteralsVerbatim(t *testing.T) {
 		t.Errorf("prose()\n got %q\nwant %q", got, want)
 	}
 }
+
+func TestProseShowsIndentedParagraphsVerbatim(t *testing.T) {
+	got := prose("Each line is:\n\n  path:line: [rule] *msg*\n  second\n\nAfter.")
+	want := "Each line is:\n\n```text\npath:line: [rule] *msg*\nsecond\n```\n\nAfter.\n\n"
+	if got != want {
+		t.Errorf("prose()\n got %q\nwant %q", got, want)
+	}
+}
