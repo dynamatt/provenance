@@ -152,3 +152,45 @@ func TestDiscoverReportsParseErrorsWithRelativePath(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func TestScanCollectsEveryProblem(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "A/bad.md", "---\nid: 1\ntype: Requirement\n---\n")
+	write(t, root, "REQ/REQ-0001.md", entityFile("REQ-0001", "Requirement"))
+	write(t, root, "REQ/copy1.md", entityFile("REQ-0001", "Requirement"))
+	write(t, root, "REQ/copy2.md", entityFile("REQ-0001", "Requirement"))
+	write(t, root, "REQ/half.md", "---\ntitle: x\ntype: Requirement\n---\n")
+	write(t, root, "Z/bad.md", "---\nid: [\n---\n")
+
+	sc, err := Scan(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, p := range sc.Problems {
+		got = append(got, p.Error())
+	}
+	want := []string{
+		"A/bad.md:2: id must be a non-empty string",
+		"duplicate entity ID REQ-0001 in REQ/REQ-0001.md and REQ/copy1.md",
+		"duplicate entity ID REQ-0001 in REQ/REQ-0001.md and REQ/copy2.md",
+		"Z/bad.md:2: invalid frontmatter: did not find expected node content",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("problems:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	var dup *DuplicateIDError
+	if !errors.As(sc.Problems[1], &dup) || dup.FirstLine != 2 || dup.ThenLine != 2 {
+		t.Errorf("duplicate lines = %+v", dup)
+	}
+	if len(sc.Partial) != 1 || sc.Partial[0].Error() != "REQ/half.md:3: frontmatter has a type but no id, so the file is not read as an entity" {
+		t.Errorf("partial = %v", sc.Partial)
+	}
+	if len(sc.Entities) != 1 || sc.Entities[0].Path != "REQ/REQ-0001.md" {
+		t.Errorf("entities = %v", sc.Entities)
+	}
+	// Discover fails with the first problem, and ignores partial files.
+	if _, err := Discover(root); err == nil || err.Error() != want[0] {
+		t.Errorf("Discover err = %v", err)
+	}
+}

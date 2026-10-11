@@ -61,8 +61,8 @@ func TestInvalidComponent(t *testing.T) {
 	cases := map[string]string{
 		"code: NEURO\n":      ".component: missing name",
 		"name: NeuroPulse\n": ".component: missing code",
-		"code: [unclosed\n":  ".component: yaml:",
-		"- just\n- a list\n": ".component: yaml:",
+		"code: [unclosed\n":  ".component:1: did not find expected ',' or ']'",
+		"- just\n- a list\n": ".component:1: cannot construct !!seq into repo.Component",
 	}
 	for content, want := range cases {
 		root := t.TempDir()

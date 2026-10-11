@@ -46,23 +46,30 @@ func newValidateCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "validate",
 		Short: "Run the rule engine and report every violation",
-		Long: `Run the rule engine against the current (or specified) graph state and print every
-violation, errors and warnings. Used locally, at the merge gate and at release-tag time.
+		Long: `Check the repository and print every violation, errors and warnings: files that
+cannot be loaded, the built-in checks, and every rule in rules/. Used locally, at the
+merge gate and at release-tag time.
+
+Each violation is reported at its file and line:
+
+  path:line: error|warning [rule-id] message (ENTITY-ID)
 
 --format selects the report: text (default), json for tooling, or junit/sarif so a git
-host can show violations natively. The exit code is the only guaranteed CI contract;
-the report formats are a convenience.
+host can show violations natively. --out writes the report to a file instead of
+standard output. The exit code is the only guaranteed CI contract; the report formats
+are a convenience.
 
 Exit codes: 0 no error-severity violations, 1 violations found, 2 tool or usage error.`,
 		Args: noArgs,
 		PreRunE: func(c *cobra.Command, _ []string) error {
 			return oneOf(c, "format", "text", "json", "junit", "sarif")
 		},
-		Annotations: notImplementedYet,
-		RunE:        notImplemented,
+		Annotations: inDevelopment,
+		RunE:        runValidate,
 	}
 	c.Flags().String("path", "", "repository `path` to validate (default: the repository containing the current directory)")
 	c.Flags().String("format", "text", "report `format`: text, json, junit or sarif")
+	c.Flags().String("out", "", "write the report to `file` instead of standard output")
 	return c
 }
 

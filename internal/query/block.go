@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/query/datalog"
@@ -107,7 +107,7 @@ func ParseScope(src string, s *schema.Schema) (*Block, error) {
 
 func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Block, error) {
 	var doc yaml.Node
-	if err := yaml.Unmarshal([]byte(src), &doc); err != nil {
+	if err := yamlnode.Unmarshal([]byte(src), 1, &doc); err != nil {
 		return nil, yamlError(err)
 	}
 	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {

@@ -21,7 +21,7 @@ import (
 	"sort"
 	"strings"
 
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 
 	"github.com/dynamatt/provenance/internal/yamlnode"
 )
@@ -156,43 +156,81 @@ const Dir = "schema"
 
 // loader resolves field declarations. Records may name other records, so
 // each is resolved on first use; pending holds those not yet resolved and
-// resolving the chain being resolved, outermost first.
+// resolving the chain being resolved, outermost first. problems collects
+// every load error in the order they are found.
 type loader struct {
 	*Schema
 	pending   map[string]*rawDecl
 	resolving []string
+	problems  []*Error
 }
 
-// Load reads every declaration under root/schema. A repository without a
-// schema folder has no types.
-func Load(root string) (*Schema, error) {
-	s := &Schema{Types: map[string]*Type{}, Enums: map[string]*EnumType{}, Records: map[string]*RecordType{}}
-	l := &loader{Schema: s, pending: map[string]*rawDecl{}}
+// keep records a schema problem and reports whether loading can go on: it
+// can after an *Error, which leaves out only the declaration or field at
+// fault, but not after an I/O error.
+func (l *loader) keep(err error) bool {
+	var e *Error
+	if errors.As(err, &e) {
+		l.problems = append(l.problems, e)
+		return true
+	}
+	return false
+}
 
-	// Enums first: field types are resolved against them.
-	enumFiles, err := yamlFiles(root, filepath.Join(Dir, "enums"))
+// Load reads every declaration under root/schema and fails with the first
+// problem. A repository without a schema folder has no types.
+func Load(root string) (*Schema, error) {
+	s, problems, err := Read(root)
+	if len(problems) > 0 {
+		return nil, problems[0]
+	}
 	if err != nil {
 		return nil, err
 	}
+	return s, nil
+}
+
+// Read reads every declaration under root/schema like Load, but collects
+// every problem instead of stopping at the first: a declaration or field at
+// fault is left out and the rest is still read, so the schema it returns is
+// usable but incomplete when there are problems. err is an I/O error, which
+// stops reading.
+func Read(root string) (s *Schema, problems []*Error, err error) {
+	s = &Schema{Types: map[string]*Type{}, Enums: map[string]*EnumType{}, Records: map[string]*RecordType{}}
+	l := &loader{Schema: s, pending: map[string]*rawDecl{}}
+	err = l.read(root)
+	return s, l.problems, err
+}
+
+func (l *loader) read(root string) error {
+	s := l.Schema
+	// Enums first: field types are resolved against them.
+	enumFiles, err := yamlFiles(root, filepath.Join(Dir, "enums"))
+	if err != nil {
+		return err
+	}
 	for _, rel := range enumFiles {
-		if err := s.loadEnum(root, rel); err != nil {
-			return nil, err
+		if err := s.loadEnum(root, rel); err != nil && !l.keep(err) {
+			return err
 		}
 	}
 	// Every name is registered before any fields are resolved, so a list's
 	// of: can name a record declared in any file.
 	recordFiles, err := yamlFiles(root, filepath.Join(Dir, "records"))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	var records []string
 	for _, rel := range recordFiles {
 		rr, err := readDecl(root, rel, "record")
-		if err != nil {
-			return nil, err
+		if err == nil {
+			err = s.checkName("record", rr)
 		}
-		if err := s.checkName("record", rr); err != nil {
-			return nil, err
+		if err != nil {
+			if !l.keep(err) {
+				return err
+			}
+			continue
 		}
 		s.Records[rr.name] = &RecordType{Name: rr.name, File: rel}
 		l.pending[rr.name] = rr
@@ -200,47 +238,43 @@ func Load(root string) (*Schema, error) {
 	}
 	typeFiles, err := yamlFiles(root, Dir)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	var raws []*rawDecl
 	for _, rel := range typeFiles {
 		rt, err := readDecl(root, rel, "type")
-		if err != nil {
-			return nil, err
+		if err == nil {
+			err = s.checkName("type", rt)
 		}
-		if err := s.checkName("type", rt); err != nil {
-			return nil, err
+		if err != nil {
+			if !l.keep(err) {
+				return err
+			}
+			continue
 		}
 		s.Types[rt.name] = &Type{Name: rt.name, IDPrefix: rt.idPrefix, File: rel}
 		raws = append(raws, rt)
 	}
 	// Resolve every record, used or not, so a broken one is reported.
 	for _, name := range records {
-		if _, err := l.record(name); err != nil {
-			return nil, err
-		}
+		l.record(name)
 	}
 	for _, rt := range raws {
 		t := s.Types[rt.name]
-		fields, err := l.fields(rt.path, rt.fields, "")
-		if err != nil {
-			return nil, err
-		}
-		t.Fields = fields
-		for _, f := range fields {
+		t.Fields = l.fields(rt.path, rt.fields, "")
+		for _, f := range t.Fields {
 			if !f.Body {
 				continue
 			}
 			if t.BodyField != nil {
-				return nil, &Error{Path: rt.path, Line: f.Line, Msg: fmt.Sprintf("field %q: only one field may set body: true (%q already does)", f.Name, t.BodyField.Name)}
+				l.keep(&Error{Path: rt.path, Line: f.Line, Msg: fmt.Sprintf("field %q: only one field may set body: true (%q already does)", f.Name, t.BodyField.Name)})
+				continue
 			}
 			t.BodyField = f
 		}
 	}
-	if err := s.facets(); err != nil {
-		return nil, err
-	}
-	return s, nil
+	s.facets(l)
+	return nil
 }
 
 // checkName fails when a type or record declaration reuses a name already
@@ -266,29 +300,25 @@ func (s *Schema) checkName(kind string, d *rawDecl) error {
 }
 
 // record returns the named record, resolving its fields on first use.
-func (l *loader) record(name string) (*RecordType, error) {
+func (l *loader) record(name string) *RecordType {
 	r := l.Records[name]
 	raw, pending := l.pending[name]
 	if !pending {
-		return r, nil
+		return r
 	}
 	l.resolving = append(l.resolving, name)
-	fields, err := l.fields(raw.path, raw.fields, fmt.Sprintf("record %q", name))
+	r.Fields = l.fields(raw.path, raw.fields, fmt.Sprintf("record %q", name))
 	l.resolving = l.resolving[:len(l.resolving)-1]
-	if err != nil {
-		return nil, err
-	}
-	r.Fields = fields
 	delete(l.pending, name)
-	return r, nil
+	return r
 }
 
 // facets derives every type's incoming facets from reverse_name
 // declarations. A link is declared once, on its source side (DES-0011),
 // so a reverse_name that repeats a field declared on the target type is
-// a load error: the same relationship would be stored twice. Targets naming
-// no declared type are left to validate.
-func (s *Schema) facets() error {
+// a load error: the same relationship would be stored twice, and the facet
+// is left out. Targets naming no declared type are left to validate.
+func (s *Schema) facets(ld *loader) {
 	for _, n := range s.TypeNames() {
 		src := s.Types[n]
 		var links []FacetSource
@@ -318,9 +348,10 @@ func (s *Schema) facets() error {
 					if l.List != nil && l.List.Record != "" {
 						path = s.Records[l.List.Record].File
 					}
-					return &Error{Path: path, Line: l.Field.Line, Msg: fmt.Sprintf(
+					ld.keep(&Error{Path: path, Line: l.Field.Line, Msg: fmt.Sprintf(
 						"field %q: reverse_name %q repeats the field %s declared on %s (%s:%d); declare a link once, on its source side",
-						l.Field.Name, l.Field.ReverseName, clash.Name, target.Name, target.File, clash.Line)}
+						l.Field.Name, l.Field.ReverseName, clash.Name, target.Name, target.File, clash.Line)})
+					continue
 				}
 				target.addFacet(l.Field.ReverseName, l)
 			}
@@ -329,7 +360,6 @@ func (s *Schema) facets() error {
 	for _, t := range s.Types {
 		sort.Slice(t.Facets, func(i, j int) bool { return t.Facets[i].Name < t.Facets[j].Name })
 	}
-	return nil
 }
 
 func (t *Type) addFacet(name string, src FacetSource) {
@@ -368,7 +398,7 @@ func readMapping(root, rel string) (*yaml.Node, error) {
 		return nil, err
 	}
 	var doc yaml.Node
-	if err := yaml.Unmarshal(data, &doc); err != nil {
+	if err := yamlnode.Unmarshal(data, 1, &doc); err != nil {
 		return nil, yamlError(rel, err)
 	}
 	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
@@ -453,85 +483,91 @@ type rawField struct {
 // fields converts field declarations. within names what encloses sub-fields
 // (`list "rows"`, `record "Equipment"`) for error messages; it is empty for a
 // type's own fields.
-func (l *loader) fields(path string, nodes []*yaml.Node, within string) ([]*Field, error) {
+func (l *loader) fields(path string, nodes []*yaml.Node, within string) []*Field {
 	var out []*Field
 	seen := map[string]int{}
 	for _, n := range nodes {
-		var rf rawField
-		if n.Kind != yaml.MappingNode {
-			return nil, &Error{Path: path, Line: n.Line, Msg: "each field must be a mapping with name and type"}
+		if f, err := l.field(path, n, within, seen); err != nil {
+			l.keep(err)
+		} else {
+			out = append(out, f)
 		}
-		if err := n.Decode(&rf); err != nil {
-			return nil, yamlError(path, err)
-		}
-		label := fmt.Sprintf("field %q", rf.Name)
-		if within != "" {
-			label = fmt.Sprintf("field %q in %s", rf.Name, within)
-		}
-		if rf.Name == "" {
-			return nil, &Error{Path: path, Line: n.Line, Msg: "field without a name"}
-		}
-		if prev, dup := seen[rf.Name]; dup {
-			return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s is declared twice (first at line %d)", label, prev)}
-		}
-		seen[rf.Name] = n.Line
-
-		f := &Field{
-			Name: rf.Name, Required: rf.Required, Body: rf.Body, Help: rf.Help,
-			Target: rf.Target, Cardinality: rf.Cardinality, ReverseName: rf.ReverseName,
-			Formula: rf.Formula, Line: n.Line,
-		}
-		typeLine := n.Line
-		if tn := yamlnode.Lookup(n, "type"); tn != nil {
-			typeLine = tn.Line
-		}
-		switch {
-		case rf.Type == "":
-			return nil, &Error{Path: path, Line: n.Line, Msg: label + ": missing type"}
-		case isBuiltin(rf.Type):
-			f.Kind = Kind(rf.Type)
-		case l.Enums[rf.Type] != nil:
-			f.Kind, f.EnumName = Enum, rf.Type
-		case l.Records[rf.Type] != nil:
-			return nil, &Error{Path: path, Line: typeLine, Msg: fmt.Sprintf("%s: record %s holds a list's rows; declare type: list with of: %s", label, rf.Type, rf.Type)}
-		default:
-			return nil, &Error{Path: path, Line: typeLine, Msg: fmt.Sprintf("%s: unknown type %q (expected %s)", label, rf.Type, l.expected())}
-		}
-		of := yamlnode.Lookup(n, "of")
-		if of != nil && f.Kind != List {
-			return nil, &Error{Path: path, Line: of.Line, Msg: label + ": of: applies only to type: list"}
-		}
-
-		if f.Body && (f.Kind != Text || within != "") {
-			return nil, &Error{Path: path, Line: n.Line, Msg: label + ": body: true is only allowed on a top-level text field"}
-		}
-		switch f.Kind {
-		case Link:
-			if f.Cardinality != "one" && f.Cardinality != "many" {
-				return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s: link cardinality must be one or many, got %q", label, f.Cardinality)}
-			}
-		case List:
-			sub := yamlnode.Lookup(n, "fields")
-			switch {
-			case of != nil && sub != nil:
-				return nil, &Error{Path: path, Line: of.Line, Msg: label + ": a list takes fields: or of:, not both"}
-			case of != nil:
-				if err := l.listOf(path, f, of, label); err != nil {
-					return nil, err
-				}
-			case sub == nil || sub.Kind != yaml.SequenceNode || len(sub.Content) == 0:
-				return nil, &Error{Path: path, Line: n.Line, Msg: label + ": a list needs fields: for its rows, or of: naming its item type"}
-			default:
-				rows, err := l.fields(path, sub.Content, fmt.Sprintf("list %q", rf.Name))
-				if err != nil {
-					return nil, err
-				}
-				f.Fields = rows
-			}
-		}
-		out = append(out, f)
 	}
-	return out, nil
+	return out
+}
+
+// field converts one field declaration; seen holds the names declared so
+// far beside it, with their lines.
+func (l *loader) field(path string, n *yaml.Node, within string, seen map[string]int) (*Field, error) {
+	var rf rawField
+	if n.Kind != yaml.MappingNode {
+		return nil, &Error{Path: path, Line: n.Line, Msg: "each field must be a mapping with name and type"}
+	}
+	if err := n.Decode(&rf); err != nil {
+		return nil, yamlError(path, err)
+	}
+	label := fmt.Sprintf("field %q", rf.Name)
+	if within != "" {
+		label = fmt.Sprintf("field %q in %s", rf.Name, within)
+	}
+	if rf.Name == "" {
+		return nil, &Error{Path: path, Line: n.Line, Msg: "field without a name"}
+	}
+	if prev, dup := seen[rf.Name]; dup {
+		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s is declared twice (first at line %d)", label, prev)}
+	}
+	seen[rf.Name] = n.Line
+
+	f := &Field{
+		Name: rf.Name, Required: rf.Required, Body: rf.Body, Help: rf.Help,
+		Target: rf.Target, Cardinality: rf.Cardinality, ReverseName: rf.ReverseName,
+		Formula: rf.Formula, Line: n.Line,
+	}
+	typeLine := n.Line
+	if tn := yamlnode.Lookup(n, "type"); tn != nil {
+		typeLine = tn.Line
+	}
+	switch {
+	case rf.Type == "":
+		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": missing type"}
+	case isBuiltin(rf.Type):
+		f.Kind = Kind(rf.Type)
+	case l.Enums[rf.Type] != nil:
+		f.Kind, f.EnumName = Enum, rf.Type
+	case l.Records[rf.Type] != nil:
+		return nil, &Error{Path: path, Line: typeLine, Msg: fmt.Sprintf("%s: record %s holds a list's rows; declare type: list with of: %s", label, rf.Type, rf.Type)}
+	default:
+		return nil, &Error{Path: path, Line: typeLine, Msg: fmt.Sprintf("%s: unknown type %q (expected %s)", label, rf.Type, l.expected())}
+	}
+	of := yamlnode.Lookup(n, "of")
+	if of != nil && f.Kind != List {
+		return nil, &Error{Path: path, Line: of.Line, Msg: label + ": of: applies only to type: list"}
+	}
+
+	if f.Body && (f.Kind != Text || within != "") {
+		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": body: true is only allowed on a top-level text field"}
+	}
+	switch f.Kind {
+	case Link:
+		if f.Cardinality != "one" && f.Cardinality != "many" {
+			return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s: link cardinality must be one or many, got %q", label, f.Cardinality)}
+		}
+	case List:
+		sub := yamlnode.Lookup(n, "fields")
+		switch {
+		case of != nil && sub != nil:
+			return nil, &Error{Path: path, Line: of.Line, Msg: label + ": a list takes fields: or of:, not both"}
+		case of != nil:
+			if err := l.listOf(path, f, of, label); err != nil {
+				return nil, err
+			}
+		case sub == nil || sub.Kind != yaml.SequenceNode || len(sub.Content) == 0:
+			return nil, &Error{Path: path, Line: n.Line, Msg: label + ": a list needs fields: for its rows, or of: naming its item type"}
+		default:
+			f.Fields = l.fields(path, sub.Content, fmt.Sprintf("list %q", rf.Name))
+		}
+	}
+	return f, nil
 }
 
 // listOf resolves a list's of: — a built-in item type, an enum, or a record
@@ -551,11 +587,7 @@ func (l *loader) listOf(path string, f *Field, of *yaml.Node, label string) erro
 			chain := append(slices.Clone(l.resolving[i:]), name)
 			return fail(fmt.Sprintf("record %s contains itself (%s)", name, strings.Join(chain, " → ")))
 		}
-		r, err := l.record(name)
-		if err != nil {
-			return err
-		}
-		f.Record, f.Fields = name, r.Fields
+		f.Record, f.Fields = name, l.record(name).Fields
 	case Kind(name) == Link:
 		return fail("a list of links is declared as type: link with cardinality: many")
 	case l.Types[name] != nil:

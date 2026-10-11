@@ -146,7 +146,7 @@ func TestLoadErrors(t *testing.T) {
 			`schema/R.yaml:6: field "x" in list "rows": unknown type "nope"`},
 		{"type is not a mapping", "schema/R.yaml", "- a\n", "schema/R.yaml: expected a mapping"},
 		{"syntax error", "schema/R.yaml", "type: R\nfields: [\n", "schema/R.yaml:"},
-		{"wrong value type", "schema/R.yaml", "type: R\nfields:\n  - {name: a, type: string, required: maybe}\n", "schema/R.yaml:3: cannot unmarshal"},
+		{"wrong value type", "schema/R.yaml", "type: R\nfields:\n  - {name: a, type: string, required: maybe}\n", "schema/R.yaml:3: cannot construct"},
 		{"enum named like builtin", "schema/enums/E.yaml", "enum: string\nvalues: [a]\n", "schema/enums/E.yaml:1: enum string has the same name as a built-in field type"},
 		{"type named like enum", "schema/S.yaml", "type: ApprovalStatus\n", "schema/S.yaml:1: type ApprovalStatus has the same name as the enum declared in schema/enums/ApprovalStatus.yaml"},
 	}
@@ -316,5 +316,51 @@ fields:
 	want := `schema/Requirement.yaml:3: field "verified_by": reverse_name "verifies" repeats the field verifies declared on Protocol (schema/Protocol.yaml:3); declare a link once, on its source side`
 	if err == nil || err.Error() != want {
 		t.Errorf("err = %v\nwant %s", err, want)
+	}
+}
+
+func TestReadCollectsEveryProblem(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/enums/Bad.yaml", "values: [a]\n")
+	write(t, root, "schema/A.yaml", `type: A
+id_prefix: A
+fields:
+  - name: x
+    type: strnig
+  - name: ok
+    type: string
+  - name: y
+    type: link
+`)
+	write(t, root, "schema/B.yaml", "type: [\n")
+	write(t, root, "schema/C.yaml", "type: C\nid_prefix: C\n")
+
+	s, problems, err := Read(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, p := range problems {
+		got = append(got, p.Error())
+	}
+	want := []string{
+		"schema/enums/Bad.yaml:1: missing enum name (enum: <Name>)",
+		"schema/B.yaml:1: did not find expected node content",
+		`schema/A.yaml:5: field "x": unknown type "strnig" (expected string, text, number, date, boolean, link, list, calculated)`,
+		`schema/A.yaml:8: field "y": link cardinality must be one or many, got ""`,
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("problems:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	// What could be read is kept: A without its two broken fields, and C.
+	if a := s.Types["A"]; a == nil || len(a.Fields) != 1 || a.Fields[0].Name != "ok" {
+		t.Errorf("A = %+v", s.Types["A"])
+	}
+	if s.Types["C"] == nil {
+		t.Error("C missing")
+	}
+	// Load fails with the first problem.
+	if _, err := Load(root); err == nil || err.Error() != want[0] {
+		t.Errorf("Load err = %v", err)
 	}
 }

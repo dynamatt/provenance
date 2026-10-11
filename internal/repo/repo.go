@@ -8,7 +8,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
+
+	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
 // ComponentFile marks a repository root and holds its component metadata.
@@ -75,7 +77,15 @@ func loadComponent(root string) (Component, error) {
 	if err != nil {
 		return c, err
 	}
-	if err := yaml.Unmarshal(data, &c); err != nil {
+	var doc yaml.Node
+	err = yamlnode.Unmarshal(data, 1, &doc)
+	if err == nil && len(doc.Content) > 0 {
+		err = doc.Content[0].Decode(&c)
+	}
+	if err != nil {
+		if line, msg := yamlnode.ErrorLine(err); line > 0 {
+			return c, fmt.Errorf("%s:%d: %s", ComponentFile, line, msg)
+		}
 		return c, fmt.Errorf("%s: %w", ComponentFile, err)
 	}
 	if c.Code == "" {

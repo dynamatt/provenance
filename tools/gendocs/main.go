@@ -240,10 +240,19 @@ func flagTable(b *strings.Builder, fs *pflag.FlagSet) {
 // prose turns help text (hard-wrapped paragraphs separated by blank lines)
 // into Markdown paragraphs. Flags, paths and file names become code spans, so
 // neither Markdown nor the site's typographer (which turns "--" into a dash)
-// alters them; everything else has Markdown syntax escaped.
+// alters them; everything else has Markdown syntax escaped. A paragraph whose
+// every line is indented is shown verbatim, as a text block.
 func prose(s string) string {
 	var b strings.Builder
-	for _, para := range strings.Split(strings.TrimSpace(s), "\n\n") {
+	for _, para := range strings.Split(strings.Trim(s, "\n"), "\n\n") {
+		if verbatim(para) {
+			b.WriteString("```text\n")
+			for _, line := range strings.Split(para, "\n") {
+				b.WriteString(strings.TrimPrefix(line, "  ") + "\n")
+			}
+			b.WriteString("```\n\n")
+			continue
+		}
 		words := strings.Fields(para)
 		for i, w := range words {
 			words[i] = proseWord(w)
@@ -251,6 +260,15 @@ func prose(s string) string {
 		b.WriteString(strings.Join(words, " ") + "\n\n")
 	}
 	return b.String()
+}
+
+func verbatim(para string) bool {
+	for _, line := range strings.Split(para, "\n") {
+		if !strings.HasPrefix(line, "  ") {
+			return false
+		}
+	}
+	return true
 }
 
 func proseWord(w string) string {
