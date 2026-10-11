@@ -58,8 +58,18 @@
 
 ## Rules for Claude Code
 
-1. **One task = one PR**, on branch `task/<id>-<slug>`. Don't start the next
-   task until the previous one is merged.
+1. **One epic = one branch; one task = one PR into it.** Each epic has a
+   branch `epic/<id>-<slug>` (e.g. `epic/E2-validate`), cut from `main`, in
+   every repository the epic touches: `provenance`, `provenance-ddf`,
+   `provenance-example` and `provenance-website`. Each task is a branch
+   `task/<id>-<slug>` cut from the epic branch, and its PRs target the epic
+   branch in each repository. Don't start the next task until the previous
+   one is merged into the epic branch. While the epic is open, the example
+   pin may point at a commit on the example's epic branch (`make
+   bump-example EXAMPLE_BRANCH=epic/<id>-<slug>`). The epic merges into
+   `main` once, at its close-out, in each repository, with the pin moved to
+   the example's `main`. Plan-only changes go to `main`
+   directly.
 2. **Every task ends with something Matt can run.** The PR description has a
    *Check it yourself* block with exact commands and the expected result.
    Commands in this plan assume `make build` has produced `bin/provenance`,

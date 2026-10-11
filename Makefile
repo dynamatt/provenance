@@ -16,6 +16,8 @@ GO_LDFLAGS     := -X $(MODULE)/internal/version.Version=$(VERSION) \
                   -X $(MODULE)/internal/version.Commit=$(COMMIT)
 
 EXAMPLE_REPO ?= https://github.com/dynamatt/provenance-example.git
+# The branch bump-example pins: main, or an epic branch while the epic is open.
+EXAMPLE_BRANCH ?= main
 EXAMPLE_DIR  := .cache/example
 EXAMPLE_REF  := $(shell cat testdata/example-repo.ref)
 
@@ -69,10 +71,10 @@ example:
 	git -C $(EXAMPLE_DIR) clean -q -fdx
 	@echo "example: $(EXAMPLE_DIR) at $(EXAMPLE_REF)"
 
-# Move the pin to the current tip of provenance-example's main branch.
+# Move the pin to the current tip of provenance-example's EXAMPLE_BRANCH.
 bump-example:
-	@sha=$$(git ls-remote $(EXAMPLE_REPO) refs/heads/main | cut -f1); \
-	if [ -z "$$sha" ]; then echo "could not read main from $(EXAMPLE_REPO)"; exit 1; fi; \
+	@sha=$$(git ls-remote $(EXAMPLE_REPO) refs/heads/$(EXAMPLE_BRANCH) | cut -f1); \
+	if [ -z "$$sha" ]; then echo "could not read $(EXAMPLE_BRANCH) from $(EXAMPLE_REPO)"; exit 1; fi; \
 	echo "$$sha" > testdata/example-repo.ref; \
 	echo "example pinned to $$sha"
 

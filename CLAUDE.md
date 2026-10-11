@@ -41,7 +41,7 @@ identity, so builds must be reproducible.
 | `make test` | `go test ./...` |
 | `make lint` | `gofmt -l`, `go vet`, `staticcheck` (pinned as a `go.mod` tool). |
 | `make example` | Checks out `provenance-example` at the pinned SHA into `.cache/example`. |
-| `make bump-example` | Moves the pin to `provenance-example`'s `main`. |
+| `make bump-example` | Moves the pin to `provenance-example`'s `main`, or to another branch with `EXAMPLE_BRANCH=` (an epic branch while the epic is open). |
 | `make acceptance` | Builds, prepares the example checkout, runs `scripts/acceptance.sh`. |
 | `make docs` | Regenerates the CLI reference into `../provenance-website/content/docs/cli` (override with `WEBSITE_DIR=`). |
 | `make ci` | `lint test build acceptance`. |
@@ -50,8 +50,12 @@ identity, so builds must be reproducible.
 
 These are the plan's *Rules for Claude Code*; `PLAN.md` has the full text.
 
-1. **One task = one PR**, on branch `task/<id>-<slug>`. Don't start the next
-   task until the previous one is merged.
+1. **One epic = one branch; one task = one PR into it.** Each epic has a
+   branch `epic/<id>-<slug>` cut from `main` in every repository it touches.
+   A task is a branch `task/<id>-<slug>` cut from the epic branch, and its
+   PRs target the epic branch. Don't start the next task until the previous
+   one is merged into the epic branch. The epic merges into `main` once, at
+   its close-out, in each repository. Plan-only changes go to `main`.
 2. **Every task ends with something Matt can run**: the PR description has a
    *Check it yourself* block with exact commands and expected results.
 3. **Every task adds automated checks**: Go unit tests plus a step in
@@ -72,7 +76,7 @@ When a command is implemented, remove its `notImplementedYet` annotation along
 with the `notImplemented` RunE, then run `make docs` and commit the regenerated
 reference in `provenance-website`.
 
-Tick the task off in `PLAN.md` in its own PR.
+Tick the task off in `PLAN.md` in its own PR, into the epic branch.
 
 ## Design documents
 
