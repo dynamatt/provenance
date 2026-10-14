@@ -2,13 +2,10 @@ package query
 
 import (
 	"errors"
+	"fmt"
 	"maps"
 	"strings"
 	"testing"
-
-	"go.yaml.in/yaml/v4"
-
-	"github.com/dynamatt/provenance/internal/schema"
 )
 
 // graph builds a query graph over exampleGraph plus extra entities.
@@ -21,15 +18,6 @@ func graph(t *testing.T, extra map[string]string) *Graph {
 		t.Fatal(err)
 	}
 	return g
-}
-
-func mustYAML(t *testing.T, src string) *yaml.Node {
-	t.Helper()
-	var doc yaml.Node
-	if err := yaml.Unmarshal([]byte(src), &doc); err != nil {
-		t.Fatal(err)
-	}
-	return doc.Content[0]
 }
 
 func ids(t *testing.T, g *Graph, src string) string {
@@ -76,17 +64,32 @@ func TestQueryBlocks(t *testing.T) {
 		{"implicit and", "from: Requirement\nwhere:\n  - {field: status, operator: equals, value: approved}\n  - {field: order, operator: greater_than, value: 1}\n", "REQ-0002"},
 		{"any_of", "from: Requirement\nwhere:\n  any_of:\n    - {field: order, operator: less_than, value: 2}\n    - {field: status, operator: equals, value: in_review}\n", "REQ-0001 REQ-0003"},
 		{"any_of of all-of groups", "from: Requirement\nwhere:\n  any_of:\n    - [{field: order, operator: less_or_equal, value: 2}, {field: order, operator: greater_or_equal, value: 2}]\n    - {field: id, operator: equals, value: REQ-0003}\n", "REQ-0002 REQ-0003"},
-		{"via", "from: Requirement\nwhere: {field: {via: implements, field: status}, operator: equals, value: deprecated}\n", "REQ-0002 REQ-0003"},
-		{"via a facet", "from: Requirement\nwhere: {field: {via: evidenced_by, field: passed}, operator: equals, value: true}\n", "REQ-0001"},
+		{"through a link", "from: Requirement\nwhere: {field: implements, where: {field: status, operator: equals, value: deprecated}}\n", "REQ-0002 REQ-0003"},
+		{"through a facet", "from: Requirement\nwhere: {field: evidenced_by, where: {field: passed, operator: equals, value: true}}\n", "REQ-0001"},
+		{"through a link, then a facet", "from: Evidence\nwhere:\n  field: verifies\n  where: {field: implements, where: {field: status, operator: equals, value: approved}}\n", "EVD-1"},
+		{"facet back to the entity", "from: UserNeed\nwhere:\n  field: implemented_by\n  where: {field: evidenced_by, where: {field: passed, operator: equals, value: false}}\n", ""},
 		{"exists on a facet", "from: Requirement\nwhere: {field: evidenced_by, operator: exists}\n", "REQ-0001 REQ-0002"},
 		{"exists on a link", "from: Evidence\nwhere: {field: verifies, operator: exists}\n", "EVD-1 EVD-3"},
 		{"link equals an ID", "from: Requirement\nwhere: {field: implements, operator: equals, value: USR-0001}\n", "REQ-0001"},
 		{"rows exist", "from: Evidence\nwhere: {field: equipment_used, operator: exists}\n", "EVD-1 EVD-2"},
-		{"row against entity field", "from: Evidence\nwhere: {field: {list: equipment_used, subfield: calibration_due_date}, operator: less_than, value: {field: execution_date}}\n", "EVD-1"},
-		// Both tests read the same row: no single row is serial A and
-		// out of calibration.
-		{"tests share a row", "from: Evidence\nwhere:\n  - {field: {list: equipment_used, subfield: serial}, operator: equals, value: A}\n  - {field: {list: equipment_used, subfield: calibration_due_date}, operator: less_than, value: 2026-03-01}\n", ""},
-		{"same row, negated", "from: Evidence\nwhere:\n  - {field: {list: equipment_used, subfield: serial}, operator: not_equals, value: A}\n  - {field: {list: equipment_used, subfield: calibration_due_date}, operator: less_than, value: 2026-03-01}\n", "EVD-1"},
+		{"row against the entity's field", "from: Evidence\nwhere: {field: equipment_used, where: {field: calibration_due_date, operator: less_than, value_of: ^execution_date}}\n", "EVD-1"},
+		// Conditions inside one sub-query are about one row: no single row
+		// is serial A and out of calibration.
+		{"one row", "from: Evidence\nwhere:\n  field: equipment_used\n  where:\n    - {field: serial, operator: equals, value: A}\n    - {field: calibration_due_date, operator: less_than, value: 2026-03-01}\n", ""},
+		{"one row, negated", "from: Evidence\nwhere:\n  field: equipment_used\n  where:\n    - {field: serial, operator: not_equals, value: A}\n    - {field: calibration_due_date, operator: less_than, value: 2026-03-01}\n", "EVD-1"},
+		// Two sub-queries on one list may match different rows.
+		{"two rows", "from: Evidence\nwhere:\n  - {field: equipment_used, where: {field: serial, operator: equals, value: A}}\n  - {field: equipment_used, where: {field: calibration_due_date, operator: less_than, value: 2026-03-01}}\n", "EVD-1"},
+		{"any_of inside a sub-query", "from: Evidence\nwhere:\n  field: equipment_used\n  where:\n    any_of:\n      - {field: serial, operator: equals, value: C}\n      - {field: serial, operator: equals, value: B}\n", "EVD-1 EVD-2"},
+		{"nested any_of", "from: Requirement\nwhere:\n  any_of:\n    - any_of: [{field: order, operator: equals, value: 1}, {field: order, operator: equals, value: 3}]\n    - {field: status, operator: equals, value: deprecated}\n", "REQ-0001 REQ-0003"},
+		{"value_of", "from: Evidence\nwhere: {field: title, operator: equals, value_of: execution_date}\n", ""},
+		{"^ from a linked entity", "from: Evidence\nwhere: {field: verifies, where: {field: id, operator: equals, value_of: ^verifies}}\n", "EVD-1 EVD-3"},
+		{"^^ two levels out", "from: Evidence\nwhere:\n  field: verifies\n  where:\n    field: evidenced_by\n    where: {field: id, operator: equals, value_of: ^^id}\n", "EVD-1 EVD-3"},
+		{"missing", "from: Evidence\nwhere: {field: passed, operator: missing}\n", "EVD-3"},
+		{"missing rows", "from: Evidence\nwhere: {field: equipment_used, operator: missing}\n", "EVD-3"},
+		{"missing link", "from: Requirement\nwhere: {field: evidenced_by, operator: missing}\n", "REQ-0003"},
+		{"not_in", "from: Requirement\nwhere: {field: status, operator: not_in, value: [approved, deprecated]}\n", "REQ-0003"},
+		{"not_in holds when absent", "from: Evidence\nwhere: {field: execution_date, operator: not_in, value: [2026-03-01]}\n", "EVD-3"},
+		{"from any", "from: any\nwhere: {field: status, operator: equals, value: deprecated}\n", "USR-0002"},
 		{"type", "from: Requirement\nwhere: {field: type, operator: equals, value: Requirement}\norder_by: [status, id]\n", "REQ-0001 REQ-0002 REQ-0003"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -101,7 +104,7 @@ func TestQueryBlockErrors(t *testing.T) {
 	g := graph(t, evidence)
 	for _, tc := range []struct{ name, src, want string }{
 		{"symbol operator", "from: Requirement\nwhere:\n  field: status\n  operator: \"=\"\n  value: approved\n",
-			`line 4: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists)`},
+			`line 4: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in)`},
 		{"no from", "where: {field: status, operator: exists}\n", "line 1: query block has no from: <type>"},
 		{"unknown type", "from: Requirment\n", `line 1: from: unknown type "Requirment" (types: Document, Evidence, OccurrenceLevel, Requirement, Risk, SeverityLevel, UserNeed)`},
 		{"unknown key", "from: Requirement\nsort: order\n", `line 2: unknown key "sort" in a query block (expected from, where, order_by, render, template, templates)`},
@@ -110,13 +113,26 @@ func TestQueryBlockErrors(t *testing.T) {
 		{"number as text", "from: Requirement\nwhere: {field: order, operator: equals, value: \"2\"}\n", `line 2: order is a number; "2" is not`},
 		{"ordering an enum", "from: Requirement\nwhere: {field: status, operator: greater_than, value: draft}\n", "line 2: greater_than compares numbers, dates and text; status is an enum value"},
 		{"bad date", "from: Evidence\nwhere: {field: execution_date, operator: less_than, value: soon}\n", `line 2: "soon" is not a date (YYYY-MM-DD)`},
-		{"mismatched fields", "from: Evidence\nwhere: {field: passed, operator: equals, value: {field: execution_date}}\n", "line 2: passed is true or false but execution_date is a date"},
+		{"mismatched fields", "from: Evidence\nwhere: {field: passed, operator: equals, value_of: execution_date}\n", "line 2: passed is true or false but execution_date is a date"},
+		{"old value field", "from: Evidence\nwhere: {field: passed, operator: equals, value: {field: execution_date}}\n", "line 2: value: {field: execution_date} is now value_of: execution_date"},
+		{"old list form", "from: Evidence\nwhere: {field: {list: equipment_used, subfield: serial}, operator: exists}\n", "line 2: {list: L, subfield: S} is now a sub-query: {field: L, where: {field: S, …}}"},
+		{"old via form", "from: Requirement\nwhere: {field: {via: implements, field: status}, operator: exists}\n", "line 2: {via: L, field: F} is now a sub-query: {field: L, where: {field: F, …}}"},
+		{"value and value_of", "from: Evidence\nwhere: {field: passed, operator: equals, value: true, value_of: passed}\n", "line 2: use value (a literal) or value_of (a field), not both"},
+		{"missing with value", "from: Evidence\nwhere: {field: passed, operator: missing, value: true}\n", "line 2: missing takes no value"},
+		{"not_in a scalar", "from: Requirement\nwhere: {field: status, operator: not_in, value: approved}\n", "line 2: not_in needs a list of values"},
+		{"not_in enum value", "from: Requirement\nwhere: {field: status, operator: not_in, value: [approved, aproved]}\n", `line 2: "aproved" is not a value of ApprovalStatus`},
+		{"list for equals", "from: Requirement\nwhere: {field: status, operator: equals, value: [approved]}\n", "line 2: value must be a single value (only not_in takes a list)"},
+		{"sub-query with an operator", "from: Evidence\nwhere: {field: equipment_used, where: {field: serial, operator: exists}, operator: exists}\n", "line 2: a sub-query holds when some item matches its where, and takes no operator"},
+		{"sub-query on a scalar", "from: Evidence\nwhere: {field: passed, where: {field: serial, operator: exists}}\n", `line 2: "passed" is true or false: a sub-query reads the rows of a list or the entities a link reaches`},
+		{"sub-query on ^", "from: Evidence\nwhere: {field: equipment_used, where: {field: ^verifies, where: {field: id, operator: exists}}}\n", "line 2: a sub-query reads the item's own list or link, not ^verifies"},
+		{"unknown sub-field", "from: Evidence\nwhere: {field: equipment_used, where: {field: serial_no, operator: exists}}\n", `line 2: list "equipment_used" has no sub-field "serial_no" (sub-fields: serial, calibration_due_date)`},
+		{"unknown field on a linked entity", "from: Requirement\nwhere: {field: implements, where: {field: passed, operator: exists}}\n", `line 2: UserNeed has no field "passed"`},
+		{"^ at the top", "from: Evidence\nwhere: {field: ^passed, operator: exists}\n", "line 2: ^passed: there is no enclosing entity 1 level(s) out"},
+		{"^ names an unknown field", "from: Evidence\nwhere: {field: equipment_used, where: {field: serial, operator: equals, value_of: ^serial}}\n", `line 2: Evidence has no field "serial"`},
+		{"id of a row", "from: Evidence\nwhere: {field: equipment_used, where: {field: id, operator: exists}}\n", `line 2: a row of "equipment_used" has no id; ^id is the entity's`},
 		{"exists with value", "from: Evidence\nwhere: {field: passed, operator: exists, value: true}\n", "line 2: exists takes no value"},
-		{"missing value", "from: Evidence\nwhere: {field: passed, operator: equals}\n", "line 2: equals needs a value"},
+		{"missing value", "from: Evidence\nwhere: {field: passed, operator: equals}\n", "line 2: equals needs a value or value_of"},
 		{"rows compared", "from: Evidence\nwhere: {field: equipment_used, operator: equals, value: A}\n", `line 2: "equipment_used" is a list of rows`},
-		{"unknown sub-field", "from: Evidence\nwhere: {field: {list: equipment_used, subfield: serial_no}, operator: exists}\n", `line 2: list "equipment_used" has no sub-field "serial_no" (sub-fields: serial, calibration_due_date)`},
-		{"unknown via", "from: Evidence\nwhere: {field: {via: tests, field: status}, operator: exists}\n", `line 2: Evidence has no link or incoming facet named "tests"`},
-		{"nested any_of", "from: Requirement\nwhere:\n  any_of:\n    - any_of: [{field: status, operator: exists}]\n", "line 4: any_of cannot nest inside any_of here"},
 		{"order_by many", "from: Requirement\norder_by: implements\n", `line 2: order_by: "implements" has several values`},
 		{"render mode", "from: Requirement\nrender: summary\n", `line 2: render: unknown mode "summary" (expected full, id or field:<name>)`},
 		{"render field", "from: Requirement\nrender: field:titel\n", `line 2: render: Requirement has no field "titel"`},
@@ -129,22 +145,6 @@ func TestQueryBlockErrors(t *testing.T) {
 				t.Fatalf("got  %v\nwant %s…", err, tc.want)
 			}
 		})
-	}
-}
-
-func TestNestedAnyOfInAssertions(t *testing.T) {
-	g := graph(t, evidence)
-	n := mustYAML(t, "any_of:\n  - any_of: [{field: order, operator: equals, value: 1}, {field: order, operator: equals, value: 3}]\n  - {field: status, operator: equals, value: deprecated}\n")
-	cond, err := ParseCondition(n, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got, err := g.Match([]*schema.Type{g.Schema.Types["Requirement"]}, cond)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Join(got, " ") != "REQ-0001 REQ-0003" {
-		t.Errorf("got %v", got)
 	}
 }
 
@@ -175,7 +175,8 @@ func TestMultiTypeQueryBlocks(t *testing.T) {
 		{"not_equals holds where the field is missing", "from: [Requirement, Evidence]\nwhere: {field: status, operator: not_equals, value: approved}\n", "EVD-1 EVD-2 EVD-3 REQ-0003"},
 		{"shared field", "from: [Requirement, UserNeed]\nwhere: {field: status, operator: equals, value: deprecated}\n", "USR-0002"},
 		{"any_of across types", "from: [Requirement, Evidence]\nwhere:\n  any_of:\n    - {field: order, operator: equals, value: 1}\n    - {field: passed, operator: equals, value: false}\n", "EVD-2 REQ-0001"},
-		{"rows on one type", "from: [Requirement, Evidence]\nwhere: {field: {list: equipment_used, subfield: serial}, operator: equals, value: C}\n", "EVD-2"},
+		{"rows on one type", "from: [Requirement, Evidence]\nwhere: {field: equipment_used, where: {field: serial, operator: equals, value: C}}\n", "EVD-2"},
+		{"missing on the type without the field", "from: [Requirement, Evidence]\nwhere: {field: passed, operator: missing}\n", "EVD-3 REQ-0001 REQ-0002 REQ-0003"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := ids(t, g, tc.src); got != tc.want {
@@ -247,6 +248,72 @@ func TestQueryBlockTemplates(t *testing.T) {
 			_, err := ParseBlock(tc.src, g.Schema)
 			if err == nil || !strings.HasPrefix(err.Error(), tc.want) {
 				t.Fatalf("got  %v\nwant %s…", err, tc.want)
+			}
+		})
+	}
+}
+
+// Each match carries the rows and links its top-level sub-queries matched,
+// placed where they are written.
+func TestMatchItems(t *testing.T) {
+	g := graph(t, evidence)
+	items := func(src string) string {
+		t.Helper()
+		b, err := ParseBlock(src, g.Schema)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ms, err := g.Matches(b.From, b.Where)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, m := range ms {
+			s := m.Entity.ID + ":"
+			for _, it := range m.Items {
+				s += fmt.Sprintf(" %s[%d]%s@%s:%d", it.Field, it.Row, it.ID, it.Path, it.Line)
+			}
+			out = append(out, s)
+		}
+		return strings.Join(out, "; ")
+	}
+	for _, tc := range []struct{ name, src, want string }{
+		{"rows", "from: Evidence\nwhere: {field: equipment_used, where: {field: calibration_due_date, operator: less_than, value: 2026-12-31}}\n",
+			"EVD-1: equipment_used[0]@EVD-1:8 equipment_used[1]@EVD-1:9; EVD-2: equipment_used[0]@EVD-2:7"},
+		{"link", "from: Requirement\nwhere: {field: implements, where: {field: status, operator: equals, value: deprecated}}\n",
+			"REQ-0002: implements[-1]USR-0002@REQ-0002:6; REQ-0003: implements[-1]USR-0002@REQ-0003:6"},
+		{"facet: where the linking entity writes it", "from: Requirement\nwhere: {field: evidenced_by, where: {field: id, operator: exists}}\n",
+			"REQ-0001: evidenced_by[-1]EVD-1@EVD-1:6; REQ-0002: evidenced_by[-1]EVD-3@EVD-3:4"},
+		{"two sub-queries, in order", "from: Evidence\nwhere:\n  - {field: verifies, where: {field: id, operator: exists}}\n  - {field: equipment_used, where: {field: serial, operator: equals, value: B}}\n",
+			"EVD-1: verifies[-1]REQ-0001@EVD-1:6 equipment_used[1]@EVD-1:9"},
+		{"none inside any_of", "from: Evidence\nwhere:\n  any_of:\n    - {field: equipment_used, where: {field: serial, operator: equals, value: C}}\n",
+			"EVD-2:"},
+		{"none without a sub-query", "from: Evidence\nwhere: {field: passed, operator: equals, value: false}\n", "EVD-2:"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := items(tc.src); got != tc.want {
+				t.Errorf("got  %s\nwant %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestViaTypes(t *testing.T) {
+	g := graph(t, evidence)
+	for _, tc := range []struct{ name, src, want string }{
+		{"none", "from: Requirement\nwhere: {field: status, operator: exists}\n", ""},
+		{"link", "from: Requirement\nwhere: {field: implements, where: {field: status, operator: exists}}\n", "UserNeed"},
+		{"facet", "from: Requirement\nwhere: {field: evidenced_by, where: {field: passed, operator: exists}}\n", "Evidence"},
+		{"nested, inside any_of", "from: Evidence\nwhere:\n  any_of:\n    - field: verifies\n      where: {field: implements, where: {field: status, operator: exists}}\n", "Requirement UserNeed"},
+		{"rows' links", "from: Risk\nwhere: {field: failure_modes, where: {field: severity, where: {field: score, operator: exists}}}\n", "SeverityLevel"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := ParseBlock(tc.src, g.Schema)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := strings.Join(viaTypes(g.Schema, b.From, b.Where), " "); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
 	}

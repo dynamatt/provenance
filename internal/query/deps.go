@@ -250,7 +250,7 @@ func (r *recorder) query(_ util.BufWriter, f markdown.Fence) error {
 	for _, t := range b.From {
 		r.w.types[t.Name] = true
 	}
-	for _, t := range viaTypes(b.From, b.Where) {
+	for _, t := range viaTypes(r.w.g.Schema, b.From, b.Where) {
 		r.w.types[t] = true
 	}
 	for _, c := range b.Templates {
