@@ -1,0 +1,4 @@
+type: NoPrefix
+fields:
+  - name: title
+    type: string

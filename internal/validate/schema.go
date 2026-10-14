@@ -146,17 +146,19 @@ func linksOut(t *schema.Type) bool {
 	return false
 }
 
-// conformance checks every entity against its type. entities all have
+// conformance checks every entity against its type, and returns them typed
+// with the graph that evaluated their calculated fields. entities all have
 // declared types.
-func (r *Report) conformance(s *schema.Schema, entities []*entity.Entity) error {
+func (r *Report) conformance(s *schema.Schema, entities []*entity.Entity) ([]*model.Entity, *query.Graph, error) {
 	typed, err := model.Build(s, entities)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	// Calculated values are evaluated so a value a formula cannot give is
 	// reported; one whose formula is broken is reported once, on the schema.
-	if _, err := query.NewGraph(s, typed); err != nil {
-		return err
+	graph, err := query.NewGraph(s, typed)
+	if err != nil {
+		return nil, nil, err
 	}
 	broken := map[*schema.Field]bool{}
 	for _, p := range query.FormulaProblems(s) {
@@ -170,7 +172,7 @@ func (r *Report) conformance(s *schema.Schema, entities []*entity.Entity) error 
 			c.value(v)
 		}
 	}
-	return nil
+	return typed, graph, nil
 }
 
 type entityCheck struct {
@@ -268,7 +270,8 @@ func (c *entityCheck) value(v *model.Value) {
 	}
 }
 
-// check reports a present value that is not of its type, or not in its enum.
+// check reports a present value that is not of its type, not in its enum,
+// or a link to no entity or to one of a type its field doesn't allow.
 func (c *entityCheck) check(label string, n *yaml.Node, v *model.Value) {
 	switch {
 	case v.Invalid:
@@ -276,6 +279,19 @@ func (c *entityCheck) check(label string, n *yaml.Node, v *model.Value) {
 	case v.Field.Kind == schema.Enum:
 		if e := c.s.Enums[v.Field.EnumName]; e != nil && !slices.Contains(e.Values, v.Str) {
 			c.add("schema/enum-value", n.Line, "%s: %q is not one of %s: %s", label, v.Str, e.Name, strings.Join(e.Values, ", "))
+		}
+	case v.Field.Kind == schema.Link:
+		for i, id := range v.IDs {
+			line := n.Line
+			if n.Kind == yaml.SequenceNode {
+				line = n.Content[i].Line
+			}
+			switch t := v.Targets[i]; {
+			case t == nil:
+				c.add("links/unresolved", line, "%s: no entity %s", label, id)
+			case len(v.Field.Target) > 0 && !slices.Contains(v.Field.Target, t.Type):
+				c.add("links/target-type", line, "%s: %s is of type %s, but %s links only to %s", label, id, t.Type, v.Field.Name, strings.Join(v.Field.Target, ", "))
+			}
 		}
 	}
 }

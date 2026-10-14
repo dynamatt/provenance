@@ -1,0 +1,12 @@
+type: LinkTargetViolation
+id_prefix: LTV
+fields:
+  # Links out, so the type is used without entities (schema/unused-type).
+  - name: example_of
+    type: link
+    target: [ErrorClass]
+    cardinality: one
+  - name: widget
+    type: link
+    target: [Widget, Nothing]
+    cardinality: one

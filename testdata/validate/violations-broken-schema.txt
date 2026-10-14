@@ -1,0 +1,3 @@
+schema/Broken.yaml:2: error [schema/file] did not find expected ',' or ']'
+schema/UnknownType.yaml:6: error [schema/file] field "status": unknown type "AprovalStatus" (expected string, text, number, date, boolean, link, list, calculated)
+2 errors, 0 warnings

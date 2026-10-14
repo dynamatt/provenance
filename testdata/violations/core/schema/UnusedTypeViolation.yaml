@@ -1,0 +1,6 @@
+# No entities, no link fields, and no link targets it.
+type: UnusedTypeViolation
+id_prefix: UTV
+fields:
+  - name: title
+    type: string

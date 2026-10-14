@@ -171,7 +171,7 @@ func (t *imageTransformer) Transform(doc *ast.Document, reader text.Reader, _ pa
 		}
 		dest, err := t.rewrite(string(img.Destination))
 		if err != nil {
-			*t.errs = append(*t.errs, &Error{Line: blockLine(img, source), Msg: err.Error()})
+			*t.errs = append(*t.errs, &Error{Line: blockLine(img, source), Msg: err.Error(), Image: true})
 			return ast.WalkContinue, nil
 		}
 		img.Destination = []byte(dest)

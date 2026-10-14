@@ -1,0 +1,4 @@
+# schema/unknown-key: an enum has only enum and values.
+enum: Colour
+values: [red, green]
+shade: dark

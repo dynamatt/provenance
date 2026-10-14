@@ -1,0 +1,6 @@
+type: Fine
+id_prefix: FIN
+fields:
+  - name: title
+    type: string
+    required: true

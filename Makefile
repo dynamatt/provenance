@@ -22,6 +22,8 @@ EXAMPLE_REF  := $(shell cat testdata/example-repo.ref)
 # Snapshot of `export website` on the pinned example (E1 standing acceptance).
 GOLDEN_DIR := testdata/golden
 VALIDATE_DIR := testdata/validate
+# One example of every validate failure, and of its passing counterpart.
+VIOLATIONS_DIR := testdata/violations
 
 # provenance-website checkout that receives the generated CLI reference.
 WEBSITE_DIR ?= ../provenance-website
@@ -78,16 +80,20 @@ bump-example:
 
 acceptance: build example
 	PROV=$(CURDIR)/$(BIN) EXAMPLE_DIR=$(CURDIR)/$(EXAMPLE_DIR) GOLDEN_DIR=$(CURDIR)/$(GOLDEN_DIR) \
-		VALIDATE_DIR=$(CURDIR)/$(VALIDATE_DIR) bash scripts/acceptance.sh
+		VALIDATE_DIR=$(CURDIR)/$(VALIDATE_DIR) VIOLATIONS_DIR=$(CURDIR)/$(VIOLATIONS_DIR) bash scripts/acceptance.sh
 
 # Rewrite the golden site and the clean validate report from the pinned
-# example. Commit the result with the change that caused it, so the PR shows
-# the difference. The example must validate without errors.
+# example, and the reports of testdata/violations. Commit the result with the
+# change that caused it, so the PR shows the difference. The example must
+# validate without errors; the violations repositories must fail (exit 1).
 golden-update: build example
 	rm -rf $(GOLDEN_DIR)
 	cd $(EXAMPLE_DIR) && $(CURDIR)/$(BIN) export website --out $(CURDIR)/$(GOLDEN_DIR) >/dev/null
 	mkdir -p $(VALIDATE_DIR)
 	cd $(EXAMPLE_DIR) && $(CURDIR)/$(BIN) validate --out $(CURDIR)/$(VALIDATE_DIR)/clean.txt
+	for r in core broken-schema; do \
+		$(BIN) validate --path $(VIOLATIONS_DIR)/$$r --out $(VALIDATE_DIR)/violations-$$r.txt >/dev/null || [ $$? -eq 1 ]; \
+	done
 	@echo "golden site and report rewritten: review 'git diff $(GOLDEN_DIR) $(VALIDATE_DIR)'"
 
 # Regenerate the website's CLI reference from the command definitions. Run it

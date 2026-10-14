@@ -1,0 +1,8 @@
+type: IdFormatClean
+id_prefix: IFC
+fields:
+  # Links out, so the type is used without entities (schema/unused-type).
+  - name: example_of
+    type: link
+    target: [ErrorClass]
+    cardinality: one

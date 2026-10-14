@@ -1,0 +1,4 @@
+# violation: the file is reported for the class's rule.
+# clean: the file is not reported at all.
+enum: Expectation
+values: [violation, clean]

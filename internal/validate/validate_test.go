@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/dynamatt/provenance/internal/repo"
 )
 
 // The example repository is the main fixture (scripts/acceptance.sh); these
@@ -23,7 +25,7 @@ func write(t *testing.T, root, rel, content string) {
 
 func text(t *testing.T, root string) string {
 	t.Helper()
-	r, err := Run(root)
+	r, err := Run(&repo.Repo{Root: root})
 	if err != nil {
 		t.Fatal(err)
 	}

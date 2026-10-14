@@ -1,0 +1,11 @@
+type: UnknownKeyClean
+id_prefix: UKC
+fields:
+  # Links out, so the type is used without entities (schema/unused-type).
+  - name: example_of
+    type: link
+    target: [ErrorClass]
+    cardinality: one
+  - name: status
+    type: Status
+    required: true

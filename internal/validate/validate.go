@@ -14,6 +14,9 @@ import (
 	"strings"
 
 	"github.com/dynamatt/provenance/internal/entity"
+	"github.com/dynamatt/provenance/internal/export"
+	"github.com/dynamatt/provenance/internal/export/website"
+	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/schema"
 	"github.com/dynamatt/provenance/internal/yamlnode"
 )
@@ -82,10 +85,10 @@ func (r *Report) sort() {
 // RulesDir is the folder of rule files at the repository root (DES-0016).
 const RulesDir = "rules"
 
-// Run validates the repository at root. Every problem is reported, not
-// just the first (REQ-0038). err is an I/O error: the repository could not
-// be read.
-func Run(root string) (*Report, error) {
+// Run validates the repository rp. Every problem is reported, not just the
+// first (REQ-0038). err is an I/O error: the repository could not be read.
+func Run(rp *repo.Repo) (*Report, error) {
+	root := rp.Root
 	r := &Report{}
 	sc, err := entity.Scan(root)
 	if err != nil {
@@ -112,7 +115,11 @@ func Run(root string) (*Report, error) {
 	} else {
 		known := r.unknownTypes(s, sc.Entities)
 		r.schemaChecks(s, sc.Entities)
-		if err := r.conformance(s, known); err != nil {
+		typed, graph, err := r.conformance(s, known)
+		if err != nil {
+			return nil, err
+		}
+		if err := r.content(&export.Input{Repo: rp, Schema: s, Entities: typed, Graph: graph}); err != nil {
 			return nil, err
 		}
 	}
@@ -202,4 +209,26 @@ func countRules(root string) (int, error) {
 		}
 	}
 	return n, nil
+}
+
+// content reports what would stop the website export, and what it would
+// show as a gap, found by rendering the site as an export does
+// (website.Exporter.Check).
+func (r *Report) content(in *export.Input) error {
+	problems, err := website.New().Check(in)
+	if err != nil {
+		return err
+	}
+	byPath := map[string]string{}
+	for _, e := range in.Entities {
+		byPath[e.Path] = e.ID
+	}
+	for _, p := range problems {
+		sev := Error
+		if p.Warning {
+			sev = Warning
+		}
+		r.add(Violation{Rule: p.Rule, Severity: sev, Message: p.Msg, Entity: byPath[p.Path], Path: p.Path, Line: p.Line})
+	}
+	return nil
 }
