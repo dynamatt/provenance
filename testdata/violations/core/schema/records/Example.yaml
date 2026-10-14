@@ -1,0 +1,10 @@
+# file is relative to testdata/violations, so an example can be in either
+# fixture repository.
+record: Example
+fields:
+  - name: file
+    type: string
+    required: true
+  - name: expect
+    type: Expectation
+    required: true

@@ -10,6 +10,7 @@ PROV=${PROV:?PROV must point at the provenance binary}
 EXAMPLE_DIR=${EXAMPLE_DIR:?EXAMPLE_DIR must point at the provenance-example checkout}
 GOLDEN_DIR=${GOLDEN_DIR:?GOLDEN_DIR must point at testdata/golden}
 VALIDATE_DIR=${VALIDATE_DIR:?VALIDATE_DIR must point at testdata/validate}
+VIOLATIONS_DIR=${VIOLATIONS_DIR:?VIOLATIONS_DIR must point at testdata/violations}
 
 failures=0
 
@@ -437,7 +438,7 @@ expect 1 '^4 errors, 0 warnings$'          "$PROV" validate
 expect 2 '^export: DOC/DOC-0001\.md:52: query block: unknown operator "="' "$PROV" export website --out "$WORK/broken"
 git checkout -q -- DOC/DOC-0001.md
 sed -i 's/^implements: \[USR-0001\]/implements: [REQ-0002]/' REQ/REQ-0001.md
-expect 1 '^REQ/REQ-0001\.md:6: error \[links/target-type\] implements: REQ-0002 is a Requirement, but implements links only to UserNeed \(REQ-0001\)$' "$PROV" validate
+expect 1 '^REQ/REQ-0001\.md:6: error \[links/target-type\] implements: REQ-0002 is of type Requirement, but implements links only to UserNeed \(REQ-0001\)$' "$PROV" validate
 git checkout -q -- REQ/REQ-0001.md
 printf 'x\n' > templates/spare.tmpl
 expect 0 '^templates/spare\.tmpl: warning \[content/unused-template\] named template spare is not chosen by any query block$' "$PROV" validate
@@ -457,6 +458,14 @@ expect 0 ''                               diff -ru "$GOLDEN_DIR" "$WORK/a"
 "$PROV" validate >"$WORK/v2.txt"
 expect 0 ''                               diff "$WORK/v1.txt" "$WORK/v2.txt"
 expect 0 ''                               diff -u "$VALIDATE_DIR/clean.txt" "$WORK/v1.txt"
+
+# Standing E2 acceptance: every failure validate catches, in
+# testdata/violations, is reported as testdata/validate/violations-*.txt
+# records, and exits 1 (make golden-update rewrites them).
+for r in core broken-schema; do
+	expect 1 '' "$PROV" validate --path "$VIOLATIONS_DIR/$r" --out "$WORK/violations-$r.txt"
+	expect 0 '' diff -u "$VALIDATE_DIR/violations-$r.txt" "$WORK/violations-$r.txt"
+done
 
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"

@@ -1,0 +1,10 @@
+type: UnusedTypeClean
+id_prefix: UTC
+fields:
+  # Links out, so the type is used without entities (schema/unused-type).
+  - name: example_of
+    type: link
+    target: [ErrorClass]
+    cardinality: one
+  - name: title
+    type: string

@@ -1,0 +1,41 @@
+# The type most entity examples are written in: one field of each kind.
+type: Widget
+id_prefix: WID
+fields:
+  - name: title
+    type: string
+    required: true
+  - name: status
+    type: Status
+  - name: due
+    type: date
+  - name: weight
+    type: number
+  - name: score
+    type: calculated
+    formula: "weight * 2"
+  - name: tags
+    type: list
+    of: Status
+  - name: steps
+    type: list
+    fields:
+      - name: n
+        type: number
+        required: true
+      - name: double
+        type: calculated
+        formula: "n * 2"
+  - name: parent
+    type: link
+    target: [Widget]
+    cardinality: one
+    reverse_name: children
+  - name: uses
+    type: link
+    target: [Widget]
+    cardinality: many
+    reverse_name: used_by
+  - name: notes
+    type: text
+    body: true

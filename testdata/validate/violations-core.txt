@@ -1,0 +1,55 @@
+cases/content-caption/violation.md:8: error [content/caption] a caption must come right after the figure, table, equation or embed it captions (WID-0030)
+cases/content-caption/violation.md:16: error [content/caption] caption: did not find expected ',' or ']' (WID-0030)
+cases/content-caption/violation.md:30: error [content/caption] caption id "twice" is used twice on one page (first at cases/content-caption/violation.md:22) (WID-0030)
+cases/content-caption/violation.md:35: error [content/caption] [[#nowhere]]: no caption with id "nowhere" on this page (WID-0030)
+cases/content-duplicate-id/violation-a.md:2: error [content/duplicate-id] duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-b.md (WID-0004)
+cases/content-duplicate-id/violation-b.md:2: error [content/duplicate-id] duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-a.md (WID-0004)
+cases/content-embed-cycle/violation-a.md:6: error [content/embed-cycle] embed cycle WID-0035 → WID-0034 → WID-0035 (WID-0034)
+cases/content-embed-cycle/violation-b.md:6: error [content/embed-cycle] embed cycle WID-0034 → WID-0035 → WID-0034 (WID-0035)
+cases/content-embed/violation.md:6: error [content/embed] ![[WID-0033]] is inside running text, so it is shown as a reference: an embed must stand on its own line (WID-0032)
+cases/content-frontmatter/violation-no-type.md:2: error [content/frontmatter] frontmatter has an id but no type, so the file is not read as an entity
+cases/content-frontmatter/violation-yaml.md:4: error [content/frontmatter] invalid frontmatter: did not find expected ',' or ']'
+cases/content-image/violation.md:6: error [content/image] image assets/missing.png does not exist (WID-0028)
+cases/content-image/violation.md:8: error [content/image] image https://example.com/figure.png: images must be files in the repository, not URLs, so the site works offline (WID-0028)
+cases/content-image/violation.md:10: error [content/image] image ../../../outside.png is outside the repository (WID-0028)
+cases/content-image/violation.md:12: error [content/image] image assets/figure.bmp: the website export does not support this format (supported: .gif, .jpeg, .jpg, .png, .svg, .webp) (WID-0028)
+cases/content-query/violation.md:10: error [content/query] query block: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists) (WID-0026)
+cases/content-template/violation.md:8: error [content/template] query block: unknown template "no-such-template": there is no templates/no-such-template.tmpl (named templates: spare, widget-row) (WID-0039)
+cases/content-unrendered-block/violation.md:6: error [content/unrendered-block] mermaid block: this version of Provenance cannot render it, so it would be published as its source (WID-0037)
+cases/content-unrendered-block/violation.md:10: error [content/unrendered-block] drawio block: this version of Provenance cannot render it, so it would be published as its source (WID-0037)
+cases/links-target-type/violation.md:5: error [links/target-type] parent: ERR-0019 is of type ErrorClass, but parent links only to Widget (WID-0024)
+cases/links-unknown-field/violation.md:6: error [links/unknown-field] [[WID-0023#colour]]: Widget has no field "colour" (WID-0022)
+cases/links-unresolved/violation.md:5: error [links/unresolved] uses: no entity WID-9999 (WID-0020)
+cases/links-unresolved/violation.md:7: error [links/unresolved] [[WID-9998]]: no entity WID-9998 (WID-0020)
+cases/schema-calculated-set/violation.md:6: error [schema/calculated-set] score is calculated (weight * 2); it cannot be written in the file (WID-0010)
+cases/schema-calculated-set/violation.md:9: error [schema/calculated-set] steps row 1: double is calculated (n * 2); it cannot be written in the file (WID-0010)
+cases/schema-enum-value/violation.md:5: error [schema/enum-value] status: "aproved" is not one of Status: draft, approved (WID-0014)
+cases/schema-enum-value/violation.md:6: error [schema/enum-value] tags item 2: "final" is not one of Status: draft, approved (WID-0014)
+cases/schema-id-format/violation-page-name.md:2: error [schema/id-format] ID two words cannot be used as a page name (letters, digits, '.', '_' and '-' only) (two words)
+cases/schema-id-format/violation.md:2: error [schema/id-format] ID WID-7 is not WID-NNNN, the form of a Widget ID (WID-7)
+cases/schema-invalid-value/violation.md:5: error [schema/invalid-value] due: not a date (YYYY-MM-DD), got 2026-13-04 (WID-0016)
+cases/schema-invalid-value/violation.md:6: error [schema/invalid-value] weight: not a number, got heavy (WID-0016)
+cases/schema-invalid-value/violation.md:8: error [schema/invalid-value] steps row 1: n: not a number, got one (WID-0016)
+cases/schema-list-row/violation.md:7: error [schema/list-row] steps row 1: no sub-field "size" (sub-fields: n) (WID-0018)
+cases/schema-required/violation.md:2: error [schema/required] required field title is not set (WID-0012)
+cases/schema-required/violation.md:6: error [schema/required] steps row 2: required sub-field n is not set (WID-0012)
+cases/schema-unknown-field/violation.md:5: error [schema/unknown-field] Widget has no field "colour" (fields: title, status, due, weight, tags, steps, parent, uses) (WID-0008)
+cases/schema-unknown-field/violation.md:6: error [schema/unknown-field] notes is the Markdown body below the frontmatter, not a frontmatter field (WID-0008)
+cases/schema-unknown-field/violation.md:7: error [schema/unknown-field] used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it (WID-0008)
+cases/schema-unknown-type/violation.md:3: error [schema/unknown-type] type "Gadget" is not declared in schema/ (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget) (GAD-0001)
+schema/DuplicatePrefixA.yaml:1: error [schema/id-format] type DuplicatePrefixA has the id_prefix DUP, which DuplicatePrefixB (schema/DuplicatePrefixB.yaml) also has
+schema/DuplicatePrefixB.yaml:1: error [schema/id-format] type DuplicatePrefixB has the id_prefix DUP, which DuplicatePrefixA (schema/DuplicatePrefixA.yaml) also has
+schema/FormulaViolation.yaml:11: error [schema/formula] field "score": formula: column 1: FormulaViolation has no field "nope" (fields: example_of, weight, score)
+schema/LinkTargetViolation.yaml:9: error [schema/link-target] field "widget": target "Nothing" is not a declared type (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)
+schema/NoPrefix.yaml:1: error [schema/id-format] type NoPrefix has no id_prefix, so its IDs cannot be checked
+schema/TemplateNameClash.yaml:9: error [content/template] field "citations": its template name .Citations is already used by the engine baseline
+schema/UnknownKeyViolation.yaml:11: error [schema/unknown-key] field "status": unknown key "default": fields have no defaults; a field that must have a value says required: true
+schema/UnusedTypeViolation.yaml:2: warning [schema/unused-type] type UnusedTypeViolation has no entities and no links to or from it
+schema/enums/Colour.yaml:4: error [schema/unknown-key] enum Colour: unknown key "shade" (expected enum, values)
+schema/enums/UnusedEnum.yaml:2: warning [schema/unused-enum] enum UnusedEnum is not used by any field
+schema/records/UnusedRecord.yaml:2: warning [schema/unused-record] record UnusedRecord is not used by any list
+templates/BrokenTemplate.tmpl:2: error [content/template] bad character U+003C '<'
+templates/NotAType.tmpl: warning [content/template-name] NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used
+templates/_footer.tmpl: warning [content/unknown-override] _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used
+templates/spare.tmpl: warning [content/unused-template] named template spare is not chosen by any query block
+48 errors, 6 warnings

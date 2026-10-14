@@ -290,7 +290,7 @@ func (c *entityCheck) check(label string, n *yaml.Node, v *model.Value) {
 			case t == nil:
 				c.add("links/unresolved", line, "%s: no entity %s", label, id)
 			case len(v.Field.Target) > 0 && !slices.Contains(v.Field.Target, t.Type):
-				c.add("links/target-type", line, "%s: %s is a %s, but %s links only to %s", label, id, t.Type, v.Field.Name, strings.Join(v.Field.Target, ", "))
+				c.add("links/target-type", line, "%s: %s is of type %s, but %s links only to %s", label, id, t.Type, v.Field.Name, strings.Join(v.Field.Target, ", "))
 			}
 		}
 	}

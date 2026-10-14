@@ -28,6 +28,7 @@ identity, so builds must be reproducible.
 | `tools/gendocs/` | Generates the website's CLI reference from the command tree. |
 | `scripts/acceptance.sh` | Acceptance steps run against the example repo. |
 | `testdata/example-repo.ref` | Pinned `provenance-example` commit. |
+| `testdata/violations/` | One example of every failure `validate` reports, each beside a clean counterpart (its `README.md`). |
 | `PLAN.md` | The implementation plan and task checklist. |
 
 ## Make targets
@@ -67,6 +68,9 @@ These are the plan's *Rules for Claude Code*; `PLAN.md` has the full text.
    paths in output. Same command, same commit → byte-identical results.
 7. **Exit codes**: `0` success, `1` expected failure reported, `2`
    tool/usage error.
+
+When a check is added to `validate`, add its case to `testdata/violations`
+(see its README); `TestViolationsCoverEveryRule` fails until it is there.
 
 When a command is implemented, remove its `notImplementedYet` annotation along
 with the `notImplemented` RunE, then run `make docs` and commit the regenerated

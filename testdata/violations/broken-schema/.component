@@ -1,0 +1,5 @@
+# The validate fixture for schema/file, which stops every check made against
+# the schema, so it cannot share a repository with them
+# (testdata/violations/README.md).
+code: BROKEN
+name: Validation failure catalogue, broken schema

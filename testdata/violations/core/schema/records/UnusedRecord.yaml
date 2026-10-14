@@ -1,0 +1,5 @@
+# schema/unused-record: no list is of this record.
+record: UnusedRecord
+fields:
+  - name: a
+    type: string

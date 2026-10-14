@@ -1,0 +1,13 @@
+type: FormulaViolation
+id_prefix: FMV
+fields:
+  # Links out, so the type is used without entities (schema/unused-type).
+  - name: example_of
+    type: link
+    target: [ErrorClass]
+    cardinality: one
+  - name: weight
+    type: number
+  - name: score
+    type: calculated
+    formula: "nope + 1"

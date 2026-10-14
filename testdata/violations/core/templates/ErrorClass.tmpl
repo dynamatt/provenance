@@ -1,0 +1,11 @@
+{{/* A type template (clean for content/template-name). */}}
+<article class="error-class" id="{{.ID}}">
+<h1><span class="id">{{.ID}}</span> <code>{{.Rule}}</code> {{.Title}}</h1>
+<p>Severity: {{.Severity}}</p>
+<div class="body">{{markdown .Description}}</div>
+<ul>
+{{- range .Examples}}
+<li>{{.Expect}}: <code>{{.File}}</code></li>
+{{- end}}
+</ul>
+</article>
