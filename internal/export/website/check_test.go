@@ -50,7 +50,7 @@ Just text.
 		"templates/spare-part.tmpl": "{{ .Title }\n",
 	})
 	want := `N/N-1.md:10 content/image image N/no.png does not exist
-N/N-1.md:14 content/query query block: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in)
+N/N-1.md:14 content/query query block: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in, duplicated)
 N/N-1.md:17 content/unrendered-block mermaid block: this version of Provenance cannot render it, so it would be published as its source
 N/N-1.md:22 content/caption a caption must come right after the figure, table, equation or embed it captions
 N/N-1.md:6 content/embed ![[N-2]] is inside running text, so it is shown as a reference: an embed must stand on its own line

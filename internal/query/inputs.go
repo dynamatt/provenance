@@ -134,7 +134,7 @@ func viaTypes(s *schema.Schema, types []*schema.Type, cond *Condition) []string 
 		for _, sub := range append(slices.Clone(c.AllOf), c.AnyOf...) {
 			walk(sub, types, list)
 		}
-		if c.Test == nil || c.Test.Where == nil {
+		if c.Test == nil || (c.Test.Where == nil && c.Test.Aggregation == nil) {
 			return
 		}
 		name := c.Test.Field.Field

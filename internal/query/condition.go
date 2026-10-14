@@ -21,11 +21,15 @@ import (
 //	where: [<condition>, <condition>]                          all must hold
 //	where: {any_of: [<condition>, …]}                          at least one
 //	where: {field: L, where: <condition>}                      a sub-query
+//	where: {field: L, aggregation: {type: count}, operator: less_than, value: 1}
+//	where: {field: title, operator: duplicated}                 shared by another
 //
 // field names a field or incoming facet of the entity, its id or type. A
 // sub-query holds when some row of list L, or some entity linked through
 // link or facet L, matches its condition; inside it names are the item's,
-// and ^name is the enclosing entity's field (^^name two levels out).
+// and ^name is the enclosing entity's field (^^name two levels out). With
+// aggregation, the sub-query's items are counted, or one of their fields
+// summed, and the single result is tested.
 
 // Operator is a comparison word.
 type Operator string
@@ -40,10 +44,11 @@ const (
 	Exists         Operator = "exists"
 	Missing        Operator = "missing"
 	NotIn          Operator = "not_in"
+	Duplicated     Operator = "duplicated"
 )
 
 // Operators lists every operator, in the order DES-0015 gives.
-var Operators = []Operator{Equals, NotEquals, GreaterOrEqual, LessOrEqual, GreaterThan, LessThan, Exists, Missing, NotIn}
+var Operators = []Operator{Equals, NotEquals, GreaterOrEqual, LessOrEqual, GreaterThan, LessThan, Exists, Missing, NotIn, Duplicated}
 
 var cmpOps = map[Operator]datalog.Op{
 	Equals: datalog.Eq, NotEquals: datalog.Eq, // not_equals is "no value equals"
@@ -72,16 +77,43 @@ type Condition struct {
 type Test struct {
 	Line  int
 	Field Ref
-	// Operator is "" for a sub-query.
+	// Operator is "" for a sub-query without aggregation.
 	Operator Operator
-	// Value is a literal or value_of; nil for exists, missing, not_in and a
-	// sub-query.
+	// Value is a literal or value_of; nil for exists, missing, not_in,
+	// duplicated and a sub-query without aggregation.
 	Value *Operand
 	// In is not_in's values.
 	In []datalog.Value
-	// Where is a sub-query's condition, on each row or linked entity.
+	// Where is a sub-query's condition, on each row or linked entity; nil
+	// for an aggregation over every item.
 	Where *Condition
+	// Aggregation makes a sub-query a single value, which Operator tests.
+	Aggregation *Aggregation
+	// Fields are duplicated's fields, compared together; Field is the
+	// first.
+	Fields []Ref
 }
+
+// Aggregation reduces a sub-query's items to one value (DES-0015), with the
+// calculated-field aggregates' semantics (DES-0012).
+type Aggregation struct {
+	Line int
+	Type AggregationType
+	// Field is the item field sum, min, max and avg read; nil for count.
+	Field *Ref
+}
+
+type AggregationType string
+
+const (
+	Count AggregationType = "count"
+	Sum   AggregationType = "sum"
+	Min   AggregationType = "min"
+	Max   AggregationType = "max"
+	Avg   AggregationType = "avg"
+)
+
+var aggregationTypes = []AggregationType{Count, Sum, Min, Max, Avg}
 
 // Ref names a value: a field of the item a condition is about, or with Up
 // set, of an entity enclosing it.
@@ -166,7 +198,7 @@ func ParseCondition(n *yaml.Node) (*Condition, error) {
 }
 
 func parseTest(n *yaml.Node) (*Test, error) {
-	if err := onlyKeys(n, "a condition", "field", "operator", "value", "value_of", "where"); err != nil {
+	if err := onlyKeys(n, "a condition", "field", "operator", "value", "value_of", "where", "aggregation"); err != nil {
 		return nil, err
 	}
 	t := &Test{Line: n.Line}
@@ -174,25 +206,65 @@ func parseTest(n *yaml.Node) (*Test, error) {
 	if fieldNode == nil {
 		return nil, errorf(n, "condition has no field")
 	}
-	ref, err := parseRef(fieldNode, "field")
-	if err != nil {
-		return nil, err
-	}
-	t.Field = ref
 	opNode := yamlnode.Lookup(n, "operator")
 	valueNode, valueOf := yamlnode.Lookup(n, "value"), yamlnode.Lookup(n, "value_of")
+	where, agg := yamlnode.Lookup(n, "where"), yamlnode.Lookup(n, "aggregation")
 
-	if where := yamlnode.Lookup(n, "where"); where != nil {
-		switch {
-		case ref.Up > 0:
-			return nil, errorf(fieldNode, "a sub-query reads the item's own list or link, not ^%s", ref.Field)
-		case opNode != nil:
-			return nil, errorf(opNode, "a sub-query holds when some item matches its where, and takes no operator")
-		case valueNode != nil || valueOf != nil:
-			return nil, errorf(cmpNode(valueNode, valueOf), "a sub-query takes no value")
+	if fieldNode.Kind == yaml.SequenceNode {
+		// duplicated's fields, compared as one combination.
+		if opNode == nil || opNode.Value != string(Duplicated) {
+			return nil, errorf(fieldNode, "a list of fields is for duplicated, which compares them together; other operators test one field")
 		}
-		t.Where, err = ParseCondition(where)
-		return t, err
+		if len(fieldNode.Content) == 0 {
+			return nil, errorf(fieldNode, "duplicated needs at least one field")
+		}
+		for _, f := range fieldNode.Content {
+			r, err := parseRef(f, "field")
+			if err != nil {
+				return nil, err
+			}
+			t.Fields = append(t.Fields, r)
+		}
+		t.Field = t.Fields[0]
+	} else {
+		ref, err := parseRef(fieldNode, "field")
+		if err != nil {
+			return nil, err
+		}
+		t.Field = ref
+	}
+
+	if where != nil || agg != nil {
+		if t.Field.Up > 0 {
+			return nil, errorf(fieldNode, "a sub-query reads the item's own list or link, not ^%s", t.Field.Field)
+		}
+		if where != nil {
+			cond, err := ParseCondition(where)
+			if err != nil {
+				return nil, err
+			}
+			t.Where = cond
+		}
+		if agg == nil {
+			switch {
+			case opNode != nil:
+				return nil, errorf(opNode, "a sub-query holds when some item matches its where, and takes no operator; with aggregation, operator tests the aggregate")
+			case valueNode != nil || valueOf != nil:
+				return nil, errorf(cmpNode(valueNode, valueOf), "a sub-query takes no value")
+			}
+			return t, nil
+		}
+		a, err := parseAggregation(agg)
+		if err != nil {
+			return nil, err
+		}
+		t.Aggregation = a
+		if opNode == nil {
+			return nil, errorf(n, "an aggregation needs an operator to test it (valid operators: %s)", validOperators())
+		}
+		if opNode.Value == string(Duplicated) {
+			return nil, errorf(opNode, "duplicated compares entities, not an aggregate")
+		}
 	}
 
 	if opNode == nil {
@@ -202,10 +274,20 @@ func parseTest(n *yaml.Node) (*Test, error) {
 	if opNode.Kind != yaml.ScalarNode || !slices.Contains(Operators, t.Operator) {
 		return nil, errorf(opNode, "unknown operator %q (valid operators: %s)", opNode.Value, validOperators())
 	}
+	if t.Operator == Duplicated {
+		if t.Fields == nil {
+			t.Fields = []Ref{t.Field}
+		}
+		for _, r := range t.Fields {
+			if r.Up > 0 {
+				return nil, errorf(fieldNode, "duplicated compares the entities' own fields, not ^%s", r.Field)
+			}
+		}
+	}
 	switch {
 	case valueNode != nil && valueOf != nil:
 		return nil, errorf(valueOf, "use value (a literal) or value_of (a field), not both")
-	case t.Operator == Exists || t.Operator == Missing:
+	case t.Operator == Exists || t.Operator == Missing || t.Operator == Duplicated:
 		if v := cmpNode(valueNode, valueOf); v != nil {
 			return nil, errorf(v, "%s takes no value", t.Operator)
 		}
@@ -244,6 +326,42 @@ func parseTest(n *yaml.Node) (*Test, error) {
 	}
 	t.Value = &Operand{Line: valueNode.Line, Literal: v}
 	return t, nil
+}
+
+func parseAggregation(n *yaml.Node) (*Aggregation, error) {
+	if n.Kind != yaml.MappingNode {
+		return nil, errorf(n, "aggregation is {type: count} or {type: sum|min|max|avg, field: <field>}")
+	}
+	if err := onlyKeys(n, "an aggregation", "type", "field"); err != nil {
+		return nil, err
+	}
+	a := &Aggregation{Line: n.Line}
+	tn := yamlnode.Lookup(n, "type")
+	var names []string
+	for _, at := range aggregationTypes {
+		names = append(names, string(at))
+	}
+	if tn == nil || !slices.Contains(aggregationTypes, AggregationType(scalar(tn))) {
+		return nil, errorf(cmpNode(tn, n), "aggregation type must be one of %s", strings.Join(names, ", "))
+	}
+	a.Type = AggregationType(tn.Value)
+	fn := yamlnode.Lookup(n, "field")
+	switch {
+	case a.Type == Count && fn != nil:
+		return nil, errorf(fn, "count counts the items and reads no field")
+	case a.Type != Count && fn == nil:
+		return nil, errorf(n, "%s needs the field of each item it reads", a.Type)
+	case fn != nil:
+		r, err := parseRef(fn, "aggregation field")
+		if err != nil {
+			return nil, err
+		}
+		if r.Up > 0 {
+			return nil, errorf(fn, "an aggregation reads the items' own field, not ^%s", r.Field)
+		}
+		a.Field = &r
+	}
+	return a, nil
 }
 
 // cmpNode returns the first of nodes that is set.
@@ -458,6 +576,12 @@ type compiler struct {
 	// witnesses are, for each sub-query among the top-level conditions,
 	// the relations holding (entity, item) for the items it matched.
 	witnesses map[*Test][]string
+	// from are the types the query selects: duplicated compares among
+	// their entities.
+	from []*schema.Type
+	// dups holds each duplicated test's relation, compiled once for every
+	// type from selects.
+	dups map[*Test]string
 }
 
 func (c *compiler) rel(kind string) string {
@@ -602,7 +726,7 @@ func checkTest(t *Test, left target, right *target) error {
 	}
 	if left.rows {
 		if t.Operator != Exists && t.Operator != Missing {
-			return fail(t.Field.Line, "%q is a list of rows: test its rows with {field: %s, where: …}, or use exists or missing", t.Field.Field, t.Field.Field)
+			return fail(t.Field.Line, "%q is a list of rows: test its rows with {field: %s, where: …}, count them with aggregation, or use exists or missing", t.Field.Field, t.Field.Field)
 		}
 		return nil
 	}
@@ -613,7 +737,7 @@ func checkTest(t *Test, left target, right *target) error {
 		switch left.class {
 		case classAny, classNumber, classDate, classText:
 		default:
-			return fail(t.Line, "%s compares numbers, dates and text; %s is %s", t.Operator, t.Field, left.class)
+			return fail(t.Line, "%s compares numbers, dates and text; %s is %s", t.Operator, left.ref, left.class)
 		}
 	}
 	if right != nil {
@@ -625,7 +749,7 @@ func checkTest(t *Test, left target, right *target) error {
 			return a == classAny || b == classAny || a == b || (text(a) && text(b))
 		}
 		if !comparable(left.class, right.class) {
-			return fail(t.Value.Line, "%s is %s but %s is %s", t.Field, left.class, right.ref, right.class)
+			return fail(t.Value.Line, "%s is %s but %s is %s", left.ref, left.class, right.ref, right.class)
 		}
 		return nil
 	}
@@ -653,7 +777,7 @@ func checkLiteral(t *Test, left target, v datalog.Value) error {
 		want = datalog.Str
 	}
 	if v.Kind != want {
-		return fail("%s is %s; %s is not", t.Field, left.class, v)
+		return fail("%s is %s; %s is not", left.ref, left.class, v)
 	}
 	switch left.class {
 	case classEnum:
@@ -700,7 +824,7 @@ func Compile(s *schema.Schema, types []*schema.Type, cond *Condition, prefix str
 }
 
 func compile(s *schema.Schema, types []*schema.Type, cond *Condition, prefix string) (*compiled, error) {
-	c := &compiler{s: s, prog: &datalog.Program{}, prefix: prefix, witnesses: map[*Test][]string{}}
+	c := &compiler{s: s, prog: &datalog.Program{}, prefix: prefix, witnesses: map[*Test][]string{}, from: types, dups: map[*Test]string{}}
 	match := prefix + "match"
 	E := datalog.Var("E")
 	var names []string
@@ -755,7 +879,7 @@ func flatten(cond *Condition) []*Condition {
 func topSubQueries(cond *Condition) []*Test {
 	var out []*Test
 	for _, item := range flatten(cond) {
-		if item.Test != nil && item.Test.Where != nil {
+		if item.Test != nil && item.Test.Where != nil && item.Test.Aggregation == nil {
 			out = append(out, item.Test)
 		}
 	}
@@ -778,8 +902,14 @@ func (c *compiler) conjunction(cond *Condition, sc *scope, top bool) ([]datalog.
 				c.prog.Add(datalog.Rule{Head: datalog.NewAtom(rel, sc.chain()...), Body: append(sc.binds(), sub...)})
 			}
 			lits = append(lits, datalog.P(rel, sc.chain()...))
-		case item.Test.Where != nil:
+		case item.Test.Where != nil || item.Test.Aggregation != nil:
 			lit, err := c.subQuery(item.Test, sc, top)
+			if err != nil {
+				return nil, err
+			}
+			lits = append(lits, lit)
+		case item.Test.Operator == Duplicated:
+			lit, err := c.duplicated(item.Test, sc)
 			if err != nil {
 				return nil, err
 			}
@@ -844,11 +974,24 @@ func (c *compiler) subQuery(t *Test, sc *scope, top bool) (datalog.Literal, erro
 	rel := c.rel("sub")
 	for _, a := range alts {
 		a.node, a.parent, a.lv = item, sc, lv
-		lits, err := c.conjunction(t.Where, a, false)
+		var lits []datalog.Literal
+		if t.Where != nil {
+			var err error
+			if lits, err = c.conjunction(t.Where, a, false); err != nil {
+				return datalog.Literal{}, err
+			}
+		}
+		c.prog.Add(datalog.Rule{Head: datalog.NewAtom(rel, a.chain()...), Body: append(a.binds(), lits...)})
+	}
+	if t.Aggregation != nil {
+		lit, err := c.aggregate(t, sc, alts, rel)
 		if err != nil {
 			return datalog.Literal{}, err
 		}
-		c.prog.Add(datalog.Rule{Head: datalog.NewAtom(rel, a.chain()...), Body: append(a.binds(), lits...)})
+		if err := lv.check(); err != nil {
+			return datalog.Literal{}, err
+		}
+		return lit, nil
 	}
 	if err := lv.check(); err != nil {
 		return datalog.Literal{}, err
@@ -857,6 +1000,127 @@ func (c *compiler) subQuery(t *Test, sc *scope, top bool) (datalog.Literal, erro
 		c.witnesses[t] = append(c.witnesses[t], rel)
 	}
 	return datalog.P(rel, append(sc.chain(), datalog.Var("_"))...), nil
+}
+
+// aggregate compiles a sub-query's aggregation to a relation of the chain
+// and the aggregate, items being sub's, and returns the literal testing it.
+// As in calculated fields (DES-0012): each item counts once; sum, min, max
+// and avg read numbers and skip the rest; with nothing to read, count and
+// sum are 0 and the others blank.
+func (c *compiler) aggregate(t *Test, sc *scope, alts []*scope, sub string) (datalog.Literal, error) {
+	a := t.Aggregation
+	chain := sc.chain()
+	A, V := datalog.Var("A"), datalog.Var("V")
+	agg := c.rel("agg")
+	items := append(slices.Clone(chain), alts[0].node)
+	// in holds what the aggregate reads: the items, for count, or each
+	// item's values of the field.
+	in := sub
+	inArgs := items
+	fn := map[AggregationType]datalog.AggFunc{Count: datalog.Count, Sum: datalog.Sum, Min: datalog.Min, Max: datalog.Max, Avg: datalog.Avg}[a.Type]
+	of := ""
+	if a.Field != nil {
+		in, of = c.rel("values"), "V"
+		inArgs = append(slices.Clone(items), V)
+		for _, alt := range alts {
+			tg, ok, err := c.resolve(a.Field, alt)
+			if err != nil {
+				return datalog.Literal{}, err
+			}
+			if !ok {
+				continue // empty on this type: nothing to read
+			}
+			if tg.rows || (tg.class != classNumber && tg.class != classAny) {
+				return datalog.Literal{}, &Error{Line: a.Field.Line, Msg: fmt.Sprintf("%s reads numbers; %s is %s", a.Type, a.Field.Field, describe(tg))}
+			}
+			body := append(alt.binds(), datalog.P(sub, items...))
+			c.prog.Add(datalog.Rule{Head: datalog.NewAtom(in, inArgs...), Body: append(body, read(tg, V)...)})
+		}
+	}
+	c.prog.Add(datalog.Rule{
+		Head: datalog.NewAtom(agg, append(slices.Clone(chain), A)...),
+		Body: []datalog.Literal{datalog.P(in, inArgs...)},
+		Agg:  &datalog.Aggregate{Func: fn, Pos: len(chain), Of: of},
+	})
+	if a.Type == Count || a.Type == Sum {
+		has := c.rel("has")
+		anon := slices.Clone(chain)
+		for range len(inArgs) - len(chain) {
+			anon = append(anon, datalog.Var("_"))
+		}
+		c.prog.Add(datalog.Rule{Head: datalog.NewAtom(has, chain...), Body: append(sc.binds(), datalog.P(in, anon...))})
+		c.prog.Add(datalog.Rule{
+			Head: datalog.NewAtom(agg, append(slices.Clone(chain), datalog.Const(datalog.Number(0)))...),
+			Body: append(sc.binds(), datalog.N(has, chain...)),
+		})
+	}
+	// Every aggregate is a number; it is named in errors as, e.g., "count
+	// of verified_by" or "sum of failure_modes.score".
+	label := fmt.Sprintf("%s of %s", a.Type, t.Field.Field)
+	if a.Field != nil {
+		label += "." + a.Field.Field
+	}
+	left := target{ref: Ref{Line: t.Field.Line, Field: label}, at: sc, class: classNumber}
+	return c.compare(t, sc, left, []datalog.Literal{datalog.P(agg, append(slices.Clone(chain), V)...)})
+}
+
+// duplicated compiles {field: F, operator: duplicated}: the entity's value
+// of F (or combination of values, for a list of fields) is also another
+// entity's, among the types from selects (DES-0015). An entity without a
+// value never collides; a type without the field never does.
+func (c *compiler) duplicated(t *Test, sc *scope) (datalog.Literal, error) {
+	if sc.parent != nil {
+		return datalog.Literal{}, &Error{Line: t.Line, Msg: "duplicated compares the entities from selects, so it cannot be inside a sub-query"}
+	}
+	if rel, ok := c.dups[t]; ok {
+		return datalog.P(rel, sc.node), nil
+	}
+	var names []string
+	for _, ft := range c.from {
+		names = append(names, ft.Name)
+	}
+	lv := newLevel(names)
+	D := datalog.Var("D")
+	vals := make([]datalog.Term, len(t.Fields))
+	for i := range vals {
+		vals[i] = datalog.Var(fmt.Sprintf("V%d", i))
+	}
+	key := c.rel("key")
+	for _, ft := range c.from {
+		at := &scope{node: D, t: ft, bind: []datalog.Literal{datalog.P(RelEntity, D, datalog.Const(datalog.String(ft.Name)))}, lv: lv}
+		body := at.binds()
+		complete := true
+		for i := range t.Fields {
+			r := &t.Fields[i]
+			tg, ok, err := c.resolve(r, at)
+			if err != nil {
+				return datalog.Literal{}, err
+			}
+			if f := ft.Field(r.Field); tg.rows || (f != nil && (f.Kind == schema.List || (f.Kind == schema.Link && f.Cardinality != "one"))) || (ok && at.facet(r.Field) != nil && ft.Field(r.Field) == nil) {
+				return datalog.Literal{}, &Error{Line: r.Line, Msg: fmt.Sprintf("duplicated compares single values; %q has several", r.Field)}
+			}
+			if !ok {
+				complete = false
+				continue
+			}
+			body = append(body, read(tg, vals[i])...)
+		}
+		if complete {
+			c.prog.Add(datalog.Rule{Head: datalog.NewAtom(key, append([]datalog.Term{D}, vals...)...), Body: body})
+		}
+	}
+	if err := lv.check(); err != nil {
+		return datalog.Literal{}, err
+	}
+	rel := c.rel("duplicated")
+	O := datalog.Var("O")
+	c.prog.Add(datalog.Rule{Head: datalog.NewAtom(rel, D), Body: []datalog.Literal{
+		datalog.P(key, append([]datalog.Term{D}, vals...)...),
+		datalog.P(key, append([]datalog.Term{O}, vals...)...),
+		datalog.Cmp(D, datalog.Ne, O),
+	}})
+	c.dups[t] = rel
+	return datalog.P(rel, sc.node), nil
 }
 
 // linked is the scope of an entity of type t that node links to through
@@ -894,26 +1158,59 @@ func (c *compiler) test(t *Test, sc *scope) (datalog.Literal, error) {
 		}
 		right, okR = &r, ok
 	}
-	negated := t.Operator == NotEquals || t.Operator == NotIn || t.Operator == Missing
+	if !okL || !okR {
+		// The value is empty on this alternative.
+		return c.absent(t, sc), nil
+	}
+	return c.compareWith(t, sc, left, right, read(left, datalog.Var("V")))
+}
+
+// compare compiles t's operator and value against left, read into V by
+// readLeft.
+func (c *compiler) compare(t *Test, sc *scope, left target, readLeft []datalog.Literal) (datalog.Literal, error) {
+	var right *target
+	if t.Value != nil && t.Value.Field != nil {
+		r, ok, err := c.resolve(t.Value.Field, sc)
+		if err != nil {
+			return datalog.Literal{}, err
+		}
+		if !ok {
+			return c.absent(t, sc), nil
+		}
+		right = &r
+	}
+	return c.compareWith(t, sc, left, right, readLeft)
+}
+
+// negated reports whether t holds where no value matches, so also where
+// the field is empty.
+func negated(t *Test) bool {
+	return t.Operator == NotEquals || t.Operator == NotIn || t.Operator == Missing
+}
+
+// absent is t on a value that is empty here: nothing derives the
+// relation, so the test never holds, and its negations always do.
+func (c *compiler) absent(t *Test, sc *scope) datalog.Literal {
+	if negated(t) {
+		return datalog.N(c.rel("absent"), sc.chain()...)
+	}
+	return datalog.P(c.rel("absent"), sc.chain()...)
+}
+
+func (c *compiler) compareWith(t *Test, sc *scope, left target, right *target, readLeft []datalog.Literal) (datalog.Literal, error) {
+	if err := checkTest(t, left, right); err != nil {
+		return datalog.Literal{}, err
+	}
 	lit := func(rel string) datalog.Literal {
-		if negated {
+		if negated(t) {
 			return datalog.N(rel, sc.chain()...)
 		}
 		return datalog.P(rel, sc.chain()...)
 	}
-	if !okL || !okR {
-		// The value is empty on this alternative: nothing derives this
-		// relation, so the test never holds, and its negations always do.
-		return lit(c.rel("absent")), nil
-	}
-	if err := checkTest(t, left, right); err != nil {
-		return datalog.Literal{}, err
-	}
-
 	rel := c.rel("test")
 	head := datalog.NewAtom(rel, sc.chain()...)
 	V, W := datalog.Var("V"), datalog.Var("W")
-	body := append(sc.binds(), read(left, V)...)
+	body := append(sc.binds(), readLeft...)
 	switch t.Operator {
 	case Exists, Missing:
 		c.prog.Add(datalog.Rule{Head: head, Body: body})
