@@ -203,6 +203,9 @@ func (p *wikilinkParser) Parse(_ ast.Node, block text.Reader, _ parser.Context) 
 	}
 	l := Link{Embed: embed, Line: bytes.Count(block.Source()[:seg.Start], []byte("\n")) + 1}
 	target, label, hasLabel := strings.Cut(inner, "|")
+	// In a table cell the separator is written \| (GFM: a bare | ends the
+	// cell), so [[ID\|label]] is the same link as [[ID|label]].
+	target = strings.TrimSuffix(target, `\`)
 	if hasLabel {
 		l.Label = strings.TrimSpace(label)
 	}

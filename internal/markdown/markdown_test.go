@@ -104,6 +104,15 @@ func TestTables(t *testing.T) {
 	}
 }
 
+// A label in a table cell is written [[ID\|label]]: a bare | would end
+// the cell.
+func TestLabelInTable(t *testing.T) {
+	got := convert(t, "| a | b |\n|---|---|\n| 1 | under any [[X-1\\|single fault]] |\n")
+	if !strings.Contains(got, "<td>under any {ref X-1|single fault#}</td>") {
+		t.Errorf("got %q", got)
+	}
+}
+
 func TestEmbedErrorStopsConversion(t *testing.T) {
 	boom := errors.New("cycle")
 	_, err := Convert("![[DOC-1]]", fake{err: boom}, Options{})
