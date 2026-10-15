@@ -346,13 +346,16 @@ type Match struct {
 
 // Item is a row or linked entity a sub-query matched, and where it is
 // written: a row in the matched entity's file; a link value where the link
-// is written, which for an incoming facet is the linking entity's file.
+// is written, which for an incoming facet is the linking entity's file; an
+// entity a sub-query on from found, at its id.
 type Item struct {
-	// Field is the sub-query's list, link or incoming facet.
+	// Field is the sub-query's list, link or incoming facet; "" for a
+	// sub-query on from.
 	Field string
 	// Row is the row's index from 0, for a list; -1 otherwise.
 	Row int
-	// ID is the linked entity, for a link or facet.
+	// ID is the linked entity, for a link or facet, or the entity a
+	// sub-query on from found.
 	ID   string
 	Path string
 	Line int
@@ -379,7 +382,7 @@ func (g *Graph) Matches(types []*schema.Type, cond *Condition) ([]Match, error) 
 		found := map[int][]Item{}
 		for _, tuple := range out.Relation(w.rel).Tuples() {
 			i := index[tuple[0].S]
-			found[i] = append(found[i], g.item(ms[i].Entity, w.test.Field.Field, tuple[1]))
+			found[i] = append(found[i], g.item(ms[i].Entity, w.test, tuple[1]))
 		}
 		for i, items := range found {
 			slices.SortFunc(items, func(a, b Item) int {
@@ -391,10 +394,19 @@ func (g *Graph) Matches(types []*schema.Type, cond *Condition) ([]Match, error) 
 	return ms, nil
 }
 
-// item describes v, a row node or linked ID that field's sub-query matched
-// on e.
-func (g *Graph) item(e *model.Entity, field string, v datalog.Value) Item {
+// item describes v, a row node, linked ID or other entity's ID that
+// sub-query t matched on e.
+func (g *Graph) item(e *model.Entity, t *Test, v datalog.Value) Item {
+	field := t.Field.Field
 	it := Item{Field: field, Row: -1, Path: e.Path}
+	if t.From != nil {
+		// Another entity, found by its type: placed at its own id.
+		it.ID = v.S
+		if other := g.byID[v.S]; other != nil {
+			it.Path, it.Line = other.Path, other.IDLine()
+		}
+		return it
+	}
 	if v.Kind == datalog.Node {
 		// RowNode: id/list/index; the list name and index have no slash.
 		it.Row, _ = strconv.Atoi(v.S[strings.LastIndex(v.S, "/")+1:])
