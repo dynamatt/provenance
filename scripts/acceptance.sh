@@ -161,7 +161,7 @@ sed -i.orig 's/^status: approved/status: draft/' REQ/REQ-0002.md
 expect 1 '' grep -q 'data-entity="REQ-0002"' _site/entities/DOC-0001.html
 mv REQ/REQ-0002.md.orig REQ/REQ-0002.md
 sed -i.orig 's/operator: equals/operator: "="/' DOC/DOC-0001.md
-expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: query block: unknown operator "=" \(valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in, duplicated\)$' "$PROV" export website
+expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: query block: unknown operator "=" \(valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in\)$' "$PROV" export website
 mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
 
 # E1.9: calculated fields. RSK-0001's row_rating is severity × occurrence
@@ -461,10 +461,11 @@ sed -i 's/^  field: equipment_used/  field: {list: equipment_used, subfield: cal
 expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: \{list: L, subfield: S\} is now a sub-query: \{field: L, where: \{field: S, …\}\} \(DOC-0003\)$' "$PROV" validate
 git checkout -q -- DOC/DOC-0003.md
 
-# E2.6: aggregation and duplicated. DOC-0003 lists REQ-0003 as unverified
-# (a count over the verified_by reverse link); removing VER-0002's link adds
-# REQ-0002 there and VER-0002 under protocols verifying nothing (a count
-# over a link); a copied title puts both requirements under duplicates.
+# E2.6: aggregation, and sub-queries on from. DOC-0003 lists REQ-0003 as
+# unverified (a count over the verified_by reverse link); removing VER-0002's
+# link adds REQ-0002 there and VER-0002 under protocols verifying nothing (a
+# count over a link); a copied title puts both requirements under duplicate
+# titles (another requirement, found by from, with an equal ^title).
 "$PROV" export website >/dev/null
 DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
 expect 0 '>Verification coverage</h2><p>[^<]*<code>[^<]*</code>[^<]*</p><ul class="query"><li><a class="ref" href="REQ-0003\.html"' sh -c "$DOC3_FLAT"
@@ -474,8 +475,8 @@ sed -i 's/^title: Amplitude ceiling — subsystem allocation/title: Single-fault
 expect 0 '>Verification coverage</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html".*href="VER-0002\.html".*>Risk-benefit analysis</h2>' sh -c "$DOC3_FLAT"
 expect 0 '>Duplicate titles</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html"' sh -c "$DOC3_FLAT"
 git checkout -q -- VER REQ
-sed -i 's/^  operator: duplicated/  operator: duplicated\n  value: x/' DOC/DOC-0003.md
-expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: duplicated takes no value \(DOC-0003\)$' "$PROV" validate
+sed -i 's/^  from: Requirement/  from: Requirment/' DOC/DOC-0003.md
+expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: from: unknown type "Requirment" ' "$PROV" validate
 git checkout -q -- DOC/DOC-0003.md
 
 # Standing E1 acceptance: exporting twice gives an identical site, and the

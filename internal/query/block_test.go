@@ -104,7 +104,7 @@ func TestQueryBlockErrors(t *testing.T) {
 	g := graph(t, evidence)
 	for _, tc := range []struct{ name, src, want string }{
 		{"symbol operator", "from: Requirement\nwhere:\n  field: status\n  operator: \"=\"\n  value: approved\n",
-			`line 4: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in, duplicated)`},
+			`line 4: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in)`},
 		{"no from", "where: {field: status, operator: exists}\n", "line 1: query block has no from: <type>"},
 		{"unknown type", "from: Requirment\n", `line 1: from: unknown type "Requirment" (types: Document, Evidence, OccurrenceLevel, Requirement, Risk, SeverityLevel, UserNeed)`},
 		{"unknown key", "from: Requirement\nsort: order\n", `line 2: unknown key "sort" in a query block (expected from, where, order_by, render, template, templates)`},
@@ -256,7 +256,9 @@ func TestQueryBlockTemplates(t *testing.T) {
 // Each match carries the rows and links its top-level sub-queries matched,
 // placed where they are written.
 func TestMatchItems(t *testing.T) {
-	g := graph(t, evidence)
+	all := maps.Clone(evidence)
+	maps.Copy(all, aggregates)
+	g := graph(t, all)
 	items := func(src string) string {
 		t.Helper()
 		b, err := ParseBlock(src, g.Schema)
@@ -288,6 +290,8 @@ func TestMatchItems(t *testing.T) {
 			"EVD-1: verifies[-1]REQ-0001@EVD-1:6 equipment_used[1]@EVD-1:9"},
 		{"none inside any_of", "from: Evidence\nwhere:\n  any_of:\n    - {field: equipment_used, where: {field: serial, operator: equals, value: C}}\n",
 			"EVD-2:"},
+		{"other entities, at their id", "from: Requirement\nwhere: {from: Requirement, where: [{field: title, operator: equals, value_of: ^title}, {field: id, operator: not_equals, value_of: ^id}]}\n",
+			"REQ-0004: [-1]REQ-0005@REQ-0005:2; REQ-0005: [-1]REQ-0004@REQ-0004:2"},
 		{"none without a sub-query", "from: Evidence\nwhere: {field: passed, operator: equals, value: false}\n", "EVD-2:"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -306,6 +310,7 @@ func TestViaTypes(t *testing.T) {
 		{"facet", "from: Requirement\nwhere: {field: evidenced_by, where: {field: passed, operator: exists}}\n", "Evidence"},
 		{"nested, inside any_of", "from: Evidence\nwhere:\n  any_of:\n    - field: verifies\n      where: {field: implements, where: {field: status, operator: exists}}\n", "Requirement UserNeed"},
 		{"aggregation without where", "from: Requirement\nwhere: {field: evidenced_by, aggregation: {type: count}, operator: equals, value: 0}\n", "Evidence"},
+		{"from", "from: Requirement\nwhere: {from: [UserNeed, Risk], where: {field: title, operator: exists}}\n", "Risk UserNeed"},
 		{"rows' links", "from: Risk\nwhere: {field: failure_modes, where: {field: severity, where: {field: score, operator: exists}}}\n", "SeverityLevel"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -320,8 +325,8 @@ func TestViaTypes(t *testing.T) {
 	}
 }
 
-// aggregates holds entities for aggregation and duplicated: a risk with no
-// failure modes, and titles shared within and across types.
+// aggregates holds entities for aggregation and sub-queries on from: a risk
+// with no failure modes, and titles shared within and across types.
 var aggregates = map[string]string{
 	"RSK-0002": fm("RSK-0002", "Risk", "title: No failure modes\n"),
 	"REQ-0004": fm("REQ-0004", "Requirement", "title: Dup\nstatus: approved\n"),
@@ -330,7 +335,7 @@ var aggregates = map[string]string{
 	"USR-0003": fm("USR-0003", "UserNeed", "title: Dup\n"),
 }
 
-func TestAggregationAndDuplicated(t *testing.T) {
+func TestAggregationAndOtherEntities(t *testing.T) {
 	all := maps.Clone(evidence)
 	maps.Copy(all, aggregates)
 	g := graph(t, all)
@@ -350,11 +355,16 @@ func TestAggregationAndDuplicated(t *testing.T) {
 		{"sum over linked entities, through rows", "from: Risk\nwhere:\n  field: failure_modes\n  where:\n    field: occurrence\n    aggregation: {type: sum, field: score}\n    operator: equals\n    value: 3\n", "RSK-0001"},
 		{"aggregate against value_of", "from: Requirement\nwhere: {field: implements, aggregation: {type: count}, operator: equals, value_of: order}\n", "REQ-0001"},
 		{"aggregation in any_of", "from: Evidence\nwhere:\n  any_of:\n    - {field: equipment_used, aggregation: {type: count}, operator: greater_than, value: 1}\n    - {field: passed, operator: equals, value: false}\n", "EVD-1 EVD-2"},
-		{"duplicated", "from: Requirement\nwhere: {field: title, operator: duplicated}\n", "REQ-0004 REQ-0005"},
-		{"duplicated combination", "from: Requirement\nwhere: {field: [title, status], operator: duplicated}\n", ""},
-		{"duplicated across from's types", "from: [Requirement, UserNeed]\nwhere: {field: title, operator: duplicated}\n", "REQ-0004 REQ-0005 USR-0003"},
-		{"duplicated among all of from, filtered after", "from: Requirement\nwhere:\n  - {field: status, operator: equals, value: approved}\n  - {field: title, operator: duplicated}\n", "REQ-0004"},
-		{"duplicated on a link", "from: Evidence\nwhere: {field: verifies, operator: duplicated}\n", ""},
+		// Another entity sharing a value: a sub-query on from, comparing
+		// with ^ and excluding the entity itself.
+		{"another with the same title", "from: Requirement\nwhere:\n  from: Requirement\n  where: [{field: title, operator: equals, value_of: ^title}, {field: id, operator: not_equals, value_of: ^id}]\n", "REQ-0004 REQ-0005"},
+		{"same title and status", "from: Requirement\nwhere:\n  from: Requirement\n  where: [{field: title, operator: equals, value_of: ^title}, {field: id, operator: not_equals, value_of: ^id}, {field: status, operator: equals, value_of: ^status}]\n", ""},
+		{"across types", "from: [Requirement, UserNeed]\nwhere:\n  from: [Requirement, UserNeed]\n  where: [{field: title, operator: equals, value_of: ^title}, {field: id, operator: not_equals, value_of: ^id}]\n", "REQ-0004 REQ-0005 USR-0003"},
+		{"among approved ones only", "from: Requirement\nwhere:\n  from: Requirement\n  where: [{field: title, operator: equals, value_of: ^title}, {field: id, operator: not_equals, value_of: ^id}, {field: status, operator: equals, value: approved}]\n", "REQ-0005"},
+		{"filtered outside", "from: Requirement\nwhere:\n  - {field: status, operator: equals, value: approved}\n  - from: Requirement\n    where: [{field: title, operator: equals, value_of: ^title}, {field: id, operator: not_equals, value_of: ^id}]\n", "REQ-0004"},
+		{"counting the others", "from: Requirement\nwhere:\n  from: Requirement\n  where: {field: title, operator: equals, value_of: ^title}\n  aggregation: {type: count}\n  operator: greater_than\n  value: 1\n", "REQ-0004 REQ-0005"},
+		{"any entity exists", "from: UserNeed\nwhere: {from: Risk, where: {field: title, operator: exists}}\n", "USR-0001 USR-0002 USR-0003"},
+		{"none exists", "from: UserNeed\nwhere:\n  from: Risk\n  where: {field: title, operator: equals, value: Nothing}\n  aggregation: {type: count}\n  operator: equals\n  value: 0\n", "USR-0001 USR-0002 USR-0003"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := ids(t, g, tc.src); got != tc.want {
@@ -364,7 +374,7 @@ func TestAggregationAndDuplicated(t *testing.T) {
 	}
 }
 
-func TestAggregationAndDuplicatedErrors(t *testing.T) {
+func TestAggregationAndOtherEntitiesErrors(t *testing.T) {
 	g := graph(t, evidence)
 	for _, tc := range []struct{ name, src, want string }{
 		{"no operator", "from: Evidence\nwhere: {field: equipment_used, aggregation: {type: count}}\n", "line 2: an aggregation needs an operator to test it"},
@@ -375,14 +385,12 @@ func TestAggregationAndDuplicatedErrors(t *testing.T) {
 		{"unknown item field", "from: Risk\nwhere: {field: failure_modes, aggregation: {type: max, field: rating}, operator: equals, value: 1}\n", `line 2: list "failure_modes" has no sub-field "rating"`},
 		{"aggregate against text", "from: Requirement\nwhere: {field: evidenced_by, aggregation: {type: count}, operator: equals, value: none}\n", `line 2: count of evidenced_by is a number; "none" is not`},
 		{"aggregate on a scalar", "from: Evidence\nwhere: {field: passed, aggregation: {type: count}, operator: equals, value: 1}\n", `line 2: "passed" is true or false: a sub-query reads the rows`},
-		{"duplicated aggregate", "from: Evidence\nwhere: {field: equipment_used, aggregation: {type: count}, operator: duplicated}\n", "line 2: duplicated compares entities, not an aggregate"},
-		{"duplicated with a value", "from: Requirement\nwhere: {field: title, operator: duplicated, value: x}\n", "line 2: duplicated takes no value"},
-		{"duplicated in a sub-query", "from: Evidence\nwhere: {field: equipment_used, where: {field: serial, operator: duplicated}}\n", "line 2: duplicated compares the entities from selects, so it cannot be inside a sub-query"},
-		{"duplicated on a many-link", "from: Requirement\nwhere: {field: implements, operator: duplicated}\n", `line 2: duplicated compares single values; "implements" has several`},
-		{"duplicated on rows", "from: Evidence\nwhere: {field: equipment_used, operator: duplicated}\n", `line 2: duplicated compares single values; "equipment_used" has several`},
-		{"duplicated on a facet", "from: Requirement\nwhere: {field: evidenced_by, operator: duplicated}\n", `line 2: duplicated compares single values; "evidenced_by" has several`},
-		{"duplicated unknown field", "from: [Requirement, UserNeed]\nwhere: {field: titel, operator: duplicated}\n", `line 2: neither Requirement nor UserNeed has a field "titel"`},
-		{"field list for equals", "from: Requirement\nwhere: {field: [title, status], operator: equals, value: x}\n", "line 2: a list of fields is for duplicated"},
+		{"field and from", "from: Requirement\nwhere: {field: title, from: Requirement, where: {field: id, operator: exists}}\n", "line 2: a condition tests a field, or with from looks among other entities, not both"},
+		{"from unknown type", "from: Requirement\nwhere: {from: Requirment, where: {field: id, operator: exists}}\n", `line 2: from: unknown type "Requirment"`},
+		{"from with an operator", "from: Requirement\nwhere: {from: Requirement, operator: exists}\n", "line 2: a sub-query holds when some item matches its where"},
+		{"^ names an unknown field", "from: Requirement\nwhere: {from: UserNeed, where: {field: title, operator: equals, value_of: ^titel}}\n", `line 2: Requirement has no field "titel"`},
+		{"from any, a field of two kinds", "from: Requirement\nwhere: {from: any, where: {field: title, operator: equals, value_of: ^title}}\n", "line 2: title is text on Document but a date on Evidence"},
+		{"duplicated is gone", "from: Requirement\nwhere: {field: title, operator: duplicated}\n", `line 2: unknown operator "duplicated"`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := ParseBlock(tc.src, g.Schema)

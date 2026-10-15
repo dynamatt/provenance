@@ -120,9 +120,9 @@ func (n fnode) value(name string) *model.Value {
 	return n.e.Field(name)
 }
 
-// viaTypes are the types a condition's sub-queries reach through links and
-// incoming facets, at any depth: a change to any entity of them can change
-// which entities match.
+// viaTypes are the types a condition's sub-queries reach through links,
+// incoming facets and from, at any depth: a change to any entity of them
+// can change which entities match.
 func viaTypes(s *schema.Schema, types []*schema.Type, cond *Condition) []string {
 	var out []string
 	// walk visits cond, about an entity of one of types or a row of list.
@@ -134,7 +134,15 @@ func viaTypes(s *schema.Schema, types []*schema.Type, cond *Condition) []string 
 		for _, sub := range append(slices.Clone(c.AllOf), c.AnyOf...) {
 			walk(sub, types, list)
 		}
-		if c.Test == nil || (c.Test.Where == nil && c.Test.Aggregation == nil) {
+		if c.Test == nil || (c.Test.Where == nil && c.Test.Aggregation == nil && c.Test.From == nil) {
+			return
+		}
+		if c.Test.From != nil {
+			reached, _ := FromTypes(s, c.Test.From, 0)
+			for _, t := range reached {
+				out = append(out, t.Name)
+			}
+			walk(c.Test.Where, reached, nil)
 			return
 		}
 		name := c.Test.Field.Field

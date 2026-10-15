@@ -13,7 +13,7 @@ cases/content-image/violation.md:6: error [content/image] image assets/missing.p
 cases/content-image/violation.md:8: error [content/image] image https://example.com/figure.png: images must be files in the repository, not URLs, so the site works offline (WID-0028)
 cases/content-image/violation.md:10: error [content/image] image ../../../outside.png is outside the repository (WID-0028)
 cases/content-image/violation.md:12: error [content/image] image assets/figure.bmp: the website export does not support this format (supported: .gif, .jpeg, .jpg, .png, .svg, .webp) (WID-0028)
-cases/content-query/violation.md:10: error [content/query] query block: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in, duplicated) (WID-0026)
+cases/content-query/violation.md:10: error [content/query] query block: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in) (WID-0026)
 cases/content-template/violation.md:8: error [content/template] query block: unknown template "no-such-template": there is no templates/no-such-template.tmpl (named templates: spare, widget-row) (WID-0039)
 cases/content-unrendered-block/violation.md:6: error [content/unrendered-block] mermaid block: this version of Provenance cannot render it, so it would be published as its source (WID-0037)
 cases/content-unrendered-block/violation.md:10: error [content/unrendered-block] drawio block: this version of Provenance cannot render it, so it would be published as its source (WID-0037)
