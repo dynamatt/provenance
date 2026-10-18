@@ -973,22 +973,30 @@ order after Epic 2, with the reason it comes where it does:
    type the schema declares (see below). After `init`, so the starter
    template can carry an example, and before `report` and `diff`, so both
    cover imported rows from the start.
-4. **`report`** — coverage metrics over the shared query engine.
-5. **`diff`** — rendered/semantic diff between refs.
-6. **`rename`** — ID rewrite across links, wikilinks and query filters.
-7. **`verify artifact`** — against the E1.14 manifest; includes deciding how
+4. **Section and item references** — a heading or list item is tagged,
+   and a reference to the tag shows the number it has where it is
+   rendered (see below). Before `diff` and `rename`, which must both
+   understand tagged references.
+5. **Query fields** — a field whose value is a query; the template gets
+   its results (see below). Before `report`, which can then count over a
+   plan's scope, and before `rename`, which must rewrite IDs inside them.
+6. **`report`** — coverage metrics over the shared query engine.
+7. **`diff`** — rendered/semantic diff between refs.
+8. **`rename`** — ID rewrite across links, wikilinks, tagged references,
+   query filters and query fields.
+9. **`verify artifact`** — against the E1.14 manifest; includes deciding how
    the manifest itself is signed.
-8. **`sign` / `sign verify`** — ledger format, then certificate provider, then
+10. **`sign` / `sign verify`** — ledger format, then certificate provider, then
    OIDC device flow; signatures become queryable facts, and the Signature
    Presence rules removed in E2.1 return as queries.
-9. **`component add/update/remove`** — submodules and composed-graph
+11. **`component add/update/remove`** — submodules and composed-graph
    validation.
-10. **`release tag`** — gate plus bill-of-materials; released content becomes
+12. **`release tag`** — gate plus bill-of-materials; released content becomes
    queryable, and Content Frozen After Release returns as a query.
-11. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
+13. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
    fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
    thin client over everything above.
-12. **`plugin`**.
+14. **`plugin`**.
 
 ### CSV-backed entity types (proposed 2026-10-11, for Matt's review)
 
@@ -1072,3 +1080,139 @@ own, so every part of the product that assumes one file per entity
    commit that brought it in.
 6. **History:** per-row last-changed (C7), page inputs, content hash.
 7. **Close-out:** docs (a "Importing data" concept page), release.
+
+### Section and item references (proposed 2026-10-18, for Matt's review)
+
+**Goal:** a document can point at a section or a list item of itself or
+of another entity, and the reference shows the number that section or
+item has where it is rendered: "see Section 3.2", "step 4 of
+[[VER-0001]]". Today only captions can be referred to (`[[#id]]`,
+DES-0034), and headings and list items have no numbers Provenance
+knows, since list numbers are the browser's and the step tables'
+numbers are a CSS counter.
+
+```markdown
+## Device Under Test {#dut}
+
+1. Connect the current probe.
+2. Set the amplitude to 3 mA and record one pulse. {#one-pulse}
+
+The device is listed in [[#dut]]; the pulse is recorded at
+[[#one-pulse]], and its limits are in [[REQ-0001#limits]].
+```
+
+renders, on a page where the heading is the third top-level section, as
+"The device is listed in Section 3; the pulse is recorded at item 2,
+and its limits are in Section 2.1 of REQ-0001".
+
+**Why "where it is rendered":** an entity's sections are numbered
+differently on its own page and inside a document that embeds it (its
+headings shift, DES-0035, and are numbered within the document). A
+reference resolves on the page being rendered, after the page is
+complete, as a caption reference does (DES-0034's two passes): to the
+tag's number on this page when the tagged entity is embedded here,
+otherwise to its number on the tagged entity's own page, with the
+entity's ID ("Section 2.1 of REQ-0001").
+
+**Decisions (for Matt, before the epic is detailed):**
+
+| # | Decision | Proposal | Why |
+| --- | --- | --- | --- |
+| X1 | How a tag is written | **`{#tag}` at the end of a heading's line or a list item's first paragraph,** the attribute syntax goldmark and Pandoc already use for headings. Tags are lower-case, `[a-z0-9-]`, and unique within the entity, sharing one namespace with caption IDs. | Plain text that reads well unrendered and survives other Markdown tools; one namespace means `[[#x]]` never has to say which kind it means. |
+| X2 | How a reference is written | **`[[#tag]]` within the same entity, `[[ID#tag]]` to another,** with `\|text` to replace the shown text and keep the link. `[[#tag]]` written in an entity means that entity's tag, wherever it is rendered; a caption reference keeps its meaning. | Extends the wikilink and caption syntax already in use (DES-0034) rather than adding a third. |
+| X3 | Which headings are numbered | **Every heading of a page is numbered by the renderer** (`1`, `1.2`, `1.2.3`), after embeds are shifted, and the number is in the HTML in `<span class="section-number">`. The stylesheet decides whether it is shown; a reference shows it regardless. A page's title heading (the H1) is not numbered. | The number a reference shows must be the one the reader can find. Numbering in Go, not CSS, is what lets a reference know it. |
+| X4 | List items | **An ordered list's items are numbered in Go too** (the number written in the Markdown, as CommonMark keeps it, then counting up); nested items read `2(b)`, then `2(b)(iii)`. A tag on an unordered list's item is an error: it has no number to show. | A protocol's numbered steps are the case that needs this. |
+| X5 | What the reference shows | **"Section 3.2" for a heading, "item 4" for a list item, followed by "of ID" when it resolves to another page**; fixed, as caption kinds are (DES-0034), and styled by `section-ref` and `item-ref`. | Same as captions: no configuration, appearance in the stylesheet. |
+| X6 | Rows of list fields | **Not in the first version.** A step in a `steps:` list field is numbered by its template, so the renderer can't see it. A later version can give templates an `anchor` function that registers a row's number and tag. | Keeps the first version to Markdown, which the renderer already walks. |
+| X7 | validate | **Errors:** a tag used twice in one entity, a tag on something other than a heading or an ordered list item, a malformed tag, and `[[#tag]]` or `[[ID#tag]]` whose tag doesn't exist in that entity (DES-0048's existing check for `[[#id]]`, widened). | References break silently when a heading is deleted; the merge gate is where that is caught. |
+
+**Rough shape:**
+
+1. **Design:** update DES-0034 (captions and references become one
+   numbering pass) and DES-0035 (heading numbering after the shift); a
+   requirement for section and item references; X1–X7 as decided.
+2. **Example repo:** DOC-0004 and VER-0001 tag sections and steps (VER-0001's
+   procedure written as an ordered list), and DOC-0005 refers to them,
+   including one tag that renders differently embedded and on its own
+   page.
+3. **Parsing:** `{#tag}` on headings and list items in `internal/markdown`;
+   `[[ID#tag]]` in wikilinks.
+4. **Numbering and resolution:** the per-page pass numbers headings and
+   ordered items and resolves every reference, after embeds.
+5. **validate:** X7.
+6. **Close-out:** docs (the Markdown reference page), release.
+
+### Query fields (proposed 2026-10-18, for Matt's review)
+
+**Goal:** a field's value can be a query, written in the entity's
+frontmatter, and its template gets the entities it selects. A Design
+Verification Plan then says which design items it covers, and its
+template gathers the devices under test and the equipment from the
+protocols that verify them, without a query block per table. Query
+blocks (DES-0032) stay for the body: each result is rendered on its own,
+so they can't aggregate. A query field gives the template every result
+at once.
+
+```yaml
+# schema/VerificationPlan.yaml
+type: VerificationPlan
+id_prefix: DVP
+fields:
+  - name: title
+    type: string
+    required: true
+  - name: scope
+    type: query
+    of: [Requirement]        # the types the query may select
+    required: true
+```
+
+```yaml
+# DVP/DVP-0001.md frontmatter
+scope:
+  from: Requirement
+  where:
+    field: status
+    operator: equals
+    value: approved
+  order_by: order
+```
+
+```gotemplate
+{{/* templates/VerificationPlan.tmpl */}}
+<h2>Device Under Test</h2>
+{{range collect .Scope "VerifiedBy" "DeviceUnderTest"}}…{{end}}
+<h2>Test equipment</h2>
+{{range collect .Scope "VerifiedBy" "EquipmentNeeded"}}…{{end}}
+```
+
+**Decisions (for Matt, before the epic is detailed):**
+
+| # | Decision | Proposal | Why |
+| --- | --- | --- | --- |
+| Q1 | What the value is | **A query block's YAML** (`from`, `where`, `order_by`) under the field's name, validated by the same grammar, with `of:` in the schema limiting `from:`. `render` and `template` aren't allowed: how results are shown is the template's job. | One grammar for blocks, rules and fields (the general mechanism, not a special case). |
+| Q2 | What the template and conditions see | **The results, as a many-link to the selected entities,** in query order: `.Scope` is a list of entities, as a link field's is. Conditions and rules treat it as a link (`field: scope, where: …`), and calculated fields can `COUNT(scope)`. The query's text is available as `.Scope.Query` for showing what the plan selected and why. | The template and the grammar already know what a many-link is; nothing new to learn. |
+| Q3 | Reverse facets | **None in the first version.** A query field selecting by a facet that is itself fed by a query field could loop; without reverse facets the query results never feed another query. | Keeps evaluation stratified. A Requirement can still find its plans with a query block over VerificationPlan. |
+| Q4 | Gathering across results | **One new template function, `collect`:** `collect LIST "Field" "Field" …` follows each named field from every entity in the list, flattens the result, keeps each entity once, and orders by ID. | Templates can't de-duplicate today, which is why DOC-0004 needs entity types such as TestEquipment and a query block per table. A path of fields keeps it general: it works on any link, facet or query field. |
+| Q5 | `^` inside the query | **`^field` reads the entity holding the query field,** as in a sub-query, so a plan can select by its own values (`value_of: ^component`). | The same meaning `^` has everywhere else. |
+| Q6 | Page inputs and history | A query field's results change when other entities change, so **the page inputs and the "changed since" check include every entity the query read,** through the dependency walk query blocks already use (E1.11). | The page must be marked changed when its scope grows, though the plan's file didn't change. |
+| Q7 | Signing | **A signature covers the query and the IDs it returned at that commit,** both stored in the ledger entry. `sign verify` reports a plan whose current results differ from the signed ones. | Approving a plan approves its scope; a scope that grows after approval mustn't look approved. Settled properly in the `sign` epic, but the ledger format must leave room. |
+
+**Rough shape:**
+
+1. **Design:** a field type in DES-0010, the grammar's use of it in
+   DES-0032, `collect` in the template functions (DES-0030), Q1–Q7 as
+   decided.
+2. **Example repo:** a VerificationPlan type and DVP-0001 whose template
+   gathers devices and equipment with `collect`; DOC-0004's per-table
+   query blocks and the joined-rows CSS go, unless kept to exercise
+   query blocks.
+3. **Schema and model:** `type: query` and `of:`; the query parsed and
+   checked at load; results resolved as a many-link.
+4. **Grammar:** query fields in conditions, rules and calculated fields;
+   `^` (Q5); stratification check (Q3).
+5. **export:** `.Scope` in templates, `collect`, page inputs (Q6).
+6. **validate:** a malformed query, a `from:` outside `of:`, `render` or
+   `template` given.
+7. **Close-out:** docs (the schema reference and the template functions),
+   release.
