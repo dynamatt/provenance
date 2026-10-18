@@ -120,41 +120,54 @@ func (n fnode) value(name string) *model.Value {
 	return n.e.Field(name)
 }
 
-// viaTypes are the types a condition reads across links ({via: L, field: F}):
-// a change to any entity of them can change which entities match.
-func viaTypes(types []*schema.Type, cond *Condition) []string {
+// viaTypes are the types a condition's sub-queries reach through links and
+// incoming facets, at any depth: a change to any entity of them can change
+// which entities match.
+func viaTypes(s *schema.Schema, types []*schema.Type, cond *Condition) []string {
 	var out []string
-	var walk func(*Condition)
-	ref := func(r *Ref) {
-		if r == nil || r.Via == "" {
-			return
-		}
-		for _, t := range types {
-			if f := t.Field(r.Via); f != nil && f.Kind == schema.Link {
-				out = append(out, f.Target...)
-			}
-			if facet := facetOf(t, r.Via); facet != nil {
-				for _, src := range facet.Sources {
-					out = append(out, src.Type.Name)
-				}
-			}
-		}
-	}
-	walk = func(c *Condition) {
+	// walk visits cond, about an entity of one of types or a row of list.
+	var walk func(c *Condition, types []*schema.Type, list *schema.Field)
+	walk = func(c *Condition, types []*schema.Type, list *schema.Field) {
 		if c == nil {
 			return
 		}
-		if c.Test != nil {
-			ref(&c.Test.Field)
-			if c.Test.Value != nil {
-				ref(c.Test.Value.Field)
+		for _, sub := range append(slices.Clone(c.AllOf), c.AnyOf...) {
+			walk(sub, types, list)
+		}
+		if c.Test == nil || c.Test.Where == nil {
+			return
+		}
+		name := c.Test.Field.Field
+		scopes := []*scope{{list: list}}
+		if list == nil {
+			scopes = nil
+			for _, t := range types {
+				scopes = append(scopes, &scope{t: t})
 			}
 		}
-		for _, sub := range append(slices.Clone(c.AllOf), c.AnyOf...) {
-			walk(sub)
+		for _, sc := range scopes {
+			var reached []*schema.Type
+			switch f := sc.field(name); {
+			case f != nil && f.Kind == schema.List && f.Elem == nil:
+				walk(c.Test.Where, nil, f)
+				continue
+			case f != nil && f.Kind == schema.Link:
+				for _, tn := range f.Target {
+					if t := s.Types[tn]; t != nil {
+						reached = append(reached, t)
+					}
+				}
+				out = append(out, f.Target...)
+			case sc.facet(name) != nil:
+				for _, src := range sc.facet(name).Sources {
+					reached = append(reached, src.Type)
+					out = append(out, src.Type.Name)
+				}
+			}
+			walk(c.Test.Where, reached, nil)
 		}
 	}
-	walk(cond)
+	walk(cond, types, nil)
 	slices.Sort(out)
 	return slices.Compact(out)
 }

@@ -161,7 +161,7 @@ sed -i.orig 's/^status: approved/status: draft/' REQ/REQ-0002.md
 expect 1 '' grep -q 'data-entity="REQ-0002"' _site/entities/DOC-0001.html
 mv REQ/REQ-0002.md.orig REQ/REQ-0002.md
 sed -i.orig 's/operator: equals/operator: "="/' DOC/DOC-0001.md
-expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: query block: unknown operator "=" \(valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists\)$' "$PROV" export website
+expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: query block: unknown operator "=" \(valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in\)$' "$PROV" export website
 mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
 
 # E1.9: calculated fields. RSK-0001's row_rating is severity × occurrence
@@ -443,6 +443,23 @@ git checkout -q -- REQ/REQ-0001.md
 printf 'x\n' > templates/spare.tmpl
 expect 0 '^templates/spare\.tmpl: warning \[content/unused-template\] named template spare is not chosen by any query block$' "$PROV" validate
 rm templates/spare.tmpl
+
+# E2.5: the grammar's sub-queries, ^name, value_of, missing and not_in.
+# DOC-0003 lists what would fail each design review check: nothing while the
+# example passes; a stale calibration row or protocol version appears in its
+# section. The removed forms are reported with the form that replaced them.
+"$PROV" export website >/dev/null
+expect 0 '^7$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VER/EVD-0001.md
+sed -i 's/^protocol_version: 2/protocol_version: 1/' VER/EVD-0002.md
+"$PROV" export website >/dev/null
+DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
+expect 0 '>Equipment calibration</h2>.*href="EVD-0001\.html".*>Stale protocol versions</h2>.*href="EVD-0002\.html".*>Risk-benefit analysis</h2>' sh -c "$DOC3_FLAT"
+expect 0 '^5$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+git checkout -q -- VER
+sed -i 's/^  field: equipment_used/  field: {list: equipment_used, subfield: calibration_due_date}/' DOC/DOC-0003.md
+expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: \{list: L, subfield: S\} is now a sub-query: \{field: L, where: \{field: S, …\}\} \(DOC-0003\)$' "$PROV" validate
+git checkout -q -- DOC/DOC-0003.md
 
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).

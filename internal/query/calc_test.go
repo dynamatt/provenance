@@ -181,7 +181,7 @@ func TestQueriesReadCalculatedFields(t *testing.T) {
 	if got := ids(t, g, "from: Risk\nwhere: {field: overall_risk_rating, operator: greater_than, value: 20}\norder_by: overall_risk_rating\n"); got != "RSK-0001" {
 		t.Errorf("got %q", got)
 	}
-	if got := ids(t, g, "from: Risk\nwhere: {field: {list: failure_modes, subfield: row_rating}, operator: equals, value: 15}\n"); got != "RSK-0001" {
+	if got := ids(t, g, "from: Risk\nwhere: {field: failure_modes, where: {field: row_rating, operator: equals, value: 15}}\n"); got != "RSK-0001" {
 		t.Errorf("got %q", got)
 	}
 }

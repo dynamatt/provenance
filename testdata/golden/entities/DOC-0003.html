@@ -1,0 +1,83 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DOC-0003 Design Review Checklist — NeuroPulse Stimulator — NEURO DHF</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="dhf-header">
+<a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
+<span class="dhf-label">Design History File · NEURO</span>
+</header>
+<main class="dhf-main">
+
+<article class="document" id="DOC-0003">
+<h1><span class="id">DOC-0003</span> Design Review Checklist — NeuroPulse Stimulator</h1>
+<p class="document-meta"><span class="status status-draft">draft</span></p>
+<div class="body">
+<h1>Design Review Checklist</h1>
+<p>Each section below is a check the design review makes before a design
+history file is released. Each one is a live query block (provenance-ddf
+DES-0032) asking for what would fail the check, so an empty section is a
+passed check. The same queries are the project's rules in <code>rules/</code>, which
+<code>provenance validate</code> runs at the merge gate (DES-0016): what a rule
+reports is exactly what its section here lists.</p>
+<h2>Equipment calibration</h2>
+<p>Verification evidence recorded with equipment whose calibration was due
+before the test was run (<code>rules/equipment-calibration-current.yaml</code>):</p>
+<p class="query-empty">No VerificationEvidence matches this query.</p>
+<p>The same for validation evidence
+(<code>rules/validation-equipment-calibration-current.yaml</code>):</p>
+<p class="query-empty">No ValidationEvidence matches this query.</p>
+<h2>Stale protocol versions</h2>
+<p>Verification evidence recorded against an older version of the protocol it
+tests (<code>rules/evidence-verified-latest-version.yaml</code>):</p>
+<p class="query-empty">No VerificationEvidence matches this query.</p>
+<h2>Risk-benefit analysis</h2>
+<p>Risks whose residual risk is unacceptable but which have no risk-benefit
+analysis (<code>rules/risk-benefit-required.yaml</code>):</p>
+<p class="query-empty">No Risk matches this query.</p>
+<h2>Change types</h2>
+<p>Change requests whose change type is outside the approved categories
+(<code>rules/eco-change-type-valid.yaml</code>):</p>
+<p class="query-empty">No ChangeRequest matches this query.</p>
+<h2>Deprecated user needs</h2>
+<p>Requirements implementing a user need that has been deprecated
+(<code>rules/no-implements-deprecated-need.yaml</code>):</p>
+<p class="query-empty">No Requirement matches this query.</p>
+<h2>Superseded requirements</h2>
+<p>Requirements that a newer requirement supersedes but that are not yet
+deprecated (<code>rules/superseded-entities-deprecated.yaml</code>):</p>
+<p class="query-empty">No Requirement matches this query.</p>
+</div>
+</article>
+
+<section class="dhf-revisions">
+<h2>Revision history</h2>
+<table>
+<thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td><code>7d65294</code></td><td>2026-10-14</td><td>Matt Williams</td><td>Add DOC-0003, a design review checklist of live queries</td></tr>
+<tr><td><code>58b2168</code></td><td>2026-10-11</td><td>Matt Williams</td><td>Merge pull request #12 from dynamatt/task/E2.1-validate-design</td></tr>
+<tr><td><code>55388be</code></td><td>2026-10-10</td><td>Matt Williams</td><td>Merge pull request #10 from dynamatt/ddf-references</td></tr>
+<tr><td><code>b617654</code></td><td>2026-10-06</td><td>Matt Williams</td><td>Merge pull request #8 from dynamatt/references</td></tr>
+<tr><td><code>bd98829</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Merge pull request #7 from dynamatt/scope-git-captions</td></tr>
+<tr><td><code>54de84f</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Add ValidationEvidence, reusing the Equipment record</td></tr>
+<tr><td><code>b6dfc5c</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Lists that name their type: a record, an enum and a built-in type</td></tr>
+<tr><td><code>4cf41f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Make templates/ functional: Requirement page, layout, index, stylesheet</td></tr>
+<tr><td><code>7aee1f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link on the VerificationProtocol side instead</td></tr>
+<tr><td><code>f1c5fe4</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link once, on the Requirement side</td></tr>
+<tr><td><code>32bb0cb</code></td><td>2026-09-26</td><td>Matt Williams</td><td>Initial commit.</td></tr>
+</tbody>
+</table>
+</section>
+</main>
+<footer class="dhf-footer">
+Controlled content, generated from the design repository. Printed copies are uncontrolled.
+<p class="dhf-stamp">Generated from commit <code>7d65294</code> · content hash <code>sha256:06b753b3ee1995269d35e08278353e80f2d7811b69db4cd04ef3e4c0e183058e</code> · this page last changed in <code>7d65294</code></p>
+</footer>
+</body>
+</html>

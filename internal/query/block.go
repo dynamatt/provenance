@@ -1,9 +1,11 @@
 package query
 
 import (
+	"cmp"
 	"fmt"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"go.yaml.in/yaml/v4"
@@ -121,9 +123,16 @@ func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Bloc
 	b := &Block{Render: Render{Mode: RenderFull}}
 	from := yamlnode.Lookup(m, "from")
 	if from == nil {
-		return nil, errorf(m, "%s has no from: <type> or from: [<type>, …]", what)
+		return nil, errorf(m, "%s has no from: <type>, from: [<type>, …] or from: any", what)
 	}
 	fromNodes := []*yaml.Node{from}
+	if from.Kind == yaml.ScalarNode && from.Value == "any" {
+		// Every entity type (DES-0015).
+		fromNodes = nil
+		for _, name := range s.TypeNames() {
+			b.From = append(b.From, s.Types[name])
+		}
+	}
 	if from.Kind == yaml.SequenceNode {
 		fromNodes = from.Content
 		if len(fromNodes) == 0 {
@@ -142,7 +151,7 @@ func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Bloc
 	}
 
 	if where := yamlnode.Lookup(m, "where"); where != nil {
-		cond, err := ParseCondition(where, false)
+		cond, err := ParseCondition(where)
 		if err != nil {
 			return nil, err
 		}
@@ -315,19 +324,136 @@ func (g *Graph) Run(b *Block) ([]*model.Entity, error) {
 // Match returns the IDs of the entities of the given types satisfying cond
 // (nil for all), sorted.
 func (g *Graph) Match(types []*schema.Type, cond *Condition) ([]string, error) {
-	prog, match, err := Compile(g.Schema, types, cond, "q_")
+	ms, err := g.Matches(types, cond)
 	if err != nil {
 		return nil, err
 	}
-	out, err := datalog.Eval(prog, g.facts)
-	if err != nil {
-		return nil, err
-	}
-	var ids []string
-	for _, tuple := range out.Relation(match).Tuples() {
-		ids = append(ids, tuple[0].S)
+	ids := make([]string, len(ms))
+	for i, m := range ms {
+		ids[i] = m.Entity.ID
 	}
 	return ids, nil
+}
+
+// Match is an entity a condition matched, with what matched it.
+type Match struct {
+	Entity *model.Entity
+	// Items are the rows and linked entities the sub-queries among the
+	// condition's top-level conditions matched (not those inside any_of),
+	// in the order the sub-queries are written, then file order.
+	Items []Item
+}
+
+// Item is a row or linked entity a sub-query matched, and where it is
+// written: a row in the matched entity's file; a link value where the link
+// is written, which for an incoming facet is the linking entity's file.
+type Item struct {
+	// Field is the sub-query's list, link or incoming facet.
+	Field string
+	// Row is the row's index from 0, for a list; -1 otherwise.
+	Row int
+	// ID is the linked entity, for a link or facet.
+	ID   string
+	Path string
+	Line int
+}
+
+// Matches returns the entities of the given types satisfying cond (nil for
+// all), sorted by ID, each with the items that matched it.
+func (g *Graph) Matches(types []*schema.Type, cond *Condition) ([]Match, error) {
+	cp, err := compile(g.Schema, types, cond, "q_")
+	if err != nil {
+		return nil, err
+	}
+	out, err := datalog.Eval(cp.prog, g.facts)
+	if err != nil {
+		return nil, err
+	}
+	var ms []Match
+	index := map[string]int{}
+	for _, tuple := range out.Relation(cp.match).Tuples() {
+		index[tuple[0].S] = len(ms)
+		ms = append(ms, Match{Entity: g.byID[tuple[0].S]})
+	}
+	for _, w := range cp.witnesses {
+		found := map[int][]Item{}
+		for _, tuple := range out.Relation(w.rel).Tuples() {
+			i := index[tuple[0].S]
+			found[i] = append(found[i], g.item(ms[i].Entity, w.test.Field.Field, tuple[1]))
+		}
+		for i, items := range found {
+			slices.SortFunc(items, func(a, b Item) int {
+				return cmp.Or(strings.Compare(a.Path, b.Path), cmp.Compare(a.Line, b.Line), cmp.Compare(a.Row, b.Row), strings.Compare(a.ID, b.ID))
+			})
+			ms[i].Items = append(ms[i].Items, items...)
+		}
+	}
+	return ms, nil
+}
+
+// item describes v, a row node or linked ID that field's sub-query matched
+// on e.
+func (g *Graph) item(e *model.Entity, field string, v datalog.Value) Item {
+	it := Item{Field: field, Row: -1, Path: e.Path}
+	if v.Kind == datalog.Node {
+		// RowNode: id/list/index; the list name and index have no slash.
+		it.Row, _ = strconv.Atoi(v.S[strings.LastIndex(v.S, "/")+1:])
+		if list := yamlnode.Lookup(e.Front, field); list != nil && it.Row < len(list.Content) {
+			it.Line = list.Content[it.Row].Line
+		}
+		return it
+	}
+	it.ID = v.S
+	if f := e.Schema.Field(field); f != nil {
+		it.Line = valueLine(yamlnode.Lookup(e.Front, field), it.ID)
+		return it
+	}
+	// An incoming facet: the link is written on the linking entity, as a
+	// field of its own or of one of its list rows.
+	src := g.byID[it.ID]
+	facet := facetOf(e.Schema, field)
+	if src == nil || facet == nil {
+		return it
+	}
+	it.Path = src.Path
+	for _, fs := range facet.Sources {
+		if fs.Type != src.Schema {
+			continue
+		}
+		if fs.List == nil {
+			if line := valueLine(yamlnode.Lookup(src.Front, fs.Field.Name), e.ID); line > 0 {
+				it.Line = line
+				return it
+			}
+			continue
+		}
+		if list := yamlnode.Lookup(src.Front, fs.List.Name); list != nil && list.Kind == yaml.SequenceNode {
+			for _, row := range list.Content {
+				if line := valueLine(yamlnode.Lookup(row, fs.Field.Name), e.ID); line > 0 {
+					it.Line = line
+					return it
+				}
+			}
+		}
+	}
+	return it
+}
+
+// valueLine is the line of n, a link field's value, where it names id: the
+// scalar, or the sequence item. 0 when it doesn't.
+func valueLine(n *yaml.Node, id string) int {
+	switch {
+	case n == nil:
+	case n.Kind == yaml.ScalarNode && n.Value == id:
+		return n.Line
+	case n.Kind == yaml.SequenceNode:
+		for _, item := range n.Content {
+			if item.Kind == yaml.ScalarNode && item.Value == id {
+				return item.Line
+			}
+		}
+	}
+	return 0
 }
 
 // sortValue is an entity's single value for an order_by field, or the zero

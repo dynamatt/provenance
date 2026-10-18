@@ -68,7 +68,7 @@ func TestFormulaInputs(t *testing.T) {
 func TestDependencyDetails(t *testing.T) {
 	g := graph(t, map[string]string{
 		"DOC-1": fm("DOC-1", "Document", "") + "![[RSK-0001]]\n\n![chart](assets/chart.png)\n\n" +
-			"```query\nfrom: Requirement\nwhere: {field: {via: implements, field: status}, operator: equals, value: approved}\nrender: id\n```\n\n" +
+			"```query\nfrom: Requirement\nwhere: {field: implements, where: {field: status, operator: equals, value: approved}}\nrender: id\n```\n\n" +
 			"```query\nfrom: Requirement\ntemplate: compact-row\n```\n",
 	})
 	d, err := g.Dependencies(g.Entity("DOC-1"))
