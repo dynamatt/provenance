@@ -1007,6 +1007,7 @@ type: Complaint
 id_prefix: CMP
 source:
   csv: data/complaints.csv       # repository path
+  system: Complaint handling (QMS-CH)   # where every dump comes from (C9)
   id: complaint_no               # the column holding each row's ID
 fields:
   - name: received
@@ -1020,6 +1021,14 @@ fields:
     type: boolean
   - name: summary
     type: text
+```
+
+Each dump comes with a sidecar saying when it was exported (C9):
+
+```yaml
+# data/complaints.csv.yaml — rewritten with each dump
+exported: 2026-09-30
+sha256: 3b5c7e…                  # sha256sum data/complaints.csv
 ```
 
 A Risk then links to its complaints (`complaints: [CMP-2026-0141, …]`, a
@@ -1043,7 +1052,7 @@ own, so every part of the product that assumes one file per entity
 | C6 | Where a row's problems are placed | **The file and the row's line** (`data/complaints.csv:142`), for validate, export errors and SARIF. | The same contract as every other violation (D8/DES-0048). |
 | C7 | History | A row's last-changed commit is the **last commit that changed that row's line content**, not the file's; the file's commit and dump date are shown on every row's page. Page inputs list the file. | Re-importing the whole file every month mustn't make every complaint look changed. |
 | C8 | Pages | **A page per row by default,** with `pages: false` on the source for large dumps; rows are still listed by queries and cited by `[[ID]]` without a page, as an entity outside the scope is. | Thousands of near-identical pages make a site slow to build and browse. |
-| C9 | Provenance of the dump | The source declares **`system:` (the system it came from) and `exported:` (the dump's date)**, shown on each row's page and available to templates, so an auditor can tie the data to its export. The file is in the content hash like any other. | ISO 13485 §8.2.2, which the QMSR incorporates: complaint records are kept by the complaint-handling process, and the copy must be traceable to it. |
+| C9 | Provenance of the dump | Provenance can't tell where a copied file came from, so it records what it knows and asks for the rest. **Git** knows when the copy entered the design record: the commit that last changed the file, with its date and author. **The schema** declares `system:`, the system the dumps come from, which doesn't change between dumps. **A sidecar beside each dump** (`data/complaints.csv.yaml`) holds what only the person exporting knows: `exported:`, the dump's date, and `sha256:`, the hash of the CSV it describes (`sha256sum` prints it). `validate` fails when the sidecar is missing or its hash isn't the file's, so a new dump copied in without saying when it was exported is stopped at the merge gate. All of it is shown on each row's page and available to templates; the CSV and the sidecar are in the content hash like any other file. | ISO 13485 §8.2.2, which the QMSR incorporates: complaint records are kept by the complaint-handling process, and the copy must be traceable to it. A per-dump date in the schema would be edited on every dump and could silently go stale; the hash ties the sidecar's date to this file, not to whichever file was there when it was last typed. |
 
 **Rough shape:**
 
@@ -1051,13 +1060,15 @@ own, so every part of the product that assumes one file per entity
    read-only, provenance of the dump) and a design element in the DDF,
    with C1–C9 as decided.
 2. **Example repo:** a `Complaint` type with `data/complaints.csv` (a dozen
-   synthetic rows), RSK-0001's failure modes linking to them, and
+   synthetic rows) and its sidecar, RSK-0001's failure modes linking to them, and
    `occurrence` justified by a `COUNT` over them.
 3. **Loading:** the CSV reader, `source:` in the schema, rows as entities
    in discovery, the model and the graph; load errors at file and row.
 4. **validate:** schema conformance for CSV types and rows (C2, C5, C6),
-   unknown columns as warnings.
+   unknown columns as warnings, and the sidecar: present, and its hash the
+   file's (C9).
 5. **export:** row pages, `pages: false`, citations and queries over rows,
-   the dump's provenance on each page.
+   the dump's provenance on each page: system, export date, and the
+   commit that brought it in.
 6. **History:** per-row last-changed (C7), page inputs, content hash.
 7. **Close-out:** docs (a "Importing data" concept page), release.
