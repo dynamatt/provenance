@@ -46,15 +46,29 @@ func New() *Exporter { return &Exporter{} }
 var safeID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 
 func (e *Exporter) Export(in *export.Input) (export.Files, error) {
+	return e.run(in, nil)
+}
+
+// run renders the site. With a checker (Check), every problem is recorded
+// and rendering goes on; the error returned is then only a failure to read
+// the repository.
+func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 	for _, ent := range in.Entities {
 		if !safeID.MatchString(ent.ID) {
-			return nil, fmt.Errorf("%s: ID %q cannot be used as a page name (letters, digits, '.', '_' and '-' only)", ent.Path, ent.ID)
+			if check == nil {
+				return nil, fmt.Errorf("%s: ID %q cannot be used as a page name (letters, digits, '.', '_' and '-' only)", ent.Path, ent.ID)
+			}
+			check.add(Problem{Rule: "schema/id-format", Path: ent.Path, Line: ent.IDLine(),
+				Msg: fmt.Sprintf("ID %s cannot be used as a page name (letters, digits, '.', '_' and '-' only)", ent.ID)})
 		}
 	}
-	if err := checkTemplateNames(in.Schema); err != nil {
-		return nil, err
+	for _, err := range templateNameErrors(in.Schema) {
+		if check == nil {
+			return nil, err
+		}
+		check.add(Problem{Rule: "content/template", Path: err.Path, Line: err.Line, Msg: err.Msg})
 	}
-	ts, err := loadTemplates(in.Repo.Root, in.Schema)
+	ts, err := loadTemplates(in.Repo.Root, in.Schema, check)
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +91,10 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 		inputs:    map[string]history.Inputs{},
 		byID:      make(map[string]*model.Entity, len(in.Entities)),
 		files:     export.Files{"style.css": ts.style},
+		check:     check,
+	}
+	if check != nil {
+		s.git = nil // a check writes no pages, so has nothing to stamp
 	}
 	for _, ent := range in.Entities {
 		s.byID[ent.ID] = ent
@@ -84,9 +102,11 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 	// Every entity's data carries its git stamps, embedded or not: a
 	// template naming .LastChangedSHA must render wherever it is used.
 	for _, ent := range in.Entities {
-		in, err := s.pageInputs(ent)
-		if err != nil {
-			return nil, err
+		var in history.Inputs
+		if s.git != nil {
+			if in, err = s.pageInputs(ent); err != nil {
+				return nil, err
+			}
 		}
 		last, revs := s.git.Page(in)
 		m := s.data.byID[ent.ID]
@@ -103,29 +123,29 @@ func (e *Exporter) Export(in *export.Input) (export.Files, error) {
 	// template (DES-0033); otherwise the index lists the scope.
 	if root := in.Scope.RootEntity(); root != nil {
 		content, data, err := s.renderPage(root, "entities/")
-		if err != nil {
+		if err := s.failed(err); err != nil {
 			return nil, err
 		}
-		if err := s.page("index.html", "", pageTitle(root), s.finalize(content), data); err != nil {
+		if err := s.failed(s.page("index.html", "", pageTitle(root), s.finalize(content), data)); err != nil {
 			return nil, err
 		}
 	} else {
 		index, err := s.renderIndex(inScope)
-		if err != nil {
+		if err := s.failed(err); err != nil {
 			return nil, err
 		}
 		last, revs := s.git.Page(s.indexInputs(inScope))
 		stamps := entityData{"LastChangedSHA": last, "Revisions": revisionData(revs)}
-		if err := s.page("index.html", "", in.Repo.Component.Name, s.finalize(index), stamps); err != nil {
+		if err := s.failed(s.page("index.html", "", in.Repo.Component.Name, s.finalize(index), stamps)); err != nil {
 			return nil, err
 		}
 	}
 	for _, ent := range inScope {
 		content, data, err := s.renderPage(ent, "")
-		if err != nil {
+		if err := s.failed(err); err != nil {
 			return nil, err
 		}
-		if err := s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), s.finalize(content), data); err != nil {
+		if err := s.failed(s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), s.finalize(content), data)); err != nil {
 			return nil, err
 		}
 	}
@@ -249,6 +269,9 @@ type site struct {
 	cites    *citations
 	pageData entityData
 	cited    map[string]entityData
+	// check, while checking, collects problems instead of stopping at the
+	// first (Check); nil while exporting.
+	check *checker
 }
 
 // citations are the IDs a page cites, in order of first citation.
@@ -284,6 +307,12 @@ func (s *site) listsCitations(e *model.Entity) bool {
 // known, as e's .Citations and to _cite.tmpl. The data returned is e's, with .Citations, for
 // the layout.
 func (s *site) renderPage(e *model.Entity, linkBase string) (string, entityData, error) {
+	if s.check != nil {
+		// The page's captions are known once it has rendered: from its
+		// second render when it cites anything, which repeats the first.
+		defer s.check.pageEnd()
+		s.check.pageStart()
+	}
 	chain := []*model.Entity{e}
 	s.cites = &citations{seen: map[string]bool{}}
 	content, err := s.renderEntity(e, chain, "", linkBase)
@@ -299,6 +328,9 @@ func (s *site) renderPage(e *model.Entity, linkBase string) (string, entityData,
 	s.pageData, s.cited = data, map[string]entityData{}
 	for _, c := range list {
 		s.cited[c["ID"].(string)] = c
+	}
+	if s.check != nil {
+		s.check.pageStart()
 	}
 	content, err = s.renderEntity(e, chain, "", linkBase)
 	s.pageData, s.cited = nil, nil
@@ -399,6 +431,9 @@ type renderCtx struct {
 	fragments []string
 	source    string
 	cite      *template.Template // _cite.tmpl, parsed on first use
+	// lineAt, while a caption's text is converted, is the caption's line
+	// in the file, where problems in its text are reported.
+	lineAt int
 }
 
 // entity is the entity being rendered, whose Markdown is being converted:
@@ -472,9 +507,16 @@ func (ctx *renderCtx) markdown(v any) (template.HTML, error) {
 	}
 	prev := ctx.source
 	ctx.source = src
+	defer func() { ctx.source = prev }()
 	r := &resolver{ctx: ctx}
+	if ctx.site.check != nil {
+		out, errs := markdown.ConvertAll(src, r, r.options())
+		for _, err := range errs {
+			ctx.markdownProblem(err)
+		}
+		return template.HTML(out), nil
+	}
 	out, err := markdown.Convert(src, r, r.options())
-	ctx.source = prev
 	var me *markdown.Error
 	if e := ctx.entity(); errors.As(err, &me) && e != nil {
 		err = &ContentError{Path: e.Path, Line: e.TextFileLine(src, me.Line), Msg: me.Msg}

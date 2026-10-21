@@ -14,6 +14,9 @@ import (
 	"strings"
 
 	"github.com/dynamatt/provenance/internal/entity"
+	"github.com/dynamatt/provenance/internal/export"
+	"github.com/dynamatt/provenance/internal/export/website"
+	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/schema"
 	"github.com/dynamatt/provenance/internal/yamlnode"
 )
@@ -82,10 +85,10 @@ func (r *Report) sort() {
 // RulesDir is the folder of rule files at the repository root (DES-0016).
 const RulesDir = "rules"
 
-// Run validates the repository at root. Every problem is reported, not
-// just the first (REQ-0038). err is an I/O error: the repository could not
-// be read.
-func Run(root string) (*Report, error) {
+// Run validates the repository rp. Every problem is reported, not just the
+// first (REQ-0038). err is an I/O error: the repository could not be read.
+func Run(rp *repo.Repo) (*Report, error) {
+	root := rp.Root
 	r := &Report{}
 	sc, err := entity.Scan(root)
 	if err != nil {
@@ -100,6 +103,9 @@ func Run(root string) (*Report, error) {
 	for _, p := range problems {
 		r.add(Violation{Rule: "schema/file", Severity: Error, Message: p.Msg, Path: p.Path, Line: p.Line})
 	}
+	for _, p := range s.KeyProblems {
+		r.add(Violation{Rule: "schema/unknown-key", Severity: Error, Message: p.Msg, Path: p.Path, Line: p.Line})
+	}
 	if len(problems) > 0 {
 		// Every type, field and rule is read against the schema: with part of
 		// it missing, they would report its absence over and over.
@@ -107,7 +113,15 @@ func Run(root string) (*Report, error) {
 			return nil, err
 		}
 	} else {
-		r.unknownTypes(s, sc.Entities)
+		known := r.unknownTypes(s, sc.Entities)
+		r.schemaChecks(s, sc.Entities)
+		typed, graph, err := r.conformance(s, known)
+		if err != nil {
+			return nil, err
+		}
+		if err := r.content(&export.Input{Repo: rp, Schema: s, Entities: typed, Graph: graph}); err != nil {
+			return nil, err
+		}
 	}
 	r.sort()
 	return r, nil
@@ -159,10 +173,12 @@ func (r *Report) entityProblems(sc *entity.Scanned) {
 	}
 }
 
-// unknownTypes reports entities whose type the schema does not declare.
-func (r *Report) unknownTypes(s *schema.Schema, entities []*entity.Entity) {
+// unknownTypes reports entities whose type the schema does not declare,
+// and returns the others.
+func (r *Report) unknownTypes(s *schema.Schema, entities []*entity.Entity) (known []*entity.Entity) {
 	for _, e := range entities {
 		if s.Types[e.Type] != nil {
+			known = append(known, e)
 			continue
 		}
 		msg := fmt.Sprintf("type %q is not declared in schema/", e.Type)
@@ -174,6 +190,7 @@ func (r *Report) unknownTypes(s *schema.Schema, entities []*entity.Entity) {
 			Path: e.Path, Line: yamlnode.Lookup(e.Front, "type").Line,
 		})
 	}
+	return known
 }
 
 // countRules counts the rule files in root/rules.
@@ -192,4 +209,26 @@ func countRules(root string) (int, error) {
 		}
 	}
 	return n, nil
+}
+
+// content reports what would stop the website export, and what it would
+// show as a gap, found by rendering the site as an export does
+// (website.Exporter.Check).
+func (r *Report) content(in *export.Input) error {
+	problems, err := website.New().Check(in)
+	if err != nil {
+		return err
+	}
+	byPath := map[string]string{}
+	for _, e := range in.Entities {
+		byPath[e.Path] = e.ID
+	}
+	for _, p := range problems {
+		sev := Error
+		if p.Warning {
+			sev = Warning
+		}
+		r.add(Violation{Rule: p.Rule, Severity: sev, Message: p.Msg, Entity: byPath[p.Path], Path: p.Path, Line: p.Line})
+	}
+	return nil
 }

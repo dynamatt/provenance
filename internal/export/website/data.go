@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/dynamatt/provenance/internal/model"
+	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/schema"
 )
 
@@ -61,10 +62,12 @@ func templateName(field string) string {
 	return b.String()
 }
 
-// checkTemplateNames fails when two of a type's fields or facets map to the
-// same accessor, or one hides a baseline accessor ("title" is allowed: the
-// field is the title).
-func checkTemplateNames(s *schema.Schema) error {
+// templateNameErrors lists every field or facet whose template accessor
+// another of its type's fields or facets already has, or that hides a
+// baseline accessor ("title" is allowed: the field is the title). Export
+// stops at the first.
+func templateNameErrors(s *schema.Schema) []*query.ContentError {
+	var out []*query.ContentError
 	for _, n := range s.TypeNames() {
 		t := s.Types[n]
 		seen := map[string]string{}
@@ -75,26 +78,25 @@ func checkTemplateNames(s *schema.Schema) error {
 			seen[b] = "the engine's citations"
 		}
 		delete(seen, "Title")
-		check := func(name, what string, line int) error {
+		check := func(name, what, path string, line int) {
 			key := templateName(name)
 			if prev, dup := seen[key]; dup {
-				return fmt.Errorf("%s:%d: %s %q: its template name .%s is already used by %s", t.File, line, what, name, key, prev)
+				out = append(out, &query.ContentError{Path: path, Line: line,
+					Msg: fmt.Sprintf("%s %q: its template name .%s is already used by %s", what, name, key, prev)})
+				return
 			}
 			seen[key] = fmt.Sprintf("%s %q", what, name)
-			return nil
 		}
 		for _, f := range t.Fields {
-			if err := check(f.Name, "field", f.Line); err != nil {
-				return err
-			}
+			check(f.Name, "field", t.File, f.Line)
 		}
+		// A facet is declared by its reverse_name, in the linking type's file.
 		for _, f := range t.Facets {
-			if err := check(f.Name, "incoming facet", f.Sources[0].Field.Line); err != nil {
-				return err
-			}
+			src := f.Sources[0]
+			check(f.Name, "incoming facet", src.Type.File, src.Field.Line)
 		}
 	}
-	return nil
+	return out
 }
 
 // dataModel holds every entity's template data, built once per export.

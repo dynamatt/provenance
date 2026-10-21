@@ -10,6 +10,7 @@ PROV=${PROV:?PROV must point at the provenance binary}
 EXAMPLE_DIR=${EXAMPLE_DIR:?EXAMPLE_DIR must point at the provenance-example checkout}
 GOLDEN_DIR=${GOLDEN_DIR:?GOLDEN_DIR must point at testdata/golden}
 VALIDATE_DIR=${VALIDATE_DIR:?VALIDATE_DIR must point at testdata/validate}
+VIOLATIONS_DIR=${VIOLATIONS_DIR:?VIOLATIONS_DIR must point at testdata/violations}
 
 failures=0
 
@@ -368,16 +369,16 @@ git worktree remove --force "$WORK/worktree"
 # file; --path validates another repository.
 expect 0 '^0 errors, 0 warnings$'         "$PROV" validate
 cp REQ/REQ-0002.md REQ/copy.md
-sed -i '2s/.*/id: DES-0001: x/' DES/DES-0001.md
+sed -i '2s/.*/id: ECO-0001: x/' ECO/ECO-0001.md
 printf -- '---\nid: REQ-0099\ntitle: no type\n---\n' > REQ/half.md
-expect 1 '^DES/DES-0001\.md:2: error \[content/frontmatter\] invalid frontmatter: mapping values are not allowed in this context$' "$PROV" validate
+expect 1 '^ECO/ECO-0001\.md:2: error \[content/frontmatter\] invalid frontmatter: mapping values are not allowed in this context$' "$PROV" validate
 expect 1 '^REQ/REQ-0002\.md:2: error \[content/duplicate-id\] duplicate entity ID REQ-0002, also in REQ/copy\.md \(REQ-0002\)$' "$PROV" validate
 expect 1 '^REQ/copy\.md:2: error \[content/duplicate-id\] duplicate entity ID REQ-0002, also in REQ/REQ-0002\.md \(REQ-0002\)$' "$PROV" validate
 expect 1 '^REQ/half\.md:2: error \[content/frontmatter\] frontmatter has an id but no type, so the file is not read as an entity$' "$PROV" validate
 expect 1 '^4 errors, 0 warnings$'         "$PROV" validate
 expect 1 '^validate: 4 errors, 0 warnings$' "$PROV" validate --out "$WORK/reports/v.txt"
 expect 0 '^4 errors, 0 warnings$'         tail -n 1 "$WORK/reports/v.txt"
-git checkout -q -- DES/DES-0001.md && rm REQ/copy.md REQ/half.md
+git checkout -q -- ECO/ECO-0001.md && rm REQ/copy.md REQ/half.md
 sed -i 's/^type: Risk/type: Rsk/' RSK/RSK-0001.md
 expect 1 '^RSK/RSK-0001\.md:3: error \[schema/unknown-type\] type "Rsk" is not declared in schema/ ' "$PROV" validate
 git checkout -q -- RSK/RSK-0001.md
@@ -391,6 +392,57 @@ expect 2 '^validate: not inside a provenance repository' "$PROV" validate --path
 cd "$WORK"
 expect 0 '^0 errors, 0 warnings$'         "$PROV" validate --path "$EXAMPLE_DIR/REQ"
 cd "$EXAMPLE_DIR"
+
+# E2.3: schema conformance. Each entity is checked against its type and
+# the schema against the DSL: an undeclared field, a value outside its enum,
+# a required field not set, a key the DSL doesn't have (default: included),
+# a value not of its type, an ID not of its type's form. Each exits 1 at its
+# line; a declaration nothing uses is a warning only.
+sed -i 's/^order: 1/order: 1\ncolour: red/' REQ/REQ-0001.md
+expect 1 '^REQ/REQ-0001\.md:9: error \[schema/unknown-field\] Requirement has no field "colour" \(fields: ' "$PROV" validate
+git checkout -q -- REQ/REQ-0001.md
+sed -i 's/^status: approved/status: aproved/' REQ/REQ-0001.md
+expect 1 '^REQ/REQ-0001\.md:5: error \[schema/enum-value\] status: "aproved" is not one of ApprovalStatus: draft, in_review, approved, deprecated \(REQ-0001\)$' "$PROV" validate
+git checkout -q -- REQ/REQ-0001.md
+sed -i '/^title:/d' REQ/REQ-0001.md
+expect 1 '^REQ/REQ-0001\.md:2: error \[schema/required\] required field title is not set \(REQ-0001\)$' "$PROV" validate
+git checkout -q -- REQ/REQ-0001.md
+sed -i 's/^\(    type: ApprovalStatus\)/\1\n    default: draft/' schema/Design.yaml
+expect 1 '^schema/Design\.yaml:[0-9]+: error \[schema/unknown-key\] field "status": unknown key "default": fields have no defaults' "$PROV" validate
+git checkout -q -- schema/Design.yaml
+sed -i 's/^execution_date: .*/execution_date: 2026-13-04/' VER/EVD-0001.md
+expect 1 '^VER/EVD-0001\.md:7: error \[schema/invalid-value\] execution_date: not a date \(YYYY-MM-DD\), got 2026-13-04 \(EVD-0001\)$' "$PROV" validate
+git checkout -q -- VER/EVD-0001.md
+sed -i 's/^id: DES-0001/id: DES-01/' DES/DES-0001.md
+expect 1 '^DES/DES-0001\.md:2: error \[schema/id-format\] ID DES-01 is not DES-NNNN' "$PROV" validate
+git checkout -q -- DES/DES-0001.md
+printf 'enum: Unused\nvalues: [a]\n' > schema/enums/Unused.yaml
+expect 0 '^schema/enums/Unused\.yaml:1: warning \[schema/unused-enum\] enum Unused is not used by any field$' "$PROV" validate
+expect 0 '^0 errors, 1 warning$'               "$PROV" validate
+rm schema/enums/Unused.yaml
+
+# E2.4: content and links. validate renders the site as export does but
+# reports every problem, each at its line: a query block that can't run, a
+# missing image, a wikilink to no entity, a block this version can't
+# render; export still stops at the first. A link field to an entity of a
+# type its field doesn't allow is reported too.
+sed -i '52s/operator: equals/operator: "="/' DOC/DOC-0001.md
+sed -i '34s|../assets/ecap-response.png|../assets/missing.png|' DOC/DOC-0001.md
+sed -i '65s/\[\[REQ-0002\]\]/[[REQ-0999]]/' DOC/DOC-0001.md
+printf '\n```mermaid\ngraph TD\n```\n' >> DOC/DOC-0001.md
+expect 1 '^DOC/DOC-0001\.md:34: error \[content/image\] image assets/missing\.png does not exist \(DOC-0001\)$' "$PROV" validate
+expect 1 '^DOC/DOC-0001\.md:52: error \[content/query\] query block: unknown operator "="' "$PROV" validate
+expect 1 '^DOC/DOC-0001\.md:65: error \[links/unresolved\] \[\[REQ-0999\]\]: no entity REQ-0999 \(DOC-0001\)$' "$PROV" validate
+expect 1 '^DOC/DOC-0001\.md:[0-9]+: error \[content/unrendered-block\] mermaid block: ' "$PROV" validate
+expect 1 '^4 errors, 0 warnings$'          "$PROV" validate
+expect 2 '^export: DOC/DOC-0001\.md:52: query block: unknown operator "="' "$PROV" export website --out "$WORK/broken"
+git checkout -q -- DOC/DOC-0001.md
+sed -i 's/^implements: \[USR-0001\]/implements: [REQ-0002]/' REQ/REQ-0001.md
+expect 1 '^REQ/REQ-0001\.md:6: error \[links/target-type\] implements: REQ-0002 is of type Requirement, but implements links only to UserNeed \(REQ-0001\)$' "$PROV" validate
+git checkout -q -- REQ/REQ-0001.md
+printf 'x\n' > templates/spare.tmpl
+expect 0 '^templates/spare\.tmpl: warning \[content/unused-template\] named template spare is not chosen by any query block$' "$PROV" validate
+rm templates/spare.tmpl
 
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
@@ -406,6 +458,14 @@ expect 0 ''                               diff -ru "$GOLDEN_DIR" "$WORK/a"
 "$PROV" validate >"$WORK/v2.txt"
 expect 0 ''                               diff "$WORK/v1.txt" "$WORK/v2.txt"
 expect 0 ''                               diff -u "$VALIDATE_DIR/clean.txt" "$WORK/v1.txt"
+
+# Standing E2 acceptance: every failure validate catches, in
+# testdata/violations, is reported as testdata/validate/violations-*.txt
+# records, and exits 1 (make golden-update rewrites them).
+for r in core broken-schema; do
+	expect 1 '' "$PROV" validate --path "$VIOLATIONS_DIR/$r" --out "$WORK/violations-$r.txt"
+	expect 0 '' diff -u "$VALIDATE_DIR/violations-$r.txt" "$WORK/violations-$r.txt"
+done
 
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"

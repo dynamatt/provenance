@@ -37,6 +37,7 @@ var _ markdown.Resolver = (*resolver)(nil)
 // or a citation (DES-0046), which the page collects and a project
 // _cite.tmpl, if any, renders.
 func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
+	r.checkLink(l)
 	if l.Local != "" {
 		// A caption on this page; resolved once the page is numbered.
 		text := "#" + l.Local
@@ -103,7 +104,7 @@ func (r *resolver) cite(w util.BufWriter, l markdown.Link) (bool, error) {
 	if r.ctx.cite == nil {
 		t, err := parse(*src, r.ctx.funcs())
 		if err != nil {
-			return true, err
+			return true, r.ctx.site.failed(err)
 		}
 		r.ctx.cite = t
 	}
@@ -111,37 +112,44 @@ func (r *resolver) cite(w util.BufWriter, l markdown.Link) (bool, error) {
 	data["CitationLabel"] = l.Label
 	var b strings.Builder
 	if err := r.ctx.cite.Execute(&b, data); err != nil {
-		return true, templateError(err)
+		return true, r.ctx.site.failed(templateError(err))
 	}
 	_, _ = w.WriteString(b.String())
 	return true, nil
 }
 
 func (r *resolver) Embed(w util.BufWriter, l markdown.Link) error {
+	r.checkLink(l)
 	target := r.ctx.site.byID[l.ID]
 	if target == nil {
 		_, _ = w.WriteString(`<p class="embed-missing">` + unresolvedHTML(l.ID, "unresolved"))
 		_, _ = w.WriteString("</p>\n")
 		return nil
 	}
-	return r.embed(w, target, "")
+	return r.embed(w, target, "", r.ctx.fileLine(l.Line))
 }
 
 // embed renders target in full, through the named template if one is
-// given, wrapped in an embed section.
-func (r *resolver) embed(w util.BufWriter, target *model.Entity, named string) error {
+// given, wrapped in an embed section. line is where the entity being
+// rendered embeds it, for a check.
+func (r *resolver) embed(w util.BufWriter, target *model.Entity, named string, line int) error {
 	for i, e := range r.ctx.chain {
 		if e == target {
 			chain := []string{}
 			for _, c := range r.ctx.chain[i:] {
 				chain = append(chain, c.ID)
 			}
+			if c := r.ctx.site.check; c != nil {
+				c.add(Problem{Rule: "content/embed-cycle", Path: r.ctx.path(), Line: line,
+					Msg: "embed cycle " + strings.Join(append(chain, target.ID), " → ")})
+				return nil
+			}
 			return &EmbedCycleError{Path: target.Path, Chain: append(chain, target.ID)}
 		}
 	}
 	chain := append(append([]*model.Entity{}, r.ctx.chain...), target)
 	html, err := r.ctx.site.renderEntity(target, chain, named, r.ctx.linkBase)
-	if err != nil {
+	if err := r.ctx.site.failed(err); err != nil {
 		return err
 	}
 	// The fragment's headings can only be shifted once the host has
@@ -156,11 +164,55 @@ func (r *resolver) embed(w util.BufWriter, target *model.Entity, named string) e
 // MisplacedEmbed renders an embed written inside running text as a normal
 // reference, marked, since a whole entity cannot go mid-sentence.
 func (r *resolver) MisplacedEmbed(w util.BufWriter, l markdown.Link) error {
-	if err := r.Reference(w, markdown.Link{ID: l.ID}); err != nil {
+	if c := r.ctx.site.check; c != nil {
+		c.add(Problem{Rule: "content/embed", Path: r.ctx.path(), Line: r.ctx.fileLine(l.Line),
+			Msg: fmt.Sprintf("![[%s]] is inside running text, so it is shown as a reference: an embed must stand on its own line", l.ID)})
+	}
+	if err := r.Reference(w, markdown.Link{ID: l.ID, Line: l.Line}); err != nil {
 		return err
 	}
 	_, _ = w.WriteString(unresolvedNote("embed must be on its own line"))
 	return nil
+}
+
+// checkLink, while checking, records a wikilink the export would show as
+// unresolved: to no entity, or [[ID#field]] to a field the entity lacks. A
+// [[#id]] is checked once its page is rendered, against the page's captions.
+func (r *resolver) checkLink(l markdown.Link) {
+	c := r.ctx.site.check
+	if c == nil {
+		return
+	}
+	at := Problem{Path: r.ctx.path(), Line: r.ctx.fileLine(l.Line)}
+	if l.Local != "" {
+		c.xrefs = append(c.xrefs, placed{id: l.Local, path: at.Path, line: at.Line})
+		return
+	}
+	target := r.ctx.site.byID[l.ID]
+	switch {
+	case target == nil:
+		at.Rule, at.Msg = "links/unresolved", fmt.Sprintf("%s: no entity %s", wikilink(l), l.ID)
+	case l.Field != "":
+		if _, ok := fieldText(target, l.Field); ok {
+			return
+		}
+		at.Rule, at.Msg = "links/unknown-field", fmt.Sprintf("%s: %s has no field %q", wikilink(l), target.Schema.Name, l.Field)
+	default:
+		return
+	}
+	c.add(at)
+}
+
+// wikilink writes l back as its source: [[ID]], ![[ID]], [[ID#field]].
+func wikilink(l markdown.Link) string {
+	s := l.ID
+	if l.Field != "" {
+		s += "#" + l.Field
+	}
+	if l.Embed {
+		return "![[" + s + "]]"
+	}
+	return "[[" + s + "]]"
 }
 
 // unresolvedHTML shows text, an ID or reference the export could not

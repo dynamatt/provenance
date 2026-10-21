@@ -364,3 +364,38 @@ fields:
 		t.Errorf("Load err = %v", err)
 	}
 }
+
+func TestKeyProblems(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/A.yaml", `type: A
+id_prefix: A
+extends: B
+fields:
+  - name: x
+    type: string
+    default: hi
+    formula: "1 + 1"
+  - name: y
+    type: link
+    target: [A]
+    cardinality: one
+    colour: red
+`)
+	s, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, p := range s.KeyProblems {
+		got = append(got, p.Error())
+	}
+	want := []string{
+		`schema/A.yaml:3: type A: unknown key "extends" (expected type, id_prefix, fields)`,
+		`schema/A.yaml:7: field "x": unknown key "default": fields have no defaults; a field that must have a value says required: true`,
+		`schema/A.yaml:8: field "x": formula applies only to a calculated field`,
+		`schema/A.yaml:13: field "y": unknown key "colour" (expected name, type, required, help, body, target, cardinality, reverse_name, formula, fields, of)`,
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}

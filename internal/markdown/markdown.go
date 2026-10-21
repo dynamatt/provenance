@@ -36,6 +36,8 @@ type Link struct {
 	Field string
 	// Embed is true for ![[ID]].
 	Embed bool
+	// Line is the line of Markdown source it is on, from 1.
+	Line int
 }
 
 // Fence is a fenced code block handed to the caller to render.
@@ -88,6 +90,9 @@ type Options struct {
 type Error struct {
 	Line int
 	Msg  string
+	// Image is true for an image the Options' Image function rejected;
+	// otherwise the problem is a caption's.
+	Image bool
 }
 
 func (e *Error) Error() string {
@@ -98,8 +103,26 @@ func (e *Error) Error() string {
 }
 
 // Convert renders src to HTML, resolving wikilinks and captions through r
-// and fenced blocks and images as opts says.
+// and fenced blocks and images as opts says. It fails with the first
+// problem.
 func Convert(src string, r Resolver, opts Options) (string, error) {
+	html, errs := render(src, r, opts, false)
+	if len(errs) > 0 {
+		return "", errs[0]
+	}
+	return html, nil
+}
+
+// ConvertAll renders src like Convert, but returns every problem in the
+// Markdown, such as each misplaced caption and unreadable image, instead of
+// the first: a caption or image at fault is left as written, and the rest
+// is still rendered. A Resolver or FenceFunc that records its problems
+// instead of returning them sees every wikilink and block.
+func ConvertAll(src string, r Resolver, opts Options) (string, []error) {
+	return render(src, r, opts, true)
+}
+
+func render(src string, r Resolver, opts Options, all bool) (string, []error) {
 	var errs []error
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.Table),
@@ -119,14 +142,14 @@ func Convert(src string, r Resolver, opts Options) (string, error) {
 	)
 	source := []byte(src)
 	doc := md.Parser().Parse(text.NewReader(source))
-	if len(errs) > 0 {
-		return "", errs[0]
+	if len(errs) > 0 && !all {
+		return "", errs
 	}
 	var b bytes.Buffer
 	if err := md.Renderer().Render(&b, source, doc); err != nil {
-		return "", err
+		errs = append(errs, err)
 	}
-	return b.String(), nil
+	return b.String(), errs
 }
 
 // wikilinkNode is an inline [[…]] or ![[…]].
@@ -162,7 +185,7 @@ type wikilinkParser struct{}
 func (p *wikilinkParser) Trigger() []byte { return []byte{'[', '!'} }
 
 func (p *wikilinkParser) Parse(_ ast.Node, block text.Reader, _ parser.Context) ast.Node {
-	line, _ := block.PeekLine()
+	line, seg := block.PeekLine()
 	embed := false
 	start := 2
 	if bytes.HasPrefix(line, []byte("![[")) {
@@ -178,8 +201,11 @@ func (p *wikilinkParser) Parse(_ ast.Node, block text.Reader, _ parser.Context) 
 	if strings.ContainsAny(inner, "[]\n") {
 		return nil
 	}
-	l := Link{Embed: embed}
+	l := Link{Embed: embed, Line: bytes.Count(block.Source()[:seg.Start], []byte("\n")) + 1}
 	target, label, hasLabel := strings.Cut(inner, "|")
+	// In a table cell the separator is written \| (GFM: a bare | ends the
+	// cell), so [[ID\|label]] is the same link as [[ID|label]].
+	target = strings.TrimSuffix(target, `\`)
 	if hasLabel {
 		l.Label = strings.TrimSpace(label)
 	}

@@ -1,0 +1,6 @@
+# schema/file: a field of a type that is neither built in nor declared.
+type: UnknownType
+id_prefix: UNK
+fields:
+  - name: status
+    type: AprovalStatus

@@ -33,6 +33,23 @@ func exportRepo(t *testing.T, files map[string]string) (export.Files, error) {
 // root), or everything when scope is "".
 func exportScoped(t *testing.T, files map[string]string, scope string) (export.Files, error) {
 	t.Helper()
+	in, root := input(t, files)
+	if scope != "" {
+		g, err := query.NewGraph(in.Schema, in.Entities)
+		if err != nil {
+			t.Fatal(err)
+		}
+		in.Graph = g
+		if in.Scope, err = export.ResolveScope(g, root, root, scope); err != nil {
+			return nil, err
+		}
+	}
+	return New().Export(in)
+}
+
+// input writes files as a repository and reads it as an export's input.
+func input(t *testing.T, files map[string]string) (*export.Input, string) {
+	t.Helper()
 	root := t.TempDir()
 	files[".component"] = "code: T\nname: Test\n"
 	for rel, content := range files {
@@ -60,18 +77,7 @@ func exportScoped(t *testing.T, files map[string]string, scope string) (export.F
 	if err != nil {
 		t.Fatal(err)
 	}
-	in := &export.Input{Repo: r, Schema: s, Entities: built}
-	if scope != "" {
-		g, err := query.NewGraph(s, built)
-		if err != nil {
-			t.Fatal(err)
-		}
-		in.Graph = g
-		if in.Scope, err = export.ResolveScope(g, root, root, scope); err != nil {
-			return nil, err
-		}
-	}
-	return New().Export(in)
+	return &export.Input{Repo: r, Schema: s, Entities: built}, root
 }
 
 func note(id, front, body string) string {

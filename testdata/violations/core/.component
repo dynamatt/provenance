@@ -1,0 +1,4 @@
+# The validate fixture: one folder under cases/ per check, each with an
+# example that breaks it and one that doesn't (testdata/violations/README.md).
+code: VIOL
+name: Validation failure catalogue

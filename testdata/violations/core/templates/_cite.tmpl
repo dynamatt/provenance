@@ -1,0 +1,6 @@
+{{/* A site override (clean for content/unknown-override). */}}
+{{- if .CitationLabel -}}
+{{link . .CitationLabel}}
+{{- else -}}
+{{link .}}
+{{- end}}

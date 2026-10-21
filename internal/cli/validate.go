@@ -33,7 +33,7 @@ func runValidate(c *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
-	report, err := validate.Run(r.Root)
+	report, err := validate.Run(r)
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}

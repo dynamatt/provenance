@@ -81,6 +81,7 @@ type Type struct {
 	// is freeform.
 	BodyField *Field
 	File      string
+	Line      int // of type:
 	// Facets are the incoming link facets other types' reverse_name
 	// declarations give this type, in name order.
 	Facets []*Facet
@@ -117,6 +118,7 @@ type EnumType struct {
 	Name   string
 	Values []string
 	File   string
+	Line   int // of enum:
 }
 
 // RecordType is a named row shape that lists use with of:, declared once
@@ -125,6 +127,7 @@ type RecordType struct {
 	Name   string
 	Fields []*Field
 	File   string
+	Line   int // of record:
 }
 
 // Schema is the full set of declarations.
@@ -132,6 +135,62 @@ type Schema struct {
 	Types   map[string]*Type
 	Enums   map[string]*EnumType
 	Records map[string]*RecordType
+	// KeyProblems are keys the DSL doesn't have, or that don't apply where
+	// they are written. They don't stop the schema loading: the key is
+	// ignored, and validate reports it.
+	KeyProblems []*Error
+}
+
+var (
+	typeKeys   = []string{"type", "id_prefix", "fields"}
+	recordKeys = []string{"record", "fields"}
+	enumKeys   = []string{"enum", "values"}
+	// fieldKeys maps each field key to the kinds of field it applies to,
+	// nil for every kind.
+	fieldKeys = map[string][]Kind{
+		"name": nil, "type": nil, "required": nil, "help": nil,
+		"body":   {Text},
+		"target": {Link}, "cardinality": {Link}, "reverse_name": {Link},
+		"formula": {Calculated},
+		"fields":  {List}, "of": {List},
+	}
+	fieldKeyOrder = []string{"name", "type", "required", "help", "body", "target", "cardinality", "reverse_name", "formula", "fields", "of"}
+)
+
+// checkKeys records the keys of a declaration's mapping m that are not in
+// allowed.
+func (s *Schema) checkKeys(path string, m *yaml.Node, what string, allowed []string) {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if k := m.Content[i]; !slices.Contains(allowed, k.Value) {
+			s.KeyProblems = append(s.KeyProblems, &Error{Path: path, Line: k.Line,
+				Msg: fmt.Sprintf("%s: unknown key %q (expected %s)", what, k.Value, strings.Join(allowed, ", "))})
+		}
+	}
+}
+
+// checkFieldKeys records the keys of a field declaration n that the DSL
+// doesn't have or that don't apply to the field's kind.
+func (s *Schema) checkFieldKeys(path string, n *yaml.Node, f *Field, label string) {
+	for i := 0; i+1 < len(n.Content); i += 2 {
+		k := n.Content[i]
+		kinds, known := fieldKeys[k.Value]
+		var msg string
+		switch {
+		case k.Value == "default":
+			msg = fmt.Sprintf("%s: unknown key \"default\": fields have no defaults; a field that must have a value says required: true", label)
+		case !known:
+			msg = fmt.Sprintf("%s: unknown key %q (expected %s)", label, k.Value, strings.Join(fieldKeyOrder, ", "))
+		case kinds != nil && !slices.Contains(kinds, f.Kind):
+			names := make([]string, len(kinds))
+			for i, k := range kinds {
+				names[i] = string(k)
+			}
+			msg = fmt.Sprintf("%s: %s applies only to a %s field", label, k.Value, strings.Join(names, " or "))
+		default:
+			continue
+		}
+		s.KeyProblems = append(s.KeyProblems, &Error{Path: path, Line: k.Line, Msg: msg})
+	}
 }
 
 // TypeNames lists the declared types in name order.
@@ -232,7 +291,8 @@ func (l *loader) read(root string) error {
 			}
 			continue
 		}
-		s.Records[rr.name] = &RecordType{Name: rr.name, File: rel}
+		s.Records[rr.name] = &RecordType{Name: rr.name, File: rel, Line: rr.nameLine}
+		s.checkKeys(rel, rr.mapping, "record "+rr.name, recordKeys)
 		l.pending[rr.name] = rr
 		records = append(records, rr.name)
 	}
@@ -252,7 +312,8 @@ func (l *loader) read(root string) error {
 			}
 			continue
 		}
-		s.Types[rt.name] = &Type{Name: rt.name, IDPrefix: rt.idPrefix, File: rel}
+		s.Types[rt.name] = &Type{Name: rt.name, IDPrefix: rt.idPrefix, File: rel, Line: rt.nameLine}
+		s.checkKeys(rel, rt.mapping, "type "+rt.name, typeKeys)
 		raws = append(raws, rt)
 	}
 	// Resolve every record, used or not, so a broken one is reported.
@@ -434,7 +495,8 @@ func (s *Schema) loadEnum(root, rel string) error {
 	if prev, dup := s.Enums[raw.Enum]; dup {
 		return &Error{Path: rel, Line: line, Msg: fmt.Sprintf("enum %s is already declared in %s", raw.Enum, prev.File)}
 	}
-	s.Enums[raw.Enum] = &EnumType{Name: raw.Enum, Values: raw.Values, File: rel}
+	s.Enums[raw.Enum] = &EnumType{Name: raw.Enum, Values: raw.Values, File: rel, Line: line}
+	s.checkKeys(rel, m, "enum "+raw.Enum, enumKeys)
 	return nil
 }
 
@@ -443,6 +505,7 @@ type rawDecl struct {
 	path, name, idPrefix string
 	nameLine             int
 	fields               []*yaml.Node
+	mapping              *yaml.Node
 }
 
 // readDecl reads a declaration whose name is under key: "type" or "record".
@@ -455,7 +518,7 @@ func readDecl(root, rel, key string) (*rawDecl, error) {
 	if name == nil || name.Kind != yaml.ScalarNode || name.Value == "" {
 		return nil, &Error{Path: rel, Line: m.Line, Msg: fmt.Sprintf("missing %s name (%s: <Name>)", key, key)}
 	}
-	rt := &rawDecl{path: rel, name: name.Value, nameLine: name.Line}
+	rt := &rawDecl{path: rel, name: name.Value, nameLine: name.Line, mapping: m}
 	if p := yamlnode.Lookup(m, "id_prefix"); p != nil {
 		rt.idPrefix = p.Value
 	}
@@ -567,6 +630,7 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 			f.Fields = l.fields(path, sub.Content, fmt.Sprintf("list %q", rf.Name))
 		}
 	}
+	l.checkFieldKeys(path, n, f, label)
 	return f, nil
 }
 

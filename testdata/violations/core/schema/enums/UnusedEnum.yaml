@@ -1,0 +1,3 @@
+# schema/unused-enum: no field is of this type.
+enum: UnusedEnum
+values: [a, b]

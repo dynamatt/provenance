@@ -1,0 +1,22 @@
+# One check provenance validate makes, with the files that break it and the
+# files that pass it. internal/validate/violations_test.go holds the report
+# to these.
+type: ErrorClass
+id_prefix: ERR
+fields:
+  - name: title
+    type: string
+    required: true
+  - name: rule
+    type: string
+    required: true
+  - name: severity
+    type: Severity
+    required: true
+  - name: description
+    type: text
+    body: true
+  - name: examples
+    type: list
+    of: Example
+    required: true
