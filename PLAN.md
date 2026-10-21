@@ -967,38 +967,106 @@ on the changed file. Revert → it passes.
 Detailed task breakdowns are written when the preceding epic closes. Proposed
 order after Epic 2, with the reason it comes where it does:
 
-1. **`fmt`** — canonical serialization; `fmt --check` joins the gate. Needed
+1. **Architecture groundwork** — one loader, source-neutral positions and
+   entity-level history (see below). Right after Epic 2 closes, since it
+   reworks the files Epic 2 is still changing, and before `fmt`, `init`
+   and CSV-backed types, which all build on it.
+2. **`fmt`** — canonical serialization; `fmt --check` joins the gate. Needed
    before the editor can write files.
-2. **`init`** — medical-device starter template embedded in the binary; a fresh
+3. **`init`** — medical-device starter template embedded in the binary; a fresh
    `init` must pass `validate` and `export`.
-3. **CSV-backed entity types** — rows of a CSV file loaded as entities of a
+4. **CSV-backed entity types** — rows of a CSV file loaded as entities of a
    type the schema declares (see below). After `init`, so the starter
    template can carry an example, and before `report` and `diff`, so both
    cover imported rows from the start.
-4. **Section and item references** — a heading or list item is tagged,
+5. **Section and item references** — a heading or list item is tagged,
    and a reference to the tag shows the number it has where it is
-   rendered (see below). Before `diff` and `rename`, which must both
-   understand tagged references.
-5. **Query fields** — a field whose value is a query; the template gets
-   its results (see below). Before `report`, which can then count over a
-   plan's scope, and before `rename`, which must rewrite IDs inside them.
-6. **`report`** — coverage metrics over the shared query engine.
-7. **`diff`** — rendered/semantic diff between refs.
-8. **`rename`** — ID rewrite across links, wikilinks, tagged references,
+   rendered (see below). Its first task replaces per-page placeholder
+   resolution with a page pipeline. Before `diff` and `rename`, which must
+   both understand tagged references.
+6. **Query fields** — a field whose value is a query; the template gets
+   its results (see below). Its first task evaluates calculated fields and
+   query fields as one Datalog program. Before `report`, which can then
+   count over a plan's scope, and before `rename`, which must rewrite IDs
+   inside them.
+7. **`report`** — coverage metrics over the shared query engine.
+8. **`diff`** — rendered/semantic diff between refs.
+9. **`rename`** — ID rewrite across links, wikilinks, tagged references,
    query filters and query fields.
-9. **`verify artifact`** — against the E1.14 manifest; includes deciding how
+10. **`verify artifact`** — against the E1.14 manifest; includes deciding how
    the manifest itself is signed.
-10. **`sign` / `sign verify`** — ledger format, then certificate provider, then
+11. **`sign` / `sign verify`** — ledger format, then certificate provider, then
    OIDC device flow; signatures become queryable facts, and the Signature
    Presence rules removed in E2.1 return as queries.
-11. **`component add/update/remove`** — submodules and composed-graph
+12. **`component add/update/remove`** — submodules and composed-graph
    validation.
-12. **`release tag`** — gate plus bill-of-materials; released content becomes
+13. **`release tag`** — gate plus bill-of-materials; released content becomes
    queryable, and Content Frozen After Release returns as a query.
-13. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
+14. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
    fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
    thin client over everything above.
-14. **`plugin`**.
+15. **`plugin`**.
+
+### Architecture groundwork (proposed 2026-10-21, for Matt's review)
+
+**Goal:** the loading and history code stops assuming that an entity is
+a Markdown file. A review of the code against the three proposed epics
+below (2026-10-21) found that the query layer will take them: the
+typed model, the Datalog facts and the template data already treat a
+row, a query field's results or a numbered section like anything else.
+The layers around it assume one Markdown file per entity:
+
+- **Discovery comes before the schema, three times over.** `export`
+  and `validate` each scan for `.md` files and then load the schema
+  (`cli/export.go`, `validate.Run`). `history` scans again to list
+  content files for the dirty check (`contentFiles`, `Status`), and
+  re-parses each commit's `.md` blobs to learn which types it touched
+  (`changes`). A CSV-backed type is only known from the schema, so a
+  changed `data/complaints.csv` would neither mark an export `-dirty`
+  nor count as a change to `Complaint` for pages whose query blocks
+  select complaints.
+- **Positions come from YAML nodes.** `IDLine()`, validate's schema
+  conformance and `model.Build` read lines and values from the
+  frontmatter's `yaml.Node` tree. A row has none.
+- **A path stands for an entity.** `validate` attributes an export
+  problem to an entity by its path (`byPath` in `validate.content`), and
+  page inputs, `history.Inputs` and the dirty check work in files. Every
+  row of a CSV shares one path, so per-row last-changed (C7) has nothing
+  to be expressed in.
+
+Fixing each of these once, before the epics that need them, keeps every
+later command (`fmt`, `report`, `diff`, `rename`, the editor) from
+patching them again in its own way. Two further pieces belong at the
+start of the epics that need them, and are written there: the page
+pipeline (Section and item references, task 3) and one Datalog program
+for derived values (Query fields, task 3).
+
+**Rough shape:**
+
+1. **One loader.** A package that goes repository → schema → sources →
+   model → graph and collects every problem on the way, used by `export`,
+   `validate` and `history`'s content listing. A *source* turns files
+   into entities; the first is the Markdown walker, and a CSV source
+   slots in beside it. The loader also answers which files are content
+   and which types a path holds, so `history` stops re-parsing blobs.
+   Output is unchanged: the golden test and the acceptance script pass
+   as they are.
+2. **Source-neutral positions.** An entity says where it and each of its
+   fields are (`path:line`), instead of callers reading `Front`.
+   Markdown entities keep their YAML nodes, which `fmt` needs, behind
+   that interface; validate's conformance checks and `model.Build` use
+   only the interface. Violations are unchanged (`testdata/violations`).
+3. **Entity-level history.** The first-parent log records, per commit,
+   the entity IDs it changed as well as the paths; for a Markdown file
+   these are the same, and a file holding several entities is diffed by
+   entity. `history.Inputs` gains entity IDs, and page inputs name the
+   entities a page shows rather than only their files. Violations and
+   export problems carry the entity directly, not through its path.
+4. **Close-out:** the developer notes in `CLAUDE.md` (where things are),
+   no release of its own; it ships with the next epic's.
+
+No design element changes: DES-0006 (one entity per file) and DES-0023
+(last-changed commit) still hold until the CSV epic revises them.
 
 ### CSV-backed entity types (proposed 2026-10-11, for Matt's review)
 
@@ -1056,7 +1124,7 @@ own, so every part of the product that assumes one file per entity
 | --- | --- | --- | --- |
 | C1 | Built in, or an import plugin (REQ-0070 allows import plugins) | **Built in.** The schema declares the source; there is no conversion step and no generated Markdown. Plugins remain for formats that need code (an eQMS API, XLSX). | CSV is the common denominator every system exports, and a built-in reader keeps the data's validation identity the binary's. Generating Markdown from the dump would create thousands of files no one reviews and that drift from the source. |
 | C2 | Row IDs | **The `id` column's value, used as written,** and checked to be unique within the file and across the repository. The `<id_prefix>-NNNN` form (DES-0007) applies to authored entities only; a CSV type's `id_prefix` is still required, and its IDs must start with it, so a link's type is still readable. | Complaint numbers are the identity the source system and the complaint handlers use; renumbering them would break traceability back to that system. |
-| C3 | Read-only | **Rows are read-only in Provenance.** `fmt`, `rename`, the editor and `sign` never write them; the file is replaced by the next dump. A row can't have a Markdown body; `text` columns render as Markdown. | The source system is the record; Provenance holds a dated copy. |
+| C3 | Read-only | **Rows are read-only in Provenance.** `fmt`, `rename`, the editor and `sign` never write them; the file is replaced by the next dump. A row can't have a Markdown body; `text` columns render as Markdown **without wikilinks, embeds or rendered fences** (`[[…]]`, `![[…]]` and a ```` ```query ```` block are shown as written), so a cell can't link out (C4), pull in content or run a query. | The source system is the record; Provenance holds a dated copy. |
 | C4 | Which way links go | **CSV rows can't link out** in the first version; authored entities link to them (Risk → Complaint), and the facet gives the reverse. A column holding IDs as a link is a later addition. | Links are stored on the later artefact (DES-0011): the risk analysis is written after, and about, the complaints. |
 | C5 | File format | **RFC 4180, UTF-8 (a BOM is ignored), a header row, comma-separated** by default with `delimiter:` to override, CRLF or LF. Values are typed by the field: dates `YYYY-MM-DD` only, unless the field gives `format:`; booleans `true/false`, `yes/no`, `1/0`; an empty cell is an absent value. Columns the schema doesn't name are ignored, and reported as a warning so a renamed column is noticed. | What Excel and most systems export, with types as strict as for authored entities. |
 | C6 | Where a row's problems are placed | **The file and the row's line** (`data/complaints.csv:142`), for validate, export errors and SARIF. | The same contract as every other violation (D8/DES-0048). |
@@ -1072,15 +1140,19 @@ own, so every part of the product that assumes one file per entity
 2. **Example repo:** a `Complaint` type with `data/complaints.csv` (a dozen
    synthetic rows) and its sidecar, RSK-0001's failure modes linking to them, and
    `occurrence` justified by a `COUNT` over them.
-3. **Loading:** the CSV reader, `source:` in the schema, rows as entities
-   in discovery, the model and the graph; load errors at file and row.
+3. **Loading:** the CSV reader as a second source of the loader
+   (Architecture groundwork, task 1), `source:` in the schema, rows as
+   entities in the model and the graph, each with its row's positions
+   (groundwork task 2); load errors at file and row.
 4. **validate:** schema conformance for CSV types and rows (C2, C5, C6),
    unknown columns as warnings, and the sidecar: present, and its hash the
    file's (C9).
 5. **export:** row pages, `pages: false`, citations and queries over rows,
    the dump's provenance on each page: system, export date, and the
    commit that brought it in.
-6. **History:** per-row last-changed (C7), page inputs, content hash.
+6. **History:** per-row last-changed (C7) on groundwork task 3's
+   entity-level log, which diffs the CSV by row ID; page inputs, the
+   dirty check, content hash.
 7. **Close-out:** docs (a "Importing data" concept page), release.
 
 ### Section and item references (proposed 2026-10-18, for Matt's review)
@@ -1121,12 +1193,12 @@ entity's ID ("Section 2.1 of REQ-0001").
 | # | Decision | Proposal | Why |
 | --- | --- | --- | --- |
 | X1 | How a tag is written | **`{#tag}` at the end of a heading's line or a list item's first paragraph,** the attribute syntax goldmark and Pandoc already use for headings. Tags are lower-case, `[a-z0-9-]`, and unique within the entity, sharing one namespace with caption IDs. | Plain text that reads well unrendered and survives other Markdown tools; one namespace means `[[#x]]` never has to say which kind it means. |
-| X2 | How a reference is written | **`[[#tag]]` within the same entity, `[[ID#tag]]` to another,** with `\|text` to replace the shown text and keep the link. `[[#tag]]` written in an entity means that entity's tag, wherever it is rendered; a caption reference keeps its meaning. | Extends the wikilink and caption syntax already in use (DES-0034) rather than adding a third. |
+| X2 | How a reference is written | **`[[#tag]]` within the same entity, `[[ID#tag]]` to another,** with `\|text` to replace the shown text and keep the link. Two existing meanings collide with this, and both are settled the same way: (a) `[[ID#field]]` already shows a field's value (DES-0034), so **a tag may not be the name of a field or facet of its entity's type** (a validate error, X7), and `[[ID#name]]` is a field when the type has one by that name, otherwise a tag; (b) `[[#id]]` today means a caption anywhere on the page being rendered, embedded entities included, so **`[[#x]]` becomes the writing entity's own tag or caption, wherever it is rendered**, and another entity's caption is `[[ID#x]]`, shown as its number on this page when that entity is embedded here. Every `[[#…]]` in `provenance-example` already refers to its own entity's caption, so none changes. | Extends the wikilink and caption syntax already in use (DES-0034) rather than adding a third. A reference that means the same thing on the entity's own page and inside any document embedding it is what lets one entity be embedded in several documents. |
 | X3 | Which headings are numbered | **Every heading of a page is numbered by the renderer** (`1`, `1.2`, `1.2.3`), after embeds are shifted, and the number is in the HTML in `<span class="section-number">`. The stylesheet decides whether it is shown; a reference shows it regardless. A page's title heading (the H1) is not numbered. | The number a reference shows must be the one the reader can find. Numbering in Go, not CSS, is what lets a reference know it. |
 | X4 | List items | **An ordered list's items are numbered in Go too** (the number written in the Markdown, as CommonMark keeps it, then counting up); nested items read `2(b)`, then `2(b)(iii)`. A tag on an unordered list's item is an error: it has no number to show. | A protocol's numbered steps are the case that needs this. |
 | X5 | What the reference shows | **"Section 3.2" for a heading, "item 4" for a list item, followed by "of ID" when it resolves to another page**; fixed, as caption kinds are (DES-0034), and styled by `section-ref` and `item-ref`. | Same as captions: no configuration, appearance in the stylesheet. |
 | X6 | Rows of list fields | **Not in the first version.** A step in a `steps:` list field is numbered by its template, so the renderer can't see it. A later version can give templates an `anchor` function that registers a row's number and tag. | Keeps the first version to Markdown, which the renderer already walks. |
-| X7 | validate | **Errors:** a tag used twice in one entity, a tag on something other than a heading or an ordered list item, a malformed tag, and `[[#tag]]` or `[[ID#tag]]` whose tag doesn't exist in that entity (DES-0048's existing check for `[[#id]]`, widened). | References break silently when a heading is deleted; the merge gate is where that is caught. |
+| X7 | validate | **Errors:** a tag used twice in one entity, a tag on something other than a heading or an ordered list item, a malformed tag, a tag named like a field or facet of its entity's type (X2), and `[[#tag]]` or `[[ID#tag]]` whose tag doesn't exist in that entity (DES-0048's existing check for `[[#id]]`, widened). | References break silently when a heading is deleted; the merge gate is where that is caught. |
 
 **Rough shape:**
 
@@ -1137,12 +1209,31 @@ entity's ID ("Section 2.1 of REQ-0001").
    procedure written as an ordered list), and DOC-0005 refers to them,
    including one tag that renders differently embedded and on its own
    page.
-3. **Parsing:** `{#tag}` on headings and list items in `internal/markdown`;
-   `[[ID#tag]]` in wikilinks.
-4. **Numbering and resolution:** the per-page pass numbers headings and
-   ordered items and resolves every reference, after embeds.
-5. **validate:** X7.
-6. **Close-out:** docs (the Markdown reference page), release.
+3. **Page pipeline.** Today each page is finished on its own, by string
+   passes over its HTML: embeds are spliced and their headings shifted
+   (`headings.go`), then caption placeholders, delimited by private-use
+   characters, are resolved by regular expression (`captions.go`). A
+   reference to another page's section needs that page's numbering, so
+   the exporter becomes two-phase: render every page, including the own
+   page of each entity a reference can fall back to, whether exported or
+   not; then finish them all. Finishing a page parses its HTML once
+   (`golang.org/x/net/html`, already used) and runs ordered passes over
+   the tree: splice and shift embeds, number headings, ordered lists and
+   captions, then resolve references from the anchor tables of every
+   page. Placeholders become elements with `data-` attributes naming the
+   owning entity, not private-use characters. The shape is Pandoc's
+   (parse, filters, write); the tool is not used, since the renderer
+   must be in the binary (REQ-0062).
+   Captions move onto it first, with byte-identical output; the golden
+   test is the check. Numbering the tree rather than the Markdown also
+   numbers an `<ol>` a template writes, which may bring X6 into the
+   first version.
+4. **Parsing:** `{#tag}` on headings and list items in `internal/markdown`;
+   `[[ID#tag]]` in wikilinks, with X2's field-or-tag lookup.
+5. **Numbering and resolution:** headings and ordered items join the
+   pipeline's numbering pass, and references resolve after it.
+6. **validate:** X7.
+7. **Close-out:** docs (the Markdown reference page), release.
 
 ### Query fields (proposed 2026-10-18, for Matt's review)
 
@@ -1194,7 +1285,7 @@ scope:
 | --- | --- | --- | --- |
 | Q1 | What the value is | **A query block's YAML** (`from`, `where`, `order_by`) under the field's name, validated by the same grammar, with `of:` in the schema limiting `from:`. `render` and `template` aren't allowed: how results are shown is the template's job. | One grammar for blocks, rules and fields (the general mechanism, not a special case). |
 | Q2 | What the template and conditions see | **The results, as a many-link to the selected entities,** in query order: `.Scope` is a list of entities, as a link field's is. Conditions and rules treat it as a link (`field: scope, where: …`), and calculated fields can `COUNT(scope)`. The query's text is available as `.Scope.Query` for showing what the plan selected and why. | The template and the grammar already know what a many-link is; nothing new to learn. |
-| Q3 | Reverse facets | **None in the first version.** A query field selecting by a facet that is itself fed by a query field could loop; without reverse facets the query results never feed another query. | Keeps evaluation stratified. A Requirement can still find its plans with a query block over VerificationPlan. |
+| Q3 | Reverse facets, and loops | **A query field may declare `reverse_name` like a link field, and loops are found by the Datalog engine's stratification, not ruled out by hand.** Query fields compile into the same program as calculated fields (task 3), so a query field reading a calculated field, a calculated field counting a query field, and a query field selecting by a facet another query field feeds are all ordered by the engine. A loop through positive conditions only has one answer (the least fixpoint) and is allowed; a loop through `missing`, `not_in` or an aggregation has none, and is a schema error placed at the query fields in the loop. | One general mechanism instead of a restriction that the next feature would have to lift. A Requirement can find the plans that cover it through the facet rather than a query block over VerificationPlan. |
 | Q4 | Gathering across results | **One new template function, `collect`:** `collect LIST "Field" "Field" …` follows each named field from every entity in the list, flattens the result, keeps each entity once, and orders by ID. | Templates can't de-duplicate today, which is why DOC-0004 needs entity types such as TestEquipment and a query block per table. A path of fields keeps it general: it works on any link, facet or query field. |
 | Q5 | `^` inside the query | **`^field` reads the entity holding the query field,** as in a sub-query, so a plan can select by its own values (`value_of: ^component`). | The same meaning `^` has everywhere else. |
 | Q6 | Page inputs and history | A query field's results change when other entities change, so **the page inputs and the "changed since" check include every entity the query read,** through the dependency walk query blocks already use (E1.11). | The page must be marked changed when its scope grows, though the plan's file didn't change. |
@@ -1209,12 +1300,20 @@ scope:
    gathers devices and equipment with `collect`; DOC-0004's per-table
    query blocks and the joined-rows CSS go, unless kept to exercise
    query blocks.
-3. **Schema and model:** `type: query` and `of:`; the query parsed and
+3. **One program for derived values.** Today `query.NewGraph` builds the
+   facts, evaluates calculated fields as one Datalog program and writes
+   their values back as facts, and each query block is evaluated
+   separately afterwards. Query fields sit between the two in both
+   directions (Q3), so the graph's derived values become one program:
+   calculated fields first, with the same results (the golden test is
+   the check), then query fields compiled into it as derived `link`
+   facts. Needs E2.5's correlated sub-queries for `^` (Q5).
+4. **Schema and model:** `type: query` and `of:`; the query parsed and
    checked at load; results resolved as a many-link.
-4. **Grammar:** query fields in conditions, rules and calculated fields;
-   `^` (Q5); stratification check (Q3).
-5. **export:** `.Scope` in templates, `collect`, page inputs (Q6).
-6. **validate:** a malformed query, a `from:` outside `of:`, `render` or
-   `template` given.
-7. **Close-out:** docs (the schema reference and the template functions),
+5. **Grammar:** query fields in conditions, rules and calculated fields;
+   `^` (Q5); loops reported by stratification (Q3).
+6. **export:** `.Scope` in templates, `collect`, page inputs (Q6).
+7. **validate:** a malformed query, a `from:` outside `of:`, `render` or
+   `template` given, and a loop with no answer (Q3).
+8. **Close-out:** docs (the schema reference and the template functions),
    release.
