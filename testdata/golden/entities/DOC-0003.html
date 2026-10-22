@@ -32,10 +32,19 @@ before the test was run (<code>rules/equipment-calibration-current.yaml</code>):
 <p>The same for validation evidence
 (<code>rules/validation-equipment-calibration-current.yaml</code>):</p>
 <p class="query-empty">No ValidationEvidence matches this query.</p>
-<h2>Stale protocol versions</h2>
-<p>Verification evidence recorded against an older version of the protocol it
-tests (<code>rules/evidence-verified-latest-version.yaml</code>):</p>
+<h2>Evidence before its build</h2>
+<p>Verification evidence executed before the build it names was built
+(<code>rules/evidence-after-build.yaml</code>):</p>
 <p class="query-empty">No VerificationEvidence matches this query.</p>
+<h2>Verification coverage</h2>
+<p>Requirements that no verification protocol verifies yet
+(<code>rules/requirement-verified.yaml</code>, a warning):</p>
+<ul class="query">
+<li><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a></li>
+</ul>
+<p>Verification protocols that verify no requirement
+(<code>rules/protocol-verifies-requirement.yaml</code>):</p>
+<p class="query-empty">No VerificationProtocol matches this query.</p>
 <h2>Risk-benefit analysis</h2>
 <p>Risks whose residual risk is unacceptable but which have no risk-benefit
 analysis (<code>rules/risk-benefit-required.yaml</code>):</p>
@@ -52,6 +61,10 @@ analysis (<code>rules/risk-benefit-required.yaml</code>):</p>
 <p>Requirements that a newer requirement supersedes but that are not yet
 deprecated (<code>rules/superseded-entities-deprecated.yaml</code>):</p>
 <p class="query-empty">No Requirement matches this query.</p>
+<h2>Duplicate titles</h2>
+<p>Requirements sharing a title with another, likely a duplicate or a
+copy-paste error (<code>rules/requirement-title-unique.yaml</code>, a warning):</p>
+<p class="query-empty">No Requirement matches this query.</p>
 </div>
 </article>
 
@@ -60,7 +73,9 @@ deprecated (<code>rules/superseded-entities-deprecated.yaml</code>):</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
-<tr><td><code>7d65294</code></td><td>2026-10-14</td><td>Matt Williams</td><td>Add DOC-0003, a design review checklist of live queries</td></tr>
+<tr><td><code>3dd7c6b</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #16 from dynamatt/verification-protocol-report</td></tr>
+<tr><td><code>3f4b916</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge commit &#39;8068898d3c091ab9a85d211d7a09eb61fc4a1018&#39; into epic/E2-validate</td></tr>
+<tr><td><code>07c4560</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #13 from dynamatt/task/E2.5-grammar</td></tr>
 <tr><td><code>58b2168</code></td><td>2026-10-11</td><td>Matt Williams</td><td>Merge pull request #12 from dynamatt/task/E2.1-validate-design</td></tr>
 <tr><td><code>55388be</code></td><td>2026-10-10</td><td>Matt Williams</td><td>Merge pull request #10 from dynamatt/ddf-references</td></tr>
 <tr><td><code>b617654</code></td><td>2026-10-06</td><td>Matt Williams</td><td>Merge pull request #8 from dynamatt/references</td></tr>
@@ -77,7 +92,7 @@ deprecated (<code>rules/superseded-entities-deprecated.yaml</code>):</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>7d65294</code> · content hash <code>sha256:06b753b3ee1995269d35e08278353e80f2d7811b69db4cd04ef3e4c0e183058e</code> · this page last changed in <code>7d65294</code></p>
+<p class="dhf-stamp">Generated from commit <code>3dd7c6b</code> · content hash <code>sha256:9f07cff189a7216710848a513b4a65bc78e24f7c2cd090253b332caa6b04e7cf</code> · this page last changed in <code>3dd7c6b</code></p>
 </footer>
 </body>
 </html>

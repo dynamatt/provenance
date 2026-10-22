@@ -256,7 +256,9 @@ func TestQueryBlockTemplates(t *testing.T) {
 // Each match carries the rows and links its top-level sub-queries matched,
 // placed where they are written.
 func TestMatchItems(t *testing.T) {
-	g := graph(t, evidence)
+	all := maps.Clone(evidence)
+	maps.Copy(all, aggregates)
+	g := graph(t, all)
 	items := func(src string) string {
 		t.Helper()
 		b, err := ParseBlock(src, g.Schema)
@@ -288,6 +290,8 @@ func TestMatchItems(t *testing.T) {
 			"EVD-1: verifies[-1]REQ-0001@EVD-1:6 equipment_used[1]@EVD-1:9"},
 		{"none inside any_of", "from: Evidence\nwhere:\n  any_of:\n    - {field: equipment_used, where: {field: serial, operator: equals, value: C}}\n",
 			"EVD-2:"},
+		{"other entities, at their id", "from: Requirement\nwhere: {from: Requirement, where: [{field: title, operator: equals, value_of: ^title}, {field: id, operator: not_equals, value_of: ^id}]}\n",
+			"REQ-0004: [-1]REQ-0005@REQ-0005:2; REQ-0005: [-1]REQ-0004@REQ-0004:2"},
 		{"none without a sub-query", "from: Evidence\nwhere: {field: passed, operator: equals, value: false}\n", "EVD-2:"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -305,6 +309,8 @@ func TestViaTypes(t *testing.T) {
 		{"link", "from: Requirement\nwhere: {field: implements, where: {field: status, operator: exists}}\n", "UserNeed"},
 		{"facet", "from: Requirement\nwhere: {field: evidenced_by, where: {field: passed, operator: exists}}\n", "Evidence"},
 		{"nested, inside any_of", "from: Evidence\nwhere:\n  any_of:\n    - field: verifies\n      where: {field: implements, where: {field: status, operator: exists}}\n", "Requirement UserNeed"},
+		{"aggregation without where", "from: Requirement\nwhere: {field: evidenced_by, aggregation: {type: count}, operator: equals, value: 0}\n", "Evidence"},
+		{"from", "from: Requirement\nwhere: {from: [UserNeed, Risk], where: {field: title, operator: exists}}\n", "Risk UserNeed"},
 		{"rows' links", "from: Risk\nwhere: {field: failure_modes, where: {field: severity, where: {field: score, operator: exists}}}\n", "SeverityLevel"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -314,6 +320,82 @@ func TestViaTypes(t *testing.T) {
 			}
 			if got := strings.Join(viaTypes(g.Schema, b.From, b.Where), " "); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// aggregates holds entities for aggregation and sub-queries on from: a risk
+// with no failure modes, and titles shared within and across types.
+var aggregates = map[string]string{
+	"RSK-0002": fm("RSK-0002", "Risk", "title: No failure modes\n"),
+	"REQ-0004": fm("REQ-0004", "Requirement", "title: Dup\nstatus: approved\n"),
+	"REQ-0005": fm("REQ-0005", "Requirement", "title: Dup\nstatus: draft\n"),
+	"REQ-0006": fm("REQ-0006", "Requirement", "title: Solo\nstatus: approved\n"),
+	"USR-0003": fm("USR-0003", "UserNeed", "title: Dup\n"),
+}
+
+func TestAggregationAndOtherEntities(t *testing.T) {
+	all := maps.Clone(evidence)
+	maps.Copy(all, aggregates)
+	g := graph(t, all)
+	// RSK-0001's row ratings are 5, 15 and 25 (calc_test.go).
+	for _, tc := range []struct{ name, src, want string }{
+		{"count of a facet", "from: Requirement\nwhere: {field: evidenced_by, aggregation: {type: count}, operator: less_than, value: 1}\n", "REQ-0003 REQ-0004 REQ-0005 REQ-0006"},
+		{"count of matching items", "from: Requirement\nwhere:\n  field: evidenced_by\n  where: {field: passed, operator: equals, value: true}\n  aggregation: {type: count}\n  operator: greater_or_equal\n  value: 1\n", "REQ-0001"},
+		{"count of rows", "from: Evidence\nwhere: {field: equipment_used, aggregation: {type: count}, operator: equals, value: 2}\n", "EVD-1"},
+		{"count of no rows is 0", "from: Evidence\nwhere: {field: equipment_used, aggregation: {type: count}, operator: equals, value: 0}\n", "EVD-3"},
+		{"sum", "from: Risk\nwhere: {field: failure_modes, aggregation: {type: sum, field: row_rating}, operator: equals, value: 45}\n", "RSK-0001"},
+		{"sum of nothing is 0", "from: Risk\nwhere: {field: failure_modes, aggregation: {type: sum, field: row_rating}, operator: equals, value: 0}\n", "RSK-0002"},
+		{"min", "from: Risk\nwhere: {field: failure_modes, aggregation: {type: min, field: row_rating}, operator: equals, value: 5}\n", "RSK-0001"},
+		{"max", "from: Risk\nwhere: {field: failure_modes, aggregation: {type: max, field: row_rating}, operator: equals, value: 25}\n", "RSK-0001"},
+		{"avg", "from: Risk\nwhere: {field: failure_modes, aggregation: {type: avg, field: row_rating}, operator: equals, value: 15}\n", "RSK-0001"},
+		{"max of nothing is blank", "from: Risk\nwhere: {field: failure_modes, aggregation: {type: max, field: row_rating}, operator: missing}\n", "RSK-0002"},
+		{"not_equals holds on a blank aggregate", "from: Risk\nwhere: {field: failure_modes, aggregation: {type: max, field: row_rating}, operator: not_equals, value: 25}\n", "RSK-0002"},
+		{"sum over linked entities, through rows", "from: Risk\nwhere:\n  field: failure_modes\n  where:\n    field: occurrence\n    aggregation: {type: sum, field: score}\n    operator: equals\n    value: 3\n", "RSK-0001"},
+		{"aggregate against value_of", "from: Requirement\nwhere: {field: implements, aggregation: {type: count}, operator: equals, value_of: order}\n", "REQ-0001"},
+		{"aggregation in any_of", "from: Evidence\nwhere:\n  any_of:\n    - {field: equipment_used, aggregation: {type: count}, operator: greater_than, value: 1}\n    - {field: passed, operator: equals, value: false}\n", "EVD-1 EVD-2"},
+		// Another entity sharing a value: a sub-query on from, comparing
+		// with ^ and excluding the entity itself.
+		{"another with the same title", "from: Requirement\nwhere:\n  from: Requirement\n  where: [{field: title, operator: equals, value_of: ^title}, {field: id, operator: not_equals, value_of: ^id}]\n", "REQ-0004 REQ-0005"},
+		{"same title and status", "from: Requirement\nwhere:\n  from: Requirement\n  where: [{field: title, operator: equals, value_of: ^title}, {field: id, operator: not_equals, value_of: ^id}, {field: status, operator: equals, value_of: ^status}]\n", ""},
+		{"across types", "from: [Requirement, UserNeed]\nwhere:\n  from: [Requirement, UserNeed]\n  where: [{field: title, operator: equals, value_of: ^title}, {field: id, operator: not_equals, value_of: ^id}]\n", "REQ-0004 REQ-0005 USR-0003"},
+		{"among approved ones only", "from: Requirement\nwhere:\n  from: Requirement\n  where: [{field: title, operator: equals, value_of: ^title}, {field: id, operator: not_equals, value_of: ^id}, {field: status, operator: equals, value: approved}]\n", "REQ-0005"},
+		{"filtered outside", "from: Requirement\nwhere:\n  - {field: status, operator: equals, value: approved}\n  - from: Requirement\n    where: [{field: title, operator: equals, value_of: ^title}, {field: id, operator: not_equals, value_of: ^id}]\n", "REQ-0004"},
+		{"counting the others", "from: Requirement\nwhere:\n  from: Requirement\n  where: {field: title, operator: equals, value_of: ^title}\n  aggregation: {type: count}\n  operator: greater_than\n  value: 1\n", "REQ-0004 REQ-0005"},
+		{"any entity exists", "from: UserNeed\nwhere: {from: Risk, where: {field: title, operator: exists}}\n", "USR-0001 USR-0002 USR-0003"},
+		{"none exists", "from: UserNeed\nwhere:\n  from: Risk\n  where: {field: title, operator: equals, value: Nothing}\n  aggregation: {type: count}\n  operator: equals\n  value: 0\n", "USR-0001 USR-0002 USR-0003"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := ids(t, g, tc.src); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestAggregationAndOtherEntitiesErrors(t *testing.T) {
+	g := graph(t, evidence)
+	for _, tc := range []struct{ name, src, want string }{
+		{"no operator", "from: Evidence\nwhere: {field: equipment_used, aggregation: {type: count}}\n", "line 2: an aggregation needs an operator to test it"},
+		{"count with a field", "from: Evidence\nwhere: {field: equipment_used, aggregation: {type: count, field: serial}, operator: equals, value: 1}\n", "line 2: count counts the items and reads no field"},
+		{"sum without a field", "from: Risk\nwhere: {field: failure_modes, aggregation: {type: sum}, operator: equals, value: 1}\n", "line 2: sum needs the field of each item it reads"},
+		{"unknown type", "from: Risk\nwhere: {field: failure_modes, aggregation: {type: median, field: row_rating}, operator: equals, value: 1}\n", "line 2: aggregation type must be one of count, sum, min, max, avg"},
+		{"sum of text", "from: Evidence\nwhere: {field: equipment_used, aggregation: {type: sum, field: serial}, operator: equals, value: 1}\n", "line 2: sum reads numbers; serial is text"},
+		{"unknown item field", "from: Risk\nwhere: {field: failure_modes, aggregation: {type: max, field: rating}, operator: equals, value: 1}\n", `line 2: list "failure_modes" has no sub-field "rating"`},
+		{"aggregate against text", "from: Requirement\nwhere: {field: evidenced_by, aggregation: {type: count}, operator: equals, value: none}\n", `line 2: count of evidenced_by is a number; "none" is not`},
+		{"aggregate on a scalar", "from: Evidence\nwhere: {field: passed, aggregation: {type: count}, operator: equals, value: 1}\n", `line 2: "passed" is true or false: a sub-query reads the rows`},
+		{"field and from", "from: Requirement\nwhere: {field: title, from: Requirement, where: {field: id, operator: exists}}\n", "line 2: a condition tests a field, or with from looks among other entities, not both"},
+		{"from unknown type", "from: Requirement\nwhere: {from: Requirment, where: {field: id, operator: exists}}\n", `line 2: from: unknown type "Requirment"`},
+		{"from with an operator", "from: Requirement\nwhere: {from: Requirement, operator: exists}\n", "line 2: a sub-query holds when some item matches its where"},
+		{"^ names an unknown field", "from: Requirement\nwhere: {from: UserNeed, where: {field: title, operator: equals, value_of: ^titel}}\n", `line 2: Requirement has no field "titel"`},
+		{"from any, a field of two kinds", "from: Requirement\nwhere: {from: any, where: {field: title, operator: equals, value_of: ^title}}\n", "line 2: title is text on Document but a date on Evidence"},
+		{"duplicated is gone", "from: Requirement\nwhere: {field: title, operator: duplicated}\n", `line 2: unknown operator "duplicated"`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := ParseBlock(tc.src, g.Schema)
+			if err == nil || !strings.HasPrefix(err.Error(), tc.want) {
+				t.Fatalf("got  %v\nwant %s…", err, tc.want)
 			}
 		})
 	}

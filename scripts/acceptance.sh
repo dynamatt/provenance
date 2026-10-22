@@ -94,7 +94,7 @@ expect 1 ''                               grep -q '^verified_by:' REQ/REQ-0001.m
 # REQ-0001's file never names VER-0001, so any link to it on the page comes
 # from the derived verified_by facet (whichever template renders the page).
 expect 0 'href="VER-0001\.html"'            cat _site/entities/REQ-0001.html
-expect 0 '<th>Verifies</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/VER-0001.html
+expect 0 'verifies <a class="ref" href="REQ-0001\.html"' cat _site/entities/VER-0001.html
 expect 0 '<th>Implemented by</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/USR-0001.html
 expect 0 '<td>BES-2201</td>'                cat _site/entities/EVD-0001.html
 expect 0 '<td>PCP-0087</td>'                cat _site/entities/EVD-0001.html
@@ -266,8 +266,8 @@ expect 0 '<a class="ref xref" href="#caption-control-loop">Figure 1</a>' cat _si
 expect 0 '<a class="ref xref" href="#caption-ecap-response">Figure 2</a>' cat _site/entities/DOC-0001.html
 expect 0 '<span class="caption-number">Table 1</span> Stimulation amplitude limits by level\.' cat _site/entities/DOC-0001.html
 expect 0 '<img src="\.\./assets/control-loop\.svg"' cat _site/entities/DOC-0001.html
-expect 0 '<a class="ref xref" href="#caption-bench-setup">Figure 1</a>' cat _site/entities/EVD-0001.html
-expect 0 '^bench-setup\.jpg control-loop\.svg ecap-response\.png $' sh -c "ls _site/assets | tr '\\n' ' '"
+expect 0 '<a class="ref xref" href="#caption-bench-setup">Figure 3</a>' cat _site/entities/EVD-0001.html
+expect 0 '^bench-setup\.jpg control-loop\.svg ecap-response\.png evd-0001-profile-1\.svg evd-0001-pulse\.svg evd-0002-lead-open\.svg $' sh -c "ls _site/assets | tr '\\n' ' '"
 expect 0 '' cmp assets/ecap-response.png _site/assets/ecap-response.png
 cp DOC/DOC-0001.md "$WORK/DOC-0001.md"
 python3 - <<'PY'
@@ -369,16 +369,16 @@ git worktree remove --force "$WORK/worktree"
 # file; --path validates another repository.
 expect 0 '^0 errors, 0 warnings$'         "$PROV" validate
 cp REQ/REQ-0002.md REQ/copy.md
-sed -i '2s/.*/id: ECO-0001: x/' ECO/ECO-0001.md
+sed -i '2s/.*/id: OCC-0003: x/' OCC/OCC-0003.md
 printf -- '---\nid: REQ-0099\ntitle: no type\n---\n' > REQ/half.md
-expect 1 '^ECO/ECO-0001\.md:2: error \[content/frontmatter\] invalid frontmatter: mapping values are not allowed in this context$' "$PROV" validate
+expect 1 '^OCC/OCC-0003\.md:2: error \[content/frontmatter\] invalid frontmatter: mapping values are not allowed in this context$' "$PROV" validate
 expect 1 '^REQ/REQ-0002\.md:2: error \[content/duplicate-id\] duplicate entity ID REQ-0002, also in REQ/copy\.md \(REQ-0002\)$' "$PROV" validate
 expect 1 '^REQ/copy\.md:2: error \[content/duplicate-id\] duplicate entity ID REQ-0002, also in REQ/REQ-0002\.md \(REQ-0002\)$' "$PROV" validate
 expect 1 '^REQ/half\.md:2: error \[content/frontmatter\] frontmatter has an id but no type, so the file is not read as an entity$' "$PROV" validate
 expect 1 '^4 errors, 0 warnings$'         "$PROV" validate
 expect 1 '^validate: 4 errors, 0 warnings$' "$PROV" validate --out "$WORK/reports/v.txt"
 expect 0 '^4 errors, 0 warnings$'         tail -n 1 "$WORK/reports/v.txt"
-git checkout -q -- ECO/ECO-0001.md && rm REQ/copy.md REQ/half.md
+git checkout -q -- OCC/OCC-0003.md && rm REQ/copy.md REQ/half.md
 sed -i 's/^type: Risk/type: Rsk/' RSK/RSK-0001.md
 expect 1 '^RSK/RSK-0001\.md:3: error \[schema/unknown-type\] type "Rsk" is not declared in schema/ ' "$PROV" validate
 git checkout -q -- RSK/RSK-0001.md
@@ -411,7 +411,7 @@ sed -i 's/^\(    type: ApprovalStatus\)/\1\n    default: draft/' schema/Design.y
 expect 1 '^schema/Design\.yaml:[0-9]+: error \[schema/unknown-key\] field "status": unknown key "default": fields have no defaults' "$PROV" validate
 git checkout -q -- schema/Design.yaml
 sed -i 's/^execution_date: .*/execution_date: 2026-13-04/' VER/EVD-0001.md
-expect 1 '^VER/EVD-0001\.md:7: error \[schema/invalid-value\] execution_date: not a date \(YYYY-MM-DD\), got 2026-13-04 \(EVD-0001\)$' "$PROV" validate
+expect 1 '^VER/EVD-0001\.md:8: error \[schema/invalid-value\] execution_date: not a date \(YYYY-MM-DD\), got 2026-13-04 \(EVD-0001\)$' "$PROV" validate
 git checkout -q -- VER/EVD-0001.md
 sed -i 's/^id: DES-0001/id: DES-01/' DES/DES-0001.md
 expect 1 '^DES/DES-0001\.md:2: error \[schema/id-format\] ID DES-01 is not DES-NNNN' "$PROV" validate
@@ -446,19 +446,38 @@ rm templates/spare.tmpl
 
 # E2.5: the grammar's sub-queries, ^name, value_of, missing and not_in.
 # DOC-0003 lists what would fail each design review check: nothing while the
-# example passes; a stale calibration row or protocol version appears in its
-# section. The removed forms are reported with the form that replaced them.
+# example passes, but for REQ-0003's open verification (E2.6); a stale
+# calibration row, or evidence run before the build it tested, appears in
+# its section. The removed forms are reported with the form that replaced them.
 "$PROV" export website >/dev/null
-expect 0 '^7$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+expect 0 '^9$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
 sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VER/EVD-0001.md
-sed -i 's/^protocol_version: 2/protocol_version: 1/' VER/EVD-0002.md
+sed -i 's/^build_date: 2026-08-06/build_date: 2026-08-20/' BLD/BLD-0002.md
 "$PROV" export website >/dev/null
 DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
-expect 0 '>Equipment calibration</h2>.*href="EVD-0001\.html".*>Stale protocol versions</h2>.*href="EVD-0002\.html".*>Risk-benefit analysis</h2>' sh -c "$DOC3_FLAT"
-expect 0 '^5$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
-git checkout -q -- VER
+expect 0 '>Equipment calibration</h2>.*href="EVD-0001\.html".*>Evidence before its build</h2>.*href="EVD-0002\.html".*>Verification coverage</h2>' sh -c "$DOC3_FLAT"
+expect 0 '^7$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+git checkout -q -- VER BLD
 sed -i 's/^  field: equipment_used/  field: {list: equipment_used, subfield: calibration_due_date}/' DOC/DOC-0003.md
 expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: \{list: L, subfield: S\} is now a sub-query: \{field: L, where: \{field: S, …\}\} \(DOC-0003\)$' "$PROV" validate
+git checkout -q -- DOC/DOC-0003.md
+
+# E2.6: aggregation, and sub-queries on from. DOC-0003 lists REQ-0003 as
+# unverified (a count over the verified_by reverse link); removing VER-0002's
+# link adds REQ-0002 there and VER-0002 under protocols verifying nothing (a
+# count over a link); a copied title puts both requirements under duplicate
+# titles (another requirement, found by from, with an equal ^title).
+"$PROV" export website >/dev/null
+DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
+expect 0 '>Verification coverage</h2><p>[^<]*<code>[^<]*</code>[^<]*</p><ul class="query"><li><a class="ref" href="REQ-0003\.html"' sh -c "$DOC3_FLAT"
+sed -i '/^verifies: \[REQ-0002\]/d' VER/VER-0002.md
+sed -i 's/^title: Amplitude ceiling — subsystem allocation/title: Single-fault amplitude ceiling/' REQ/REQ-0003.md
+"$PROV" export website >/dev/null
+expect 0 '>Verification coverage</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html".*href="VER-0002\.html".*>Risk-benefit analysis</h2>' sh -c "$DOC3_FLAT"
+expect 0 '>Duplicate titles</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html"' sh -c "$DOC3_FLAT"
+git checkout -q -- VER REQ
+sed -i 's/^  from: Requirement/  from: Requirment/' DOC/DOC-0003.md
+expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: from: unknown type "Requirment" ' "$PROV" validate
 git checkout -q -- DOC/DOC-0003.md
 
 # Standing E1 acceptance: exporting twice gives an identical site, and the
