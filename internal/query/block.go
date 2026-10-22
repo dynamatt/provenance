@@ -410,6 +410,13 @@ func (g *Graph) item(e *model.Entity, t *Test, v datalog.Value) Item {
 	if v.Kind == datalog.Node {
 		// RowNode: id/list/index; the list name and index have no slash.
 		it.Row, _ = strconv.Atoi(v.S[strings.LastIndex(v.S, "/")+1:])
+		if field == schema.CodeBlocks.Name {
+			// A derived row: placed at its block's opening fence.
+			if ts := g.facts.Lookup(RelField, v, datalog.String("line")); len(ts) > 0 {
+				it.Line = int(ts[0][2].N)
+			}
+			return it
+		}
 		if list := yamlnode.Lookup(e.Front, field); list != nil && it.Row < len(list.Content) {
 			it.Line = list.Content[it.Row].Line
 		}
@@ -417,7 +424,15 @@ func (g *Graph) item(e *model.Entity, t *Test, v datalog.Value) Item {
 	}
 	it.ID = v.S
 	if f := e.Schema.Field(field); f != nil {
-		it.Line = valueLine(yamlnode.Lookup(e.Front, field), it.ID)
+		n := yamlnode.Lookup(e.Front, field)
+		if it.Line = valueLine(n, it.ID); it.Line == 0 && t.Transitive && n != nil {
+			// Reached through other entities, such as e itself around a
+			// cycle: placed at e's link, where the walk starts (D8).
+			it.Line = n.Line
+			if n.Kind == yaml.SequenceNode && len(n.Content) > 0 {
+				it.Line = n.Content[0].Line
+			}
+		}
 		return it
 	}
 	// An incoming facet: the link is written on the linking entity, as a
@@ -447,6 +462,11 @@ func (g *Graph) item(e *model.Entity, t *Test, v datalog.Value) Item {
 				}
 			}
 		}
+	}
+	if t.Transitive {
+		// Reached through other entities: src writes no link to e, so the
+		// match is placed at e's own id.
+		it.Path, it.Line = e.Path, e.IDLine()
 	}
 	return it
 }

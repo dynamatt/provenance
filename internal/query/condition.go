@@ -23,8 +23,10 @@ import (
 //	where: {field: L, where: <condition>}                      a sub-query
 //	where: {field: L, aggregation: {type: count}, operator: less_than, value: 1}
 //	where: {from: T, where: <condition>}                       some entity of T
+//	where: {field: L, transitive: true, where: <condition>}    at any depth
 //
-// field names a field or incoming facet of the entity, its id or type. A
+// field names a field or incoming facet of the entity, its id or type, or
+// code_blocks, the list of its fenced blocks (schema.CodeBlocks). A
 // sub-query holds when some row of list L, or some entity linked through
 // link or facet L, matches its condition; inside it names are the item's,
 // and ^name is the enclosing entity's field (^^name two levels out). A
@@ -32,7 +34,9 @@ import (
 // the way to compare an entity with others it has no link to, such as two
 // requirements sharing a title. With
 // aggregation, the sub-query's items are counted, or one of their fields
-// summed, and the single result is tested.
+// summed, and the single result is tested. A transitive sub-query on a link
+// or facet reaches the entities it leads to at any depth: the linked ones,
+// those they link to through the same name, and so on.
 
 // Operator is a comparison word.
 type Operator string
@@ -95,6 +99,15 @@ type Test struct {
 	// instead of over a field's rows or links; Field is then unset.
 	From     []string
 	FromLine int
+	// Transitive makes a sub-query on a link or incoming facet reach every
+	// entity the link leads to at any depth, not only the linked ones.
+	Transitive bool
+}
+
+// SubQuery reports whether t tests the rows, linked entities or other
+// entities of a sub-query rather than a value.
+func (t *Test) SubQuery() bool {
+	return t.Where != nil || t.Aggregation != nil || t.From != nil || t.Transitive
 }
 
 // Aggregation reduces a sub-query's items to one value (DES-0015), with the
@@ -201,7 +214,7 @@ func ParseCondition(n *yaml.Node) (*Condition, error) {
 }
 
 func parseTest(n *yaml.Node) (*Test, error) {
-	if err := onlyKeys(n, "a condition", "field", "from", "operator", "value", "value_of", "where", "aggregation"); err != nil {
+	if err := onlyKeys(n, "a condition", "field", "from", "operator", "value", "value_of", "where", "aggregation", "transitive"); err != nil {
 		return nil, err
 	}
 	t := &Test{Line: n.Line}
@@ -209,6 +222,17 @@ func parseTest(n *yaml.Node) (*Test, error) {
 	opNode := yamlnode.Lookup(n, "operator")
 	valueNode, valueOf := yamlnode.Lookup(n, "value"), yamlnode.Lookup(n, "value_of")
 	where, agg := yamlnode.Lookup(n, "where"), yamlnode.Lookup(n, "aggregation")
+	if tn := yamlnode.Lookup(n, "transitive"); tn != nil {
+		if tn.Kind != yaml.ScalarNode || tn.Tag != "!!bool" {
+			return nil, errorf(tn, "transitive is true or false")
+		}
+		if err := tn.Decode(&t.Transitive); err != nil {
+			return nil, errorf(tn, "transitive is true or false")
+		}
+		if t.Transitive && fromNode != nil {
+			return nil, errorf(tn, "transitive follows a link field or incoming facet; from looks among other entities and follows none")
+		}
+	}
 
 	switch {
 	case fieldNode != nil && fromNode != nil:
@@ -229,7 +253,7 @@ func parseTest(n *yaml.Node) (*Test, error) {
 		t.Field = ref
 	}
 
-	if t.From != nil || where != nil || agg != nil {
+	if t.From != nil || where != nil || agg != nil || t.Transitive {
 		if t.Field.Up > 0 {
 			return nil, errorf(fieldNode, "a sub-query reads the item's own list or link, not ^%s", t.Field.Field)
 		}
@@ -598,7 +622,7 @@ func fieldNames(t *schema.Type) string {
 	for _, f := range t.Facets {
 		names = append(names, f.Name)
 	}
-	return strings.Join(names, ", ")
+	return strings.Join(append(names, schema.CodeBlocks.Name), ", ")
 }
 
 func subFieldNames(list *schema.Field) string {
@@ -640,7 +664,10 @@ func (sc *scope) field(name string) *schema.Field {
 		}
 		return nil
 	}
-	return sc.t.Field(name)
+	if f := sc.t.Field(name); f != nil || name != schema.CodeBlocks.Name {
+		return f
+	}
+	return schema.CodeBlocks
 }
 
 func (sc *scope) facet(name string) *schema.Facet {
@@ -879,7 +906,7 @@ func flatten(cond *Condition) []*Condition {
 func topSubQueries(cond *Condition) []*Test {
 	var out []*Test
 	for _, item := range flatten(cond) {
-		if item.Test != nil && (item.Test.Where != nil || item.Test.From != nil) && item.Test.Aggregation == nil {
+		if item.Test != nil && item.Test.SubQuery() && item.Test.Aggregation == nil {
 			out = append(out, item.Test)
 		}
 	}
@@ -902,7 +929,7 @@ func (c *compiler) conjunction(cond *Condition, sc *scope, top bool) ([]datalog.
 				c.prog.Add(datalog.Rule{Head: datalog.NewAtom(rel, sc.chain()...), Body: append(sc.binds(), sub...)})
 			}
 			lits = append(lits, datalog.P(rel, sc.chain()...))
-		case item.Test.Where != nil || item.Test.Aggregation != nil || item.Test.From != nil:
+		case item.Test.SubQuery():
 			lit, err := c.subQuery(item.Test, sc, top)
 			if err != nil {
 				return nil, err
@@ -939,25 +966,29 @@ func (c *compiler) subQuery(t *Test, sc *scope, top bool) (datalog.Literal, erro
 		}
 		return c.items(t, sc, alts, top)
 	}
+	var reached []*schema.Type
 	switch {
 	case f != nil && f.Kind == schema.List && f.Elem == nil:
+		if t.Transitive {
+			return datalog.Literal{}, &Error{Line: t.Field.Line, Msg: fmt.Sprintf("%q is a list of rows: transitive follows a link field or incoming facet", name)}
+		}
 		kind = target{ref: t.Field, at: sc, rows: true}
 		alts = []*scope{{list: f, bind: []datalog.Literal{datalog.P(RelRow, sc.node, lname, item)}}}
 	case f != nil && f.Kind == schema.Link:
-		for _, tn := range f.Target {
-			if tt := c.s.Types[tn]; tt != nil {
-				alts = append(alts, linked(sc.node, lname, item, tt))
-			}
-		}
+		reached = linkTypes(c.s, f)
 	case f != nil:
 		return datalog.Literal{}, &Error{Line: t.Field.Line, Msg: fmt.Sprintf("%q is %s: a sub-query reads the rows of a list or the entities a link reaches", name, valueKind(c.s, f))}
 	case facet != nil:
-		var seenType []string
-		for _, src := range facet.Sources {
-			if !slices.Contains(seenType, src.Type.Name) {
-				seenType = append(seenType, src.Type.Name)
-				alts = append(alts, linked(sc.node, lname, item, src.Type))
-			}
+		reached = facetTypes(facet)
+	}
+	if reached != nil {
+		via := datalog.P(RelLink, sc.node, lname, item)
+		if t.Transitive {
+			reached = transitiveTypes(c.s, reached, name)
+			via = datalog.P(c.reach(lname), sc.node, item)
+		}
+		for _, tt := range reached {
+			alts = append(alts, &scope{t: tt, bind: []datalog.Literal{via, datalog.P(RelEntity, item, datalog.Const(datalog.String(tt.Name)))}})
 		}
 	}
 	if err := sc.lv.record(&t.Field, sc.alt(), alts != nil, kind); err != nil {
@@ -1099,13 +1130,60 @@ func FromTypes(s *schema.Schema, names []string, line int) ([]*schema.Type, erro
 	return out, nil
 }
 
-// linked is the scope of an entity of type t that node links to through
-// name, a link field or an incoming facet.
-func linked(node, name, item datalog.Term, t *schema.Type) *scope {
-	return &scope{t: t, bind: []datalog.Literal{
-		datalog.P(RelLink, node, name, item),
-		datalog.P(RelEntity, item, datalog.Const(datalog.String(t.Name))),
-	}}
+// linkTypes are the declared types link field f targets.
+func linkTypes(s *schema.Schema, f *schema.Field) []*schema.Type {
+	var out []*schema.Type
+	for _, tn := range f.Target {
+		if tt := s.Types[tn]; tt != nil {
+			out = append(out, tt)
+		}
+	}
+	return out
+}
+
+// facetTypes are the types whose links feed facet, each once.
+func facetTypes(facet *schema.Facet) []*schema.Type {
+	var out []*schema.Type
+	for _, src := range facet.Sources {
+		if !slices.Contains(out, src.Type) {
+			out = append(out, src.Type)
+		}
+	}
+	return out
+}
+
+// transitiveTypes are the types a transitive sub-query on name reaches,
+// given first, the types one step reaches: each further step follows the
+// link field or incoming facet called name on the entity reached, as long
+// as its type has one.
+func transitiveTypes(s *schema.Schema, first []*schema.Type, name string) []*schema.Type {
+	out := slices.Clone(first)
+	for i := 0; i < len(out); i++ {
+		var next []*schema.Type
+		if f := out[i].Field(name); f != nil && f.Kind == schema.Link {
+			next = linkTypes(s, f)
+		} else if facet := facetOf(out[i], name); facet != nil {
+			next = facetTypes(facet)
+		}
+		for _, tt := range next {
+			if !slices.Contains(out, tt) {
+				out = append(out, tt)
+			}
+		}
+	}
+	return out
+}
+
+// reach adds the transitive closure of the links called name, a link field
+// or an incoming facet, as a relation of (node, reached entity), and returns
+// it. A cycle reaches each entity once, so evaluation ends (REQ-0040), and
+// an entity on a cycle reaches itself.
+func (c *compiler) reach(name datalog.Term) string {
+	rel := c.rel("reach")
+	X, M, T := datalog.Var("X"), datalog.Var("M"), datalog.Var("T")
+	c.prog.Add(datalog.Rule{Head: datalog.NewAtom(rel, X, T), Body: []datalog.Literal{datalog.P(RelLink, X, name, T)}})
+	c.prog.Add(datalog.Rule{Head: datalog.NewAtom(rel, X, T), Body: []datalog.Literal{datalog.P(rel, X, M), datalog.P(RelLink, M, name, T)}})
+	return rel
 }
 
 func valueKind(s *schema.Schema, f *schema.Field) string {
