@@ -53,6 +53,34 @@ type Fence struct {
 // FenceFunc renders a fenced block. Like a Resolver, it writes trusted HTML.
 type FenceFunc func(w util.BufWriter, f Fence) error
 
+// CodeBlock is one fenced code block, of any language.
+type CodeBlock struct {
+	// Lang is the first word of the info string, "" for a bare fence.
+	Lang string
+	// Line is the line of Markdown source the opening fence is on, from 1.
+	Line int
+}
+
+// CodeBlocks lists src's fenced code blocks in document order, parsed as
+// Convert parses them, captions and query blocks included: the rows of the
+// derived code_blocks list (DES-0015).
+func CodeBlocks(src string) []CodeBlock {
+	source := []byte(src)
+	md := goldmark.New(
+		goldmark.WithExtensions(extension.Table),
+		goldmark.WithParserOptions(parser.WithInlineParsers(util.Prioritized(&wikilinkParser{}, 199))),
+	)
+	doc := md.Parser().Parse(text.NewReader(source))
+	var out []CodeBlock
+	for _, b := range fencedBlocks(doc, source, func(string) bool { return true }) {
+		out = append(out, CodeBlock{
+			Lang: string(b.Language(source)),
+			Line: bytes.Count(source[:b.Pos()], []byte("\n")) + 1,
+		})
+	}
+	return out
+}
+
 // RenderedLanguages are the fence languages the product renders instead of
 // showing as code (DES-0036). Every
 // exporter must give each one a FenceFunc, even if only to say it cannot

@@ -121,8 +121,8 @@ func (n fnode) value(name string) *model.Value {
 }
 
 // viaTypes are the types a condition's sub-queries reach through links,
-// incoming facets and from, at any depth: a change to any entity of them
-// can change which entities match.
+// incoming facets and from, nested to any depth and transitively: a change
+// to any entity of them can change which entities match.
 func viaTypes(s *schema.Schema, types []*schema.Type, cond *Condition) []string {
 	var out []string
 	// walk visits cond, about an entity of one of types or a row of list.
@@ -134,7 +134,7 @@ func viaTypes(s *schema.Schema, types []*schema.Type, cond *Condition) []string 
 		for _, sub := range append(slices.Clone(c.AllOf), c.AnyOf...) {
 			walk(sub, types, list)
 		}
-		if c.Test == nil || (c.Test.Where == nil && c.Test.Aggregation == nil && c.Test.From == nil) {
+		if c.Test == nil || !c.Test.SubQuery() {
 			return
 		}
 		if c.Test.From != nil {
@@ -160,17 +160,16 @@ func viaTypes(s *schema.Schema, types []*schema.Type, cond *Condition) []string 
 				walk(c.Test.Where, nil, f)
 				continue
 			case f != nil && f.Kind == schema.Link:
-				for _, tn := range f.Target {
-					if t := s.Types[tn]; t != nil {
-						reached = append(reached, t)
-					}
-				}
+				reached = linkTypes(s, f)
 				out = append(out, f.Target...)
 			case sc.facet(name) != nil:
-				for _, src := range sc.facet(name).Sources {
-					reached = append(reached, src.Type)
-					out = append(out, src.Type.Name)
-				}
+				reached = facetTypes(sc.facet(name))
+			}
+			if c.Test.Transitive {
+				reached = transitiveTypes(s, reached, name)
+			}
+			for _, t := range reached {
+				out = append(out, t.Name)
 			}
 			walk(c.Test.Where, reached, nil)
 		}

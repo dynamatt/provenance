@@ -4,8 +4,11 @@
 package query
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 
+	"github.com/dynamatt/provenance/internal/markdown"
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/query/datalog"
 	"github.com/dynamatt/provenance/internal/schema"
@@ -23,6 +26,9 @@ import (
 //	row(E, List, R)       R is a row of entity E's list field List
 //	item(N, List, I, V)   item I (from 0) of a list that names an item
 //	                      type; field holds the same values, but as a set
+//
+// Every entity also has the rows of code_blocks (schema.CodeBlocks), derived
+// from its Markdown, as row and field facts like a declared list's.
 //
 // A node is an entity's ID (a string) or a list row (a datalog Node value),
 // so a row's sub-fields and links read exactly like an entity's. Values not
@@ -69,8 +75,34 @@ func Facts(entities []*model.Entity) *datalog.Database {
 				db.MustAdd(RelLink, id, str(in.Facet.Name), str(from.ID))
 			}
 		}
+		list := str(schema.CodeBlocks.Name)
+		for i, b := range CodeBlocks(e) {
+			node := RowNode(e.ID, schema.CodeBlocks.Name, i)
+			db.MustAdd(RelRow, id, list, node)
+			db.MustAdd(RelField, node, str("language"), str(b.Lang))
+			db.MustAdd(RelField, node, str("line"), datalog.Number(float64(b.Line)))
+		}
 	}
 	return db
+}
+
+// CodeBlocks are e's code_blocks rows (schema.CodeBlocks): every fenced
+// block in the Markdown its export renders, its body and text fields, with
+// the language "none" for a bare fence and the opening fence's file line,
+// in file order.
+func CodeBlocks(e *model.Entity) []markdown.CodeBlock {
+	var out []markdown.CodeBlock
+	for _, text := range markdownSources(e) {
+		for _, b := range markdown.CodeBlocks(text) {
+			if b.Lang == "" {
+				b.Lang = "none"
+			}
+			b.Line = e.TextFileLine(text, b.Line)
+			out = append(out, b)
+		}
+	}
+	slices.SortStableFunc(out, func(a, b markdown.CodeBlock) int { return cmp.Compare(a.Line, b.Line) })
+	return out
 }
 
 func addValue(db *datalog.Database, node datalog.Value, v *model.Value) {

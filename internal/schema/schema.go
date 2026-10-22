@@ -72,6 +72,16 @@ type Field struct {
 	Line    int
 }
 
+// CodeBlocks is the list every entity derives from its Markdown, one row
+// per fenced code block in document order, read by conditions like a
+// declared list (DES-0015): language, the first word of the fence's info
+// string or "none" for a bare fence, and line, the opening fence's line in
+// the file. No type may declare a field or reverse_name of its name.
+var CodeBlocks = &Field{Name: "code_blocks", Kind: List, Fields: []*Field{
+	{Name: "language", Kind: String},
+	{Name: "line", Kind: Number},
+}}
+
 // Type is one entity type.
 type Type struct {
 	Name     string
@@ -399,16 +409,21 @@ func (s *Schema) facets(ld *loader) {
 			if l.Field.ReverseName == "" {
 				continue
 			}
+			path := src.File
+			if l.List != nil && l.List.Record != "" {
+				path = s.Records[l.List.Record].File
+			}
+			if l.Field.ReverseName == CodeBlocks.Name {
+				ld.keep(&Error{Path: path, Line: l.Field.Line, Msg: fmt.Sprintf(
+					"field %q: reverse_name code_blocks is the list every entity derives from its Markdown; choose another name", l.Field.Name)})
+				continue
+			}
 			for _, tn := range l.Field.Target {
 				target := s.Types[tn]
 				if target == nil {
 					continue
 				}
 				if clash := target.Field(l.Field.ReverseName); clash != nil {
-					path := src.File
-					if l.List != nil && l.List.Record != "" {
-						path = s.Records[l.List.Record].File
-					}
 					ld.keep(&Error{Path: path, Line: l.Field.Line, Msg: fmt.Sprintf(
 						"field %q: reverse_name %q repeats the field %s declared on %s (%s:%d); declare a link once, on its source side",
 						l.Field.Name, l.Field.ReverseName, clash.Name, target.Name, target.File, clash.Line)})
@@ -580,6 +595,9 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s is declared twice (first at line %d)", label, prev)}
 	}
 	seen[rf.Name] = n.Line
+	if within == "" && rf.Name == CodeBlocks.Name {
+		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": code_blocks is the list every entity derives from its Markdown; choose another name"}
+	}
 
 	f := &Field{
 		Name: rf.Name, Required: rf.Required, Body: rf.Body, Help: rf.Help,
