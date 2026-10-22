@@ -450,13 +450,13 @@ rm templates/spare.tmpl
 # calibration row, or evidence run before the build it tested, appears in
 # its section. The removed forms are reported with the form that replaced them.
 "$PROV" export website >/dev/null
-expect 0 '^9$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+expect 0 '^11$'                           sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
 sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VER/EVD-0001.md
 sed -i 's/^build_date: 2026-08-06/build_date: 2026-08-20/' BLD/BLD-0002.md
 "$PROV" export website >/dev/null
 DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
 expect 0 '>Equipment calibration</h2>.*href="EVD-0001\.html".*>Evidence before its build</h2>.*href="EVD-0002\.html".*>Verification coverage</h2>' sh -c "$DOC3_FLAT"
-expect 0 '^7$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+expect 0 '^9$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
 git checkout -q -- VER BLD
 sed -i 's/^  field: equipment_used/  field: {list: equipment_used, subfield: calibration_due_date}/' DOC/DOC-0003.md
 expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: \{list: L, subfield: S\} is now a sub-query: \{field: L, where: \{field: S, …\}\} \(DOC-0003\)$' "$PROV" validate
@@ -478,6 +478,23 @@ expect 0 '>Duplicate titles</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html"' 
 git checkout -q -- VER REQ
 sed -i 's/^  from: Requirement/  from: Requirment/' DOC/DOC-0003.md
 expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: from: unknown type "Requirment" ' "$PROV" validate
+git checkout -q -- DOC/DOC-0003.md
+
+# E2.7: transitive links and code_blocks. DOC-0003's decomposition-cycle
+# and block-language sections are empty; making REQ-0003, which refines
+# REQ-0002, REQ-0002's parent closes a cycle that lists both (a link
+# followed to any depth), and a python block lists the entity it is in.
+"$PROV" export website >/dev/null
+expect 0 '^11$'                           sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+sed -i 's/^order: 2/order: 2\nparent_requirement: REQ-0003/' REQ/REQ-0002.md
+printf '\n```python\nprint("amplitude")\n```\n' >> DES/DES-0001.md
+"$PROV" export website >/dev/null
+DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
+expect 0 '>Decomposition cycles</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html".*>Block languages</h2>.*href="DES-0001\.html"' sh -c "$DOC3_FLAT"
+expect 0 '^9$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+git checkout -q -- REQ DES
+sed -i 's/^  transitive: true/  transitive: yes/' DOC/DOC-0003.md
+expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: transitive is true or false \(DOC-0003\)$' "$PROV" validate
 git checkout -q -- DOC/DOC-0003.md
 
 # Standing E1 acceptance: exporting twice gives an identical site, and the

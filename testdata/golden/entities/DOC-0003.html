@@ -65,6 +65,15 @@ deprecated (<code>rules/superseded-entities-deprecated.yaml</code>):</p>
 <p>Requirements sharing a title with another, likely a duplicate or a
 copy-paste error (<code>rules/requirement-title-unique.yaml</code>, a warning):</p>
 <p class="query-empty">No Requirement matches this query.</p>
+<h2>Decomposition cycles</h2>
+<p>Requirements that are their own ancestor through <code>parent_requirement</code>,
+followed to any depth (<code>rules/no-requirement-decomposition-cycles.yaml</code>).
+Every requirement on the cycle is listed:</p>
+<p class="query-empty">No Requirement matches this query.</p>
+<h2>Block languages</h2>
+<p>Entities with a fenced block in a language this project doesn't use
+(<code>rules/block-languages.yaml</code>). <code>none</code> is a fence with no language:</p>
+<p class="query-empty">No BuildStandard or ChangeRequest or Component or Definition or Design or Document or OccurrenceLevel or Reference or Requirement or Risk or SeverityLevel or TestEquipment or UserNeed or ValidationEvidence or VerificationEvidence or VerificationProtocol matches this query.</p>
 </div>
 </article>
 
@@ -73,13 +82,17 @@ copy-paste error (<code>rules/requirement-title-unique.yaml</code>, a warning):<
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>2c29ae3</code></td><td>2026-10-22</td><td>Matt Williams</td><td>E2.7: DOC-0003 decomposition cycles and block languages</td></tr>
 <tr><td><code>3dd7c6b</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #16 from dynamatt/verification-protocol-report</td></tr>
 <tr><td><code>3f4b916</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge commit &#39;8068898d3c091ab9a85d211d7a09eb61fc4a1018&#39; into epic/E2-validate</td></tr>
 <tr><td><code>07c4560</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #13 from dynamatt/task/E2.5-grammar</td></tr>
 <tr><td><code>58b2168</code></td><td>2026-10-11</td><td>Matt Williams</td><td>Merge pull request #12 from dynamatt/task/E2.1-validate-design</td></tr>
 <tr><td><code>55388be</code></td><td>2026-10-10</td><td>Matt Williams</td><td>Merge pull request #10 from dynamatt/ddf-references</td></tr>
+<tr><td><code>1b28c4c</code></td><td>2026-10-08</td><td>Matt Williams</td><td>Merge pull request #9 from dynamatt/cite-template</td></tr>
 <tr><td><code>b617654</code></td><td>2026-10-06</td><td>Matt Williams</td><td>Merge pull request #8 from dynamatt/references</td></tr>
 <tr><td><code>bd98829</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Merge pull request #7 from dynamatt/scope-git-captions</td></tr>
+<tr><td><code>29eb0b6</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Merge pull request #6 from dynamatt/named-templates</td></tr>
+<tr><td><code>2d9182e</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Add DOC-0002, a query block over two types</td></tr>
 <tr><td><code>54de84f</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Add ValidationEvidence, reusing the Equipment record</td></tr>
 <tr><td><code>b6dfc5c</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Lists that name their type: a record, an enum and a built-in type</td></tr>
 <tr><td><code>4cf41f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Make templates/ functional: Requirement page, layout, index, stylesheet</td></tr>
@@ -92,7 +105,7 @@ copy-paste error (<code>rules/requirement-title-unique.yaml</code>, a warning):<
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>3dd7c6b</code> · content hash <code>sha256:9f07cff189a7216710848a513b4a65bc78e24f7c2cd090253b332caa6b04e7cf</code> · this page last changed in <code>3dd7c6b</code></p>
+<p class="dhf-stamp">Generated from commit <code>2c29ae3</code> · content hash <code>sha256:5748786817b4ea762e055006b8c4fe961dbe4b16fe46b9645ead498f1dcb8ec3</code> · this page last changed in <code>2c29ae3</code></p>
 </footer>
 </body>
 </html>

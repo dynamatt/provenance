@@ -108,7 +108,7 @@ func TestQueryBlockErrors(t *testing.T) {
 		{"no from", "where: {field: status, operator: exists}\n", "line 1: query block has no from: <type>"},
 		{"unknown type", "from: Requirment\n", `line 1: from: unknown type "Requirment" (types: Document, Evidence, OccurrenceLevel, Requirement, Risk, SeverityLevel, UserNeed)`},
 		{"unknown key", "from: Requirement\nsort: order\n", `line 2: unknown key "sort" in a query block (expected from, where, order_by, render, template, templates)`},
-		{"unknown field", "from: Requirement\nwhere: {field: state, operator: exists}\n", `line 2: Requirement has no field "state" (fields: id, type, title, status, implements, order, evidenced_by)`},
+		{"unknown field", "from: Requirement\nwhere: {field: state, operator: exists}\n", `line 2: Requirement has no field "state" (fields: id, type, title, status, implements, order, evidenced_by, code_blocks)`},
 		{"enum value", "from: Requirement\nwhere: {field: status, operator: equals, value: aproved}\n", `line 2: "aproved" is not a value of ApprovalStatus (values: draft, in_review, approved, deprecated)`},
 		{"number as text", "from: Requirement\nwhere: {field: order, operator: equals, value: \"2\"}\n", `line 2: order is a number; "2" is not`},
 		{"ordering an enum", "from: Requirement\nwhere: {field: status, operator: greater_than, value: draft}\n", "line 2: greater_than compares numbers, dates and text; status is an enum value"},
