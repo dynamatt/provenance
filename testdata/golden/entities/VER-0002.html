@@ -14,27 +14,55 @@
 </header>
 <main class="dhf-main">
 
-<article class="entity" id="VER-0002">
-<p class="entity-type">VerificationProtocol</p>
+<article class="protocol" id="VER-0002">
 <h1><span class="id">VER-0002</span> Bench verification of single-fault amplitude ceiling</h1>
-<table class="fields">
-<tbody>
-<tr><th>Title</th><td>Bench verification of single-fault amplitude ceiling</td></tr>
-<tr><th>Current version</th><td>2</td></tr>
-<tr><th>Status</th><td>approved</td></tr>
-<tr><th>Verifies</th><td><a class="id" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a></td></tr>
-<tr><th>Order</th><td>2</td></tr>
-<tr class="incoming"><th>Tested by</th><td><a class="id" href="EVD-0002.html" title="Execution record — single-fault amplitude ceiling bench test (rev 2)">EVD-0002</a></td></tr>
-</tbody>
-</table>
-<h2>Procedure</h2>
+<p class="protocol-meta">
+<span class="status status-approved">approved</span> · verifies <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>
+</p>
 <div class="body">
 <p>Simulate sense-electrode lead disconnection during active stimulation and
 confirm delivered amplitude never exceeds 8 mA, exercising the hardware
 current-limit circuit (<a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a>) independent of firmware behavior.</p>
-<p>Revision 2 added the lead-disconnection fault injection step; revision 1
-covered only a firmware-commanded overrange attempt.</p>
+<p><a class="ref" href="ECO-0001.html" title="Add fault-injection step to single-fault ceiling protocol">ECO-0001</a> added the lead-disconnection fault injection step; before it
+the procedure covered only a firmware-commanded overrange attempt.</p>
 </div>
+<table class="fields">
+<tbody>
+<tr><th>Device under test</th><td><a class="ref" href="CMP-0001.html" title="NeuroPulse implantable pulse generator">CMP-0001</a>: NeuroPulse implantable pulse generator</td></tr>
+<tr><th>Equipment needed</th><td><a class="ref" href="EQP-0003.html" title="Fault-injection lead simulator">EQP-0003</a>: Fault-injection lead simulator</td></tr>
+</tbody>
+</table>
+<h2>Steps</h2>
+<table class="steps">
+<thead><tr><th class="step-number">Step</th><th>Description</th><th>Acceptance criteria</th></tr></thead>
+<tbody>
+<tr>
+<td class="step-number"></td>
+<td><p>Connect the implant's sense electrode through the fault-injection lead simulator, with its current monitor on the stimulation lead. Enable closed-loop control with the amplitude at its configured maximum.</p>
+</td>
+<td><p>The current monitor reads the configured maximum amplitude, within ± 2 %.</p>
+</td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Through the test interface, command an amplitude of 10 mA, above the ceiling.</p>
+</td>
+<td><p>Delivered amplitude does not exceed 8 mA.</p>
+</td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Disconnect the sense electrode during active stimulation, hold for 30 seconds and reconnect. Repeat for ten trials.</p>
+</td>
+<td><p>Delivered amplitude does not exceed 8 mA at any time in any of the ten trials.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h2>Executions</h2>
+<ul>
+<li><a class="ref" href="EVD-0002.html" title="Execution record — single-fault amplitude ceiling bench test">EVD-0002</a>: Execution record — single-fault amplitude ceiling bench test — 2026-08-11, against commit <code>145edd3</code>, <span class="pass-fail pass-fail-pass">pass</span></li>
+</ul>
 </article>
 
 <section class="dhf-revisions">
@@ -42,6 +70,8 @@ covered only a firmware-commanded overrange attempt.</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>3dd7c6b</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #16 from dynamatt/verification-protocol-report</td></tr>
+<tr><td><code>3f4b916</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge commit &#39;8068898d3c091ab9a85d211d7a09eb61fc4a1018&#39; into epic/E2-validate</td></tr>
 <tr><td><code>58b2168</code></td><td>2026-10-11</td><td>Matt Williams</td><td>Merge pull request #12 from dynamatt/task/E2.1-validate-design</td></tr>
 <tr><td><code>55388be</code></td><td>2026-10-10</td><td>Matt Williams</td><td>Merge pull request #10 from dynamatt/ddf-references</td></tr>
 <tr><td><code>1b28c4c</code></td><td>2026-10-08</td><td>Matt Williams</td><td>Merge pull request #9 from dynamatt/cite-template</td></tr>
@@ -58,7 +88,7 @@ covered only a firmware-commanded overrange attempt.</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>189d28b</code> · content hash <code>sha256:e2bfae8bd67c90bcf28e647f84d2fc10c296b96f74e1710aed0849ffc032389b</code> · this page last changed in <code>58b2168</code></p>
+<p class="dhf-stamp">Generated from commit <code>3dd7c6b</code> · content hash <code>sha256:9f07cff189a7216710848a513b4a65bc78e24f7c2cd090253b332caa6b04e7cf</code> · this page last changed in <code>3dd7c6b</code></p>
 </footer>
 </body>
 </html>

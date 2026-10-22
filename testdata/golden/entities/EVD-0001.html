@@ -14,33 +14,99 @@
 </header>
 <main class="dhf-main">
 
-<article class="entity" id="EVD-0001">
-<p class="entity-type">VerificationEvidence</p>
+<article class="evidence" id="EVD-0001">
 <h1><span class="id">EVD-0001</span> Execution record — closed-loop amplitude adjustment bench test</h1>
+<p class="evidence-meta">
+<span class="pass-fail pass-fail-pass">pass</span> · executed 2026-08-04 · tests <a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a> at commit <code>145edd3</code>
+</p>
 <table class="fields">
 <tbody>
-<tr><th>Title</th><td>Execution record — closed-loop amplitude adjustment bench test</td></tr>
-<tr><th>Tests</th><td><a class="id" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a></td></tr>
-<tr><th>Protocol version</th><td>1</td></tr>
-<tr><th>Execution date</th><td>2026-08-04</td></tr>
-<tr><th>Result</th><td>pass</td></tr>
-<tr><th>Equipment used</th><td><table class="list">
-<thead><tr><th>Name</th><th>Serial number</th><th>Calibration due date</th></tr></thead>
-<tbody>
-<tr><td>Bench ECAP simulator</td><td>BES-2201</td><td>2026-11-01</td></tr>
-<tr><td>Precision current probe</td><td>PCP-0087</td><td>2026-09-30</td></tr>
+<tr><th>Build tested</th><td><a class="ref" href="BLD-0001.html" title="Pulse generator, engineering build B">BLD-0001</a>: Pulse generator, engineering build B, <strong>HW rev B, FW 1.3.0</strong> — a build of <a class="ref" href="CMP-0001.html" title="NeuroPulse implantable pulse generator">CMP-0001</a></td></tr>
 </tbody>
-</table></td></tr>
+</table>
+<h2>Steps</h2>
+<table class="steps steps-results">
+<thead><tr><th class="step-number">Step</th><th>Description</th><th>Acceptance criteria</th><th>Result</th><th>Pass/Fail</th></tr></thead>
+<tbody>
+<tr>
+<td class="step-number"></td>
+<td><p>Place the implant in the saline tank, connect its sense electrode to the bench ECAP simulator and clip the precision current probe onto the stimulation lead. Program a fixed amplitude of 3 mA in open loop.</p>
+</td>
+<td><p>The simulator detects an evoked response on every stimulation cycle, and the probe reads 3 mA ± 2 %.</p>
+</td>
+<td class="step-result"><p>Evoked response on every cycle; probe read 3.02 mA, as in
+<a class="ref xref" href="#caption-evd-0001-pulse">Figure 1</a>.</p>
+<figure class="captioned captioned-figure" id="caption-evd-0001-pulse">
+<p><img src="../assets/evd-0001-pulse.svg" alt="Biphasic pulse on the current probe"></p>
+<figcaption><span class="caption-number">Figure 1</span> One stimulation pulse on the current probe (PCP-0087), 1 mA/div, 50 µs/div. Each phase 3.02 mA for 100 µs, 20 µs apart.</figcaption>
+</figure>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Configure the target band from the clinician settings and enable closed-loop control.</p>
+</td>
+<td><p>The implant reports closed-loop mode, and the target band it reads back matches the band configured.</p>
+</td>
+<td class="step-result"><p>Closed-loop mode reported; target band read back as configured.</p>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Replay response profile 1, posture change from supine to standing, for 10 minutes.</p>
+</td>
+<td><p>The evoked response is within the target band on at least 99 % of cycles, and delivered amplitude stays within the configured range.</p>
+</td>
+<td class="step-result"><p>Within the target band on 99.7 % of cycles; amplitude 2.1–4.4 mA. The
+only excursions are at the two posture changes, in
+<a class="ref xref" href="#caption-evd-0001-profile-1">Figure 2</a>.</p>
+<figure class="captioned captioned-figure" id="caption-evd-0001-profile-1">
+<p><img src="../assets/evd-0001-profile-1.svg" alt="Profile 1 roll"></p>
+<figcaption><span class="caption-number">Figure 2</span> Profile 1 over 10 minutes. The evoked response (CH1) stays in the shaded target band while delivered amplitude (CH2) falls when the patient rolls onto one side and rises on standing.</figcaption>
+</figure>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Replay response profile 2, a slow increase in neural sensitivity, for 10 minutes.</p>
+</td>
+<td><p>The evoked response is within the target band on at least 99 % of cycles, and delivered amplitude stays within the configured range.</p>
+</td>
+<td class="step-result"><p>Within the target band on 99.8 % of cycles; amplitude 2.6–3.9 mA.</p>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Replay response profile 3, transient responses from coughing, for 10 minutes.</p>
+</td>
+<td><p>The evoked response returns to the target band within 5 cycles of each transient, and delivered amplitude stays within the configured range.</p>
+</td>
+<td class="step-result"><p>Back in the target band within 3 cycles of every transient; amplitude 2.4–4.1 mA.</p>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+</tbody>
+</table>
+<h2>Equipment used</h2>
+<table class="list">
+<thead><tr><th>Equipment</th><th>Serial number</th><th>Calibration due date</th></tr></thead>
+<tbody>
+<tr><td><a class="ref" href="EQP-0001.html" title="Bench ECAP simulator">EQP-0001</a>: Bench ECAP simulator</td><td>BES-2201</td><td>2026-11-01</td></tr>
+<tr><td><a class="ref" href="EQP-0002.html" title="Precision current probe">EQP-0002</a>: Precision current probe</td><td>PCP-0087</td><td>2026-09-30</td></tr>
 </tbody>
 </table>
 <h2>Notes</h2>
 <div class="body">
 <p>All three response profiles held within the configured target band across
 a 30-minute run. No anomalies observed. The set-up is shown in
-<a class="ref xref" href="#caption-bench-setup">Figure 1</a>.</p>
+<a class="ref xref" href="#caption-bench-setup">Figure 3</a>.</p>
 <figure class="captioned captioned-figure" id="caption-bench-setup">
 <p><img src="../assets/bench-setup.jpg" alt="Bench set-up"></p>
-<figcaption><span class="caption-number">Figure 1</span> Bench set-up. The implant in a saline tank drives the ECAP simulator; the current probe (PCP-0087) feeds the oscilloscope.</figcaption>
+<figcaption><span class="caption-number">Figure 3</span> Bench set-up. The implant in a saline tank drives the ECAP simulator; the current probe (PCP-0087) feeds the oscilloscope.</figcaption>
 </figure>
 </div>
 </article>
@@ -50,6 +116,7 @@ a 30-minute run. No anomalies observed. The set-up is shown in
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>3dd7c6b</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #16 from dynamatt/verification-protocol-report</td></tr>
 <tr><td><code>58b2168</code></td><td>2026-10-11</td><td>Matt Williams</td><td>Merge pull request #12 from dynamatt/task/E2.1-validate-design</td></tr>
 <tr><td><code>55388be</code></td><td>2026-10-10</td><td>Matt Williams</td><td>Merge pull request #10 from dynamatt/ddf-references</td></tr>
 <tr><td><code>bd98829</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Merge pull request #7 from dynamatt/scope-git-captions</td></tr>
@@ -62,7 +129,7 @@ a 30-minute run. No anomalies observed. The set-up is shown in
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>189d28b</code> · content hash <code>sha256:e2bfae8bd67c90bcf28e647f84d2fc10c296b96f74e1710aed0849ffc032389b</code> · this page last changed in <code>58b2168</code></p>
+<p class="dhf-stamp">Generated from commit <code>3dd7c6b</code> · content hash <code>sha256:9f07cff189a7216710848a513b4a65bc78e24f7c2cd090253b332caa6b04e7cf</code> · this page last changed in <code>3dd7c6b</code></p>
 </footer>
 </body>
 </html>

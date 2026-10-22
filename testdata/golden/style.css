@@ -85,9 +85,47 @@ figure.captioned figcaption { font: 0.9rem system-ui, sans-serif; color: var(--m
 .dhf-tag { background: var(--brand-soft); border-radius: 3px; padding: 0 5px; }
 .dhf-stamp { margin: 6px 0 0; word-break: break-all; }
 
-/* Named presentation templates (requirement-checklist, risk-summary). */
+/* Named presentation templates (requirement-checklist, risk-summary,
+   equipment-summary). */
 .checklist-item { font-family: system-ui, sans-serif; }
 .checklist-item .checkbox { margin-right: 6px; }
+/* Query results rendered as rows (device-under-test, build-tested): each
+   result is its own one-row table inside its own embed section; these
+   rules make consecutive ones read as one table. */
+section.embed:has(> table.joined-rows) { margin: 0; padding: 0; background: none; border: 0; }
+table.joined-rows { table-layout: fixed; margin: 0; }
+table.joined-rows th, table.joined-rows td { border: 1px solid var(--rule); padding: 6px 8px; }
+table.joined-rows thead th { background: var(--brand-soft); font-weight: 600; }
+section.embed + section.embed > table.joined-rows thead { display: none; }
+section.embed + section.embed > table.joined-rows td { border-top: 0; }
+div.query:has(table.joined-rows) { margin: 12px 0 0; }
+table.joined-rows .unit + .unit { margin-top: 4px; }
+table.joined-rows a.ref { white-space: nowrap; }
+.summary-line { font-family: system-ui, sans-serif; margin: 4px 0; }
 .risk-meta { color: var(--muted); font-family: system-ui, sans-serif; font-size: 0.9rem; }
 
+/* Verification protocols and evidence: steps as a table, numbered by a
+   counter, and each result's pass/fail as a badge. */
+.protocol-meta, .evidence-meta { color: var(--muted); font-family: system-ui, sans-serif; font-size: 0.9rem; }
+table.steps { counter-reset: step; table-layout: fixed; }
+table.steps th, table.steps td { vertical-align: top; text-align: left; padding: 6px 8px; border: 1px solid var(--rule); }
+table.steps thead th { background: var(--brand-soft); font-weight: 600; }
+table.steps td p { margin: 0 0 6px; }
+table.steps td p:last-child { margin-bottom: 0; }
+table.steps .step-number { width: 3.2em; text-align: center; }
+table.steps tbody td.step-number::before { counter-increment: step; content: counter(step); font-weight: 600; color: var(--brand); }
+table.steps-results th:nth-child(2), table.steps-results th:nth-child(3) { width: 22%; }
+table.steps-results th:nth-child(5) { width: 5.5em; }
+table.steps .step-result figure.captioned { margin: 8px 0 0; }
+.pass-fail { display: inline-block; padding: 1px 8px; border-radius: 10px; font: 0.8rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; }
+.pass-fail-pass { background: #dff1e3; color: #1f5f2e; }
+.pass-fail-fail { background: #f8dcdc; color: #8a1f1f; }
+.pass-fail-pending { background: #fdf1d8; color: #7a5a12; }
+
 .dhf-footer { max-width: 920px; margin: 0 auto; padding: 20px 28px 40px; color: var(--muted); font: 0.8rem system-ui, sans-serif; border-top: 1px solid var(--rule); }
+
+/* Definitions cited in a Document (the Cookbook's Glossary recipe). */
+.definitions dt { font-weight: 600; margin-top: 12px; }
+.definitions dd { margin: 4px 0 0 1.2em; }
+.definitions dd p { margin: 0 0 4px; }
+.definition-source { color: var(--muted); font: 0.85rem system-ui, sans-serif; }

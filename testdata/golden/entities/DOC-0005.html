@@ -1,0 +1,363 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DOC-0005 Verification Report — Amplitude Control — NEURO DHF</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="dhf-header">
+<a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
+<span class="dhf-label">Design History File · NEURO</span>
+</header>
+<main class="dhf-main">
+
+<article class="document" id="DOC-0005">
+<h1><span class="id">DOC-0005</span> Verification Report — Amplitude Control</h1>
+<p class="document-meta"><span class="status status-in_review">in_review</span></p>
+<div class="body">
+<h1>Verification Report — Amplitude Control</h1>
+<p>This document is the verification report for amplitude control. Each
+result is a Verification Evidence entity (<code>EVD-</code>), shown here by a live
+query block (provenance-ddf DES-0032), and the builds and equipment are
+gathered from them the same way. The sections that check for failures,
+missing executions and deviations are queries too, so an empty section is
+a clean result rather than an author's assurance.</p>
+<h2>Purpose</h2>
+<p>To record the execution of the procedures in <a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a>, on which build
+of the device and with which equipment, and to conclude whether the
+amplitude control requirements are verified.</p>
+<h2>Scope</h2>
+<p>This report covers every recorded execution of the approved procedures in
+<a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a>. The procedures executed:</p>
+<ul class="query">
+<li><a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a></li>
+<li><a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a></li>
+</ul>
+<p>Requirements outside <a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a>'s scope are outside this report's too.</p>
+<h2>Device Under Test</h2>
+<p>The builds the procedures were executed on: the device under test and the
+version of it actually tested, each listed once with the executions run on
+it, in <a class="ref xref" href="#caption-builds-tested">Table 1</a>:</p>
+<figure class="captioned captioned-table" id="caption-builds-tested">
+<figcaption><span class="caption-number">Table 1</span> Devices under test, by the build actually tested.</figcaption>
+<div class="query">
+<section class="embed" data-entity="BLD-0001">
+<table class="joined-rows" id="BLD-0001">
+<colgroup><col style="width: 30%"><col style="width: 14%"><col style="width: 18%"><col style="width: 20%"><col style="width: 18%"></colgroup>
+<thead><tr><th>Device</th><th>Part number</th><th>Build</th><th>Version tested</th><th>Tested in</th></tr></thead>
+<tbody><tr>
+<td><a class="ref" href="CMP-0001.html" title="NeuroPulse implantable pulse generator">CMP-0001</a>: NeuroPulse implantable pulse generator</td>
+<td>NP-IPG-100</td>
+<td><a class="ref" href="BLD-0001.html" title="Pulse generator, engineering build B">BLD-0001</a></td>
+<td><strong>HW rev B, FW 1.3.0</strong></td>
+<td><a class="ref" href="EVD-0001.html" title="Execution record — closed-loop amplitude adjustment bench test">EVD-0001</a></td>
+</tr></tbody>
+</table>
+</section>
+<section class="embed" data-entity="BLD-0002">
+<table class="joined-rows" id="BLD-0002">
+<colgroup><col style="width: 30%"><col style="width: 14%"><col style="width: 18%"><col style="width: 20%"><col style="width: 18%"></colgroup>
+<thead><tr><th>Device</th><th>Part number</th><th>Build</th><th>Version tested</th><th>Tested in</th></tr></thead>
+<tbody><tr>
+<td><a class="ref" href="CMP-0001.html" title="NeuroPulse implantable pulse generator">CMP-0001</a>: NeuroPulse implantable pulse generator</td>
+<td>NP-IPG-100</td>
+<td><a class="ref" href="BLD-0002.html" title="Pulse generator, engineering build B2">BLD-0002</a></td>
+<td><strong>HW rev B, FW 1.3.1</strong></td>
+<td><a class="ref" href="EVD-0002.html" title="Execution record — single-fault amplitude ceiling bench test">EVD-0002</a></td>
+</tr></tbody>
+</table>
+</section>
+</div>
+</figure>
+<h2>Test equipment</h2>
+<p>The equipment the executions used, each listed once with every unit of it
+used — serial number, calibration due date and the execution — in
+<a class="ref xref" href="#caption-equipment-used">Table 2</a>. Each unit is an equipment record on the execution,
+linked to the equipment <a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a>'s procedures say they need:</p>
+<figure class="captioned captioned-table" id="caption-equipment-used">
+<figcaption><span class="caption-number">Table 2</span> Test equipment used, by unit.</figcaption>
+<div class="query">
+<section class="embed" data-entity="EQP-0001"><table class="joined-rows" id="EQP-0001">
+<colgroup><col style="width: 34%"><col style="width: 20%"><col style="width: 46%"></colgroup>
+<thead><tr><th>Equipment</th><th>Model</th><th>Units used</th></tr></thead>
+<tbody><tr>
+<td><a class="ref" href="EQP-0001.html" title="Bench ECAP simulator">EQP-0001</a>: Bench ECAP simulator</td>
+<td>Neurolab ES-4</td>
+<td>
+<div class="unit">BES-2201 · calibration due 2026-11-01 · used in <a class="ref" href="EVD-0001.html" title="Execution record — closed-loop amplitude adjustment bench test">EVD-0001</a></div>
+</td>
+</tr></tbody>
+</table>
+</section>
+<section class="embed" data-entity="EQP-0002"><table class="joined-rows" id="EQP-0002">
+<colgroup><col style="width: 34%"><col style="width: 20%"><col style="width: 46%"></colgroup>
+<thead><tr><th>Equipment</th><th>Model</th><th>Units used</th></tr></thead>
+<tbody><tr>
+<td><a class="ref" href="EQP-0002.html" title="Precision current probe">EQP-0002</a>: Precision current probe</td>
+<td>Tekbench CP-30</td>
+<td>
+<div class="unit">PCP-0087 · calibration due 2026-09-30 · used in <a class="ref" href="EVD-0001.html" title="Execution record — closed-loop amplitude adjustment bench test">EVD-0001</a></div>
+</td>
+</tr></tbody>
+</table>
+</section>
+<section class="embed" data-entity="EQP-0003"><table class="joined-rows" id="EQP-0003">
+<colgroup><col style="width: 34%"><col style="width: 20%"><col style="width: 46%"></colgroup>
+<thead><tr><th>Equipment</th><th>Model</th><th>Units used</th></tr></thead>
+<tbody><tr>
+<td><a class="ref" href="EQP-0003.html" title="Fault-injection lead simulator">EQP-0003</a>: Fault-injection lead simulator</td>
+<td>Neurolab FL-2</td>
+<td>
+<div class="unit">FLS-0042 · calibration due 2026-10-15 · used in <a class="ref" href="EVD-0002.html" title="Execution record — single-fault amplitude ceiling bench test">EVD-0002</a></div>
+</td>
+</tr></tbody>
+</table>
+</section>
+</div>
+</figure>
+<h2>Results</h2>
+<p>Every execution, in the order it was run, with each step of its protocol
+beside the result recorded for it:</p>
+<div class="query">
+<section class="embed" data-entity="EVD-0001">
+<article class="evidence" id="EVD-0001">
+<h3><span class="id">EVD-0001</span> Execution record — closed-loop amplitude adjustment bench test</h3>
+<p class="evidence-meta">
+<span class="pass-fail pass-fail-pass">pass</span> · executed 2026-08-04 · tests <a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a> at commit <code>145edd3</code>
+</p>
+<table class="fields">
+<tbody>
+<tr><th>Build tested</th><td><a class="ref" href="BLD-0001.html" title="Pulse generator, engineering build B">BLD-0001</a>: Pulse generator, engineering build B, <strong>HW rev B, FW 1.3.0</strong> — a build of <a class="ref" href="CMP-0001.html" title="NeuroPulse implantable pulse generator">CMP-0001</a></td></tr>
+</tbody>
+</table>
+<h4>Steps</h4>
+<table class="steps steps-results">
+<thead><tr><th class="step-number">Step</th><th>Description</th><th>Acceptance criteria</th><th>Result</th><th>Pass/Fail</th></tr></thead>
+<tbody>
+<tr>
+<td class="step-number"></td>
+<td><p>Place the implant in the saline tank, connect its sense electrode to the bench ECAP simulator and clip the precision current probe onto the stimulation lead. Program a fixed amplitude of 3 mA in open loop.</p>
+</td>
+<td><p>The simulator detects an evoked response on every stimulation cycle, and the probe reads 3 mA ± 2 %.</p>
+</td>
+<td class="step-result"><p>Evoked response on every cycle; probe read 3.02 mA, as in
+<a class="ref xref" href="#caption-evd-0001-pulse">Figure 1</a>.</p>
+<figure class="captioned captioned-figure" id="caption-evd-0001-pulse">
+<p><img src="../assets/evd-0001-pulse.svg" alt="Biphasic pulse on the current probe"></p>
+<figcaption><span class="caption-number">Figure 1</span> One stimulation pulse on the current probe (PCP-0087), 1 mA/div, 50 µs/div. Each phase 3.02 mA for 100 µs, 20 µs apart.</figcaption>
+</figure>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Configure the target band from the clinician settings and enable closed-loop control.</p>
+</td>
+<td><p>The implant reports closed-loop mode, and the target band it reads back matches the band configured.</p>
+</td>
+<td class="step-result"><p>Closed-loop mode reported; target band read back as configured.</p>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Replay response profile 1, posture change from supine to standing, for 10 minutes.</p>
+</td>
+<td><p>The evoked response is within the target band on at least 99 % of cycles, and delivered amplitude stays within the configured range.</p>
+</td>
+<td class="step-result"><p>Within the target band on 99.7 % of cycles; amplitude 2.1–4.4 mA. The
+only excursions are at the two posture changes, in
+<a class="ref xref" href="#caption-evd-0001-profile-1">Figure 2</a>.</p>
+<figure class="captioned captioned-figure" id="caption-evd-0001-profile-1">
+<p><img src="../assets/evd-0001-profile-1.svg" alt="Profile 1 roll"></p>
+<figcaption><span class="caption-number">Figure 2</span> Profile 1 over 10 minutes. The evoked response (CH1) stays in the shaded target band while delivered amplitude (CH2) falls when the patient rolls onto one side and rises on standing.</figcaption>
+</figure>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Replay response profile 2, a slow increase in neural sensitivity, for 10 minutes.</p>
+</td>
+<td><p>The evoked response is within the target band on at least 99 % of cycles, and delivered amplitude stays within the configured range.</p>
+</td>
+<td class="step-result"><p>Within the target band on 99.8 % of cycles; amplitude 2.6–3.9 mA.</p>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Replay response profile 3, transient responses from coughing, for 10 minutes.</p>
+</td>
+<td><p>The evoked response returns to the target band within 5 cycles of each transient, and delivered amplitude stays within the configured range.</p>
+</td>
+<td class="step-result"><p>Back in the target band within 3 cycles of every transient; amplitude 2.4–4.1 mA.</p>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+</tbody>
+</table>
+<h4>Equipment used</h4>
+<table class="list">
+<thead><tr><th>Equipment</th><th>Serial number</th><th>Calibration due date</th></tr></thead>
+<tbody>
+<tr><td><a class="ref" href="EQP-0001.html" title="Bench ECAP simulator">EQP-0001</a>: Bench ECAP simulator</td><td>BES-2201</td><td>2026-11-01</td></tr>
+<tr><td><a class="ref" href="EQP-0002.html" title="Precision current probe">EQP-0002</a>: Precision current probe</td><td>PCP-0087</td><td>2026-09-30</td></tr>
+</tbody>
+</table>
+<h4>Notes</h4>
+<div class="body">
+<p>All three response profiles held within the configured target band across
+a 30-minute run. No anomalies observed. The set-up is shown in
+<a class="ref xref" href="#caption-bench-setup">Figure 3</a>.</p>
+<figure class="captioned captioned-figure" id="caption-bench-setup">
+<p><img src="../assets/bench-setup.jpg" alt="Bench set-up"></p>
+<figcaption><span class="caption-number">Figure 3</span> Bench set-up. The implant in a saline tank drives the ECAP simulator; the current probe (PCP-0087) feeds the oscilloscope.</figcaption>
+</figure>
+</div>
+</article>
+</section>
+<section class="embed" data-entity="EVD-0002">
+<article class="evidence" id="EVD-0002">
+<h3><span class="id">EVD-0002</span> Execution record — single-fault amplitude ceiling bench test</h3>
+<p class="evidence-meta">
+<span class="pass-fail pass-fail-pass">pass</span> · executed 2026-08-11 · tests <a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a> at commit <code>145edd3</code>
+</p>
+<table class="fields">
+<tbody>
+<tr><th>Build tested</th><td><a class="ref" href="BLD-0002.html" title="Pulse generator, engineering build B2">BLD-0002</a>: Pulse generator, engineering build B2, <strong>HW rev B, FW 1.3.1</strong> — a build of <a class="ref" href="CMP-0001.html" title="NeuroPulse implantable pulse generator">CMP-0001</a></td></tr>
+</tbody>
+</table>
+<h4>Steps</h4>
+<table class="steps steps-results">
+<thead><tr><th class="step-number">Step</th><th>Description</th><th>Acceptance criteria</th><th>Result</th><th>Pass/Fail</th></tr></thead>
+<tbody>
+<tr>
+<td class="step-number"></td>
+<td><p>Connect the implant's sense electrode through the fault-injection lead simulator, with its current monitor on the stimulation lead. Enable closed-loop control with the amplitude at its configured maximum.</p>
+</td>
+<td><p>The current monitor reads the configured maximum amplitude, within ± 2 %.</p>
+</td>
+<td class="step-result"><p>Current monitor read 7.04 mA against a configured maximum of 7 mA.</p>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Through the test interface, command an amplitude of 10 mA, above the ceiling.</p>
+</td>
+<td><p>Delivered amplitude does not exceed 8 mA.</p>
+</td>
+<td class="step-result"><p>Delivered amplitude held at 7.9 mA; the ceiling engaged.</p>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Disconnect the sense electrode during active stimulation, hold for 30 seconds and reconnect. Repeat for ten trials.</p>
+</td>
+<td><p>Delivered amplitude does not exceed 8 mA at any time in any of the ten trials.</p>
+</td>
+<td class="step-result"><p>Peak delivered amplitude 7.9 mA across the ten trials. Every trial
+looked like trial 4, in <a class="ref xref" href="#caption-evd-0002-lead-open">Figure 4</a>: with the lead open
+the loop drives amplitude up, and the hardware limit holds it below
+the ceiling until the lead is reconnected.</p>
+<figure class="captioned captioned-figure" id="caption-evd-0002-lead-open">
+<p><img src="../assets/evd-0002-lead-open.svg" alt="Trial 4 on the current monitor"></p>
+<figcaption><span class="caption-number">Figure 4</span> Trial 4 of 10 on the lead simulator (FLS-0042), 2 mA/div, 5 s/div. Delivered amplitude (CH1) against the 8 mA ceiling of <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a> while the sense lead (CH3) is open for 30 s.</figcaption>
+</figure>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+</tbody>
+</table>
+<h4>Equipment used</h4>
+<table class="list">
+<thead><tr><th>Equipment</th><th>Serial number</th><th>Calibration due date</th></tr></thead>
+<tbody>
+<tr><td><a class="ref" href="EQP-0003.html" title="Fault-injection lead simulator">EQP-0003</a>: Fault-injection lead simulator</td><td>FLS-0042</td><td>2026-10-15</td></tr>
+</tbody>
+</table>
+<h4>Notes</h4>
+<div class="body">
+<p>Executed against the protocol as revised by <a class="ref" href="ECO-0001.html" title="Add fault-injection step to single-fault ceiling protocol">ECO-0001</a>, including the
+lead-disconnection fault-injection step. Delivered amplitude did not exceed
+7.9 mA across ten trials. Had <a class="ref" href="BLD-0002.html" title="Pulse generator, engineering build B2">BLD-0002</a>'s <code>build_date</code> been after this
+execution's, rules/evidence-after-build.yaml would flag it.</p>
+</div>
+</article>
+</section>
+</div>
+<p>Executions that did not pass, by ID:</p>
+<p class="query-empty">No VerificationEvidence matches this query.</p>
+<p>Executions with a step that did not pass, whatever their overall result:</p>
+<p class="query-empty">No VerificationEvidence matches this query.</p>
+<h2>Completeness</h2>
+<p>Approved procedures with no recorded execution:</p>
+<p class="query-empty">No VerificationProtocol matches this query.</p>
+<h2>Deviations</h2>
+<p>Executions recorded before the build they name was built
+(<code>rules/evidence-after-build.yaml</code>):</p>
+<p class="query-empty">No VerificationEvidence matches this query.</p>
+<p>Each execution records the commit of the protocol it ran against
+(<code>protocol_commit</code>). Whether a procedure has changed since is not yet a
+check this report can make: it needs the protocol's git history in a
+query, which is still to be designed (provenance-ddf DES-0016).</p>
+<p>Executions using equipment whose calibration was due before the test was
+run (<code>rules/equipment-calibration-current.yaml</code>):</p>
+<p class="query-empty">No VerificationEvidence matches this query.</p>
+<h2>Conclusion</h2>
+<p>While the sections above are empty, every procedure in <a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a> has
+passed, on builds that existed when it ran and with calibrated equipment,
+and
+<a class="ref" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a> and <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a> are verified by test. <a class="ref" href="EVD-0002.html" title="Execution record — single-fault amplitude ceiling bench test">EVD-0002</a> is the
+evidence the risk-benefit analysis of <a class="ref" href="RSK-0001.html" title="Uncontrolled stimulation amplitude increase">RSK-0001</a> waits on: delivered
+amplitude stayed under the 8 mA ceiling with the sense electrode
+disconnected, the single-fault condition of [<a class="ref" href="REF-0002.html" title="Medical electrical equipment — Part 1: General requirements for basic safety and essential performance">1</a>]. Re-assessing the
+residual risk belongs to the risk file, not to this report.</p>
+<p><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a> is not verified by this report; see <a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a>'s scope.</p>
+</div>
+<section class="references">
+<h2>References</h2>
+<h3>Internal</h3>
+<ul>
+<li><a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a>: Verification Protocol — Amplitude Control</li>
+</ul>
+<h3>External</h3>
+<ol class="external-references">
+<li id="ref-1"><cite>Medical electrical equipment — Part 1: General requirements for basic safety and essential performance</cite>. IEC/TC 62 (International Electrotechnical Commission, 2020). IEC 60601-1:2005&#43;AMD1:2012&#43;AMD2:2020. (<a class="ref" href="REF-0002.html" title="Medical electrical equipment — Part 1: General requirements for basic safety and essential performance">REF-0002</a>)</li>
+</ol>
+</section>
+</article>
+
+<section class="dhf-revisions">
+<h2>Revision history</h2>
+<table>
+<thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td><code>3dd7c6b</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #16 from dynamatt/verification-protocol-report</td></tr>
+<tr><td><code>3f4b916</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge commit &#39;8068898d3c091ab9a85d211d7a09eb61fc4a1018&#39; into epic/E2-validate</td></tr>
+<tr><td><code>58b2168</code></td><td>2026-10-11</td><td>Matt Williams</td><td>Merge pull request #12 from dynamatt/task/E2.1-validate-design</td></tr>
+<tr><td><code>55388be</code></td><td>2026-10-10</td><td>Matt Williams</td><td>Merge pull request #10 from dynamatt/ddf-references</td></tr>
+<tr><td><code>1b28c4c</code></td><td>2026-10-08</td><td>Matt Williams</td><td>Merge pull request #9 from dynamatt/cite-template</td></tr>
+<tr><td><code>b617654</code></td><td>2026-10-06</td><td>Matt Williams</td><td>Merge pull request #8 from dynamatt/references</td></tr>
+<tr><td><code>bd98829</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Merge pull request #7 from dynamatt/scope-git-captions</td></tr>
+<tr><td><code>54de84f</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Add ValidationEvidence, reusing the Equipment record</td></tr>
+<tr><td><code>b6dfc5c</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Lists that name their type: a record, an enum and a built-in type</td></tr>
+<tr><td><code>4cf41f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Make templates/ functional: Requirement page, layout, index, stylesheet</td></tr>
+<tr><td><code>7aee1f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link on the VerificationProtocol side instead</td></tr>
+<tr><td><code>f1c5fe4</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link once, on the Requirement side</td></tr>
+<tr><td><code>32bb0cb</code></td><td>2026-09-26</td><td>Matt Williams</td><td>Initial commit.</td></tr>
+</tbody>
+</table>
+</section>
+</main>
+<footer class="dhf-footer">
+Controlled content, generated from the design repository. Printed copies are uncontrolled.
+<p class="dhf-stamp">Generated from commit <code>3dd7c6b</code> · content hash <code>sha256:9f07cff189a7216710848a513b4a65bc78e24f7c2cd090253b332caa6b04e7cf</code> · this page last changed in <code>3dd7c6b</code></p>
+</footer>
+</body>
+</html>
