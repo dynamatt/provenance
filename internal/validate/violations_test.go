@@ -123,7 +123,9 @@ var ruleID = regexp.MustCompile(`"((?:content|links|schema|rules)/[a-z][a-z-]*)"
 func TestViolationsCoverEveryRule(t *testing.T) {
 	inCode := map[string]string{}
 	err := filepath.WalkDir("..", func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") {
+		// checks.go lists every check by ID, so it would show them all
+		// as in the code; TestChecksMatchTheCatalogue holds it to the rest.
+		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") || p == "../validate/checks.go" {
 			return err
 		}
 		src, err := os.ReadFile(p)
@@ -151,6 +153,54 @@ func TestViolationsCoverEveryRule(t *testing.T) {
 	for rule, p := range inCode {
 		if classes[rule] == "" {
 			t.Errorf("%s (%s) has no ErrorClass in testdata/violations/core/cases", rule, p)
+		}
+	}
+}
+
+// Checks, which the junit and sarif reports list, has every class of the
+// catalogue, with its severity and its title as the description.
+func TestChecksMatchTheCatalogue(t *testing.T) {
+	classes := map[string]errorClass{}
+	titles := map[string]string{}
+	sc, err := entity.Scan(filepath.Join(violationsDir, "core"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range sc.Entities {
+		if e.Type != "ErrorClass" {
+			continue
+		}
+		var c errorClass
+		var title struct {
+			Title string `yaml:"title"`
+		}
+		if err := e.Front.Decode(&c); err != nil {
+			t.Fatal(err)
+		}
+		if err := e.Front.Decode(&title); err != nil {
+			t.Fatal(err)
+		}
+		classes[c.Rule], titles[c.Rule] = c, title.Title
+	}
+	seen := map[string]bool{}
+	for i, ch := range Checks {
+		if i > 0 && Checks[i-1].ID >= ch.ID {
+			t.Errorf("Checks: %s is not after %s", ch.ID, Checks[i-1].ID)
+		}
+		seen[ch.ID] = true
+		c, ok := classes[ch.ID]
+		switch {
+		case !ok:
+			t.Errorf("Checks: %s has no ErrorClass", ch.ID)
+		case string(ch.Severity) != c.Severity:
+			t.Errorf("Checks: %s is %s, its ErrorClass %s", ch.ID, ch.Severity, c.Severity)
+		case ch.Description != titles[ch.ID]:
+			t.Errorf("Checks: %s is described %q, its ErrorClass %q", ch.ID, ch.Description, titles[ch.ID])
+		}
+	}
+	for rule, c := range classes {
+		if !seen[rule] {
+			t.Errorf("%s (%s) is not in Checks", rule, c.ID)
 		}
 	}
 }

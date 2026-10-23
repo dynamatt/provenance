@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "violations": [
+    {
+      "rule": "requirement-verified",
+      "severity": "warning",
+      "message": "requirement missing verification",
+      "entity": "REQ-0003",
+      "path": "REQ/REQ-0003.md",
+      "line": 2
+    }
+  ],
+  "summary": {
+    "errors": 0,
+    "warnings": 1,
+    "rules_skipped": 0
+  }
+}

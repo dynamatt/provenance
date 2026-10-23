@@ -84,6 +84,10 @@ acceptance: build example
 	PROV=$(CURDIR)/$(BIN) EXAMPLE_DIR=$(CURDIR)/$(EXAMPLE_DIR) GOLDEN_DIR=$(CURDIR)/$(GOLDEN_DIR) \
 		VALIDATE_DIR=$(CURDIR)/$(VALIDATE_DIR) VIOLATIONS_DIR=$(CURDIR)/$(VIOLATIONS_DIR) bash scripts/acceptance.sh
 
+# SARIF names the binary's version, which changes with every commit; the
+# golden reports say dev instead.
+SARIF_DEV := sed -E '/"name": "provenance",/{n;s/"version": "[^"]*"/"version": "dev"/;}'
+
 # Rewrite the golden site and the clean validate report from the pinned
 # example, and the reports of testdata/violations. Commit the result with the
 # change that caused it, so the PR shows the difference. The example must
@@ -92,10 +96,13 @@ golden-update: build example
 	rm -rf $(GOLDEN_DIR)
 	cd $(EXAMPLE_DIR) && $(CURDIR)/$(BIN) export website --out $(CURDIR)/$(GOLDEN_DIR) >/dev/null
 	mkdir -p $(VALIDATE_DIR)
-	cd $(EXAMPLE_DIR) && $(CURDIR)/$(BIN) validate --out $(CURDIR)/$(VALIDATE_DIR)/clean.txt
-	for r in core broken-schema; do \
-		$(BIN) validate --path $(VIOLATIONS_DIR)/$$r --out $(VALIDATE_DIR)/violations-$$r.txt >/dev/null || [ $$? -eq 1 ]; \
+	for f in text:txt json:json junit:junit.xml sarif:sarif; do \
+		(cd $(EXAMPLE_DIR) && $(CURDIR)/$(BIN) validate --format $${f%%:*} --out $(CURDIR)/$(VALIDATE_DIR)/clean.$${f#*:}); \
+		for r in core broken-schema; do \
+			$(BIN) validate --path $(VIOLATIONS_DIR)/$$r --format $${f%%:*} --out $(VALIDATE_DIR)/violations-$$r.$${f#*:} >/dev/null || [ $$? -eq 1 ]; \
+		done; \
 	done
+	for f in $(VALIDATE_DIR)/*.sarif; do $(SARIF_DEV) $$f > $$f.tmp && mv $$f.tmp $$f; done
 	@echo "golden site and report rewritten: review 'git diff $(GOLDEN_DIR) $(VALIDATE_DIR)'"
 
 # Regenerate the website's CLI reference from the command definitions. Run it

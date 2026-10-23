@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="provenance validate" tests="43" failures="29" errors="0">
+  <testsuite name="built-in" tests="36" failures="29" errors="0" skipped="0">
+    <testcase name="content/caption" classname="built-in">
+      <failure type="error" message="a caption must come right after the figure, table, equation or embed it captions">cases/content-caption/violation.md:8: error [content/caption] a caption must come right after the figure, table, equation or embed it captions (WID-0030)</failure>
+      <failure type="error" message="caption: did not find expected &#39;,&#39; or &#39;]&#39;">cases/content-caption/violation.md:16: error [content/caption] caption: did not find expected &#39;,&#39; or &#39;]&#39; (WID-0030)</failure>
+      <failure type="error" message="caption id &#34;twice&#34; is used twice on one page (first at cases/content-caption/violation.md:22)">cases/content-caption/violation.md:30: error [content/caption] caption id &#34;twice&#34; is used twice on one page (first at cases/content-caption/violation.md:22) (WID-0030)</failure>
+      <failure type="error" message="[[#nowhere]]: no caption with id &#34;nowhere&#34; on this page">cases/content-caption/violation.md:35: error [content/caption] [[#nowhere]]: no caption with id &#34;nowhere&#34; on this page (WID-0030)</failure>
+    </testcase>
+    <testcase name="content/duplicate-id" classname="built-in">
+      <failure type="error" message="duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-b.md">cases/content-duplicate-id/violation-a.md:2: error [content/duplicate-id] duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-b.md (WID-0004)</failure>
+      <failure type="error" message="duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-a.md">cases/content-duplicate-id/violation-b.md:2: error [content/duplicate-id] duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-a.md (WID-0004)</failure>
+    </testcase>
+    <testcase name="content/embed" classname="built-in">
+      <failure type="error" message="![[WID-0033]] is inside running text, so it is shown as a reference: an embed must stand on its own line">cases/content-embed/violation.md:6: error [content/embed] ![[WID-0033]] is inside running text, so it is shown as a reference: an embed must stand on its own line (WID-0032)</failure>
+    </testcase>
+    <testcase name="content/embed-cycle" classname="built-in">
+      <failure type="error" message="embed cycle WID-0035 → WID-0034 → WID-0035">cases/content-embed-cycle/violation-a.md:6: error [content/embed-cycle] embed cycle WID-0035 → WID-0034 → WID-0035 (WID-0034)</failure>
+      <failure type="error" message="embed cycle WID-0034 → WID-0035 → WID-0034">cases/content-embed-cycle/violation-b.md:6: error [content/embed-cycle] embed cycle WID-0034 → WID-0035 → WID-0034 (WID-0035)</failure>
+    </testcase>
+    <testcase name="content/frontmatter" classname="built-in">
+      <failure type="error" message="frontmatter has an id but no type, so the file is not read as an entity">cases/content-frontmatter/violation-no-type.md:2: error [content/frontmatter] frontmatter has an id but no type, so the file is not read as an entity</failure>
+      <failure type="error" message="invalid frontmatter: did not find expected &#39;,&#39; or &#39;]&#39;">cases/content-frontmatter/violation-yaml.md:4: error [content/frontmatter] invalid frontmatter: did not find expected &#39;,&#39; or &#39;]&#39;</failure>
+    </testcase>
+    <testcase name="content/image" classname="built-in">
+      <failure type="error" message="image assets/missing.png does not exist">cases/content-image/violation.md:6: error [content/image] image assets/missing.png does not exist (WID-0028)</failure>
+      <failure type="error" message="image https://example.com/figure.png: images must be files in the repository, not URLs, so the site works offline">cases/content-image/violation.md:8: error [content/image] image https://example.com/figure.png: images must be files in the repository, not URLs, so the site works offline (WID-0028)</failure>
+      <failure type="error" message="image ../../../outside.png is outside the repository">cases/content-image/violation.md:10: error [content/image] image ../../../outside.png is outside the repository (WID-0028)</failure>
+      <failure type="error" message="image assets/figure.bmp: the website export does not support this format (supported: .gif, .jpeg, .jpg, .png, .svg, .webp)">cases/content-image/violation.md:12: error [content/image] image assets/figure.bmp: the website export does not support this format (supported: .gif, .jpeg, .jpg, .png, .svg, .webp) (WID-0028)</failure>
+    </testcase>
+    <testcase name="content/query" classname="built-in">
+      <failure type="error" message="query block: unknown operator &#34;=&#34; (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in)">cases/content-query/violation.md:10: error [content/query] query block: unknown operator &#34;=&#34; (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in) (WID-0026)</failure>
+    </testcase>
+    <testcase name="content/template" classname="built-in">
+      <failure type="error" message="query block: unknown template &#34;no-such-template&#34;: there is no templates/no-such-template.tmpl (named templates: spare, widget-row)">cases/content-template/violation.md:8: error [content/template] query block: unknown template &#34;no-such-template&#34;: there is no templates/no-such-template.tmpl (named templates: spare, widget-row) (WID-0039)</failure>
+      <failure type="error" message="field &#34;citations&#34;: its template name .Citations is already used by the engine baseline">schema/TemplateNameClash.yaml:9: error [content/template] field &#34;citations&#34;: its template name .Citations is already used by the engine baseline</failure>
+      <failure type="error" message="bad character U+003C &#39;&lt;&#39;">templates/BrokenTemplate.tmpl:2: error [content/template] bad character U+003C &#39;&lt;&#39;</failure>
+    </testcase>
+    <testcase name="content/template-name" classname="built-in">
+      <system-out>templates/NotAType.tmpl: warning [content/template-name] NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used&#xA;</system-out>
+    </testcase>
+    <testcase name="content/unknown-override" classname="built-in">
+      <system-out>templates/_footer.tmpl: warning [content/unknown-override] _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used&#xA;</system-out>
+    </testcase>
+    <testcase name="content/unrendered-block" classname="built-in">
+      <failure type="error" message="mermaid block: this version of Provenance cannot render it, so it would be published as its source">cases/content-unrendered-block/violation.md:6: error [content/unrendered-block] mermaid block: this version of Provenance cannot render it, so it would be published as its source (WID-0037)</failure>
+      <failure type="error" message="drawio block: this version of Provenance cannot render it, so it would be published as its source">cases/content-unrendered-block/violation.md:10: error [content/unrendered-block] drawio block: this version of Provenance cannot render it, so it would be published as its source (WID-0037)</failure>
+    </testcase>
+    <testcase name="content/unused-template" classname="built-in">
+      <system-out>templates/spare.tmpl: warning [content/unused-template] named template spare is not chosen by any query block&#xA;</system-out>
+    </testcase>
+    <testcase name="links/target-type" classname="built-in">
+      <failure type="error" message="parent: ERR-0019 is of type ErrorClass, but parent links only to Widget">cases/links-target-type/violation.md:5: error [links/target-type] parent: ERR-0019 is of type ErrorClass, but parent links only to Widget (WID-0024)</failure>
+    </testcase>
+    <testcase name="links/unknown-field" classname="built-in">
+      <failure type="error" message="[[WID-0023#colour]]: Widget has no field &#34;colour&#34;">cases/links-unknown-field/violation.md:6: error [links/unknown-field] [[WID-0023#colour]]: Widget has no field &#34;colour&#34; (WID-0022)</failure>
+    </testcase>
+    <testcase name="links/unresolved" classname="built-in">
+      <failure type="error" message="uses: no entity WID-9999">cases/links-unresolved/violation.md:5: error [links/unresolved] uses: no entity WID-9999 (WID-0020)</failure>
+      <failure type="error" message="[[WID-9998]]: no entity WID-9998">cases/links-unresolved/violation.md:7: error [links/unresolved] [[WID-9998]]: no entity WID-9998 (WID-0020)</failure>
+    </testcase>
+    <testcase name="rules/file" classname="built-in">
+      <failure type="error" message="invalid YAML: did not find expected node content">rules/rules-file-violation.yaml:1: error [rules/file] invalid YAML: did not find expected node content</failure>
+    </testcase>
+    <testcase name="rules/message" classname="built-in">
+      <failure type="error" message="no message: the text each violation is reported with">rules/rules-message-violation.yaml:1: error [rules/message] no message: the text each violation is reported with</failure>
+    </testcase>
+    <testcase name="rules/name" classname="built-in">
+      <failure type="error" message="a rule file is named for its ID, in lower-case kebab-case, with .yaml: Rules_Name_Violation.yaml is not">rules/Rules_Name_Violation.yaml: error [rules/name] a rule file is named for its ID, in lower-case kebab-case, with .yaml: Rules_Name_Violation.yaml is not</failure>
+    </testcase>
+    <testcase name="rules/query" classname="built-in">
+      <failure type="error" message="Widget has no field &#34;colour&#34; (fields: id, type, title, status, due, weight, score, tags, steps, parent, uses, notes, children, used_by, code_blocks)">rules/rules-query-violation.yaml:4: error [rules/query] Widget has no field &#34;colour&#34; (fields: id, type, title, status, due, weight, score, tags, steps, parent, uses, notes, children, used_by, code_blocks)</failure>
+    </testcase>
+    <testcase name="rules/severity" classname="built-in">
+      <failure type="error" message="severity is error or warning, not &#34;fatal&#34;">rules/rules-severity-violation.yaml:1: error [rules/severity] severity is error or warning, not &#34;fatal&#34;</failure>
+    </testcase>
+    <testcase name="rules/unknown-key" classname="built-in">
+      <failure type="error" message="unknown key &#34;id&#34;: a rule&#39;s ID is its file name, rules-unknown-key-violation">rules/rules-unknown-key-violation.yaml:1: error [rules/unknown-key] unknown key &#34;id&#34;: a rule&#39;s ID is its file name, rules-unknown-key-violation</failure>
+    </testcase>
+    <testcase name="schema/calculated-set" classname="built-in">
+      <failure type="error" message="score is calculated (weight * 2); it cannot be written in the file">cases/schema-calculated-set/violation.md:6: error [schema/calculated-set] score is calculated (weight * 2); it cannot be written in the file (WID-0010)</failure>
+      <failure type="error" message="steps row 1: double is calculated (n * 2); it cannot be written in the file">cases/schema-calculated-set/violation.md:9: error [schema/calculated-set] steps row 1: double is calculated (n * 2); it cannot be written in the file (WID-0010)</failure>
+    </testcase>
+    <testcase name="schema/enum-value" classname="built-in">
+      <failure type="error" message="status: &#34;aproved&#34; is not one of Status: draft, approved">cases/schema-enum-value/violation.md:5: error [schema/enum-value] status: &#34;aproved&#34; is not one of Status: draft, approved (WID-0014)</failure>
+      <failure type="error" message="tags item 2: &#34;final&#34; is not one of Status: draft, approved">cases/schema-enum-value/violation.md:6: error [schema/enum-value] tags item 2: &#34;final&#34; is not one of Status: draft, approved (WID-0014)</failure>
+    </testcase>
+    <testcase name="schema/file" classname="built-in"></testcase>
+    <testcase name="schema/formula" classname="built-in">
+      <failure type="error" message="field &#34;score&#34;: formula: column 1: FormulaViolation has no field &#34;nope&#34; (fields: example_of, weight, score)">schema/FormulaViolation.yaml:11: error [schema/formula] field &#34;score&#34;: formula: column 1: FormulaViolation has no field &#34;nope&#34; (fields: example_of, weight, score)</failure>
+    </testcase>
+    <testcase name="schema/id-format" classname="built-in">
+      <failure type="error" message="ID two words cannot be used as a page name (letters, digits, &#39;.&#39;, &#39;_&#39; and &#39;-&#39; only)">cases/schema-id-format/violation-page-name.md:2: error [schema/id-format] ID two words cannot be used as a page name (letters, digits, &#39;.&#39;, &#39;_&#39; and &#39;-&#39; only) (two words)</failure>
+      <failure type="error" message="ID WID-7 is not WID-NNNN, the form of a Widget ID">cases/schema-id-format/violation.md:2: error [schema/id-format] ID WID-7 is not WID-NNNN, the form of a Widget ID (WID-7)</failure>
+      <failure type="error" message="type DuplicatePrefixA has the id_prefix DUP, which DuplicatePrefixB (schema/DuplicatePrefixB.yaml) also has">schema/DuplicatePrefixA.yaml:1: error [schema/id-format] type DuplicatePrefixA has the id_prefix DUP, which DuplicatePrefixB (schema/DuplicatePrefixB.yaml) also has</failure>
+      <failure type="error" message="type DuplicatePrefixB has the id_prefix DUP, which DuplicatePrefixA (schema/DuplicatePrefixA.yaml) also has">schema/DuplicatePrefixB.yaml:1: error [schema/id-format] type DuplicatePrefixB has the id_prefix DUP, which DuplicatePrefixA (schema/DuplicatePrefixA.yaml) also has</failure>
+      <failure type="error" message="type NoPrefix has no id_prefix, so its IDs cannot be checked">schema/NoPrefix.yaml:1: error [schema/id-format] type NoPrefix has no id_prefix, so its IDs cannot be checked</failure>
+    </testcase>
+    <testcase name="schema/invalid-value" classname="built-in">
+      <failure type="error" message="due: not a date (YYYY-MM-DD), got 2026-13-04">cases/schema-invalid-value/violation.md:5: error [schema/invalid-value] due: not a date (YYYY-MM-DD), got 2026-13-04 (WID-0016)</failure>
+      <failure type="error" message="weight: not a number, got heavy">cases/schema-invalid-value/violation.md:6: error [schema/invalid-value] weight: not a number, got heavy (WID-0016)</failure>
+      <failure type="error" message="steps row 1: n: not a number, got one">cases/schema-invalid-value/violation.md:8: error [schema/invalid-value] steps row 1: n: not a number, got one (WID-0016)</failure>
+    </testcase>
+    <testcase name="schema/link-target" classname="built-in">
+      <failure type="error" message="field &#34;widget&#34;: target &#34;Nothing&#34; is not a declared type (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)">schema/LinkTargetViolation.yaml:9: error [schema/link-target] field &#34;widget&#34;: target &#34;Nothing&#34; is not a declared type (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)</failure>
+    </testcase>
+    <testcase name="schema/list-row" classname="built-in">
+      <failure type="error" message="steps row 1: no sub-field &#34;size&#34; (sub-fields: n)">cases/schema-list-row/violation.md:7: error [schema/list-row] steps row 1: no sub-field &#34;size&#34; (sub-fields: n) (WID-0018)</failure>
+    </testcase>
+    <testcase name="schema/required" classname="built-in">
+      <failure type="error" message="required field title is not set">cases/schema-required/violation.md:2: error [schema/required] required field title is not set (WID-0012)</failure>
+      <failure type="error" message="steps row 2: required sub-field n is not set">cases/schema-required/violation.md:6: error [schema/required] steps row 2: required sub-field n is not set (WID-0012)</failure>
+    </testcase>
+    <testcase name="schema/unknown-field" classname="built-in">
+      <failure type="error" message="Widget has no field &#34;colour&#34; (fields: title, status, due, weight, tags, steps, parent, uses)">cases/schema-unknown-field/violation.md:5: error [schema/unknown-field] Widget has no field &#34;colour&#34; (fields: title, status, due, weight, tags, steps, parent, uses) (WID-0008)</failure>
+      <failure type="error" message="notes is the Markdown body below the frontmatter, not a frontmatter field">cases/schema-unknown-field/violation.md:6: error [schema/unknown-field] notes is the Markdown body below the frontmatter, not a frontmatter field (WID-0008)</failure>
+      <failure type="error" message="used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it">cases/schema-unknown-field/violation.md:7: error [schema/unknown-field] used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it (WID-0008)</failure>
+    </testcase>
+    <testcase name="schema/unknown-key" classname="built-in">
+      <failure type="error" message="field &#34;status&#34;: unknown key &#34;default&#34;: fields have no defaults; a field that must have a value says required: true">schema/UnknownKeyViolation.yaml:11: error [schema/unknown-key] field &#34;status&#34;: unknown key &#34;default&#34;: fields have no defaults; a field that must have a value says required: true</failure>
+      <failure type="error" message="enum Colour: unknown key &#34;shade&#34; (expected enum, values)">schema/enums/Colour.yaml:4: error [schema/unknown-key] enum Colour: unknown key &#34;shade&#34; (expected enum, values)</failure>
+    </testcase>
+    <testcase name="schema/unknown-type" classname="built-in">
+      <failure type="error" message="type &#34;Gadget&#34; is not declared in schema/ (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)">cases/schema-unknown-type/violation.md:3: error [schema/unknown-type] type &#34;Gadget&#34; is not declared in schema/ (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget) (GAD-0001)</failure>
+    </testcase>
+    <testcase name="schema/unused-enum" classname="built-in">
+      <system-out>schema/enums/UnusedEnum.yaml:2: warning [schema/unused-enum] enum UnusedEnum is not used by any field&#xA;</system-out>
+    </testcase>
+    <testcase name="schema/unused-record" classname="built-in">
+      <system-out>schema/records/UnusedRecord.yaml:2: warning [schema/unused-record] record UnusedRecord is not used by any list&#xA;</system-out>
+    </testcase>
+    <testcase name="schema/unused-type" classname="built-in">
+      <system-out>schema/UnusedTypeViolation.yaml:2: warning [schema/unused-type] type UnusedTypeViolation has no entities and no links to or from it&#xA;</system-out>
+    </testcase>
+  </testsuite>
+  <testsuite name="rules" tests="7" failures="0" errors="0" skipped="6">
+    <testcase name="Rules_Name_Violation" classname="rules">
+      <skipped message="the rule file has errors"></skipped>
+    </testcase>
+    <testcase name="rules-clean" classname="rules"></testcase>
+    <testcase name="rules-file-violation" classname="rules">
+      <skipped message="the rule file has errors"></skipped>
+    </testcase>
+    <testcase name="rules-message-violation" classname="rules">
+      <skipped message="the rule file has errors"></skipped>
+    </testcase>
+    <testcase name="rules-query-violation" classname="rules">
+      <skipped message="the rule file has errors"></skipped>
+    </testcase>
+    <testcase name="rules-severity-violation" classname="rules">
+      <skipped message="the rule file has errors"></skipped>
+    </testcase>
+    <testcase name="rules-unknown-key-violation" classname="rules">
+      <skipped message="the rule file has errors"></skipped>
+    </testcase>
+  </testsuite>
+</testsuites>

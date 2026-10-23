@@ -1,0 +1,490 @@
+{
+  "version": 1,
+  "violations": [
+    {
+      "rule": "content/caption",
+      "severity": "error",
+      "message": "a caption must come right after the figure, table, equation or embed it captions",
+      "entity": "WID-0030",
+      "path": "cases/content-caption/violation.md",
+      "line": 8
+    },
+    {
+      "rule": "content/caption",
+      "severity": "error",
+      "message": "caption: did not find expected ',' or ']'",
+      "entity": "WID-0030",
+      "path": "cases/content-caption/violation.md",
+      "line": 16
+    },
+    {
+      "rule": "content/caption",
+      "severity": "error",
+      "message": "caption id \"twice\" is used twice on one page (first at cases/content-caption/violation.md:22)",
+      "entity": "WID-0030",
+      "path": "cases/content-caption/violation.md",
+      "line": 30
+    },
+    {
+      "rule": "content/caption",
+      "severity": "error",
+      "message": "[[#nowhere]]: no caption with id \"nowhere\" on this page",
+      "entity": "WID-0030",
+      "path": "cases/content-caption/violation.md",
+      "line": 35
+    },
+    {
+      "rule": "content/duplicate-id",
+      "severity": "error",
+      "message": "duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-b.md",
+      "entity": "WID-0004",
+      "path": "cases/content-duplicate-id/violation-a.md",
+      "line": 2
+    },
+    {
+      "rule": "content/duplicate-id",
+      "severity": "error",
+      "message": "duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-a.md",
+      "entity": "WID-0004",
+      "path": "cases/content-duplicate-id/violation-b.md",
+      "line": 2
+    },
+    {
+      "rule": "content/embed-cycle",
+      "severity": "error",
+      "message": "embed cycle WID-0035 → WID-0034 → WID-0035",
+      "entity": "WID-0034",
+      "path": "cases/content-embed-cycle/violation-a.md",
+      "line": 6
+    },
+    {
+      "rule": "content/embed-cycle",
+      "severity": "error",
+      "message": "embed cycle WID-0034 → WID-0035 → WID-0034",
+      "entity": "WID-0035",
+      "path": "cases/content-embed-cycle/violation-b.md",
+      "line": 6
+    },
+    {
+      "rule": "content/embed",
+      "severity": "error",
+      "message": "![[WID-0033]] is inside running text, so it is shown as a reference: an embed must stand on its own line",
+      "entity": "WID-0032",
+      "path": "cases/content-embed/violation.md",
+      "line": 6
+    },
+    {
+      "rule": "content/frontmatter",
+      "severity": "error",
+      "message": "frontmatter has an id but no type, so the file is not read as an entity",
+      "entity": "",
+      "path": "cases/content-frontmatter/violation-no-type.md",
+      "line": 2
+    },
+    {
+      "rule": "content/frontmatter",
+      "severity": "error",
+      "message": "invalid frontmatter: did not find expected ',' or ']'",
+      "entity": "",
+      "path": "cases/content-frontmatter/violation-yaml.md",
+      "line": 4
+    },
+    {
+      "rule": "content/image",
+      "severity": "error",
+      "message": "image assets/missing.png does not exist",
+      "entity": "WID-0028",
+      "path": "cases/content-image/violation.md",
+      "line": 6
+    },
+    {
+      "rule": "content/image",
+      "severity": "error",
+      "message": "image https://example.com/figure.png: images must be files in the repository, not URLs, so the site works offline",
+      "entity": "WID-0028",
+      "path": "cases/content-image/violation.md",
+      "line": 8
+    },
+    {
+      "rule": "content/image",
+      "severity": "error",
+      "message": "image ../../../outside.png is outside the repository",
+      "entity": "WID-0028",
+      "path": "cases/content-image/violation.md",
+      "line": 10
+    },
+    {
+      "rule": "content/image",
+      "severity": "error",
+      "message": "image assets/figure.bmp: the website export does not support this format (supported: .gif, .jpeg, .jpg, .png, .svg, .webp)",
+      "entity": "WID-0028",
+      "path": "cases/content-image/violation.md",
+      "line": 12
+    },
+    {
+      "rule": "content/query",
+      "severity": "error",
+      "message": "query block: unknown operator \"=\" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in)",
+      "entity": "WID-0026",
+      "path": "cases/content-query/violation.md",
+      "line": 10
+    },
+    {
+      "rule": "content/template",
+      "severity": "error",
+      "message": "query block: unknown template \"no-such-template\": there is no templates/no-such-template.tmpl (named templates: spare, widget-row)",
+      "entity": "WID-0039",
+      "path": "cases/content-template/violation.md",
+      "line": 8
+    },
+    {
+      "rule": "content/unrendered-block",
+      "severity": "error",
+      "message": "mermaid block: this version of Provenance cannot render it, so it would be published as its source",
+      "entity": "WID-0037",
+      "path": "cases/content-unrendered-block/violation.md",
+      "line": 6
+    },
+    {
+      "rule": "content/unrendered-block",
+      "severity": "error",
+      "message": "drawio block: this version of Provenance cannot render it, so it would be published as its source",
+      "entity": "WID-0037",
+      "path": "cases/content-unrendered-block/violation.md",
+      "line": 10
+    },
+    {
+      "rule": "links/target-type",
+      "severity": "error",
+      "message": "parent: ERR-0019 is of type ErrorClass, but parent links only to Widget",
+      "entity": "WID-0024",
+      "path": "cases/links-target-type/violation.md",
+      "line": 5
+    },
+    {
+      "rule": "links/unknown-field",
+      "severity": "error",
+      "message": "[[WID-0023#colour]]: Widget has no field \"colour\"",
+      "entity": "WID-0022",
+      "path": "cases/links-unknown-field/violation.md",
+      "line": 6
+    },
+    {
+      "rule": "links/unresolved",
+      "severity": "error",
+      "message": "uses: no entity WID-9999",
+      "entity": "WID-0020",
+      "path": "cases/links-unresolved/violation.md",
+      "line": 5
+    },
+    {
+      "rule": "links/unresolved",
+      "severity": "error",
+      "message": "[[WID-9998]]: no entity WID-9998",
+      "entity": "WID-0020",
+      "path": "cases/links-unresolved/violation.md",
+      "line": 7
+    },
+    {
+      "rule": "schema/calculated-set",
+      "severity": "error",
+      "message": "score is calculated (weight * 2); it cannot be written in the file",
+      "entity": "WID-0010",
+      "path": "cases/schema-calculated-set/violation.md",
+      "line": 6
+    },
+    {
+      "rule": "schema/calculated-set",
+      "severity": "error",
+      "message": "steps row 1: double is calculated (n * 2); it cannot be written in the file",
+      "entity": "WID-0010",
+      "path": "cases/schema-calculated-set/violation.md",
+      "line": 9
+    },
+    {
+      "rule": "schema/enum-value",
+      "severity": "error",
+      "message": "status: \"aproved\" is not one of Status: draft, approved",
+      "entity": "WID-0014",
+      "path": "cases/schema-enum-value/violation.md",
+      "line": 5
+    },
+    {
+      "rule": "schema/enum-value",
+      "severity": "error",
+      "message": "tags item 2: \"final\" is not one of Status: draft, approved",
+      "entity": "WID-0014",
+      "path": "cases/schema-enum-value/violation.md",
+      "line": 6
+    },
+    {
+      "rule": "schema/id-format",
+      "severity": "error",
+      "message": "ID two words cannot be used as a page name (letters, digits, '.', '_' and '-' only)",
+      "entity": "two words",
+      "path": "cases/schema-id-format/violation-page-name.md",
+      "line": 2
+    },
+    {
+      "rule": "schema/id-format",
+      "severity": "error",
+      "message": "ID WID-7 is not WID-NNNN, the form of a Widget ID",
+      "entity": "WID-7",
+      "path": "cases/schema-id-format/violation.md",
+      "line": 2
+    },
+    {
+      "rule": "schema/invalid-value",
+      "severity": "error",
+      "message": "due: not a date (YYYY-MM-DD), got 2026-13-04",
+      "entity": "WID-0016",
+      "path": "cases/schema-invalid-value/violation.md",
+      "line": 5
+    },
+    {
+      "rule": "schema/invalid-value",
+      "severity": "error",
+      "message": "weight: not a number, got heavy",
+      "entity": "WID-0016",
+      "path": "cases/schema-invalid-value/violation.md",
+      "line": 6
+    },
+    {
+      "rule": "schema/invalid-value",
+      "severity": "error",
+      "message": "steps row 1: n: not a number, got one",
+      "entity": "WID-0016",
+      "path": "cases/schema-invalid-value/violation.md",
+      "line": 8
+    },
+    {
+      "rule": "schema/list-row",
+      "severity": "error",
+      "message": "steps row 1: no sub-field \"size\" (sub-fields: n)",
+      "entity": "WID-0018",
+      "path": "cases/schema-list-row/violation.md",
+      "line": 7
+    },
+    {
+      "rule": "schema/required",
+      "severity": "error",
+      "message": "required field title is not set",
+      "entity": "WID-0012",
+      "path": "cases/schema-required/violation.md",
+      "line": 2
+    },
+    {
+      "rule": "schema/required",
+      "severity": "error",
+      "message": "steps row 2: required sub-field n is not set",
+      "entity": "WID-0012",
+      "path": "cases/schema-required/violation.md",
+      "line": 6
+    },
+    {
+      "rule": "schema/unknown-field",
+      "severity": "error",
+      "message": "Widget has no field \"colour\" (fields: title, status, due, weight, tags, steps, parent, uses)",
+      "entity": "WID-0008",
+      "path": "cases/schema-unknown-field/violation.md",
+      "line": 5
+    },
+    {
+      "rule": "schema/unknown-field",
+      "severity": "error",
+      "message": "notes is the Markdown body below the frontmatter, not a frontmatter field",
+      "entity": "WID-0008",
+      "path": "cases/schema-unknown-field/violation.md",
+      "line": 6
+    },
+    {
+      "rule": "schema/unknown-field",
+      "severity": "error",
+      "message": "used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it",
+      "entity": "WID-0008",
+      "path": "cases/schema-unknown-field/violation.md",
+      "line": 7
+    },
+    {
+      "rule": "schema/unknown-type",
+      "severity": "error",
+      "message": "type \"Gadget\" is not declared in schema/ (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
+      "entity": "GAD-0001",
+      "path": "cases/schema-unknown-type/violation.md",
+      "line": 3
+    },
+    {
+      "rule": "rules/name",
+      "severity": "error",
+      "message": "a rule file is named for its ID, in lower-case kebab-case, with .yaml: Rules_Name_Violation.yaml is not",
+      "entity": "",
+      "path": "rules/Rules_Name_Violation.yaml",
+      "line": 0
+    },
+    {
+      "rule": "rules/file",
+      "severity": "error",
+      "message": "invalid YAML: did not find expected node content",
+      "entity": "",
+      "path": "rules/rules-file-violation.yaml",
+      "line": 1
+    },
+    {
+      "rule": "rules/message",
+      "severity": "error",
+      "message": "no message: the text each violation is reported with",
+      "entity": "",
+      "path": "rules/rules-message-violation.yaml",
+      "line": 1
+    },
+    {
+      "rule": "rules/query",
+      "severity": "error",
+      "message": "Widget has no field \"colour\" (fields: id, type, title, status, due, weight, score, tags, steps, parent, uses, notes, children, used_by, code_blocks)",
+      "entity": "",
+      "path": "rules/rules-query-violation.yaml",
+      "line": 4
+    },
+    {
+      "rule": "rules/severity",
+      "severity": "error",
+      "message": "severity is error or warning, not \"fatal\"",
+      "entity": "",
+      "path": "rules/rules-severity-violation.yaml",
+      "line": 1
+    },
+    {
+      "rule": "rules/unknown-key",
+      "severity": "error",
+      "message": "unknown key \"id\": a rule's ID is its file name, rules-unknown-key-violation",
+      "entity": "",
+      "path": "rules/rules-unknown-key-violation.yaml",
+      "line": 1
+    },
+    {
+      "rule": "schema/id-format",
+      "severity": "error",
+      "message": "type DuplicatePrefixA has the id_prefix DUP, which DuplicatePrefixB (schema/DuplicatePrefixB.yaml) also has",
+      "entity": "",
+      "path": "schema/DuplicatePrefixA.yaml",
+      "line": 1
+    },
+    {
+      "rule": "schema/id-format",
+      "severity": "error",
+      "message": "type DuplicatePrefixB has the id_prefix DUP, which DuplicatePrefixA (schema/DuplicatePrefixA.yaml) also has",
+      "entity": "",
+      "path": "schema/DuplicatePrefixB.yaml",
+      "line": 1
+    },
+    {
+      "rule": "schema/formula",
+      "severity": "error",
+      "message": "field \"score\": formula: column 1: FormulaViolation has no field \"nope\" (fields: example_of, weight, score)",
+      "entity": "",
+      "path": "schema/FormulaViolation.yaml",
+      "line": 11
+    },
+    {
+      "rule": "schema/link-target",
+      "severity": "error",
+      "message": "field \"widget\": target \"Nothing\" is not a declared type (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
+      "entity": "",
+      "path": "schema/LinkTargetViolation.yaml",
+      "line": 9
+    },
+    {
+      "rule": "schema/id-format",
+      "severity": "error",
+      "message": "type NoPrefix has no id_prefix, so its IDs cannot be checked",
+      "entity": "",
+      "path": "schema/NoPrefix.yaml",
+      "line": 1
+    },
+    {
+      "rule": "content/template",
+      "severity": "error",
+      "message": "field \"citations\": its template name .Citations is already used by the engine baseline",
+      "entity": "",
+      "path": "schema/TemplateNameClash.yaml",
+      "line": 9
+    },
+    {
+      "rule": "schema/unknown-key",
+      "severity": "error",
+      "message": "field \"status\": unknown key \"default\": fields have no defaults; a field that must have a value says required: true",
+      "entity": "",
+      "path": "schema/UnknownKeyViolation.yaml",
+      "line": 11
+    },
+    {
+      "rule": "schema/unused-type",
+      "severity": "warning",
+      "message": "type UnusedTypeViolation has no entities and no links to or from it",
+      "entity": "",
+      "path": "schema/UnusedTypeViolation.yaml",
+      "line": 2
+    },
+    {
+      "rule": "schema/unknown-key",
+      "severity": "error",
+      "message": "enum Colour: unknown key \"shade\" (expected enum, values)",
+      "entity": "",
+      "path": "schema/enums/Colour.yaml",
+      "line": 4
+    },
+    {
+      "rule": "schema/unused-enum",
+      "severity": "warning",
+      "message": "enum UnusedEnum is not used by any field",
+      "entity": "",
+      "path": "schema/enums/UnusedEnum.yaml",
+      "line": 2
+    },
+    {
+      "rule": "schema/unused-record",
+      "severity": "warning",
+      "message": "record UnusedRecord is not used by any list",
+      "entity": "",
+      "path": "schema/records/UnusedRecord.yaml",
+      "line": 2
+    },
+    {
+      "rule": "content/template",
+      "severity": "error",
+      "message": "bad character U+003C '<'",
+      "entity": "",
+      "path": "templates/BrokenTemplate.tmpl",
+      "line": 2
+    },
+    {
+      "rule": "content/template-name",
+      "severity": "warning",
+      "message": "NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used",
+      "entity": "",
+      "path": "templates/NotAType.tmpl",
+      "line": 0
+    },
+    {
+      "rule": "content/unknown-override",
+      "severity": "warning",
+      "message": "_footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used",
+      "entity": "",
+      "path": "templates/_footer.tmpl",
+      "line": 0
+    },
+    {
+      "rule": "content/unused-template",
+      "severity": "warning",
+      "message": "named template spare is not chosen by any query block",
+      "entity": "",
+      "path": "templates/spare.tmpl",
+      "line": 0
+    }
+  ],
+  "summary": {
+    "errors": 54,
+    "warnings": 6,
+    "rules_skipped": 0
+  }
+}

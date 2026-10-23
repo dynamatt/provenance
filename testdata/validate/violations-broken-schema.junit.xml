@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="provenance validate" tests="36" failures="1" errors="0">
+  <testsuite name="built-in" tests="36" failures="1" errors="0" skipped="0">
+    <testcase name="content/caption" classname="built-in"></testcase>
+    <testcase name="content/duplicate-id" classname="built-in"></testcase>
+    <testcase name="content/embed" classname="built-in"></testcase>
+    <testcase name="content/embed-cycle" classname="built-in"></testcase>
+    <testcase name="content/frontmatter" classname="built-in"></testcase>
+    <testcase name="content/image" classname="built-in"></testcase>
+    <testcase name="content/query" classname="built-in"></testcase>
+    <testcase name="content/template" classname="built-in"></testcase>
+    <testcase name="content/template-name" classname="built-in"></testcase>
+    <testcase name="content/unknown-override" classname="built-in"></testcase>
+    <testcase name="content/unrendered-block" classname="built-in"></testcase>
+    <testcase name="content/unused-template" classname="built-in"></testcase>
+    <testcase name="links/target-type" classname="built-in"></testcase>
+    <testcase name="links/unknown-field" classname="built-in"></testcase>
+    <testcase name="links/unresolved" classname="built-in"></testcase>
+    <testcase name="rules/file" classname="built-in"></testcase>
+    <testcase name="rules/message" classname="built-in"></testcase>
+    <testcase name="rules/name" classname="built-in"></testcase>
+    <testcase name="rules/query" classname="built-in"></testcase>
+    <testcase name="rules/severity" classname="built-in"></testcase>
+    <testcase name="rules/unknown-key" classname="built-in"></testcase>
+    <testcase name="schema/calculated-set" classname="built-in"></testcase>
+    <testcase name="schema/enum-value" classname="built-in"></testcase>
+    <testcase name="schema/file" classname="built-in">
+      <failure type="error" message="did not find expected &#39;,&#39; or &#39;]&#39;">schema/Broken.yaml:2: error [schema/file] did not find expected &#39;,&#39; or &#39;]&#39;</failure>
+      <failure type="error" message="field &#34;status&#34;: unknown type &#34;AprovalStatus&#34; (expected string, text, number, date, boolean, link, list, calculated)">schema/UnknownType.yaml:6: error [schema/file] field &#34;status&#34;: unknown type &#34;AprovalStatus&#34; (expected string, text, number, date, boolean, link, list, calculated)</failure>
+    </testcase>
+    <testcase name="schema/formula" classname="built-in"></testcase>
+    <testcase name="schema/id-format" classname="built-in"></testcase>
+    <testcase name="schema/invalid-value" classname="built-in"></testcase>
+    <testcase name="schema/link-target" classname="built-in"></testcase>
+    <testcase name="schema/list-row" classname="built-in"></testcase>
+    <testcase name="schema/required" classname="built-in"></testcase>
+    <testcase name="schema/unknown-field" classname="built-in"></testcase>
+    <testcase name="schema/unknown-key" classname="built-in"></testcase>
+    <testcase name="schema/unknown-type" classname="built-in"></testcase>
+    <testcase name="schema/unused-enum" classname="built-in"></testcase>
+    <testcase name="schema/unused-record" classname="built-in"></testcase>
+    <testcase name="schema/unused-type" classname="built-in"></testcase>
+  </testsuite>
+  <testsuite name="rules" tests="0" failures="0" errors="0" skipped="0"></testsuite>
+</testsuites>

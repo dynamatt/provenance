@@ -1,0 +1,1766 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "provenance",
+          "version": "dev",
+          "informationUri": "https://github.com/dynamatt/provenance",
+          "rules": [
+            {
+              "id": "content/caption",
+              "shortDescription": {
+                "text": "A caption that cannot be placed or referred to"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/duplicate-id",
+              "shortDescription": {
+                "text": "Two files with one ID"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/embed",
+              "shortDescription": {
+                "text": "An embed inside running text"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/embed-cycle",
+              "shortDescription": {
+                "text": "Entities that embed each other"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/frontmatter",
+              "shortDescription": {
+                "text": "Frontmatter that cannot be read"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/image",
+              "shortDescription": {
+                "text": "An image the website cannot publish"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/query",
+              "shortDescription": {
+                "text": "A query block that cannot run"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/template",
+              "shortDescription": {
+                "text": "A template that cannot render"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/template-name",
+              "shortDescription": {
+                "text": "A template named for nothing"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "content/unknown-override",
+              "shortDescription": {
+                "text": "An underscore template that overrides nothing"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "content/unrendered-block",
+              "shortDescription": {
+                "text": "A block this version publishes only as source"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/unused-template",
+              "shortDescription": {
+                "text": "A named template no query chooses"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "links/target-type",
+              "shortDescription": {
+                "text": "A link to an entity of the wrong type"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "links/unknown-field",
+              "shortDescription": {
+                "text": "A field reference to a field the target does not have"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "links/unresolved",
+              "shortDescription": {
+                "text": "A link to no entity"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules/file",
+              "shortDescription": {
+                "text": "A rule file that is not a YAML mapping"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules/message",
+              "shortDescription": {
+                "text": "A rule without a message"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules/name",
+              "shortDescription": {
+                "text": "A rule file not named for a kebab-case ID"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules/query",
+              "shortDescription": {
+                "text": "A rule whose query does not fit the schema"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules/severity",
+              "shortDescription": {
+                "text": "A rule severity other than error or warning"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules/unknown-key",
+              "shortDescription": {
+                "text": "A key a rule file does not have"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/calculated-set",
+              "shortDescription": {
+                "text": "A calculated field written in the file"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/enum-value",
+              "shortDescription": {
+                "text": "A value not in its enum"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/file",
+              "shortDescription": {
+                "text": "A schema file that cannot be loaded"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/formula",
+              "shortDescription": {
+                "text": "A calculated field whose formula cannot run"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/id-format",
+              "shortDescription": {
+                "text": "An ID that is not the type's form"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/invalid-value",
+              "shortDescription": {
+                "text": "A value not of its field's type"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/link-target",
+              "shortDescription": {
+                "text": "A link field targeting an undeclared type"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/list-row",
+              "shortDescription": {
+                "text": "A list row with a key its list does not have"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/required",
+              "shortDescription": {
+                "text": "A required field not set"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/unknown-field",
+              "shortDescription": {
+                "text": "A frontmatter key the type does not have"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/unknown-key",
+              "shortDescription": {
+                "text": "A key the schema language does not have"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/unknown-type",
+              "shortDescription": {
+                "text": "An entity of an undeclared type"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/unused-enum",
+              "shortDescription": {
+                "text": "An enum no field uses"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "schema/unused-record",
+              "shortDescription": {
+                "text": "A record no list uses"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "schema/unused-type",
+              "shortDescription": {
+                "text": "A type with no entities and no links"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "Rules_Name_Violation",
+              "shortDescription": {
+                "text": "not kebab-case"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules-clean",
+              "shortDescription": {
+                "text": "no widget is WID-9999"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules-file-violation",
+              "shortDescription": {
+                "text": "rules-file-violation"
+              }
+            },
+            {
+              "id": "rules-message-violation",
+              "shortDescription": {
+                "text": "rules-message-violation"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules-query-violation",
+              "shortDescription": {
+                "text": "names a field Widget lacks"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules-severity-violation",
+              "shortDescription": {
+                "text": "not error or warning"
+              }
+            },
+            {
+              "id": "rules-unknown-key-violation",
+              "shortDescription": {
+                "text": "has an id"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            }
+          ]
+        }
+      },
+      "originalUriBaseIds": {
+        "%SRCROOT%": {
+          "description": {
+            "text": "The repository root."
+          }
+        }
+      },
+      "results": [
+        {
+          "ruleId": "content/caption",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "a caption must come right after the figure, table, equation or embed it captions"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-caption/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0030"
+          }
+        },
+        {
+          "ruleId": "content/caption",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "caption: did not find expected ',' or ']'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-caption/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0030"
+          }
+        },
+        {
+          "ruleId": "content/caption",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "caption id \"twice\" is used twice on one page (first at cases/content-caption/violation.md:22)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-caption/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 30
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0030"
+          }
+        },
+        {
+          "ruleId": "content/caption",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "[[#nowhere]]: no caption with id \"nowhere\" on this page"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-caption/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 35
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0030"
+          }
+        },
+        {
+          "ruleId": "content/duplicate-id",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-b.md"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-duplicate-id/violation-a.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0004"
+          }
+        },
+        {
+          "ruleId": "content/duplicate-id",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-a.md"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-duplicate-id/violation-b.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0004"
+          }
+        },
+        {
+          "ruleId": "content/embed-cycle",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "embed cycle WID-0035 → WID-0034 → WID-0035"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-embed-cycle/violation-a.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0034"
+          }
+        },
+        {
+          "ruleId": "content/embed-cycle",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "embed cycle WID-0034 → WID-0035 → WID-0034"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-embed-cycle/violation-b.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0035"
+          }
+        },
+        {
+          "ruleId": "content/embed",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "![[WID-0033]] is inside running text, so it is shown as a reference: an embed must stand on its own line"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-embed/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0032"
+          }
+        },
+        {
+          "ruleId": "content/frontmatter",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "frontmatter has an id but no type, so the file is not read as an entity"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-frontmatter/violation-no-type.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "content/frontmatter",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "invalid frontmatter: did not find expected ',' or ']'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-frontmatter/violation-yaml.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "content/image",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "image assets/missing.png does not exist"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-image/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0028"
+          }
+        },
+        {
+          "ruleId": "content/image",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "image https://example.com/figure.png: images must be files in the repository, not URLs, so the site works offline"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-image/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0028"
+          }
+        },
+        {
+          "ruleId": "content/image",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "image ../../../outside.png is outside the repository"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-image/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 10
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0028"
+          }
+        },
+        {
+          "ruleId": "content/image",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "image assets/figure.bmp: the website export does not support this format (supported: .gif, .jpeg, .jpg, .png, .svg, .webp)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-image/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0028"
+          }
+        },
+        {
+          "ruleId": "content/query",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "query block: unknown operator \"=\" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-query/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 10
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0026"
+          }
+        },
+        {
+          "ruleId": "content/template",
+          "ruleIndex": 7,
+          "level": "error",
+          "message": {
+            "text": "query block: unknown template \"no-such-template\": there is no templates/no-such-template.tmpl (named templates: spare, widget-row)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-template/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0039"
+          }
+        },
+        {
+          "ruleId": "content/unrendered-block",
+          "ruleIndex": 10,
+          "level": "error",
+          "message": {
+            "text": "mermaid block: this version of Provenance cannot render it, so it would be published as its source"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-unrendered-block/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0037"
+          }
+        },
+        {
+          "ruleId": "content/unrendered-block",
+          "ruleIndex": 10,
+          "level": "error",
+          "message": {
+            "text": "drawio block: this version of Provenance cannot render it, so it would be published as its source"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-unrendered-block/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 10
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0037"
+          }
+        },
+        {
+          "ruleId": "links/target-type",
+          "ruleIndex": 12,
+          "level": "error",
+          "message": {
+            "text": "parent: ERR-0019 is of type ErrorClass, but parent links only to Widget"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/links-target-type/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0024"
+          }
+        },
+        {
+          "ruleId": "links/unknown-field",
+          "ruleIndex": 13,
+          "level": "error",
+          "message": {
+            "text": "[[WID-0023#colour]]: Widget has no field \"colour\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/links-unknown-field/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0022"
+          }
+        },
+        {
+          "ruleId": "links/unresolved",
+          "ruleIndex": 14,
+          "level": "error",
+          "message": {
+            "text": "uses: no entity WID-9999"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/links-unresolved/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0020"
+          }
+        },
+        {
+          "ruleId": "links/unresolved",
+          "ruleIndex": 14,
+          "level": "error",
+          "message": {
+            "text": "[[WID-9998]]: no entity WID-9998"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/links-unresolved/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0020"
+          }
+        },
+        {
+          "ruleId": "schema/calculated-set",
+          "ruleIndex": 21,
+          "level": "error",
+          "message": {
+            "text": "score is calculated (weight * 2); it cannot be written in the file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-calculated-set/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0010"
+          }
+        },
+        {
+          "ruleId": "schema/calculated-set",
+          "ruleIndex": 21,
+          "level": "error",
+          "message": {
+            "text": "steps row 1: double is calculated (n * 2); it cannot be written in the file"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-calculated-set/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0010"
+          }
+        },
+        {
+          "ruleId": "schema/enum-value",
+          "ruleIndex": 22,
+          "level": "error",
+          "message": {
+            "text": "status: \"aproved\" is not one of Status: draft, approved"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-enum-value/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0014"
+          }
+        },
+        {
+          "ruleId": "schema/enum-value",
+          "ruleIndex": 22,
+          "level": "error",
+          "message": {
+            "text": "tags item 2: \"final\" is not one of Status: draft, approved"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-enum-value/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0014"
+          }
+        },
+        {
+          "ruleId": "schema/id-format",
+          "ruleIndex": 25,
+          "level": "error",
+          "message": {
+            "text": "ID two words cannot be used as a page name (letters, digits, '.', '_' and '-' only)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-id-format/violation-page-name.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "two words"
+          }
+        },
+        {
+          "ruleId": "schema/id-format",
+          "ruleIndex": 25,
+          "level": "error",
+          "message": {
+            "text": "ID WID-7 is not WID-NNNN, the form of a Widget ID"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-id-format/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-7"
+          }
+        },
+        {
+          "ruleId": "schema/invalid-value",
+          "ruleIndex": 26,
+          "level": "error",
+          "message": {
+            "text": "due: not a date (YYYY-MM-DD), got 2026-13-04"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-invalid-value/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0016"
+          }
+        },
+        {
+          "ruleId": "schema/invalid-value",
+          "ruleIndex": 26,
+          "level": "error",
+          "message": {
+            "text": "weight: not a number, got heavy"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-invalid-value/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0016"
+          }
+        },
+        {
+          "ruleId": "schema/invalid-value",
+          "ruleIndex": 26,
+          "level": "error",
+          "message": {
+            "text": "steps row 1: n: not a number, got one"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-invalid-value/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0016"
+          }
+        },
+        {
+          "ruleId": "schema/list-row",
+          "ruleIndex": 28,
+          "level": "error",
+          "message": {
+            "text": "steps row 1: no sub-field \"size\" (sub-fields: n)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-list-row/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0018"
+          }
+        },
+        {
+          "ruleId": "schema/required",
+          "ruleIndex": 29,
+          "level": "error",
+          "message": {
+            "text": "required field title is not set"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-required/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0012"
+          }
+        },
+        {
+          "ruleId": "schema/required",
+          "ruleIndex": 29,
+          "level": "error",
+          "message": {
+            "text": "steps row 2: required sub-field n is not set"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-required/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0012"
+          }
+        },
+        {
+          "ruleId": "schema/unknown-field",
+          "ruleIndex": 30,
+          "level": "error",
+          "message": {
+            "text": "Widget has no field \"colour\" (fields: title, status, due, weight, tags, steps, parent, uses)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-unknown-field/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0008"
+          }
+        },
+        {
+          "ruleId": "schema/unknown-field",
+          "ruleIndex": 30,
+          "level": "error",
+          "message": {
+            "text": "notes is the Markdown body below the frontmatter, not a frontmatter field"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-unknown-field/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0008"
+          }
+        },
+        {
+          "ruleId": "schema/unknown-field",
+          "ruleIndex": 30,
+          "level": "error",
+          "message": {
+            "text": "used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-unknown-field/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0008"
+          }
+        },
+        {
+          "ruleId": "schema/unknown-type",
+          "ruleIndex": 32,
+          "level": "error",
+          "message": {
+            "text": "type \"Gadget\" is not declared in schema/ (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-unknown-type/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "GAD-0001"
+          }
+        },
+        {
+          "ruleId": "rules/name",
+          "ruleIndex": 17,
+          "level": "error",
+          "message": {
+            "text": "a rule file is named for its ID, in lower-case kebab-case, with .yaml: Rules_Name_Violation.yaml is not"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "rules/Rules_Name_Violation.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "rules/file",
+          "ruleIndex": 15,
+          "level": "error",
+          "message": {
+            "text": "invalid YAML: did not find expected node content"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "rules/rules-file-violation.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "rules/message",
+          "ruleIndex": 16,
+          "level": "error",
+          "message": {
+            "text": "no message: the text each violation is reported with"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "rules/rules-message-violation.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "rules/query",
+          "ruleIndex": 18,
+          "level": "error",
+          "message": {
+            "text": "Widget has no field \"colour\" (fields: id, type, title, status, due, weight, score, tags, steps, parent, uses, notes, children, used_by, code_blocks)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "rules/rules-query-violation.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "rules/severity",
+          "ruleIndex": 19,
+          "level": "error",
+          "message": {
+            "text": "severity is error or warning, not \"fatal\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "rules/rules-severity-violation.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "rules/unknown-key",
+          "ruleIndex": 20,
+          "level": "error",
+          "message": {
+            "text": "unknown key \"id\": a rule's ID is its file name, rules-unknown-key-violation"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "rules/rules-unknown-key-violation.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/id-format",
+          "ruleIndex": 25,
+          "level": "error",
+          "message": {
+            "text": "type DuplicatePrefixA has the id_prefix DUP, which DuplicatePrefixB (schema/DuplicatePrefixB.yaml) also has"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/DuplicatePrefixA.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/id-format",
+          "ruleIndex": 25,
+          "level": "error",
+          "message": {
+            "text": "type DuplicatePrefixB has the id_prefix DUP, which DuplicatePrefixA (schema/DuplicatePrefixA.yaml) also has"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/DuplicatePrefixB.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/formula",
+          "ruleIndex": 24,
+          "level": "error",
+          "message": {
+            "text": "field \"score\": formula: column 1: FormulaViolation has no field \"nope\" (fields: example_of, weight, score)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/FormulaViolation.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/link-target",
+          "ruleIndex": 27,
+          "level": "error",
+          "message": {
+            "text": "field \"widget\": target \"Nothing\" is not a declared type (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/LinkTargetViolation.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/id-format",
+          "ruleIndex": 25,
+          "level": "error",
+          "message": {
+            "text": "type NoPrefix has no id_prefix, so its IDs cannot be checked"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/NoPrefix.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "content/template",
+          "ruleIndex": 7,
+          "level": "error",
+          "message": {
+            "text": "field \"citations\": its template name .Citations is already used by the engine baseline"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/TemplateNameClash.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/unknown-key",
+          "ruleIndex": 31,
+          "level": "error",
+          "message": {
+            "text": "field \"status\": unknown key \"default\": fields have no defaults; a field that must have a value says required: true"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/UnknownKeyViolation.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/unused-type",
+          "ruleIndex": 35,
+          "level": "warning",
+          "message": {
+            "text": "type UnusedTypeViolation has no entities and no links to or from it"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/UnusedTypeViolation.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/unknown-key",
+          "ruleIndex": 31,
+          "level": "error",
+          "message": {
+            "text": "enum Colour: unknown key \"shade\" (expected enum, values)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/enums/Colour.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/unused-enum",
+          "ruleIndex": 33,
+          "level": "warning",
+          "message": {
+            "text": "enum UnusedEnum is not used by any field"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/enums/UnusedEnum.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/unused-record",
+          "ruleIndex": 34,
+          "level": "warning",
+          "message": {
+            "text": "record UnusedRecord is not used by any list"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/records/UnusedRecord.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "content/template",
+          "ruleIndex": 7,
+          "level": "error",
+          "message": {
+            "text": "bad character U+003C '<'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "templates/BrokenTemplate.tmpl",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "content/template-name",
+          "ruleIndex": 8,
+          "level": "warning",
+          "message": {
+            "text": "NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "templates/NotAType.tmpl",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "content/unknown-override",
+          "ruleIndex": 9,
+          "level": "warning",
+          "message": {
+            "text": "_footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "templates/_footer.tmpl",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "content/unused-template",
+          "ruleIndex": 11,
+          "level": "warning",
+          "message": {
+            "text": "named template spare is not chosen by any query block"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "templates/spare.tmpl",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

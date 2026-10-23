@@ -82,11 +82,53 @@ func (r *Report) loadRules(root string, s *schema.Schema) ([]*rule, error) {
 		if err != nil {
 			return nil, err
 		}
+		info := peekRule(path, data)
 		if ru := r.checkRule(path, data, s); ru != nil {
 			out = append(out, ru)
+		} else {
+			info.Skipped = "the rule file has errors"
 		}
+		r.Rules = append(r.Rules, info)
 	}
 	return out, nil
+}
+
+// skipRules lists every rule file as skipped for why, without checking it,
+// and returns how many there are.
+func (r *Report) skipRules(root, why string) (int, error) {
+	paths, err := ruleFiles(root)
+	if err != nil {
+		return 0, err
+	}
+	for _, path := range paths {
+		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(path)))
+		if err != nil {
+			return 0, err
+		}
+		info := peekRule(path, data)
+		info.Skipped = why
+		r.Rules = append(r.Rules, info)
+	}
+	return len(paths), nil
+}
+
+// peekRule is what a report says about a rule file, read without checking
+// it: its ID, and its severity and message where they can be read.
+func peekRule(path string, data []byte) RuleInfo {
+	base := filepath.Base(path)
+	info := RuleInfo{ID: strings.TrimSuffix(base, filepath.Ext(base)), Path: path}
+	var doc yaml.Node
+	if yamlnode.Unmarshal(data, 1, &doc) != nil || len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
+		return info
+	}
+	m := doc.Content[0]
+	if sev := yamlnode.Lookup(m, "severity"); sev != nil && (sev.Value == string(Error) || sev.Value == string(Warning)) {
+		info.Severity = Severity(sev.Value)
+	}
+	if msg := yamlnode.Lookup(m, "message"); msg != nil && msg.Kind == yaml.ScalarNode {
+		info.Message = msg.Value
+	}
+	return info
 }
 
 // checkRule checks one rule file, reporting every problem it finds; nil

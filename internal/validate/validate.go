@@ -49,6 +49,8 @@ type Report struct {
 	// RulesSkipped counts the rules not run because the schema they are
 	// checked against has errors.
 	RulesSkipped int
+	// Rules are every rule file, in file name order, run or skipped.
+	Rules []RuleInfo
 }
 
 // Errors counts the error-severity violations.
@@ -107,7 +109,7 @@ func Run(rp *repo.Repo) (*Report, error) {
 	if len(problems) > 0 {
 		// Every type, field and rule is read against the schema: with part of
 		// it missing, they would report its absence over and over.
-		if r.RulesSkipped, err = countRules(root); err != nil {
+		if r.RulesSkipped, err = r.skipRules(root, "the schema has errors"); err != nil {
 			return nil, err
 		}
 	} else {
@@ -192,12 +194,6 @@ func (r *Report) unknownTypes(s *schema.Schema, entities []*entity.Entity) (know
 		})
 	}
 	return known
-}
-
-// countRules counts the rule files in root/rules.
-func countRules(root string) (int, error) {
-	files, err := ruleFiles(root)
-	return len(files), err
 }
 
 // content reports what would stop the website export, and what it would
