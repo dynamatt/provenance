@@ -32,13 +32,13 @@
 - [x] E1.13a Reference lists
 - [x] E1.13b Citation templates
 - [ ] E1.14 Epic close-out: docs and first binary release
-- [ ] E2.1 Validate design decisions
-- [ ] E2.2 `validate` command, report model and load errors
-- [ ] E2.3 Schema conformance (built-in)
-- [ ] E2.4 Content and links (built-in)
-- [ ] E2.5 Grammar: sub-queries, `value_of`, `missing`, `not_in`
-- [ ] E2.6 Grammar: `aggregation` and `duplicated`
-- [ ] E2.7 Grammar: transitive links and `code_blocks`
+- [x] E2.1 Validate design decisions
+- [x] E2.2 `validate` command, report model and load errors
+- [x] E2.3 Schema conformance (built-in)
+- [x] E2.4 Content and links (built-in)
+- [x] E2.5 Grammar: sub-queries, `value_of`, `missing`, `not_in`
+- [x] E2.6 Grammar: `aggregation` and `duplicated`
+- [x] E2.7 Grammar: transitive links and `code_blocks`
 - [ ] E2.8 Rule files
 - [ ] E2.9 Report formats
 - [ ] E2.10 Report templates
