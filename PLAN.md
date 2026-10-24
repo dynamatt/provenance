@@ -41,7 +41,7 @@
 - [x] E2.7 Grammar: transitive links and `code_blocks`
 - [x] E2.8 Rule files
 - [x] E2.9 Report formats
-- [ ] E2.10 Report templates
+- [x] E2.10 Report templates
 - [ ] E2.11 Epic close-out: gate in CI, docs, release
 
 ## Shape of the plan

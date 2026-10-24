@@ -60,4 +60,6 @@ type RuleInfo struct {
 	Message  string
 	// Skipped says why the rule was not run, or is "".
 	Skipped string
+	// Source is the rule file's text, with LF line endings.
+	Source string
 }

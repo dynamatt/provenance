@@ -113,10 +113,12 @@ func (r *Report) skipRules(root, why string) (int, error) {
 }
 
 // peekRule is what a report says about a rule file, read without checking
-// it: its ID, and its severity and message where they can be read.
+// it: its ID and text, and its severity and message where they can be
+// read.
 func peekRule(path string, data []byte) RuleInfo {
 	base := filepath.Base(path)
-	info := RuleInfo{ID: strings.TrimSuffix(base, filepath.Ext(base)), Path: path}
+	info := RuleInfo{ID: strings.TrimSuffix(base, filepath.Ext(base)), Path: path,
+		Source: strings.ReplaceAll(string(data), "\r\n", "\n")}
 	var doc yaml.Node
 	if yamlnode.Unmarshal(data, 1, &doc) != nil || len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
 		return info

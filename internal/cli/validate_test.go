@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -97,5 +98,60 @@ func TestValidateFormats(t *testing.T) {
 		if code != 1 || !strings.Contains(out, want) {
 			t.Errorf("%s: exit %d, stdout %q; want 1 and %s", format, code, out, want)
 		}
+	}
+}
+
+// --report renders a project's report template; its exit code is the one
+// the violations give.
+func TestValidateReport(t *testing.T) {
+	root := newRepo(t)
+	writeFile(t, root, "templates/reports/summary.md.tmpl", "{{.Component.Name}}: {{.Summary.Errors}} errors{{range .Violations}}\n- {{.Path}}: {{.Rule}}{{end}}\n")
+	if code, out, errOut := run("validate", "--report", "summary.md"); code != 0 || out != "Test System: 0 errors\n" || errOut != "" {
+		t.Errorf("clean: exit %d, stdout %q, stderr %q", code, out, errOut)
+	}
+	writeFile(t, root, "REQ/a.md", "---\nid: REQ-0001\n---\n")
+	code, out, _ := run("validate", "--report", "summary.md", "--out", "_site/summary.md")
+	if code != 1 || out != "" {
+		t.Errorf("violations: exit %d, stdout %q", code, out)
+	}
+	if got, _ := os.ReadFile(filepath.Join(root, "_site", "summary.md")); string(got) != "Test System: 1 errors\n- REQ/a.md: content/frontmatter\n" {
+		t.Errorf("report = %q", got)
+	}
+}
+
+// A report template that fails is a violation: exit 1, nothing written.
+// An unknown report, or --report with --format, is a usage error.
+func TestValidateReportErrors(t *testing.T) {
+	root := newRepo(t)
+	writeFile(t, root, "templates/reports/broken.tmpl", "{{.Nope}}\n")
+	code, out, errOut := run("validate", "--report", "broken", "--out", "r.txt")
+	if code != 1 || out != "" || errOut != `validate: report broken: templates/reports/broken.tmpl:1: executing "templates/reports/broken.tmpl" at <.Nope>: map has no entry for key "Nope" (1 error, 0 warnings)`+"\n" {
+		t.Errorf("broken: exit %d, stdout %q, stderr %q", code, out, errOut)
+	}
+	if _, err := os.Stat(filepath.Join(root, "r.txt")); !os.IsNotExist(err) {
+		t.Errorf("r.txt written: %v", err)
+	}
+	for _, tc := range []struct {
+		args   []string
+		stderr string
+	}{
+		{[]string{"validate", "--report", "nope"}, `validate: unknown report "nope": there is no templates/reports/nope.tmpl (reports: broken)` + "\nRun 'provenance validate --help' for usage.\n"},
+		{[]string{"validate", "--report", "broken", "--format", "json"}, "validate: --format cannot be used with --report\nRun 'provenance validate --help' for usage.\n"},
+	} {
+		if code, out, errOut := run(tc.args...); code != 2 || out != "" || errOut != tc.stderr {
+			t.Errorf("%v: exit %d, stdout %q, stderr %q", tc.args, code, out, errOut)
+		}
+	}
+}
+
+// In a git repository a report has the stamps: HEAD, the content hash and
+// whether the working tree differs, as it does here with the template
+// not yet committed.
+func TestValidateReportStamps(t *testing.T) {
+	root := gitRepo(t)
+	writeFile(t, root, "templates/reports/stamps.tmpl", "{{.GitSHA}} {{.ContentHash}} {{.Dirty}}\n")
+	_, out, _ := run("validate", "--report", "stamps")
+	if !regexp.MustCompile(`^[0-9a-f]{40} sha256:[0-9a-f]{64}-dirty true\n$`).MatchString(out) {
+		t.Errorf("stdout = %q", out)
 	}
 }

@@ -2,13 +2,16 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
 
 	"github.com/dynamatt/provenance/internal/exitcode"
+	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/validate"
 	"github.com/dynamatt/provenance/internal/version"
@@ -38,7 +41,11 @@ func runValidate(c *cobra.Command, _ []string) error {
 	}
 
 	var buf bytes.Buffer
-	if err := report.Write(&buf, format, version.Version); err != nil {
+	if tmpl, _ := c.Flags().GetString("report"); tmpl != "" {
+		if err := writeTemplate(&buf, report, tmpl); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+	} else if err := report.Write(&buf, format, version.Version); err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 	if out, _ := c.Flags().GetString("out"); out != "" {
@@ -64,4 +71,46 @@ func writeReport(path string, data []byte) error {
 		}
 	}
 	return os.WriteFile(path, data, 0o644)
+}
+
+// writeTemplate renders the report template name with the git stamps. A
+// name with no template is a usage error; a template that fails is the
+// content/template violation the report already holds, so it fails the
+// run, writing nothing.
+func writeTemplate(w io.Writer, report *validate.Report, name string) error {
+	st, err := stamps(report.Root())
+	if err != nil {
+		return err
+	}
+	err = report.WriteTemplate(w, name, st)
+	var unknown *validate.UnknownReportError
+	var te *validate.TemplateError
+	switch {
+	case errors.As(err, &unknown):
+		return exitcode.Usage(err)
+	case errors.As(err, &te):
+		return exitcode.Failed(fmt.Errorf("report %s: %w (%s)", name, err, report.Summary()))
+	}
+	return err
+}
+
+// stamps are a report's git stamps: HEAD, and the content hash with
+// whether the working tree differs from it. Outside a git repository there
+// is nothing to stamp.
+func stamps(root string) (validate.Stamps, error) {
+	h, err := history.Open(root)
+	if errors.Is(err, history.ErrNotRepository) {
+		return validate.Stamps{}, nil
+	}
+	if err != nil {
+		return validate.Stamps{}, err
+	}
+	defer h.Close()
+	st := validate.Stamps{GitSHA: h.HEAD()}
+	var dirty *history.Dirty
+	if st.ContentHash, dirty, err = h.WorkingContentHash(); err != nil {
+		return validate.Stamps{}, err
+	}
+	st.Dirty = dirty.Any()
+	return st, nil
 }

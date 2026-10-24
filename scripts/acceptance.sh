@@ -561,6 +561,33 @@ expect 0 '"ruleId":"equipment-calibration-current".{0,400}"uri":"VER/EVD-0001\.m
 expect 0 '"ruleId":"risk-benefit-required".{0,400}"uri":"RSK/RSK-0001\.md","uriBaseId":"%SRCROOT%"},"region":\{"startLine":2\}' sh -c "$SARIF_FLAT"
 git checkout -q -- RSK VER
 
+# E2.10: report templates. validation.html, written into the exported
+# site, lists every check and rule (all passed but the REQ-0003 warning)
+# and links each violation to its entity's page; breaking VER-0002's link
+# puts its two violations in it, and in the Markdown pull-request
+# summary. A report template that cannot render is a violation.
+"$PROV" export website >/dev/null
+expect 0 ''                               "$PROV" validate --report validation.html --out _site/validation.html
+expect 0 ''                               test -f _site/index.html
+VALIDATION_FLAT="tr -d '\\n' < _site/validation.html"
+expect 0 '<code>risk-benefit-required</code><br>[^<]*</td><td>error</td><td><span class="status status-approved">passed</span>' sh -c "$VALIDATION_FLAT"
+expect 0 '<a class="ref" href="entities/REQ-0003\.html" title="[^"]*">REQ-0003</a></td><td><code>REQ/REQ-0003\.md:2</code>' sh -c "$VALIDATION_FLAT"
+expect 0 '^### Design controls: passed$'           "$PROV" validate --report pr-summary.md
+"$PROV" validate --report validation.html >"$WORK/r1.html"
+"$PROV" validate --report validation.html >"$WORK/r2.html"
+expect 0 ''                               diff "$WORK/r1.html" "$WORK/r2.html"
+sed -i 's/^verifies: \[REQ-0002\]/verifies: [REQ-0099]/' VER/VER-0002.md
+expect 1 'validate: 2 errors, 2 warnings$' "$PROV" validate --report validation.html --out _site/validation.html
+expect 0 '^2$'                            sh -c "grep -o '<a class=\"ref\" href=\"entities/VER-0002\.html\"' _site/validation.html | wc -l"
+expect 0 ''                               test -f _site/entities/VER-0002.html
+expect 1 '^\| error \| `VER/VER-0002\.md:6` \| `links/unresolved` \| verifies: no entity REQ-0099 \|$' "$PROV" validate --report pr-summary.md
+git checkout -q -- VER
+sed -i 's/{{\.Summary\.Errors}} error/{{.Summary.Failures}} error/' templates/reports/pr-summary.md.tmpl
+expect 1 '^templates/reports/pr-summary\.md\.tmpl:[0-9]+: error \[content/template\] executing .* map has no entry for key "Failures"$' "$PROV" validate
+expect 1 '^validate: report pr-summary\.md: templates/reports/pr-summary\.md\.tmpl:[0-9]+: ' "$PROV" validate --report pr-summary.md
+git checkout -q -- templates
+expect 2 'unknown report "nope": there is no templates/reports/nope\.tmpl \(reports: pr-summary\.md, validation\.html\)' "$PROV" validate --report nope
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null

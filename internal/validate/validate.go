@@ -51,6 +51,12 @@ type Report struct {
 	RulesSkipped int
 	// Rules are every rule file, in file name order, run or skipped.
 	Rules []RuleInfo
+
+	// For report templates: the repository's root and component, and
+	// every entity's template data by ID (nil when the schema has errors).
+	root      string
+	component repo.Component
+	entities  map[string]map[string]any
 }
 
 // Errors counts the error-severity violations.
@@ -89,7 +95,7 @@ const RulesDir = "rules"
 // first (REQ-0038). err is an I/O error: the repository could not be read.
 func Run(rp *repo.Repo) (*Report, error) {
 	root := rp.Root
-	r := &Report{}
+	r := &Report{root: root, component: rp.Component}
 	sc, err := entity.Scan(root)
 	if err != nil {
 		return nil, err
@@ -125,6 +131,12 @@ func Run(rp *repo.Repo) (*Report, error) {
 		if err := r.rules(root, s, graph); err != nil {
 			return nil, err
 		}
+		r.entities = website.EntityData(s, typed)
+	}
+	r.sort()
+	// Report templates are checked against everything else found.
+	if err := r.checkReports(); err != nil {
+		return nil, err
 	}
 	r.sort()
 	return r, nil
