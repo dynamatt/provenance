@@ -11,6 +11,7 @@ import (
 	"github.com/dynamatt/provenance/internal/exitcode"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/validate"
+	"github.com/dynamatt/provenance/internal/version"
 )
 
 // runValidate reports every violation in the repository and exits 1 while
@@ -18,9 +19,7 @@ import (
 // files are violations; only the tool and its invocation exit 2.
 func runValidate(c *cobra.Command, _ []string) error {
 	name := commandName(c)
-	if format, _ := c.Flags().GetString("format"); format != "text" {
-		return &exitcode.NotImplementedError{Command: name + " --format " + format}
-	}
+	format, _ := c.Flags().GetString("format")
 	start, _ := c.Flags().GetString("path")
 	if start == "" {
 		cwd, err := os.Getwd()
@@ -39,7 +38,7 @@ func runValidate(c *cobra.Command, _ []string) error {
 	}
 
 	var buf bytes.Buffer
-	if err := report.WriteText(&buf); err != nil {
+	if err := report.Write(&buf, format, version.Version); err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 	if out, _ := c.Flags().GetString("out"); out != "" {

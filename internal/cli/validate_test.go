@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -64,7 +65,7 @@ func TestValidateToolErrorsExitTwo(t *testing.T) {
 		args   []string
 		stderr string
 	}{
-		{[]string{"validate", "--format", "json"}, "validate --format json: not implemented yet\n"},
+		{[]string{"validate", "--format", "xml"}, ""},
 		{[]string{"validate", "--path", filepath.Join(t.TempDir(), "none")}, ""},
 	} {
 		code, out, errOut := run(tc.args...)
@@ -73,6 +74,28 @@ func TestValidateToolErrorsExitTwo(t *testing.T) {
 		}
 		if tc.stderr != "" && errOut != tc.stderr {
 			t.Errorf("%v: stderr = %q, want %q", tc.args, errOut, tc.stderr)
+		}
+	}
+}
+
+// Every format writes its report, to standard output or --out, and the
+// exit code is the same whichever is chosen.
+func TestValidateFormats(t *testing.T) {
+	newRepo(t)
+	if err := os.Mkdir("REQ", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("REQ/a.md", []byte("---\nid: REQ-0001\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for format, want := range map[string]string{
+		"json":  `"rule": "content/frontmatter"`,
+		"junit": `<failure type="error"`,
+		"sarif": `"ruleId": "content/frontmatter"`,
+	} {
+		code, out, _ := run("validate", "--format", format)
+		if code != 1 || !strings.Contains(out, want) {
+			t.Errorf("%s: exit %d, stdout %q; want 1 and %s", format, code, out, want)
 		}
 	}
 }

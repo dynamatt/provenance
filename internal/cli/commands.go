@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/dynamatt/provenance/internal/validate"
 
 	"github.com/spf13/cobra"
 
@@ -62,7 +63,7 @@ are a convenience.
 Exit codes: 0 no error-severity violations, 1 violations found, 2 tool or usage error.`,
 		Args: noArgs,
 		PreRunE: func(c *cobra.Command, _ []string) error {
-			return oneOf(c, "format", "text", "json", "junit", "sarif")
+			return oneOf(c, "format", validate.Formats...)
 		},
 		Annotations: inDevelopment,
 		RunE:        runValidate,

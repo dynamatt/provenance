@@ -14,6 +14,20 @@ VIOLATIONS_DIR=${VIOLATIONS_DIR:?VIOLATIONS_DIR must point at testdata/violation
 
 failures=0
 
+# The JUnit reports are checked against Jenkins' junit-10.xsd with xmllint
+# (libxml2-utils on Debian and Ubuntu).
+if ! command -v xmllint >/dev/null; then
+	echo "acceptance needs xmllint: install libxml2-utils (apt) or libxml2 (brew)" >&2
+	exit 2
+fi
+SCHEMAS_DIR=$(cd "$(dirname "$0")/../testdata/schemas" && pwd)
+
+# sarif_dev replaces the binary's version in a SARIF report with dev, as
+# the golden reports have it (make golden-update).
+sarif_dev() {
+	sed -E '/"name": "provenance",/{n;s/"version": "[^"]*"/"version": "dev"/;}' "$1"
+}
+
 # expect <exit-code> <extended-regex> <command...>
 # Runs the command, then checks its exit code and that its combined
 # stdout/stderr matches the regex (an empty regex skips the output check).
@@ -387,7 +401,6 @@ expect 1 '^schema/Requirement\.yaml:20: error \[schema/file\] field "status": un
 expect 1 '^12 rules not run: the schema has errors$' "$PROV" validate
 git checkout -q -- schema/Requirement.yaml
 expect 2 '^validate: invalid --format "xml"' "$PROV" validate --format xml
-expect 2 '^validate --format sarif: not implemented yet$' "$PROV" validate --format sarif
 expect 2 '^validate: not inside a provenance repository' "$PROV" validate --path "$WORK"
 cd "$WORK"
 expect 0 '^0 errors, 1 warning$'          "$PROV" validate --path "$EXAMPLE_DIR/REQ"
@@ -527,6 +540,27 @@ printf 'id: requirement-verified\n' >> rules/requirement-verified.yaml
 expect 1 '^rules/requirement-verified\.yaml:[0-9]+: error \[rules/unknown-key\] unknown key "id": a rule.s ID is its file name, requirement-verified$' "$PROV" validate
 git checkout -q -- rules
 
+# E2.9: report formats. json, junit and sarif report the same violations
+# as text, at the same lines, with the same exit code; the JUnit report
+# conforms to junit-10.xsd (the SARIF report's conformance to the 2.1.0
+# schema is a unit test). Breaking two entities puts both in every format.
+for f in json junit sarif; do
+	expect 0 ''                           "$PROV" validate --format "$f" --out "$WORK/clean.$f"
+done
+expect 0 'validates$'                     xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/clean.junit"
+expect 0 '<testcase name="risk-benefit-required" classname="rules"></testcase>' cat "$WORK/clean.junit"
+sed -i '/^risk_benefit_analysis:/,/^  "unacceptable"/d' RSK/RSK-0001.md
+sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VER/EVD-0001.md
+expect 1 '"errors": 2,'                   "$PROV" validate --format json
+expect 1 ''                               "$PROV" validate --format junit --out "$WORK/broken.junit"
+expect 0 'validates$'                     xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/broken.junit"
+expect 0 '<failure type="error" message="risk-benefit analysis required when residual acceptability is unacceptable">RSK/RSK-0001\.md:2: ' cat "$WORK/broken.junit"
+expect 1 ''                               "$PROV" validate --format sarif --out "$WORK/broken.sarif"
+SARIF_FLAT="tr -d ' \n' < $WORK/broken.sarif"
+expect 0 '"ruleId":"equipment-calibration-current".{0,400}"uri":"VER/EVD-0001\.md","uriBaseId":"%SRCROOT%"},"region":\{"startLine":51\}' sh -c "$SARIF_FLAT"
+expect 0 '"ruleId":"risk-benefit-required".{0,400}"uri":"RSK/RSK-0001\.md","uriBaseId":"%SRCROOT%"},"region":\{"startLine":2\}' sh -c "$SARIF_FLAT"
+git checkout -q -- RSK VER
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null
@@ -535,19 +569,30 @@ expect 0 ''                               diff -r "$WORK/a" "$WORK/b"
 expect 0 ''                               diff -ru "$GOLDEN_DIR" "$WORK/a"
 
 # Standing E2 acceptance: validating twice gives an identical report, and
-# the clean example's report matches testdata/validate/clean.txt (make
-# golden-update rewrites it).
+# the clean example's report matches testdata/validate/clean.* in every
+# format (make golden-update rewrites them).
 "$PROV" validate >"$WORK/v1.txt"
 "$PROV" validate >"$WORK/v2.txt"
 expect 0 ''                               diff "$WORK/v1.txt" "$WORK/v2.txt"
 expect 0 ''                               diff -u "$VALIDATE_DIR/clean.txt" "$WORK/v1.txt"
+for f in json:json junit:junit.xml sarif:sarif; do
+	"$PROV" validate --format "${f%%:*}" >"$WORK/clean.${f#*:}"
+	[ "${f%%:*}" = sarif ] && sarif_dev "$WORK/clean.sarif" >"$WORK/clean.sarif.dev" && mv "$WORK/clean.sarif.dev" "$WORK/clean.sarif"
+	expect 0 ''                           diff -u "$VALIDATE_DIR/clean.${f#*:}" "$WORK/clean.${f#*:}"
+done
 
 # Standing E2 acceptance: every failure validate catches, in
-# testdata/violations, is reported as testdata/validate/violations-*.txt
-# records, and exits 1 (make golden-update rewrites them).
+# testdata/violations, is reported in every format as
+# testdata/validate/violations-* records, and exits 1 (make golden-update
+# rewrites them); the JUnit reports conform to junit-10.xsd.
 for r in core broken-schema; do
-	expect 1 '' "$PROV" validate --path "$VIOLATIONS_DIR/$r" --out "$WORK/violations-$r.txt"
-	expect 0 '' diff -u "$VALIDATE_DIR/violations-$r.txt" "$WORK/violations-$r.txt"
+	for f in text:txt json:json junit:junit.xml sarif:sarif; do
+		out="$WORK/violations-$r.${f#*:}"
+		expect 1 '' "$PROV" validate --path "$VIOLATIONS_DIR/$r" --format "${f%%:*}" --out "$out"
+		[ "${f%%:*}" = sarif ] && sarif_dev "$out" >"$out.dev" && mv "$out.dev" "$out"
+		expect 0 '' diff -u "$VALIDATE_DIR/violations-$r.${f#*:}" "$out"
+	done
+	expect 0 'validates$' xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/violations-$r.junit.xml"
 done
 
 if [ "$failures" -ne 0 ]; then

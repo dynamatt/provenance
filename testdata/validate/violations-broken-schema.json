@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "violations": [
+    {
+      "rule": "schema/file",
+      "severity": "error",
+      "message": "did not find expected ',' or ']'",
+      "entity": "",
+      "path": "schema/Broken.yaml",
+      "line": 2
+    },
+    {
+      "rule": "schema/file",
+      "severity": "error",
+      "message": "field \"status\": unknown type \"AprovalStatus\" (expected string, text, number, date, boolean, link, list, calculated)",
+      "entity": "",
+      "path": "schema/UnknownType.yaml",
+      "line": 6
+    }
+  ],
+  "summary": {
+    "errors": 2,
+    "warnings": 0,
+    "rules_skipped": 0
+  }
+}

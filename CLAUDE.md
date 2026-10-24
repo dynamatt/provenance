@@ -28,6 +28,7 @@ identity, so builds must be reproducible.
 | `tools/gendocs/` | Generates the website's CLI reference from the command tree. |
 | `scripts/acceptance.sh` | Acceptance steps run against the example repo. |
 | `testdata/example-repo.ref` | Pinned `provenance-example` commit. |
+| `testdata/schemas/` | The SARIF 2.1.0 JSON schema and Jenkins' JUnit XSD the reports are checked against. |
 | `testdata/violations/` | One example of every failure `validate` reports, each beside a clean counterpart (its `README.md`). |
 | `PLAN.md` | The implementation plan and task checklist. |
 
@@ -43,7 +44,7 @@ identity, so builds must be reproducible.
 | `make lint` | `gofmt -l`, `go vet`, `staticcheck` (pinned as a `go.mod` tool). |
 | `make example` | Checks out `provenance-example` at the pinned SHA into `.cache/example`. |
 | `make bump-example` | Moves the pin to `provenance-example`'s `main`, or to another branch with `EXAMPLE_BRANCH=` (an epic branch while the epic is open). |
-| `make acceptance` | Builds, prepares the example checkout, runs `scripts/acceptance.sh`. |
+| `make acceptance` | Builds, prepares the example checkout, runs `scripts/acceptance.sh`. Needs `xmllint` (`libxml2-utils`) to check the JUnit report. |
 | `make docs` | Regenerates the CLI reference into `../provenance-website/content/docs/cli` (override with `WEBSITE_DIR=`). |
 | `make ci` | `lint test build acceptance`. |
 
@@ -80,7 +81,7 @@ When a command is implemented, remove its `notImplementedYet` annotation along
 with the `notImplemented` RunE, then run `make docs` and commit the regenerated
 reference in `provenance-website`.
 
-Tick the task off in `PLAN.md` in its own PR, into the epic branch.
+Tick the task off in `PLAN.md` in the task's own PR, not in a separate one.
 
 ## Design documents
 

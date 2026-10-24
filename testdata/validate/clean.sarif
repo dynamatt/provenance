@@ -1,0 +1,482 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "provenance",
+          "version": "dev",
+          "informationUri": "https://github.com/dynamatt/provenance",
+          "rules": [
+            {
+              "id": "content/caption",
+              "shortDescription": {
+                "text": "A caption that cannot be placed or referred to"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/duplicate-id",
+              "shortDescription": {
+                "text": "Two files with one ID"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/embed",
+              "shortDescription": {
+                "text": "An embed inside running text"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/embed-cycle",
+              "shortDescription": {
+                "text": "Entities that embed each other"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/frontmatter",
+              "shortDescription": {
+                "text": "Frontmatter that cannot be read"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/image",
+              "shortDescription": {
+                "text": "An image the website cannot publish"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/query",
+              "shortDescription": {
+                "text": "A query block that cannot run"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/template",
+              "shortDescription": {
+                "text": "A template that cannot render"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/template-name",
+              "shortDescription": {
+                "text": "A template named for nothing"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "content/unknown-override",
+              "shortDescription": {
+                "text": "An underscore template that overrides nothing"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "content/unrendered-block",
+              "shortDescription": {
+                "text": "A block this version publishes only as source"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/unused-template",
+              "shortDescription": {
+                "text": "A named template no query chooses"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "links/target-type",
+              "shortDescription": {
+                "text": "A link to an entity of the wrong type"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "links/unknown-field",
+              "shortDescription": {
+                "text": "A field reference to a field the target does not have"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "links/unresolved",
+              "shortDescription": {
+                "text": "A link to no entity"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules/file",
+              "shortDescription": {
+                "text": "A rule file that is not a YAML mapping"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules/message",
+              "shortDescription": {
+                "text": "A rule without a message"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules/name",
+              "shortDescription": {
+                "text": "A rule file not named for a kebab-case ID"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules/query",
+              "shortDescription": {
+                "text": "A rule whose query does not fit the schema"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules/severity",
+              "shortDescription": {
+                "text": "A rule severity other than error or warning"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "rules/unknown-key",
+              "shortDescription": {
+                "text": "A key a rule file does not have"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/calculated-set",
+              "shortDescription": {
+                "text": "A calculated field written in the file"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/enum-value",
+              "shortDescription": {
+                "text": "A value not in its enum"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/file",
+              "shortDescription": {
+                "text": "A schema file that cannot be loaded"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/formula",
+              "shortDescription": {
+                "text": "A calculated field whose formula cannot run"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/id-format",
+              "shortDescription": {
+                "text": "An ID that is not the type's form"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/invalid-value",
+              "shortDescription": {
+                "text": "A value not of its field's type"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/link-target",
+              "shortDescription": {
+                "text": "A link field targeting an undeclared type"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/list-row",
+              "shortDescription": {
+                "text": "A list row with a key its list does not have"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/required",
+              "shortDescription": {
+                "text": "A required field not set"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/unknown-field",
+              "shortDescription": {
+                "text": "A frontmatter key the type does not have"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/unknown-key",
+              "shortDescription": {
+                "text": "A key the schema language does not have"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/unknown-type",
+              "shortDescription": {
+                "text": "An entity of an undeclared type"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "schema/unused-enum",
+              "shortDescription": {
+                "text": "An enum no field uses"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "schema/unused-record",
+              "shortDescription": {
+                "text": "A record no list uses"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "schema/unused-type",
+              "shortDescription": {
+                "text": "A type with no entities and no links"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "block-languages",
+              "shortDescription": {
+                "text": "code block in a language this project does not use"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "eco-change-type-valid",
+              "shortDescription": {
+                "text": "change_type must be one of the approved categories"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "equipment-calibration-current",
+              "shortDescription": {
+                "text": "equipment calibration was not current at time of test execution"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "evidence-after-build",
+              "shortDescription": {
+                "text": "executed before its build was built"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "no-implements-deprecated-need",
+              "shortDescription": {
+                "text": "requirement implements a deprecated user need"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "no-requirement-decomposition-cycles",
+              "shortDescription": {
+                "text": "requirement decomposition hierarchy contains a cycle"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "protocol-verifies-requirement",
+              "shortDescription": {
+                "text": "verification protocol not linked to any requirement"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "requirement-title-unique",
+              "shortDescription": {
+                "text": "two requirements share the same title — likely a duplicate or copy-paste error"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "requirement-verified",
+              "shortDescription": {
+                "text": "requirement missing verification"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "risk-benefit-required",
+              "shortDescription": {
+                "text": "risk-benefit analysis required when residual acceptability is unacceptable"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "superseded-entities-deprecated",
+              "shortDescription": {
+                "text": "entity has been superseded but its status is not Deprecated"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "validation-equipment-calibration-current",
+              "shortDescription": {
+                "text": "equipment calibration was not current at time of validation"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            }
+          ]
+        }
+      },
+      "originalUriBaseIds": {
+        "%SRCROOT%": {
+          "description": {
+            "text": "The repository root."
+          }
+        }
+      },
+      "results": [
+        {
+          "ruleId": "requirement-verified",
+          "ruleIndex": 44,
+          "level": "warning",
+          "message": {
+            "text": "requirement missing verification"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "REQ/REQ-0003.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "REQ-0003"
+          }
+        }
+      ]
+    }
+  ]
+}
