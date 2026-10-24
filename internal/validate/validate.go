@@ -8,8 +8,6 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -122,6 +120,9 @@ func Run(rp *repo.Repo) (*Report, error) {
 		if err := r.content(&export.Input{Repo: rp, Schema: s, Entities: typed, Graph: graph}); err != nil {
 			return nil, err
 		}
+		if err := r.rules(root, s, graph); err != nil {
+			return nil, err
+		}
 	}
 	r.sort()
 	return r, nil
@@ -195,20 +196,8 @@ func (r *Report) unknownTypes(s *schema.Schema, entities []*entity.Entity) (know
 
 // countRules counts the rule files in root/rules.
 func countRules(root string) (int, error) {
-	entries, err := os.ReadDir(filepath.Join(root, RulesDir))
-	if errors.Is(err, os.ErrNotExist) {
-		return 0, nil
-	}
-	if err != nil {
-		return 0, err
-	}
-	n := 0
-	for _, e := range entries {
-		if !e.IsDir() && strings.EqualFold(filepath.Ext(e.Name()), ".yaml") {
-			n++
-		}
-	}
-	return n, nil
+	files, err := ruleFiles(root)
+	return len(files), err
 }
 
 // content reports what would stop the website export, and what it would

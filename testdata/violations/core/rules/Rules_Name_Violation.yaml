@@ -1,0 +1,4 @@
+severity: error
+message: "not kebab-case"
+from: Widget
+where: {field: id, operator: equals, value: WID-9999}

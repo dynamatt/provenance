@@ -367,7 +367,7 @@ git worktree remove --force "$WORK/worktree"
 # copy of a duplicated ID, an unknown type, a schema problem (which skips
 # the rules). Tool and usage errors exit 2. --out writes the report to a
 # file; --path validates another repository.
-expect 0 '^0 errors, 0 warnings$'         "$PROV" validate
+expect 0 '^0 errors, 1 warning$'          "$PROV" validate
 cp REQ/REQ-0002.md REQ/copy.md
 sed -i '2s/.*/id: OCC-0003: x/' OCC/OCC-0003.md
 printf -- '---\nid: REQ-0099\ntitle: no type\n---\n' > REQ/half.md
@@ -375,9 +375,9 @@ expect 1 '^OCC/OCC-0003\.md:2: error \[content/frontmatter\] invalid frontmatter
 expect 1 '^REQ/REQ-0002\.md:2: error \[content/duplicate-id\] duplicate entity ID REQ-0002, also in REQ/copy\.md \(REQ-0002\)$' "$PROV" validate
 expect 1 '^REQ/copy\.md:2: error \[content/duplicate-id\] duplicate entity ID REQ-0002, also in REQ/REQ-0002\.md \(REQ-0002\)$' "$PROV" validate
 expect 1 '^REQ/half\.md:2: error \[content/frontmatter\] frontmatter has an id but no type, so the file is not read as an entity$' "$PROV" validate
-expect 1 '^4 errors, 0 warnings$'         "$PROV" validate
-expect 1 '^validate: 4 errors, 0 warnings$' "$PROV" validate --out "$WORK/reports/v.txt"
-expect 0 '^4 errors, 0 warnings$'         tail -n 1 "$WORK/reports/v.txt"
+expect 1 '^4 errors, 1 warning$'          "$PROV" validate
+expect 1 '^validate: 4 errors, 1 warning$' "$PROV" validate --out "$WORK/reports/v.txt"
+expect 0 '^4 errors, 1 warning$'          tail -n 1 "$WORK/reports/v.txt"
 git checkout -q -- OCC/OCC-0003.md && rm REQ/copy.md REQ/half.md
 sed -i 's/^type: Risk/type: Rsk/' RSK/RSK-0001.md
 expect 1 '^RSK/RSK-0001\.md:3: error \[schema/unknown-type\] type "Rsk" is not declared in schema/ ' "$PROV" validate
@@ -390,7 +390,7 @@ expect 2 '^validate: invalid --format "xml"' "$PROV" validate --format xml
 expect 2 '^validate --format sarif: not implemented yet$' "$PROV" validate --format sarif
 expect 2 '^validate: not inside a provenance repository' "$PROV" validate --path "$WORK"
 cd "$WORK"
-expect 0 '^0 errors, 0 warnings$'         "$PROV" validate --path "$EXAMPLE_DIR/REQ"
+expect 0 '^0 errors, 1 warning$'          "$PROV" validate --path "$EXAMPLE_DIR/REQ"
 cd "$EXAMPLE_DIR"
 
 # E2.3: schema conformance. Each entity is checked against its type and
@@ -418,7 +418,7 @@ expect 1 '^DES/DES-0001\.md:2: error \[schema/id-format\] ID DES-01 is not DES-N
 git checkout -q -- DES/DES-0001.md
 printf 'enum: Unused\nvalues: [a]\n' > schema/enums/Unused.yaml
 expect 0 '^schema/enums/Unused\.yaml:1: warning \[schema/unused-enum\] enum Unused is not used by any field$' "$PROV" validate
-expect 0 '^0 errors, 1 warning$'               "$PROV" validate
+expect 0 '^0 errors, 2 warnings$'              "$PROV" validate
 rm schema/enums/Unused.yaml
 
 # E2.4: content and links. validate renders the site as export does but
@@ -434,7 +434,7 @@ expect 1 '^DOC/DOC-0001\.md:34: error \[content/image\] image assets/missing\.pn
 expect 1 '^DOC/DOC-0001\.md:52: error \[content/query\] query block: unknown operator "="' "$PROV" validate
 expect 1 '^DOC/DOC-0001\.md:65: error \[links/unresolved\] \[\[REQ-0999\]\]: no entity REQ-0999 \(DOC-0001\)$' "$PROV" validate
 expect 1 '^DOC/DOC-0001\.md:[0-9]+: error \[content/unrendered-block\] mermaid block: ' "$PROV" validate
-expect 1 '^4 errors, 0 warnings$'          "$PROV" validate
+expect 1 '^4 errors, 1 warning$'           "$PROV" validate
 expect 2 '^export: DOC/DOC-0001\.md:52: query block: unknown operator "="' "$PROV" export website --out "$WORK/broken"
 git checkout -q -- DOC/DOC-0001.md
 sed -i 's/^implements: \[USR-0001\]/implements: [REQ-0002]/' REQ/REQ-0001.md
@@ -496,6 +496,36 @@ git checkout -q -- REQ DES
 sed -i 's/^  transitive: true/  transitive: yes/' DOC/DOC-0003.md
 expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: transitive is true or false \(DOC-0003\)$' "$PROV" validate
 git checkout -q -- DOC/DOC-0003.md
+
+# E2.8: rule files. The example's rules run at the gate: REQ-0003's open
+# verification is a warning, and each break from E2.5–E2.7 is a violation
+# at the line D8 gives: a missing field at the id, a list row at the row,
+# an aggregate over an absent reverse link at the id, a cycle at each
+# member's link. A rule file with a problem is reported at its line and
+# skipped, so its own violations go.
+expect 0 '^REQ/REQ-0003\.md:2: warning \[requirement-verified\] requirement missing verification \(REQ-0003\)$' "$PROV" validate
+sed -i '/^risk_benefit_analysis:/,/^  "unacceptable"/d' RSK/RSK-0001.md
+expect 1 '^RSK/RSK-0001\.md:2: error \[risk-benefit-required\] risk-benefit analysis required when residual acceptability is unacceptable \(RSK-0001\)$' "$PROV" validate
+git checkout -q -- RSK
+sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VER/EVD-0001.md
+expect 1 '^VER/EVD-0001\.md:51: error \[equipment-calibration-current\] equipment calibration was not current at time of test execution \(EVD-0001\)$' "$PROV" validate
+git checkout -q -- VER
+sed -i '/^verifies: \[REQ-0002\]/d' VER/VER-0002.md
+expect 1 '^VER/VER-0002\.md:2: error \[protocol-verifies-requirement\] verification protocol not linked to any requirement \(VER-0002\)$' "$PROV" validate
+expect 1 '^REQ/REQ-0002\.md:2: warning \[requirement-verified\] requirement missing verification \(REQ-0002\)$' "$PROV" validate
+expect 1 '^1 error, 2 warnings$'           "$PROV" validate
+git checkout -q -- VER
+sed -i 's/^order: 2/order: 2\nparent_requirement: REQ-0003/' REQ/REQ-0002.md
+expect 1 '^REQ/REQ-0002\.md:9: error \[no-requirement-decomposition-cycles\] ' "$PROV" validate
+expect 1 '^REQ/REQ-0003\.md:6: error \[no-requirement-decomposition-cycles\] ' "$PROV" validate
+git checkout -q -- REQ
+sed -i 's/^severity: warning/severity: fatal/' rules/requirement-verified.yaml
+expect 1 '^rules/requirement-verified\.yaml:4: error \[rules/severity\] severity is error or warning, not "fatal"$' "$PROV" validate
+expect 1 '^1 error, 0 warnings$'           "$PROV" validate
+git checkout -q -- rules
+printf 'id: requirement-verified\n' >> rules/requirement-verified.yaml
+expect 1 '^rules/requirement-verified\.yaml:[0-9]+: error \[rules/unknown-key\] unknown key "id": a rule.s ID is its file name, requirement-verified$' "$PROV" validate
+git checkout -q -- rules
 
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).

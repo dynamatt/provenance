@@ -7,7 +7,7 @@ This folder shows each way one can fail.
 
 ```bash
 make build
-bin/provenance validate --path testdata/violations/core           # 48 errors, 6 warnings
+bin/provenance validate --path testdata/violations/core           # 54 errors, 6 warnings
 bin/provenance validate --path testdata/violations/broken-schema  # 2 errors
 ```
 
@@ -22,7 +22,8 @@ The expected reports are `testdata/validate/violations-core.txt` and
     - `class.md` is an `ErrorClass` entity: the rule, its severity and its
       examples, each a file marked `violation` or `clean`.
     - `violation*.md` and `clean.md` are the entity examples.
-  - The examples that can't be entities are in `schema/` and `templates/`,
+  - The examples that can't be entities are in `schema/`, `templates/`
+    and `rules/`,
     named for their case (`schema/FormulaViolation.yaml`,
     `schema/FormulaClean.yaml`), and the `class.md` lists them.
   - Most entity examples are `Widget`s (`schema/Widget.yaml`), which has
@@ -54,7 +55,9 @@ When validate gets a new check:
 
 1. Add `core/cases/<rule>/` with a `class.md` (the next `ERR-NNNN`), a
    `violation.md` and a `clean.md`. Use the next free `WID-NNNN`, or put the
-   example in `schema/` or `templates/` if it can't be an entity.
+   example in `schema/`, `templates/` or `rules/` if it can't be an
+   entity. A clean rule file must match nothing, or it reports the
+   entities it matches.
 2. A clean example must be clean for every check, not only its own.
 3. Run `make golden-update` and look at the diff in
    `testdata/validate/violations-core.txt`.

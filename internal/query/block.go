@@ -107,19 +107,10 @@ func ParseScope(src string, s *schema.Schema) (*Block, error) {
 	return parseBlock(src, s, []string{"from", "where"}, "scope query file")
 }
 
-func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Block, error) {
-	var doc yaml.Node
-	if err := yamlnode.Unmarshal([]byte(src), 1, &doc); err != nil {
-		return nil, yamlError(err)
-	}
-	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
-		return nil, &Error{Line: 1, Msg: "a " + what + " is a mapping with " + strings.Join(keys, ", ")}
-	}
-	m := doc.Content[0]
-	if err := onlyKeys(m, "a "+what, keys...); err != nil {
-		return nil, err
-	}
-
+// ParseQuery reads the from and where of m, a query block, scope file or
+// rule file (DES-0016), against the schema; what names it in errors. The
+// caller checks m's other keys.
+func ParseQuery(m *yaml.Node, s *schema.Schema, what string) (*Block, error) {
 	b := &Block{Render: Render{Mode: RenderFull}}
 	from := yamlnode.Lookup(m, "from")
 	if from == nil {
@@ -160,6 +151,26 @@ func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Bloc
 		if _, _, err := Compile(s, b.From, cond, "q_"); err != nil {
 			return nil, err
 		}
+	}
+	return b, nil
+}
+
+func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Block, error) {
+	var doc yaml.Node
+	if err := yamlnode.Unmarshal([]byte(src), 1, &doc); err != nil {
+		return nil, yamlError(err)
+	}
+	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
+		return nil, &Error{Line: 1, Msg: "a " + what + " is a mapping with " + strings.Join(keys, ", ")}
+	}
+	m := doc.Content[0]
+	if err := onlyKeys(m, "a "+what, keys...); err != nil {
+		return nil, err
+	}
+
+	b, err := ParseQuery(m, s, what)
+	if err != nil {
+		return nil, err
 	}
 
 	if ob := yamlnode.Lookup(m, "order_by"); ob != nil {

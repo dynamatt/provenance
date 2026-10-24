@@ -1,0 +1,5 @@
+id: rules-unknown-key-violation
+severity: error
+message: "has an id"
+from: Widget
+where: {field: id, operator: equals, value: WID-9999}
