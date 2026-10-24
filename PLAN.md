@@ -32,15 +32,15 @@
 - [x] E1.13a Reference lists
 - [x] E1.13b Citation templates
 - [ ] E1.14 Epic close-out: docs and first binary release
-- [ ] E2.1 Validate design decisions
-- [ ] E2.2 `validate` command, report model and load errors
-- [ ] E2.3 Schema conformance (built-in)
-- [ ] E2.4 Content and links (built-in)
-- [ ] E2.5 Grammar: sub-queries, `value_of`, `missing`, `not_in`
-- [ ] E2.6 Grammar: `aggregation` and `duplicated`
-- [ ] E2.7 Grammar: transitive links and `code_blocks`
-- [ ] E2.8 Rule files
-- [ ] E2.9 Report formats
+- [x] E2.1 Validate design decisions
+- [x] E2.2 `validate` command, report model and load errors
+- [x] E2.3 Schema conformance (built-in)
+- [x] E2.4 Content and links (built-in)
+- [x] E2.5 Grammar: sub-queries, `value_of`, `missing`, `not_in`
+- [x] E2.6 Grammar: `aggregation` and `duplicated`
+- [x] E2.7 Grammar: transitive links and `code_blocks`
+- [x] E2.8 Rule files
+- [x] E2.9 Report formats
 - [ ] E2.10 Report templates
 - [ ] E2.11 Epic close-out: gate in CI, docs, release
 
@@ -64,7 +64,9 @@
    `provenance-example` and `provenance-website`. Each task is a branch
    `task/<id>-<slug>` cut from the epic branch, and its PRs target the epic
    branch in each repository. Don't start the next task until the previous
-   one is merged into the epic branch. While the epic is open, the example
+   one is merged into the epic branch. A task's PR ticks the task off in
+   this plan's checklist, so the tick merges with the work, not in a PR
+   of its own. While the epic is open, the example
    pin may point at a commit on the example's epic branch (`make
    bump-example EXAMPLE_BRANCH=epic/<id>-<slug>`). The epic merges into
    `main` once, at its close-out, in each repository, with the pin moved to

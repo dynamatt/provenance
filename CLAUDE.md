@@ -81,7 +81,7 @@ When a command is implemented, remove its `notImplementedYet` annotation along
 with the `notImplemented` RunE, then run `make docs` and commit the regenerated
 reference in `provenance-website`.
 
-Tick the task off in `PLAN.md` in its own PR, into the epic branch.
+Tick the task off in `PLAN.md` in the task's own PR, not in a separate one.
 
 ## Design documents
 
