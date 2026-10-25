@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/dynamatt/provenance/internal/cli"
+	"github.com/dynamatt/provenance/internal/validate"
 )
 
 func main() {
@@ -190,7 +191,31 @@ func page(c *cobra.Command, weight int) string {
 		b.WriteString("## Flags\n\n")
 		flagTable(&b, c.LocalFlags())
 	}
+	if section, ok := sections[name(c)]; ok {
+		b.WriteString(section())
+	}
 	return strings.TrimRight(b.String(), "\n") + "\n"
+}
+
+// sections are reference tables added to a command's page, generated from
+// the code the command runs, so they cannot drift from it either.
+var sections = map[string]func() string{
+	"validate": builtinChecks,
+}
+
+// builtinChecks lists validate's built-in checks (DES-0048).
+func builtinChecks() string {
+	var b strings.Builder
+	b.WriteString("## Built-in checks\n\n")
+	b.WriteString("Every repository gets these checks, with no rule file, and they can't be\n")
+	b.WriteString("turned off. Each is reported under its ID, like a rule, and an error fails\n")
+	b.WriteString("the gate.\n\n")
+	b.WriteString("| ID | Severity | Reports |\n| --- | --- | --- |\n")
+	for _, c := range validate.Checks {
+		fmt.Fprintf(&b, "| `%s` | %s | %s |\n", c.ID, c.Severity, cell(c.Description))
+	}
+	b.WriteString("\n")
+	return b.String()
 }
 
 // flagNames lists c's own flags for the index, e.g. "`--scope`, `--out`".

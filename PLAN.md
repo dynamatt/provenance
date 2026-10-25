@@ -42,7 +42,7 @@
 - [x] E2.8 Rule files
 - [x] E2.9 Report formats
 - [x] E2.10 Report templates
-- [ ] E2.11 Epic close-out: gate in CI, docs, release
+- [x] E2.11 Epic close-out: gate in CI, docs, release
 
 ## Shape of the plan
 
@@ -965,6 +965,18 @@ from one run.
   required check.
 - **DDF PR:** the same gate on `provenance-ddf`, whose own rules then run on
   every change. Any violations this finds are fixed or listed in the PR.
+  (*Decided 2026-10-25:* they are listed, and the gate is not required.
+  All 175 come from the DDF's own assurance rules, since only 11 of its 135
+  requirements have an assurance activity and none has a record. Writing
+  that assurance is later work; until then the check shows red.)
+- **Website:** the built-in checks are generated into the `validate`
+  reference page by `tools/gendocs`, from the same list the reports use.
+
+**Order:** close-out PRs into the provenance and website epics; their
+epics merge into `main`; tag `v0.2.0-alpha`, whose release is the first one
+published (the `v0.1.0-alpha` tag predates the release workflow); then the
+example and DDF PRs pin that release and their epics merge; then the
+example's Validate check is made required on `main`.
 
 **Check it yourself:** open a pull request on `provenance-example` that
 deletes VER-0002's `verifies:` → the check fails and shows the violation

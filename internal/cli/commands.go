@@ -68,8 +68,7 @@ Exit codes: 0 no error-severity violations, 1 violations found, 2 tool or usage 
 			_, err := outputs(c)
 			return err
 		},
-		Annotations: inDevelopment,
-		RunE:        runValidate,
+		RunE: runValidate,
 	}
 	c.Flags().String("path", "", "repository `path` to validate (default: the repository containing the current directory)")
 	c.Flags().StringArray("output", nil, "report to write, as `name` or name=file: text, json, junit, sarif or a report template; repeatable (default: text to standard output)")
