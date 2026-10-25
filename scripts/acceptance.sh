@@ -590,7 +590,7 @@ expect 0 'entities/VER-0002\.html'        cat "$WORK/gate/validation.html"
 git checkout -q -- VER
 sed -i 's/{{\.Summary\.Errors}} error/{{.Summary.Failures}} error/' templates/reports/pr-summary.md.tmpl
 expect 1 '^templates/reports/pr-summary\.md\.tmpl:[0-9]+: error \[content/template\] executing .* map has no entry for key "Failures"$' "$PROV" validate
-expect 1 '^validate: report pr-summary\.md: templates/reports/pr-summary\.md\.tmpl:[0-9]+: ' "$PROV" validate --output sarif="$WORK/none.sarif" --output pr-summary.md
+expect 1 '^validate: report pr-summary\.md: templates/reports/pr-summary\.md\.tmpl:[0-9]+:[0-9]+: ' "$PROV" validate --output sarif="$WORK/none.sarif" --output pr-summary.md
 expect 1 ''                               test -e "$WORK/none.sarif"
 git checkout -q -- templates
 expect 2 'unknown report "nope": not a format \(text, json, junit, sarif\) and there is no templates/reports/nope\.tmpl \(reports: pr-summary\.md, validation\.html\)' "$PROV" validate --output nope

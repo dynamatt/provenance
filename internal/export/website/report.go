@@ -1,9 +1,7 @@
 package website
 
 import (
-	"fmt"
 	"html/template"
-	"strings"
 
 	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/model"
@@ -23,49 +21,12 @@ func EntityData(s *schema.Schema, entities []*model.Entity) map[string]map[strin
 // Resolved false and the other baseline keys empty.
 func UnresolvedEntity(id string) map[string]any { return baseline(id) }
 
-// ReportFuncs are the template functions of a validation report. Its links
-// are relative to the exported site's main page, where validate --out
-// _site/<file> puts it: link renders a link to an entity (the ID unless
-// text is given), href is the URL of its page, and short abbreviates a
-// commit hash. An entity no file defines has no page; link shows its text
-// unlinked, and href is "".
+// ReportFuncs are the template functions of a validation report: link,
+// href and short, as in entity templates. Its links are relative to the
+// exported site's main page, where validate --output <name>=_site/<file>
+// puts it, and the whole site is exported, so every entity validate loaded
+// has a page; one it could not load is marked unresolved, as on the site.
 func ReportFuncs() template.FuncMap {
-	return template.FuncMap{
-		"link": func(v any, text ...any) (template.HTML, error) {
-			ref, err := asRef(v, "link")
-			if ref == nil || err != nil {
-				return "", err
-			}
-			id, _ := ref["ID"].(string)
-			label := id
-			if len(text) > 0 {
-				label = fmt.Sprint(text[0])
-			}
-			if resolved, _ := ref["Resolved"].(bool); !resolved {
-				return template.HTML(fmt.Sprintf(`<span class="ref">%s</span>`, template.HTMLEscapeString(label))), nil
-			}
-			var b strings.Builder
-			fmt.Fprintf(&b, `<a class="ref" href="%s"`, template.HTMLEscapeString(reportHref(id)))
-			if t, _ := ref["Title"].(string); t != "" {
-				fmt.Fprintf(&b, ` title="%s"`, template.HTMLEscapeString(t))
-			}
-			fmt.Fprintf(&b, `>%s</a>`, template.HTMLEscapeString(label))
-			return template.HTML(b.String()), nil
-		},
-		"href": func(v any) (string, error) {
-			ref, err := asRef(v, "href")
-			if ref == nil || err != nil {
-				return "", err
-			}
-			if resolved, _ := ref["Resolved"].(bool); !resolved {
-				return "", nil
-			}
-			id, _ := ref["ID"].(string)
-			return reportHref(id), nil
-		},
-		"short": history.Short,
-	}
+	l := linker{base: "entities/"}
+	return template.FuncMap{"link": l.link, "href": l.href, "short": history.Short}
 }
-
-// reportHref is an entity page's URL from the site's main page.
-func reportHref(id string) string { return "entities/" + id + ".html" }

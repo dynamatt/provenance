@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
 func TestShiftHeadingsKeepsEverythingElse(t *testing.T) {
@@ -153,7 +155,7 @@ func TestTemplateErrorsNameTheFile(t *testing.T) {
 			tc.files["schema/Ver.yaml"] = verSchema
 			tc.files["R/R-2.md"] = req("R-2", "", "leaf")
 			_, err := exportRepo(t, tc.files)
-			var te *TemplateError
+			var te *tmpl.Error
 			if !errors.As(err, &te) || !strings.HasPrefix(err.Error(), tc.want) {
 				t.Errorf("err = %v\nwant prefix %s", err, tc.want)
 			}

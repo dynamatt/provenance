@@ -3,18 +3,17 @@ package validate
 import (
 	"bytes"
 	"errors"
-	htmltemplate "html/template"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	texttemplate "text/template"
 
 	"github.com/dynamatt/provenance/internal/export/website"
+	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
 // Report templates (DES-0049): validate --output <name> renders
@@ -50,21 +49,6 @@ func (e *UnknownReportError) Error() string {
 	return msg
 }
 
-// TemplateError is a report template that failed to parse or render, at
-// its line.
-type TemplateError struct {
-	Path string
-	Line int
-	Msg  string
-}
-
-func (e *TemplateError) Error() string {
-	if e.Line > 0 {
-		return e.Path + ":" + strconv.Itoa(e.Line) + ": " + e.Msg
-	}
-	return e.Path + ": " + e.Msg
-}
-
 // Root is the repository the report is about.
 func (r *Report) Root() string { return r.root }
 
@@ -91,7 +75,7 @@ func (r *Report) CheckOutput(name string) error {
 // WriteOutput writes the output name: a format, or the report template of
 // that name rendered with the stamps. toolVersion is the binary's, for
 // SARIF. An unknown name is an *UnknownReportError; a template that fails,
-// a *TemplateError.
+// a *tmpl.Error.
 func (r *Report) WriteOutput(w io.Writer, name, toolVersion string, st Stamps) error {
 	if IsFormat(name) {
 		return r.Write(w, name, toolVersion)
@@ -101,7 +85,7 @@ func (r *Report) WriteOutput(w io.Writer, name, toolVersion string, st Stamps) e
 
 // WriteTemplate renders the report template name with the report and
 // stamps. An unknown name is an *UnknownReportError; a template that
-// fails, a *TemplateError.
+// fails, a *tmpl.Error.
 func (r *Report) WriteTemplate(w io.Writer, name string, st Stamps) error {
 	if err := r.CheckOutput(name); err != nil {
 		return err
@@ -135,7 +119,7 @@ func (r *Report) checkReports() error {
 		if err != nil {
 			return err
 		}
-		var te *TemplateError
+		var te *tmpl.Error
 		if err := r.render(io.Discard, name, text, Stamps{}); errors.As(err, &te) {
 			r.add(Violation{Rule: "content/template", Severity: Error, Path: te.Path, Line: te.Line, Message: te.Msg})
 		} else if err != nil {
@@ -164,11 +148,8 @@ func reportNames(root string) ([]string, error) {
 	return names, nil
 }
 
-// readReport reads a report template with LF line endings, so a Windows
-// core.autocrlf checkout renders the same bytes.
 func readReport(root, name string) (string, error) {
-	b, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(ReportsDir), name+".tmpl"))
-	return strings.ReplaceAll(string(b), "\r\n", "\n"), err
+	return tmpl.Read(filepath.Join(root, filepath.FromSlash(ReportsDir), name+".tmpl"))
 }
 
 func (r *Report) render(w io.Writer, name, text string, st Stamps) error {
@@ -177,39 +158,19 @@ func (r *Report) render(w io.Writer, name, text string, st Stamps) error {
 	var t interface {
 		Execute(io.Writer, any) error
 	}
+	var err error
 	if strings.HasSuffix(name, ".html") {
-		h, err := htmltemplate.New(path).Option("missingkey=error").Funcs(funcs).Parse(text)
-		if err != nil {
-			return templateError(path, err)
-		}
-		t = h
+		t, err = tmpl.HTML(path, text, funcs)
 	} else {
-		x, err := texttemplate.New(path).Option("missingkey=error").Funcs(texttemplate.FuncMap(funcs)).Parse(text)
-		if err != nil {
-			return templateError(path, err)
-		}
-		t = x
+		t, err = tmpl.Text(path, text, texttemplate.FuncMap(funcs))
+	}
+	if err != nil {
+		return err
 	}
 	if err := t.Execute(w, r.templateData(st)); err != nil {
-		return templateError(path, err)
+		return tmpl.NewError(err, path)
 	}
 	return nil
-}
-
-// templateLoc splits the location from a template error:
-// "templates/reports/x.tmpl:5:12: …".
-var templateLoc = regexp.MustCompile(`^([^\s:]+):(\d+)(?::\d+)?:\s*(.*)$`)
-
-func templateError(path string, err error) error {
-	msg := err.Error()
-	for _, prefix := range []string{"template: ", "html/template:"} {
-		msg = strings.TrimPrefix(msg, prefix)
-	}
-	if m := templateLoc.FindStringSubmatch(msg); m != nil {
-		line, _ := strconv.Atoi(m[2])
-		return &TemplateError{Path: m[1], Line: line, Msg: m[3]}
-	}
-	return &TemplateError{Path: path, Msg: msg}
 }
 
 // templateData is what a report template receives as ".". It is maps, like

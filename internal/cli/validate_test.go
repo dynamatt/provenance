@@ -147,7 +147,7 @@ func TestValidateReportErrors(t *testing.T) {
 	writeFile(t, root, "templates/reports/broken.tmpl", "{{.Nope}}\n")
 	writeFile(t, root, "templates/reports/sarif.tmpl", "shadowed\n")
 	code, out, errOut := run("validate", "--output", "json=v.json", "--output", "broken=r.txt", "--output", "text")
-	if code != 1 || out != "" || errOut != `validate: report broken: templates/reports/broken.tmpl:1: executing "templates/reports/broken.tmpl" at <.Nope>: map has no entry for key "Nope" (2 errors, 0 warnings)`+"\n" {
+	if code != 1 || out != "" || errOut != `validate: report broken: templates/reports/broken.tmpl:1:2: executing "templates/reports/broken.tmpl" at <.Nope>: map has no entry for key "Nope" (2 errors, 0 warnings)`+"\n" {
 		t.Errorf("broken: exit %d, stdout %q, stderr %q", code, out, errOut)
 	}
 	for _, f := range []string{"r.txt", "v.json"} {

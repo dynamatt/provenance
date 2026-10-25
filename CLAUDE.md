@@ -20,6 +20,7 @@ identity, so builds must be reproducible.
 | `internal/schema/` | Loads `schema/`: types, fields, enums, records, facets. |
 | `internal/model/` | Entities typed against the schema: values, resolved links, incoming facets. |
 | `internal/query/` | Condition grammar, query blocks, calculated fields and the dependency walk, over the Datalog engine in `query/datalog/`. |
+| `internal/tmpl/` | What project templates share, for the site and validation reports: reading, parsing with missing keys as errors, and errors at their file and line. |
 | `internal/markdown/` | Markdown to HTML with wikilinks, embeds, captions and fenced blocks; the caller resolves them. |
 | `internal/assets/` | Resolves and reads the image files Markdown refers to. |
 | `internal/history/` | Git via go-git: content hash, dirty state, first-parent log, revisions. |

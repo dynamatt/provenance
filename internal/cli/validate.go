@@ -13,6 +13,7 @@ import (
 	"github.com/dynamatt/provenance/internal/exitcode"
 	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/repo"
+	"github.com/dynamatt/provenance/internal/tmpl"
 	"github.com/dynamatt/provenance/internal/validate"
 	"github.com/dynamatt/provenance/internal/version"
 )
@@ -132,7 +133,7 @@ func renderOutputs(report *validate.Report, outs []output) ([][]byte, error) {
 	for i, o := range outs {
 		var b bytes.Buffer
 		err := report.WriteOutput(&b, o.name, version.Version, st)
-		var te *validate.TemplateError
+		var te *tmpl.Error
 		if errors.As(err, &te) {
 			return nil, exitcode.Failed(fmt.Errorf("report %s: %w (%s)", o.name, err, report.Summary()))
 		} else if err != nil {

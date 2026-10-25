@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/dynamatt/provenance/internal/repo"
+	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
 // reportRepo is ruleRepo with a rule that fails PRT-0001, a rule that
@@ -88,8 +89,9 @@ func TestReportRules(t *testing.T) {
 	}
 }
 
-// An entity validate could not load has no page: link shows its ID and
-// href is empty. A violation of no entity has a nil .Entity.
+// An entity validate could not load has no page: link marks its ID
+// unresolved, as on the site, and href is empty. A violation of no entity
+// has a nil .Entity.
 func TestReportEntities(t *testing.T) {
 	root := reportRepo(t, map[string]string{"e.tmpl": `{{range .Violations}}{{.Rule}} [{{link .Entity}}] [{{href .Entity}}]{{with .Entity}} {{.Resolved}}{{end}}
 {{end}}`})
@@ -97,7 +99,7 @@ func TestReportEntities(t *testing.T) {
 	write(t, root, "rules/Bad.yaml", "severity: error\nmessage: m\nfrom: Part\n")
 	got := renderReport(t, runReport(t, root), "e")
 	for _, want := range []string{
-		`schema/unknown-type [<span class="ref">WID-0001</span>] [] false`,
+		`schema/unknown-type [<span class="id unresolved-id">WID-0001</span> <span class="unresolved">unresolved</span>] [] false`,
 		"rules/name [] []\n",
 		`draft [<a class="ref" href="entities/PRT-0001.html" title="Frame">PRT-0001</a>] [entities/PRT-0001.html] true`,
 	} {
@@ -141,7 +143,7 @@ func TestReportTemplateErrors(t *testing.T) {
 	if err := r.WriteOutput(&b, "json", "dev", Stamps{}); err != nil || !strings.Contains(b.String(), `"errors": 4,`) {
 		t.Errorf("WriteOutput json = %q, %v; want the json format", b.String(), err)
 	}
-	var te *TemplateError
+	var te *tmpl.Error
 	if err := r.WriteTemplate(&bytes.Buffer{}, "field.html", Stamps{}); !errors.As(err, &te) || te.Line != 2 {
 		t.Errorf("err = %v", err)
 	}
