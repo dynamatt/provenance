@@ -11,6 +11,7 @@ import (
 
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/export/website"
+	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/repo"
 )
@@ -50,9 +51,10 @@ type Report struct {
 
 	// For report templates: the repository's root and component, and
 	// every entity's template data by ID (nil when the schema has errors).
-	root      string
-	component repo.Component
-	entities  map[string]map[string]any
+	root        string
+	component   repo.Component
+	repoContent history.Content
+	entities    map[string]map[string]any
 }
 
 // Errors counts the error-severity violations.
@@ -96,6 +98,7 @@ func Run(rp *repo.Repo) (*Report, error) {
 	if err != nil {
 		return nil, err
 	}
+	r.repoContent = res.Content()
 	r.loadProblems(res)
 	if res.SchemaBroken {
 		if r.RulesSkipped, err = r.skipRules(root, "the schema has errors"); err != nil {

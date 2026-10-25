@@ -56,7 +56,7 @@ func exportFormat(c *cobra.Command, format string) error {
 	}
 	// The output folder may sit inside the repository (the default ./_site
 	// usually does); never read it back as source.
-	in, err := loadInput(cwd, outDir)
+	in, content, err := loadInput(cwd, outDir)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func exportFormat(c *cobra.Command, format string) error {
 			return err
 		}
 	}
-	if in.Git, err = gitContext(in.Repo.Root, outDir); err != nil {
+	if in.Git, err = gitContext(in.Repo.Root, content); err != nil {
 		return err
 	}
 	files, err := exp.Export(in)
@@ -80,26 +80,27 @@ func exportFormat(c *cobra.Command, format string) error {
 }
 
 // loadInput reads the repository containing cwd, stopping at its first
-// problem. Folders under skip are not read.
-func loadInput(cwd string, skip ...string) (*export.Input, error) {
+// problem, and what history needs to know of its content. Folders under
+// skip are not read.
+func loadInput(cwd string, skip ...string) (*export.Input, history.Content, error) {
 	r, err := repo.Open(cwd)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	res, err := load.Load(r, skip...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := res.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return res.Input(), nil
+	return res.Input(), res.Content(), nil
 }
 
 // gitContext reads what an export stamps into its output (DES-0021,
 // DES-0023). Outside a git repository there is nothing to stamp: export
 // still works, without commit or content hash.
-func gitContext(root, outDir string) (*export.Git, error) {
+func gitContext(root string, content history.Content) (*export.Git, error) {
 	h, err := history.Open(root)
 	if errors.Is(err, history.ErrNotRepository) {
 		return nil, nil
@@ -109,10 +110,10 @@ func gitContext(root, outDir string) (*export.Git, error) {
 	}
 	defer h.Close()
 	g := &export.Git{SHA: h.HEAD()}
-	if g.ContentHash, g.Dirty, err = h.WorkingContentHash(outDir); err != nil {
+	if g.ContentHash, g.Dirty, err = h.WorkingContentHash(content); err != nil {
 		return nil, err
 	}
-	if g.Log, err = h.Log(); err != nil {
+	if g.Log, err = h.Log(content); err != nil {
 		return nil, err
 	}
 	return g, nil
@@ -148,8 +149,14 @@ func runVerifyContent(c *cobra.Command, _ []string) error {
 		if hash, err = h.ContentHash(sha); err != nil {
 			return fmt.Errorf("%s: %w", name, err)
 		}
-	} else if hash, _, err = h.WorkingContentHash(); err != nil {
-		return fmt.Errorf("%s: %w", name, err)
+	} else {
+		content, err := load.ContentOf(r)
+		if err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+		if hash, _, err = h.WorkingContentHash(content); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
 	}
 	fmt.Fprintln(c.OutOrStdout(), hash)
 	if expected, _ := c.Flags().GetString("expected"); expected != "" && expected != hash {

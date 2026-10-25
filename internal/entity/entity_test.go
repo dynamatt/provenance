@@ -2,8 +2,6 @@ package entity
 
 import (
 	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -84,113 +82,5 @@ func TestParseYAMLErrorUsesFileLines(t *testing.T) {
 	var fe *Error
 	if !errors.As(err, &fe) || fe.Line != 4 || !strings.Contains(fe.Msg, "invalid frontmatter") {
 		t.Errorf("err = %v, want line 4 invalid frontmatter", err)
-	}
-}
-
-func write(t *testing.T, root, rel, content string) {
-	t.Helper()
-	p := filepath.Join(root, filepath.FromSlash(rel))
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func entityFile(id, typ string) string {
-	return "---\nid: " + id + "\ntype: " + typ + "\n---\n"
-}
-
-func TestDiscover(t *testing.T) {
-	root := t.TempDir()
-	write(t, root, "REQ/REQ-0002.md", entityFile("REQ-0002", "Requirement"))
-	write(t, root, "REQ/REQ-0001.md", entityFile("REQ-0001", "Requirement"))
-	write(t, root, "USR/deep/USR-0001.MD", entityFile("USR-0001", "UserNeed"))
-	write(t, root, "README.md", "# not an entity\n")
-	write(t, root, "REQ/notes.txt", entityFile("TXT-1", "Ignored"))
-	// Configuration folders at the root are skipped...
-	for _, d := range ConfigDirs {
-		write(t, root, d+"/x.md", entityFile("CFG-"+d, "Ignored"))
-	}
-	// ...but only at the root.
-	write(t, root, "DOC/templates/DOC-0001.md", entityFile("DOC-0001", "Document"))
-	write(t, root, ".git/x.md", entityFile("GIT-1", "Ignored"))
-	write(t, root, "sub/.git/x.md", entityFile("GIT-2", "Ignored"))
-	write(t, root, "_site/copy.md", entityFile("REQ-0001", "Requirement"))
-
-	got, err := Discover(root, filepath.Join(root, "_site"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var ids []string
-	for _, e := range got {
-		ids = append(ids, e.ID+"="+e.Path)
-	}
-	want := "DOC-0001=DOC/templates/DOC-0001.md REQ-0001=REQ/REQ-0001.md REQ-0002=REQ/REQ-0002.md USR-0001=USR/deep/USR-0001.MD"
-	if strings.Join(ids, " ") != want {
-		t.Errorf("got  %s\nwant %s", strings.Join(ids, " "), want)
-	}
-}
-
-func TestDiscoverDuplicateIDs(t *testing.T) {
-	root := t.TempDir()
-	write(t, root, "REQ/REQ-0001.md", entityFile("REQ-0001", "Requirement"))
-	write(t, root, "REQ/copy.md", entityFile("REQ-0001", "Requirement"))
-	_, err := Discover(root)
-	var dup *DuplicateIDError
-	if !errors.As(err, &dup) || err.Error() != "duplicate entity ID REQ-0001 in REQ/REQ-0001.md and REQ/copy.md" {
-		t.Errorf("err = %v", err)
-	}
-}
-
-func TestDiscoverReportsParseErrorsWithRelativePath(t *testing.T) {
-	root := t.TempDir()
-	write(t, root, "REQ/bad.md", "---\nid: 1\ntype: Requirement\n---\n")
-	_, err := Discover(root)
-	if err == nil || !strings.HasPrefix(err.Error(), "REQ/bad.md:2:") {
-		t.Errorf("err = %v", err)
-	}
-}
-
-func TestScanCollectsEveryProblem(t *testing.T) {
-	root := t.TempDir()
-	write(t, root, "A/bad.md", "---\nid: 1\ntype: Requirement\n---\n")
-	write(t, root, "REQ/REQ-0001.md", entityFile("REQ-0001", "Requirement"))
-	write(t, root, "REQ/copy1.md", entityFile("REQ-0001", "Requirement"))
-	write(t, root, "REQ/copy2.md", entityFile("REQ-0001", "Requirement"))
-	write(t, root, "REQ/half.md", "---\ntitle: x\ntype: Requirement\n---\n")
-	write(t, root, "Z/bad.md", "---\nid: [\n---\n")
-
-	sc, err := Scan(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var got []string
-	for _, p := range sc.Problems {
-		got = append(got, p.Error())
-	}
-	want := []string{
-		"A/bad.md:2: id must be a non-empty string",
-		"duplicate entity ID REQ-0001 in REQ/REQ-0001.md and REQ/copy1.md",
-		"duplicate entity ID REQ-0001 in REQ/REQ-0001.md and REQ/copy2.md",
-		"Z/bad.md:2: invalid frontmatter: did not find expected node content",
-	}
-	if strings.Join(got, "\n") != strings.Join(want, "\n") {
-		t.Errorf("problems:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
-	}
-	var dup *DuplicateIDError
-	if !errors.As(sc.Problems[1], &dup) || dup.FirstLine != 2 || dup.ThenLine != 2 {
-		t.Errorf("duplicate lines = %+v", dup)
-	}
-	if len(sc.Partial) != 1 || sc.Partial[0].Error() != "REQ/half.md:3: frontmatter has a type but no id, so the file is not read as an entity" {
-		t.Errorf("partial = %v", sc.Partial)
-	}
-	if len(sc.Entities) != 1 || sc.Entities[0].Path != "REQ/REQ-0001.md" {
-		t.Errorf("entities = %v", sc.Entities)
-	}
-	// Discover fails with the first problem, and ignores partial files.
-	if _, err := Discover(root); err == nil || err.Error() != want[0] {
-		t.Errorf("Discover err = %v", err)
 	}
 }

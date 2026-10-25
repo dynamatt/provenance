@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dynamatt/provenance/internal/entity"
+	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/repo"
 )
 
@@ -52,12 +52,12 @@ type errorClass struct {
 
 func errorClasses(t *testing.T) []errorClass {
 	t.Helper()
-	sc, err := entity.Scan(filepath.Join(violationsDir, "core"))
+	res, err := load.Load(&repo.Repo{Root: filepath.Join(violationsDir, "core")})
 	if err != nil {
 		t.Fatal(err)
 	}
 	var out []errorClass
-	for _, e := range sc.Entities {
+	for _, e := range res.Parsed {
 		if e.Type != "ErrorClass" {
 			continue
 		}
@@ -162,11 +162,11 @@ func TestViolationsCoverEveryRule(t *testing.T) {
 func TestChecksMatchTheCatalogue(t *testing.T) {
 	classes := map[string]errorClass{}
 	titles := map[string]string{}
-	sc, err := entity.Scan(filepath.Join(violationsDir, "core"))
+	res, err := load.Load(&repo.Repo{Root: filepath.Join(violationsDir, "core")})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, e := range sc.Entities {
+	for _, e := range res.Parsed {
 		if e.Type != "ErrorClass" {
 			continue
 		}

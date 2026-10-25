@@ -97,7 +97,7 @@ func loadWith(t testing.TB, schemaFiles, entities map[string]string) (*schema.Sc
 		}
 		parsed = append(parsed, e)
 	}
-	// model.Build expects ID order, as entity.Discover returns.
+	// model.Build expects ID order, as the loader gives it.
 	sortByID(parsed)
 	built, err := model.Build(s, parsed)
 	if err != nil {
