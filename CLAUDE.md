@@ -19,6 +19,7 @@ identity, so builds must be reproducible.
 | `internal/entity/` | Parses entity files (frontmatter and body) and discovers them. |
 | `internal/schema/` | Loads `schema/`: types, fields, enums, records, facets. |
 | `internal/model/` | Entities typed against the schema: values, resolved links, incoming facets. |
+| `internal/load/` | Reads a repository the one way `export` and `validate` both use: entities, schema, typed model and graph, collecting every problem with its kind. |
 | `internal/query/` | Condition grammar, query blocks, calculated fields and the dependency walk, over the Datalog engine in `query/datalog/`. |
 | `internal/tmpl/` | What project templates share, for the site and validation reports: reading, parsing with missing keys as errors, and errors at their file and line. |
 | `internal/markdown/` | Markdown to HTML with wikilinks, embeds, captions and fenced blocks; the caller resolves them. |

@@ -146,20 +146,11 @@ func linksOut(t *schema.Type) bool {
 	return false
 }
 
-// conformance checks every entity against its type, and returns them typed
-// with the graph that evaluated their calculated fields. entities all have
-// declared types.
-func (r *Report) conformance(s *schema.Schema, entities []*entity.Entity) ([]*model.Entity, *query.Graph, error) {
-	typed, err := model.Build(s, entities)
-	if err != nil {
-		return nil, nil, err
-	}
-	// Calculated values are evaluated so a value a formula cannot give is
-	// reported; one whose formula is broken is reported once, on the schema.
-	graph, err := query.NewGraph(s, typed)
-	if err != nil {
-		return nil, nil, err
-	}
+// conformance checks every typed entity against its type. Their calculated
+// values were evaluated when they were loaded, so a value a formula cannot
+// give is reported; one whose formula is broken is reported once, on the
+// schema.
+func (r *Report) conformance(s *schema.Schema, typed []*model.Entity) {
 	broken := map[*schema.Field]bool{}
 	for _, p := range query.FormulaProblems(s) {
 		broken[p.Field] = true
@@ -172,7 +163,6 @@ func (r *Report) conformance(s *schema.Schema, entities []*entity.Entity) ([]*mo
 			c.value(v)
 		}
 	}
-	return typed, graph, nil
 }
 
 type entityCheck struct {
