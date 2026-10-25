@@ -19,12 +19,12 @@ identity, so builds must be reproducible.
 | `internal/entity/` | An entity and its record: the values and positions its source wrote, and what a text value refers to. The Markdown record and file parser (frontmatter and body) are here too. |
 | `internal/schema/` | Loads `schema/`: types, fields, enums, records, facets. |
 | `internal/model/` | Entities typed against the schema: values, resolved links, incoming facets. |
-| `internal/load/` | Reads a repository the one way `export` and `validate` both use: schema, then entities from each source (`Source`; the Markdown walker is the first), typed model and graph, collecting every problem under its built-in check. Tells `history` which files are content. `load/loadtest` is a second source for tests. |
+| `internal/load/` | Reads a repository the one way `export` and `validate` both use: schema, then entities from each source (`Source`; the Markdown walker is the first), typed model and graph, collecting every problem under its built-in check. Tells `history` which files are content and the entities a file holds, and reads the history once (`Result.History`, `Result.Git`) for every stamp. `load/loadtest` is a second source for tests, a table typed by field. |
 | `internal/query/` | Condition grammar, query blocks, calculated fields and the dependency walk, over the Datalog engine in `query/datalog/`. |
 | `internal/tmpl/` | What project templates share, for the site and validation reports: reading, parsing with missing keys as errors, and errors at their file and line. |
 | `internal/markdown/` | Markdown to HTML with wikilinks, embeds, captions and fenced blocks; the caller resolves them. |
 | `internal/assets/` | Resolves and reads the image files Markdown refers to. |
-| `internal/history/` | Git via go-git: content hash, dirty state, first-parent log, revisions. |
+| `internal/history/` | Git via go-git: content hash, dirty state, first-parent log of the entities and files each commit changed, revisions. |
 | `internal/export/` | Exporter registry, `--scope`, git stamps and the output folder; `export/website/` is the website exporter and its built-in templates. |
 | `internal/version/` | Version and commit, injected by `make build` through `-ldflags`. |
 | `tools/gendocs/` | Generates the website's CLI reference from the command tree. |
