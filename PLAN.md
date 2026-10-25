@@ -43,6 +43,11 @@
 - [x] E2.9 Report formats
 - [x] E2.10 Report templates
 - [x] E2.11 Epic close-out: gate in CI, docs, release
+- [ ] E3.1 One loader
+- [ ] E3.2 Sources and content files
+- [ ] E3.3 Values and positions from the source
+- [ ] E3.4 Entity-level history
+- [ ] E3.5 Epic close-out
 
 ## Shape of the plan
 
@@ -982,15 +987,151 @@ example's Validate check is made required on `main`.
 deletes VER-0002's `verifies:` → the check fails and shows the violation
 on the changed file. Revert → it passes.
 
+## Epic 3 — Architecture groundwork
+
+> **Status: proposed 2026-10-25, for Matt's review.** Decisions G1–G6 are
+> proposals. Nothing below is started until the plan PR is merged and
+> Epic 2 has closed.
+
+**Goal:** loading, validation and history stop assuming that an entity is
+a Markdown file, so the CSV-backed types epic, and every command after it
+(`fmt`, `report`, `diff`, `rename`, the editor), add a source of entities
+instead of patching each layer. The query layer already copes: the typed
+model, the Datalog facts and the template data treat a row like anything
+else. What doesn't, checked against the code at the end of Epic 2:
+
+- **Two loading pipelines.** `export` loads in `cli/export.go` (discover,
+  schema, model, graph, stopping at the first problem); `validate.Run`
+  loads again its own way (`entity.Scan`, `schema.Read`, its own
+  unknown-type pass, then `model.Build` and the graph, collecting every
+  problem). Discovery runs before the schema in both, so a type the
+  schema backs with a file can't be found. `history` walks the files a
+  third time (`contentFiles`) for the dirty check, and re-parses every
+  commit's `.md` blobs to learn which types it touched (`changes`).
+- **Values and positions come from YAML nodes.** `model.Build` decodes
+  every value from the frontmatter's `yaml.Node`s by their YAML tags
+  (`model.value`), and line numbers come from the same nodes:
+  `entity.IDLine`, `model.TextFileLine`, validate's conformance checks
+  (`validate/schema.go`), its unknown-type check. A row has no nodes.
+- **A path stands for an entity.** `validate` finds the entity of an
+  export problem by its path (`byPath` in `validate.go`); page inputs
+  and `history.Inputs` are paths and types; a commit records paths. Every
+  row of a CSV shares one path.
+
+Rule files, query blocks and the schema are YAML whatever the entity
+source, so their YAML positions stay as they are.
+
+**Standing acceptance for every E3 task:** output doesn't change. The
+golden site, `testdata/validate/*` and every acceptance step pass as they
+are, with no example-repo change and no pin bump. Each task adds unit
+tests, including through the test source (G6).
+
+**Decisions (for Matt):**
+
+| # | Decision | Proposal | Why |
+| --- | --- | --- | --- |
+| G1 | How problems are reported | **The loader collects every problem, as `validate` does today; `export` reports the first,** in today's order and wording. | One pipeline. Export's messages are what users and the acceptance script see, so they must not move. |
+| G2 | Where it lives | **A package `internal/load`.** `load.Repo(root)` returns the repository, schema, typed entities, graph and the problems, each with a kind, its path, line and entity. `validate` keeps the rule IDs: it maps each kind to its built-in check. `export.Input` is built from the result. | Callers stop sequencing packages themselves, and the CLI shrinks to flags and output. |
+| G3 | What a source is | **An interface the loader runs after the schema:** it lists the files it reads (the content files for the dirty check), loads them into entities with problems, and parses one file's bytes (for a commit's blobs). The first is the Markdown walker, which ignores the schema and still runs when the schema is broken, so load errors keep being reported then. | A CSV source finds its files from the schema, so the schema has to come first. One place answers "is this file content?" and "what entities does it hold?". |
+| G4 | Who decodes values and positions | **The source.** Each entity carries a record, an interface with its value for a field and the position of the entity, a field, a list row or a cell. The Markdown record keeps the YAML nodes (which `fmt` needs) and the YAML-tag typing that `model.value` does today; a CSV record would type a cell by its field (C5). `model.Build` and validate's conformance checks use only the interface, and the shared typing rules (date form, enum values, link IDs) stay in `model`. | The alternative, every source producing YAML nodes, would make a CSV cell pretend to be YAML: its tags would be guesses, and conformance would report YAML problems for a file that isn't YAML. |
+| G5 | What history records | **Each commit records the entity IDs it changed beside its paths,** found by parsing both sides of each changed file through its source and comparing entities by ID. `history.Inputs` gains `Entities`; a page's inputs name the entities it shows, and paths only for files that aren't entities (schema, templates, assets, `.component`). An export problem and a violation carry their entity directly. A file moved without changing still counts as changed, as today. | For a Markdown file an entity and its path change together, so output doesn't change; a CSV dump re-exported every month then changes only the rows that differ (C7). Whether a move is a change is the CSV epic's to revisit with DES-0023. |
+| G6 | How the seam is proved | **A test-only second source** that builds entities from a Go table, with positions of its own, run through the loader, `validate`, `export` and history in unit tests. No CSV code in this epic. | Shows the layers no longer assume Markdown before the CSV epic depends on it, without designing CSV ahead of its decisions. |
+
+Not in this epic: the page pipeline (the first task of Section and item
+references) and one Datalog program for derived values (the first task
+of Query fields), written in those epics; stamps in the golden site that
+change with every pin bump; replacing `validate`'s format `switch` with a
+table.
+
+**Order:** the loader first (E3.1), since the other tasks change what it
+calls; then sources (E3.2), then values and positions (E3.3), then
+history (E3.4), which needs both.
+
+### E3.1 One loader
+
+**Deliverables:**
+- `internal/load` per G1–G2: repository, schema, entities, model, graph,
+  collecting every problem as `validate` does now.
+- `export` (`cli/export.go`'s `load`) and `validate.Run` use it. `validate`
+  maps problem kinds to its built-in checks; the website check (`Check`)
+  receives the loaded input as it does now.
+- `load` has unit tests for each problem kind and for its order.
+
+**Check it yourself:** `make ci` passes with no golden or acceptance
+change. `git grep -n 'entity.Discover\|entity.Scan\|schema.Load\|schema.Read' internal/cli internal/validate`
+→ nothing.
+
+### E3.2 Sources and content files
+
+**Deliverables:**
+- The `Source` interface per G3, and the Markdown source: today's walker,
+  moved behind it.
+- The schema loads before sources; the Markdown source runs with a broken
+  schema too.
+- The dirty check lists content files through the loader (the sources'
+  files, `.component` and the configuration folders), replacing
+  `history.contentFiles`. A commit's types come from parsing its blobs
+  through the source of each path, replacing the `.md` test in
+  `changes`.
+- The test source (G6), with tests that its entities load, are selected
+  by queries and rules, and are listed as content.
+
+**Check it yourself:** `make ci` passes unchanged. `go test ./internal/load
+-run Source -v` → the test source's entities load beside Markdown ones.
+In the example checkout, edit a schema file → `export` marks pages
+`-dirty`, as before.
+
+### E3.3 Values and positions from the source
+
+**Deliverables:**
+- The record interface per G4. `entity.Entity` keeps ID, type and path,
+  and its record; `Front`, `Body` and `BodyLine` move into the Markdown
+  record.
+- `model.Build` decodes values through the record; `model.TextFileLine`,
+  `entity.IDLine` and validate's conformance and unknown-type checks use
+  its positions.
+- `git grep yamlnode` outside the Markdown source, the schema, rule files
+  and query blocks → nothing.
+- Unit tests: every conformance problem in `testdata/violations` is placed
+  as before, and the test source's problems are placed at its own
+  positions.
+
+**Check it yourself:** `make ci` passes unchanged: every violation keeps
+its line. `go test ./internal/validate -run TestSource -v` → a test-source
+entity with a wrong value is reported at its record's position.
+
+### E3.4 Entity-level history
+
+**Deliverables:**
+- History per G5: each commit's changed entity IDs, `Inputs.Entities`, and
+  page inputs naming entities.
+- Export problems carry their entity; `validate.go`'s `byPath` goes.
+- DES-0023 says a page's inputs are entities and files, if its wording
+  needs it (a clarification: last-changed commits don't change).
+- Unit tests on an in-memory git history: a file holding two test-source
+  entities, where a commit changing one changes only that entity's
+  last-changed commit.
+
+**Check it yourself:** `make ci` passes unchanged: every page keeps its
+last-changed commit and revision history. `go test ./internal/history -run
+Entities -v` → only the edited entity's last-changed commit moves.
+
+### E3.5 Epic close-out
+
+**Deliverables:** `CLAUDE.md`'s *Where things are* lists `internal/load`
+and the sources; the CSV-backed types epic is revised against what
+landed (its tasks 3 and 6 build on E3.2–E3.4). No release of its own: it
+ships with the next epic's.
+
+**Check it yourself:** read the CSV epic's rough shape; each task names
+the groundwork it builds on.
+
 ## Later epics (outline)
 
 Detailed task breakdowns are written when the preceding epic closes. Proposed
 order after Epic 2, with the reason it comes where it does:
 
-1. **Architecture groundwork** — one loader, source-neutral positions and
-   entity-level history (see below). Right after Epic 2 closes, since it
-   reworks the files Epic 2 is still changing, and before `fmt`, `init`
-   and CSV-backed types, which all build on it.
+1. **Architecture groundwork** — Epic 3, detailed above.
 2. **`fmt`** — canonical serialization; `fmt --check` joins the gate. Needed
    before the editor can write files.
 3. **`init`** — medical-device starter template embedded in the binary; a fresh
@@ -1026,67 +1167,6 @@ order after Epic 2, with the reason it comes where it does:
    fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
    thin client over everything above.
 15. **`plugin`**.
-
-### Architecture groundwork (proposed 2026-10-21, for Matt's review)
-
-**Goal:** the loading and history code stops assuming that an entity is
-a Markdown file. A review of the code against the three proposed epics
-below (2026-10-21) found that the query layer will take them: the
-typed model, the Datalog facts and the template data already treat a
-row, a query field's results or a numbered section like anything else.
-The layers around it assume one Markdown file per entity:
-
-- **Discovery comes before the schema, three times over.** `export`
-  and `validate` each scan for `.md` files and then load the schema
-  (`cli/export.go`, `validate.Run`). `history` scans again to list
-  content files for the dirty check (`contentFiles`, `Status`), and
-  re-parses each commit's `.md` blobs to learn which types it touched
-  (`changes`). A CSV-backed type is only known from the schema, so a
-  changed `data/complaints.csv` would neither mark an export `-dirty`
-  nor count as a change to `Complaint` for pages whose query blocks
-  select complaints.
-- **Positions come from YAML nodes.** `IDLine()`, validate's schema
-  conformance and `model.Build` read lines and values from the
-  frontmatter's `yaml.Node` tree. A row has none.
-- **A path stands for an entity.** `validate` attributes an export
-  problem to an entity by its path (`byPath` in `validate.content`), and
-  page inputs, `history.Inputs` and the dirty check work in files. Every
-  row of a CSV shares one path, so per-row last-changed (C7) has nothing
-  to be expressed in.
-
-Fixing each of these once, before the epics that need them, keeps every
-later command (`fmt`, `report`, `diff`, `rename`, the editor) from
-patching them again in its own way. Two further pieces belong at the
-start of the epics that need them, and are written there: the page
-pipeline (Section and item references, task 3) and one Datalog program
-for derived values (Query fields, task 3).
-
-**Rough shape:**
-
-1. **One loader.** A package that goes repository → schema → sources →
-   model → graph and collects every problem on the way, used by `export`,
-   `validate` and `history`'s content listing. A *source* turns files
-   into entities; the first is the Markdown walker, and a CSV source
-   slots in beside it. The loader also answers which files are content
-   and which types a path holds, so `history` stops re-parsing blobs.
-   Output is unchanged: the golden test and the acceptance script pass
-   as they are.
-2. **Source-neutral positions.** An entity says where it and each of its
-   fields are (`path:line`), instead of callers reading `Front`.
-   Markdown entities keep their YAML nodes, which `fmt` needs, behind
-   that interface; validate's conformance checks and `model.Build` use
-   only the interface. Violations are unchanged (`testdata/violations`).
-3. **Entity-level history.** The first-parent log records, per commit,
-   the entity IDs it changed as well as the paths; for a Markdown file
-   these are the same, and a file holding several entities is diffed by
-   entity. `history.Inputs` gains entity IDs, and page inputs name the
-   entities a page shows rather than only their files. Violations and
-   export problems carry the entity directly, not through its path.
-4. **Close-out:** the developer notes in `CLAUDE.md` (where things are),
-   no release of its own; it ships with the next epic's.
-
-No design element changes: DES-0006 (one entity per file) and DES-0023
-(last-changed commit) still hold until the CSV epic revises them.
 
 ### CSV-backed entity types (proposed 2026-10-11, for Matt's review)
 
@@ -1160,19 +1240,18 @@ own, so every part of the product that assumes one file per entity
 2. **Example repo:** a `Complaint` type with `data/complaints.csv` (a dozen
    synthetic rows) and its sidecar, RSK-0001's failure modes linking to them, and
    `occurrence` justified by a `COUNT` over them.
-3. **Loading:** the CSV reader as a second source of the loader
-   (Architecture groundwork, task 1), `source:` in the schema, rows as
-   entities in the model and the graph, each with its row's positions
-   (groundwork task 2); load errors at file and row.
+3. **Loading:** the CSV reader as a second source of the loader (E3.2),
+   `source:` in the schema, rows as entities in the model and the graph,
+   each with its row's positions (E3.3); load errors at file and row.
 4. **validate:** schema conformance for CSV types and rows (C2, C5, C6),
    unknown columns as warnings, and the sidecar: present, and its hash the
    file's (C9).
 5. **export:** row pages, `pages: false`, citations and queries over rows,
    the dump's provenance on each page: system, export date, and the
    commit that brought it in.
-6. **History:** per-row last-changed (C7) on groundwork task 3's
-   entity-level log, which diffs the CSV by row ID; page inputs, the
-   dirty check, content hash.
+6. **History:** per-row last-changed (C7) on E3.4's entity-level log,
+   which diffs the CSV by row ID; page inputs, the dirty check, content
+   hash.
 7. **Close-out:** docs (a "Importing data" concept page), release.
 
 ### Section and item references (proposed 2026-10-18, for Matt's review)
