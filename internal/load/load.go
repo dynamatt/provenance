@@ -1,12 +1,13 @@
 // Package load reads a repository the one way every command does: its
 // entities, the schema, the entities typed against it, and the graph that
 // evaluates their calculated fields and runs queries. It collects every
-// problem on the way; export stops at the first, validate reports them all
-// as its built-in checks.
+// problem on the way, each under its built-in check; export stops at the
+// first, validate reports them all.
 package load
 
 import (
-	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/export"
@@ -17,44 +18,23 @@ import (
 	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
-// Kind is what a problem is. validate reports each kind as a built-in
-// check; export stops at the first problem that is Fatal.
-type Kind int
-
-const (
-	// Frontmatter is a file whose frontmatter cannot be read: an
-	// *entity.Error.
-	Frontmatter Kind = iota
-	// Partial is frontmatter declaring only one of id and type, so the
-	// file is not an entity: an *entity.Error. Export leaves it out.
-	Partial
-	// DuplicateID is a second file declaring an ID: an
-	// *entity.DuplicateIDError.
-	DuplicateID
-	// SchemaFile is a schema declaration that cannot be loaded: a
-	// *schema.Error. The entities are then not typed.
-	SchemaFile
-	// SchemaKey is a key the schema language doesn't have, which is
-	// ignored: a *schema.Error. Export carries on.
-	SchemaKey
-	// UnknownType is an entity of a type the schema doesn't declare: a
-	// *model.UnknownTypeError. The entity is left out of the model.
-	UnknownType
-)
-
-// Fatal reports whether export stops at a problem of kind k.
-func (k Kind) Fatal() bool { return k != Partial && k != SchemaKey }
-
-// Problem is one problem found while loading. Err is the error export
-// reports, worded as it always has been.
+// Problem is one problem found while loading.
 type Problem struct {
-	Kind Kind
+	// Check is the built-in check it is reported under (DES-0048), such as
+	// "content/frontmatter". The set is open: a new problem names its own
+	// check, and validate's catalogue (validate.Checks) lists them all.
+	Check string
 	// Path is slash-separated and relative to the repository root; Line is
 	// 0 when not known; Entity is the entity's ID, when there is one.
 	Path   string
 	Line   int
 	Entity string
-	Err    error
+	// Msg is the problem as validate reports it.
+	Msg string
+	// Err is what export stops at, worded as export has always worded it,
+	// or nil for a problem export carries on past, such as a file that is
+	// not an entity or an ignored schema key.
+	Err error
 }
 
 // Result is a loaded repository.
@@ -72,23 +52,15 @@ type Result struct {
 	// Problems are in the order export meets them: the entity files as
 	// the walk finds them, then the schema, then unknown types by ID.
 	Problems []Problem
-}
-
-// SchemaBroken reports whether the schema has problems, so the entities
-// could not be typed.
-func (r *Result) SchemaBroken() bool {
-	for _, p := range r.Problems {
-		if p.Kind == SchemaFile {
-			return true
-		}
-	}
-	return false
+	// SchemaBroken is set when the schema has problems, so the entities
+	// could not be typed.
+	SchemaBroken bool
 }
 
 // Err is the first problem export stops at, or nil.
 func (r *Result) Err() error {
 	for _, p := range r.Problems {
-		if p.Kind.Fatal() {
+		if p.Err != nil {
 			return p.Err
 		}
 	}
@@ -110,34 +82,21 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 		return nil, err
 	}
 	res.Parsed = sc.Entities
-	for _, p := range sc.Problems {
-		var fe *entity.Error
-		var de *entity.DuplicateIDError
-		switch {
-		case errors.As(p, &fe):
-			res.add(Problem{Kind: Frontmatter, Path: fe.Path, Line: fe.Line, Err: p})
-		case errors.As(p, &de):
-			res.add(Problem{Kind: DuplicateID, Path: de.Then, Line: de.ThenLine, Entity: de.ID, Err: p})
-		default:
-			return nil, p
-		}
-	}
-	for _, p := range sc.Partial {
-		res.add(Problem{Kind: Partial, Path: p.Path, Line: p.Line, Err: p})
-	}
+	res.entityProblems(sc)
 
 	s, problems, err := schema.Read(rp.Root)
-	for _, p := range problems {
-		res.add(Problem{Kind: SchemaFile, Path: p.Path, Line: p.Line, Err: p})
-	}
 	if err != nil && len(problems) == 0 {
 		return nil, err
 	}
 	res.Schema = s
+	for _, p := range problems {
+		res.add(Problem{Check: "schema/file", Path: p.Path, Line: p.Line, Msg: p.Msg, Err: p})
+	}
 	for _, p := range s.KeyProblems {
-		res.add(Problem{Kind: SchemaKey, Path: p.Path, Line: p.Line, Err: p})
+		res.add(Problem{Check: "schema/unknown-key", Path: p.Path, Line: p.Line, Msg: p.Msg})
 	}
 	if len(problems) > 0 {
+		res.SchemaBroken = true
 		return res, nil
 	}
 
@@ -148,7 +107,11 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 			continue
 		}
 		line := yamlnode.Lookup(e.Front, "type").Line
-		res.add(Problem{Kind: UnknownType, Path: e.Path, Line: line, Entity: e.ID,
+		msg := fmt.Sprintf("type %q is not declared in schema/", e.Type)
+		if names := s.TypeNames(); len(names) > 0 {
+			msg += " (declared: " + strings.Join(names, ", ") + ")"
+		}
+		res.add(Problem{Check: "schema/unknown-type", Path: e.Path, Line: line, Entity: e.ID, Msg: msg,
 			Err: &model.UnknownTypeError{Path: e.Path, Type: e.Type, Line: line}})
 	}
 	if res.Entities, err = model.Build(s, known); err != nil {
@@ -158,6 +121,54 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 		return nil, err
 	}
 	return res, nil
+}
+
+// entityProblems adds the files that could not be read as entities. Every
+// file declaring a duplicated ID is reported, naming the others, where the
+// walk first found the duplicate.
+func (r *Result) entityProblems(sc *entity.Scanned) {
+	type place struct {
+		path string
+		line int
+	}
+	copies := map[string][]place{}
+	for _, p := range sc.Problems {
+		if de, ok := p.(*entity.DuplicateIDError); ok {
+			if copies[de.ID] == nil {
+				copies[de.ID] = []place{{de.First, de.FirstLine}}
+			}
+			copies[de.ID] = append(copies[de.ID], place{de.Then, de.ThenLine})
+		}
+	}
+	for _, p := range sc.Problems {
+		switch p := p.(type) {
+		case *entity.Error:
+			r.add(Problem{Check: "content/frontmatter", Path: p.Path, Line: p.Line, Msg: p.Msg, Err: p})
+		case *entity.DuplicateIDError:
+			all := copies[p.ID]
+			if all == nil {
+				continue // already reported
+			}
+			delete(copies, p.ID)
+			for i, c := range all {
+				var others []string
+				for j, o := range all {
+					if j != i {
+						others = append(others, o.path)
+					}
+				}
+				prob := Problem{Check: "content/duplicate-id", Path: c.path, Line: c.line, Entity: p.ID,
+					Msg: fmt.Sprintf("duplicate entity ID %s, also in %s", p.ID, strings.Join(others, ", "))}
+				if i == 0 {
+					prob.Err = p
+				}
+				r.add(prob)
+			}
+		}
+	}
+	for _, p := range sc.Partial {
+		r.add(Problem{Check: "content/frontmatter", Path: p.Path, Line: p.Line, Msg: p.Msg})
+	}
 }
 
 func (r *Result) add(p Problem) { r.Problems = append(r.Problems, p) }

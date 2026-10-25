@@ -6,17 +6,13 @@ package validate
 
 import (
 	"cmp"
-	"fmt"
 	"slices"
 	"strings"
 
-	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/export/website"
 	"github.com/dynamatt/provenance/internal/load"
-	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/repo"
-	"github.com/dynamatt/provenance/internal/schema"
 )
 
 // Severity is how a violation affects the gate: errors fail it, warnings
@@ -101,7 +97,7 @@ func Run(rp *repo.Repo) (*Report, error) {
 		return nil, err
 	}
 	r.loadProblems(res)
-	if res.SchemaBroken() {
+	if res.SchemaBroken {
 		if r.RulesSkipped, err = r.skipRules(root, "the schema has errors"); err != nil {
 			return nil, err
 		}
@@ -125,53 +121,10 @@ func Run(rp *repo.Repo) (*Report, error) {
 	return r, nil
 }
 
-// loadProblems reports what loading found, each kind as its built-in
-// check.
+// loadProblems reports what loading found, each under its built-in check.
 func (r *Report) loadProblems(res *load.Result) {
-	type place struct {
-		path string
-		line int
-	}
-	dups := map[string][]place{}
-	var dupIDs []string
 	for _, p := range res.Problems {
-		switch p.Kind {
-		case load.Frontmatter, load.Partial:
-			r.add(Violation{Rule: "content/frontmatter", Severity: Error, Message: p.Err.(*entity.Error).Msg, Path: p.Path, Line: p.Line})
-		case load.DuplicateID:
-			de := p.Err.(*entity.DuplicateIDError)
-			if dups[de.ID] == nil {
-				dupIDs = append(dupIDs, de.ID)
-				dups[de.ID] = []place{{de.First, de.FirstLine}}
-			}
-			dups[de.ID] = append(dups[de.ID], place{de.Then, de.ThenLine})
-		case load.SchemaFile:
-			r.add(Violation{Rule: "schema/file", Severity: Error, Message: p.Err.(*schema.Error).Msg, Path: p.Path, Line: p.Line})
-		case load.SchemaKey:
-			r.add(Violation{Rule: "schema/unknown-key", Severity: Error, Message: p.Err.(*schema.Error).Msg, Path: p.Path, Line: p.Line})
-		case load.UnknownType:
-			msg := fmt.Sprintf("type %q is not declared in schema/", p.Err.(*model.UnknownTypeError).Type)
-			if names := res.Schema.TypeNames(); len(names) > 0 {
-				msg += " (declared: " + strings.Join(names, ", ") + ")"
-			}
-			r.add(Violation{Rule: "schema/unknown-type", Severity: Error, Message: msg, Entity: p.Entity, Path: p.Path, Line: p.Line})
-		}
-	}
-	// Every file declaring a duplicated ID is reported, naming the others.
-	for _, id := range dupIDs {
-		copies := dups[id]
-		for i, c := range copies {
-			var others []string
-			for j, o := range copies {
-				if j != i {
-					others = append(others, o.path)
-				}
-			}
-			r.add(Violation{
-				Rule: "content/duplicate-id", Severity: Error, Entity: id, Path: c.path, Line: c.line,
-				Message: fmt.Sprintf("duplicate entity ID %s, also in %s", id, strings.Join(others, ", ")),
-			})
-		}
+		r.add(Violation{Rule: p.Check, Severity: Error, Message: p.Msg, Entity: p.Entity, Path: p.Path, Line: p.Line})
 	}
 }
 
