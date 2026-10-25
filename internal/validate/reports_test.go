@@ -108,13 +108,15 @@ func TestReportEntities(t *testing.T) {
 }
 
 // A report template that does not parse, or names a missing field, is a
-// content/template violation at its line, and cannot be rendered. Report
+// content/template violation at its line, and cannot be rendered; so is
+// one named like a format, which --output takes as the format. Report
 // templates are never warned of as unused.
 func TestReportTemplateErrors(t *testing.T) {
 	root := reportRepo(t, map[string]string{
 		"parse.tmpl":      "line one\n{{.Summary.Errors}\n",
 		"field.html.tmpl": "<p>ok</p>\n{{range .Violations}}{{.Entity.Title}}{{end}}{{.Summary.Nope}}\n",
 		"fine.tmpl":       "{{.Summary.Errors}}\n",
+		"json.tmpl":       "{{.Summary.Errors}}\n",
 	})
 	write(t, root, ReportsDir+"/notes.txt", "not a template\n")
 	r := runReport(t, root)
@@ -126,13 +128,18 @@ func TestReportTemplateErrors(t *testing.T) {
 	}
 	want := []string{
 		`templates/reports/field.html.tmpl:2: error [content/template] executing "templates/reports/field.html.tmpl" at <.Summary.Nope>: map has no entry for key "Nope"`,
+		`templates/reports/json.tmpl: error [content/template] a report template cannot be named json, which --output takes as the json format`,
 		`templates/reports/parse.tmpl:2: error [content/template] bad character U+007D '}'`,
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
-	if got := renderReport(t, r, "fine"); got != "3\n" {
+	if got := renderReport(t, r, "fine"); got != "4\n" {
 		t.Errorf("fine = %q", got)
+	}
+	var b bytes.Buffer
+	if err := r.WriteOutput(&b, "json", "dev", Stamps{}); err != nil || !strings.Contains(b.String(), `"errors": 4,`) {
+		t.Errorf("WriteOutput json = %q, %v; want the json format", b.String(), err)
 	}
 	var te *TemplateError
 	if err := r.WriteTemplate(&bytes.Buffer{}, "field.html", Stamps{}); !errors.As(err, &te) || te.Line != 2 {
@@ -144,11 +151,11 @@ func TestUnknownReport(t *testing.T) {
 	r := runReport(t, reportRepo(t, map[string]string{"b.tmpl": "", "a.html.tmpl": ""}))
 	var unknown *UnknownReportError
 	err := r.WriteTemplate(&bytes.Buffer{}, "a", Stamps{})
-	if !errors.As(err, &unknown) || err.Error() != `unknown report "a": there is no templates/reports/a.tmpl (reports: a.html, b)` {
+	if !errors.As(err, &unknown) || err.Error() != `unknown report "a": not a format (text, json, junit, sarif) and there is no templates/reports/a.tmpl (reports: a.html, b)` {
 		t.Errorf("err = %v", err)
 	}
 	r = runReport(t, ruleRepo(t, nil))
-	if err := r.WriteTemplate(&bytes.Buffer{}, "../rules/x", Stamps{}); err == nil || err.Error() != `unknown report "../rules/x": there is no templates/reports/../rules/x.tmpl` {
+	if err := r.WriteTemplate(&bytes.Buffer{}, "../rules/x", Stamps{}); err == nil || err.Error() != `unknown report "../rules/x": not a format (text, json, junit, sarif) and there is no templates/reports/../rules/x.tmpl` {
 		t.Errorf("err = %v", err)
 	}
 }

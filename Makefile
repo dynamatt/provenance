@@ -88,6 +88,9 @@ acceptance: build example
 # golden reports say dev instead.
 SARIF_DEV := sed -E '/"name": "provenance",/{n;s/"version": "[^"]*"/"version": "dev"/;}'
 
+# --output flags writing every validate format to $(1).<extension>.
+validate_outputs = $(foreach f,text:txt json:json junit:junit.xml sarif:sarif,--output $(word 1,$(subst :, ,$(f)))=$(1).$(word 2,$(subst :, ,$(f))))
+
 # Rewrite the golden site and the clean validate report from the pinned
 # example, and the reports of testdata/violations. Commit the result with the
 # change that caused it, so the PR shows the difference. The example must
@@ -96,11 +99,9 @@ golden-update: build example
 	rm -rf $(GOLDEN_DIR)
 	cd $(EXAMPLE_DIR) && $(CURDIR)/$(BIN) export website --out $(CURDIR)/$(GOLDEN_DIR) >/dev/null
 	mkdir -p $(VALIDATE_DIR)
-	for f in text:txt json:json junit:junit.xml sarif:sarif; do \
-		(cd $(EXAMPLE_DIR) && $(CURDIR)/$(BIN) validate --format $${f%%:*} --out $(CURDIR)/$(VALIDATE_DIR)/clean.$${f#*:}); \
-		for r in core broken-schema; do \
-			$(BIN) validate --path $(VIOLATIONS_DIR)/$$r --format $${f%%:*} --out $(VALIDATE_DIR)/violations-$$r.$${f#*:} >/dev/null || [ $$? -eq 1 ]; \
-		done; \
+	cd $(EXAMPLE_DIR) && $(CURDIR)/$(BIN) validate $(call validate_outputs,$(CURDIR)/$(VALIDATE_DIR)/clean)
+	for r in core broken-schema; do \
+		$(BIN) validate --path $(VIOLATIONS_DIR)/$$r $(call validate_outputs,$(VALIDATE_DIR)/violations-$$r) || [ $$? -eq 1 ]; \
 	done
 	for f in $(VALIDATE_DIR)/*.sarif; do $(SARIF_DEV) $$f > $$f.tmp && mv $$f.tmp $$f; done
 	@echo "golden site and report rewritten: review 'git diff $(GOLDEN_DIR) $(VALIDATE_DIR)'"

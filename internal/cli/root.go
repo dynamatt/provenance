@@ -152,19 +152,4 @@ func maxArgs(n int) cobra.PositionalArgs {
 	}
 }
 
-// oneOf validates that a string flag holds one of the allowed values.
-func oneOf(c *cobra.Command, flag string, allowed ...string) error {
-	v, err := c.Flags().GetString(flag)
-	if err != nil {
-		return err
-	}
-	for _, a := range allowed {
-		if v == a {
-			return nil
-		}
-	}
-	return exitcode.Usage(fmt.Errorf("%s: invalid --%s %q (want one of: %s)",
-		commandName(c), flag, v, strings.Join(allowed, ", ")))
-}
-
 func noArgs(c *cobra.Command, args []string) error { return maxArgs(0)(c, args) }

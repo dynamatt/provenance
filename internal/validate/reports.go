@@ -17,11 +17,12 @@ import (
 	"github.com/dynamatt/provenance/internal/export/website"
 )
 
-// Report templates (DES-0049): validate --report <name> renders
+// Report templates (DES-0049): validate --output <name> renders
 // templates/reports/<name>.tmpl with the report, through html/template
 // when the name ends .html and text/template otherwise. Validate renders
 // every one, so a template that does not parse, or names a missing field,
-// is a content/template violation.
+// is a content/template violation; so is one named like a format, which
+// --output could never reach.
 
 // ReportsDir is the folder of report templates.
 const ReportsDir = "templates/reports"
@@ -33,14 +34,16 @@ type Stamps struct {
 	Dirty               bool
 }
 
-// UnknownReportError is a --report naming no report template.
+// UnknownReportError is an output name that is neither a format nor a
+// report template.
 type UnknownReportError struct {
 	Name      string
 	Available []string
 }
 
 func (e *UnknownReportError) Error() string {
-	msg := "unknown report " + strconv.Quote(e.Name) + ": there is no " + ReportsDir + "/" + e.Name + ".tmpl"
+	msg := "unknown report " + strconv.Quote(e.Name) + ": not a format (" + strings.Join(Formats, ", ") +
+		") and there is no " + ReportsDir + "/" + e.Name + ".tmpl"
 	if len(e.Available) > 0 {
 		msg += " (reports: " + strings.Join(e.Available, ", ") + ")"
 	}
@@ -65,16 +68,43 @@ func (e *TemplateError) Error() string {
 // Root is the repository the report is about.
 func (r *Report) Root() string { return r.root }
 
-// WriteTemplate renders the report template name with the report and
-// stamps. An unknown name is an *UnknownReportError; a template that
-// fails, a *TemplateError.
-func (r *Report) WriteTemplate(w io.Writer, name string, st Stamps) error {
+// IsFormat reports whether name is one of Formats rather than a report
+// template.
+func IsFormat(name string) bool { return slices.Contains(Formats, name) }
+
+// CheckOutput returns an *UnknownReportError unless name is a format or a
+// report template.
+func (r *Report) CheckOutput(name string) error {
+	if IsFormat(name) {
+		return nil
+	}
 	names, err := reportNames(r.root)
 	if err != nil {
 		return err
 	}
 	if !slices.Contains(names, name) {
-		return &UnknownReportError{Name: name, Available: names}
+		return &UnknownReportError{Name: name, Available: slices.DeleteFunc(names, IsFormat)}
+	}
+	return nil
+}
+
+// WriteOutput writes the output name: a format, or the report template of
+// that name rendered with the stamps. toolVersion is the binary's, for
+// SARIF. An unknown name is an *UnknownReportError; a template that fails,
+// a *TemplateError.
+func (r *Report) WriteOutput(w io.Writer, name, toolVersion string, st Stamps) error {
+	if IsFormat(name) {
+		return r.Write(w, name, toolVersion)
+	}
+	return r.WriteTemplate(w, name, st)
+}
+
+// WriteTemplate renders the report template name with the report and
+// stamps. An unknown name is an *UnknownReportError; a template that
+// fails, a *TemplateError.
+func (r *Report) WriteTemplate(w io.Writer, name string, st Stamps) error {
+	if err := r.CheckOutput(name); err != nil {
+		return err
 	}
 	text, err := readReport(r.root, name)
 	if err != nil {
@@ -89,13 +119,18 @@ func (r *Report) WriteTemplate(w io.Writer, name string, st Stamps) error {
 }
 
 // checkReports renders every report template, without stamps, and reports
-// each that fails.
+// each that fails or has a format's name.
 func (r *Report) checkReports() error {
 	names, err := reportNames(r.root)
 	if err != nil {
 		return err
 	}
 	for _, name := range names {
+		if IsFormat(name) {
+			r.add(Violation{Rule: "content/template", Severity: Error, Path: ReportsDir + "/" + name + ".tmpl",
+				Message: "a report template cannot be named " + name + ", which --output takes as the " + name + " format"})
+			continue
+		}
 		text, err := readReport(r.root, name)
 		if err != nil {
 			return err

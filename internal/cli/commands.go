@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"github.com/dynamatt/provenance/internal/validate"
 
 	"github.com/spf13/cobra"
 
@@ -55,28 +54,25 @@ Each violation is reported at its file and line:
 
   path:line: error|warning [rule-id] message (ENTITY-ID)
 
---format selects the report: text (default), json for tooling, or junit/sarif so a git
-host can show violations natively. --report renders the project's own report from
-templates/reports/<name>.tmpl instead (html/template when the name ends .html,
-otherwise text/template). --out writes the report to a file instead of standard
-output. The exit code is the only guaranteed CI contract; the reports are a
-convenience.
+--output name[=file] writes a report: text, json for tooling, junit or sarif so a git
+host can show violations natively, or the project's own report from
+templates/reports/<name>.tmpl (html/template when the name ends .html, otherwise
+text/template). Repeat it to write several reports from one run; each goes to its
+file, or to standard output when no file is given. With no --output the text report
+goes to standard output. Nothing is written unless every report renders. The exit
+code is the only guaranteed CI contract; the reports are a convenience.
 
 Exit codes: 0 no error-severity violations, 1 violations found, 2 tool or usage error.`,
 		Args: noArgs,
 		PreRunE: func(c *cobra.Command, _ []string) error {
-			if c.Flags().Changed("format") && c.Flags().Changed("report") {
-				return exitcode.Usage(fmt.Errorf("%s: --format cannot be used with --report", commandName(c)))
-			}
-			return oneOf(c, "format", validate.Formats...)
+			_, err := outputs(c)
+			return err
 		},
 		Annotations: inDevelopment,
 		RunE:        runValidate,
 	}
 	c.Flags().String("path", "", "repository `path` to validate (default: the repository containing the current directory)")
-	c.Flags().String("format", "text", "report `format`: text, json, junit or sarif")
-	c.Flags().String("report", "", "render templates/reports/`name`.tmpl instead of a --format")
-	c.Flags().String("out", "", "write the report to `file` instead of standard output")
+	c.Flags().StringArray("output", nil, "write the report `name[=file]`: text, json, junit, sarif or a report template; repeatable (default text to standard output)")
 	return c
 }
 

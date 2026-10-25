@@ -390,7 +390,7 @@ expect 1 '^REQ/REQ-0002\.md:2: error \[content/duplicate-id\] duplicate entity I
 expect 1 '^REQ/copy\.md:2: error \[content/duplicate-id\] duplicate entity ID REQ-0002, also in REQ/REQ-0002\.md \(REQ-0002\)$' "$PROV" validate
 expect 1 '^REQ/half\.md:2: error \[content/frontmatter\] frontmatter has an id but no type, so the file is not read as an entity$' "$PROV" validate
 expect 1 '^4 errors, 1 warning$'          "$PROV" validate
-expect 1 '^validate: 4 errors, 1 warning$' "$PROV" validate --out "$WORK/reports/v.txt"
+expect 1 '^validate: 4 errors, 1 warning$' "$PROV" validate --output text="$WORK/reports/v.txt"
 expect 0 '^4 errors, 1 warning$'          tail -n 1 "$WORK/reports/v.txt"
 git checkout -q -- OCC/OCC-0003.md && rm REQ/copy.md REQ/half.md
 sed -i 's/^type: Risk/type: Rsk/' RSK/RSK-0001.md
@@ -400,7 +400,7 @@ sed -i 's/type: ApprovalStatus/type: AprovalStatus/' schema/Requirement.yaml
 expect 1 '^schema/Requirement\.yaml:20: error \[schema/file\] field "status": unknown type "AprovalStatus"' "$PROV" validate
 expect 1 '^12 rules not run: the schema has errors$' "$PROV" validate
 git checkout -q -- schema/Requirement.yaml
-expect 2 '^validate: invalid --format "xml"' "$PROV" validate --format xml
+expect 2 '^validate: unknown report "xml": not a format \(text, json, junit, sarif\)' "$PROV" validate --output xml
 expect 2 '^validate: not inside a provenance repository' "$PROV" validate --path "$WORK"
 cd "$WORK"
 expect 0 '^0 errors, 1 warning$'          "$PROV" validate --path "$EXAMPLE_DIR/REQ"
@@ -544,18 +544,15 @@ git checkout -q -- rules
 # as text, at the same lines, with the same exit code; the JUnit report
 # conforms to junit-10.xsd (the SARIF report's conformance to the 2.1.0
 # schema is a unit test). Breaking two entities puts both in every format.
-for f in json junit sarif; do
-	expect 0 ''                           "$PROV" validate --format "$f" --out "$WORK/clean.$f"
-done
+expect 0 ''                               "$PROV" validate --output json="$WORK/clean.json" --output junit="$WORK/clean.junit" --output sarif="$WORK/clean.sarif"
 expect 0 'validates$'                     xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/clean.junit"
 expect 0 '<testcase name="risk-benefit-required" classname="rules"></testcase>' cat "$WORK/clean.junit"
 sed -i '/^risk_benefit_analysis:/,/^  "unacceptable"/d' RSK/RSK-0001.md
 sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VER/EVD-0001.md
-expect 1 '"errors": 2,'                   "$PROV" validate --format json
-expect 1 ''                               "$PROV" validate --format junit --out "$WORK/broken.junit"
+expect 1 '"errors": 2,'                   "$PROV" validate --output json
+expect 1 ''                               "$PROV" validate --output junit="$WORK/broken.junit" --output sarif="$WORK/broken.sarif"
 expect 0 'validates$'                     xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/broken.junit"
 expect 0 '<failure type="error" message="risk-benefit analysis required when residual acceptability is unacceptable">RSK/RSK-0001\.md:2: ' cat "$WORK/broken.junit"
-expect 1 ''                               "$PROV" validate --format sarif --out "$WORK/broken.sarif"
 SARIF_FLAT="tr -d ' \n' < $WORK/broken.sarif"
 expect 0 '"ruleId":"equipment-calibration-current".{0,400}"uri":"VER/EVD-0001\.md","uriBaseId":"%SRCROOT%"},"region":\{"startLine":51\}' sh -c "$SARIF_FLAT"
 expect 0 '"ruleId":"risk-benefit-required".{0,400}"uri":"RSK/RSK-0001\.md","uriBaseId":"%SRCROOT%"},"region":\{"startLine":2\}' sh -c "$SARIF_FLAT"
@@ -565,28 +562,39 @@ git checkout -q -- RSK VER
 # site, lists every check and rule (all passed but the REQ-0003 warning)
 # and links each violation to its entity's page; breaking VER-0002's link
 # puts its two violations in it, and in the Markdown pull-request
-# summary. A report template that cannot render is a violation.
+# summary. A report template that cannot render is a violation, and then
+# no output is written. One run writes every --output: the merge gate's
+# SARIF and JUnit reports, the page and the summary, and the text report
+# to the log.
 "$PROV" export website >/dev/null
-expect 0 ''                               "$PROV" validate --report validation.html --out _site/validation.html
+expect 0 ''                               "$PROV" validate --output validation.html=_site/validation.html
 expect 0 ''                               test -f _site/index.html
 VALIDATION_FLAT="tr -d '\\n' < _site/validation.html"
 expect 0 '<code>risk-benefit-required</code><br>[^<]*</td><td>error</td><td><span class="status status-approved">passed</span>' sh -c "$VALIDATION_FLAT"
 expect 0 '<a class="ref" href="entities/REQ-0003\.html" title="[^"]*">REQ-0003</a></td><td><code>REQ/REQ-0003\.md:2</code>' sh -c "$VALIDATION_FLAT"
-expect 0 '^### Design controls: passed$'           "$PROV" validate --report pr-summary.md
-"$PROV" validate --report validation.html >"$WORK/r1.html"
-"$PROV" validate --report validation.html >"$WORK/r2.html"
+expect 0 '^### Design controls: passed$'           "$PROV" validate --output pr-summary.md
+"$PROV" validate --output validation.html >"$WORK/r1.html"
+"$PROV" validate --output validation.html >"$WORK/r2.html"
 expect 0 ''                               diff "$WORK/r1.html" "$WORK/r2.html"
 sed -i 's/^verifies: \[REQ-0002\]/verifies: [REQ-0099]/' VER/VER-0002.md
-expect 1 'validate: 2 errors, 2 warnings$' "$PROV" validate --report validation.html --out _site/validation.html
+expect 1 'validate: 2 errors, 2 warnings$' "$PROV" validate --output validation.html=_site/validation.html
 expect 0 '^2$'                            sh -c "grep -o '<a class=\"ref\" href=\"entities/VER-0002\.html\"' _site/validation.html | wc -l"
 expect 0 ''                               test -f _site/entities/VER-0002.html
-expect 1 '^\| error \| `VER/VER-0002\.md:6` \| `links/unresolved` \| verifies: no entity REQ-0099 \|$' "$PROV" validate --report pr-summary.md
+expect 1 '^\| error \| `VER/VER-0002\.md:6` \| `links/unresolved` \| verifies: no entity REQ-0099 \|$' "$PROV" validate --output pr-summary.md
+mkdir "$WORK/gate"
+expect 1 '^VER/VER-0002\.md:6: error \[links/unresolved\] verifies: no entity REQ-0099 \(VER-0002\)$' "$PROV" validate --output text --output sarif="$WORK/gate/v.sarif" --output junit="$WORK/gate/v.xml" --output pr-summary.md="$WORK/gate/summary.md" --output validation.html="$WORK/gate/validation.html"
+expect 0 '"ruleId": "links/unresolved"'   cat "$WORK/gate/v.sarif"
+expect 0 'validates$'                     xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/gate/v.xml"
+expect 0 '^### Design controls: failed$'  cat "$WORK/gate/summary.md"
+expect 0 'entities/VER-0002\.html'        cat "$WORK/gate/validation.html"
 git checkout -q -- VER
 sed -i 's/{{\.Summary\.Errors}} error/{{.Summary.Failures}} error/' templates/reports/pr-summary.md.tmpl
 expect 1 '^templates/reports/pr-summary\.md\.tmpl:[0-9]+: error \[content/template\] executing .* map has no entry for key "Failures"$' "$PROV" validate
-expect 1 '^validate: report pr-summary\.md: templates/reports/pr-summary\.md\.tmpl:[0-9]+: ' "$PROV" validate --report pr-summary.md
+expect 1 '^validate: report pr-summary\.md: templates/reports/pr-summary\.md\.tmpl:[0-9]+: ' "$PROV" validate --output sarif="$WORK/none.sarif" --output pr-summary.md
+expect 1 ''                               test -e "$WORK/none.sarif"
 git checkout -q -- templates
-expect 2 'unknown report "nope": there is no templates/reports/nope\.tmpl \(reports: pr-summary\.md, validation\.html\)' "$PROV" validate --report nope
+expect 2 'unknown report "nope": not a format \(text, json, junit, sarif\) and there is no templates/reports/nope\.tmpl \(reports: pr-summary\.md, validation\.html\)' "$PROV" validate --output nope
+expect 2 '^validate: --output text and --output pr-summary\.md both write to standard output' "$PROV" validate --output text --output pr-summary.md
 
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
@@ -602,10 +610,10 @@ expect 0 ''                               diff -ru "$GOLDEN_DIR" "$WORK/a"
 "$PROV" validate >"$WORK/v2.txt"
 expect 0 ''                               diff "$WORK/v1.txt" "$WORK/v2.txt"
 expect 0 ''                               diff -u "$VALIDATE_DIR/clean.txt" "$WORK/v1.txt"
-for f in json:json junit:junit.xml sarif:sarif; do
-	"$PROV" validate --format "${f%%:*}" >"$WORK/clean.${f#*:}"
-	[ "${f%%:*}" = sarif ] && sarif_dev "$WORK/clean.sarif" >"$WORK/clean.sarif.dev" && mv "$WORK/clean.sarif.dev" "$WORK/clean.sarif"
-	expect 0 ''                           diff -u "$VALIDATE_DIR/clean.${f#*:}" "$WORK/clean.${f#*:}"
+"$PROV" validate --output json="$WORK/clean.json" --output junit="$WORK/clean.junit.xml" --output sarif="$WORK/clean.sarif"
+sarif_dev "$WORK/clean.sarif" >"$WORK/clean.sarif.dev" && mv "$WORK/clean.sarif.dev" "$WORK/clean.sarif"
+for f in json junit.xml sarif; do
+	expect 0 ''                           diff -u "$VALIDATE_DIR/clean.$f" "$WORK/clean.$f"
 done
 
 # Standing E2 acceptance: every failure validate catches, in
@@ -613,11 +621,11 @@ done
 # testdata/validate/violations-* records, and exits 1 (make golden-update
 # rewrites them); the JUnit reports conform to junit-10.xsd.
 for r in core broken-schema; do
-	for f in text:txt json:json junit:junit.xml sarif:sarif; do
-		out="$WORK/violations-$r.${f#*:}"
-		expect 1 '' "$PROV" validate --path "$VIOLATIONS_DIR/$r" --format "${f%%:*}" --out "$out"
-		[ "${f%%:*}" = sarif ] && sarif_dev "$out" >"$out.dev" && mv "$out.dev" "$out"
-		expect 0 '' diff -u "$VALIDATE_DIR/violations-$r.${f#*:}" "$out"
+	out="$WORK/violations-$r"
+	expect 1 '' "$PROV" validate --path "$VIOLATIONS_DIR/$r" --output text="$out.txt" --output json="$out.json" --output junit="$out.junit.xml" --output sarif="$out.sarif"
+	sarif_dev "$out.sarif" >"$out.sarif.dev" && mv "$out.sarif.dev" "$out.sarif"
+	for f in txt json junit.xml sarif; do
+		expect 0 '' diff -u "$VALIDATE_DIR/violations-$r.$f" "$out.$f"
 	done
 	expect 0 'validates$' xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/violations-$r.junit.xml"
 done
