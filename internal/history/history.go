@@ -13,9 +13,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"maps"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -30,8 +30,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/filesystem"
 	"github.com/go-git/go-git/v5/storage/filesystem/dotgit"
-
-	"github.com/dynamatt/provenance/internal/entity"
 )
 
 // Repo is a component repository's git history. The component may sit in a
@@ -283,14 +281,27 @@ func (d *Dirty) Touches(in Inputs) bool {
 	return in.sets().touches(&Commit{Paths: d.Paths, Types: d.Types})
 }
 
+// Content is what history needs to know about a repository's content that
+// git can't tell it: which working-tree files hold entities, and the types
+// of the entities a file holds. internal/load provides it from its
+// sources, so history knows no entity file format.
+type Content interface {
+	// Files lists the working-tree files that hold entities,
+	// slash-separated and relative to the component root.
+	Files() ([]string, error)
+	// Types lists the entity types path holds; data reads its bytes, and
+	// is only called for a file that can hold entities.
+	Types(path string, data func() ([]byte, error)) ([]string, error)
+}
+
 // WorkingContentHash is HEAD's content hash, suffixed -dirty when the
-// working tree differs from it (Status, with skip), and how it differs.
-func (h *Repo) WorkingContentHash(skip ...string) (string, *Dirty, error) {
+// working tree differs from it (Status), and how it differs.
+func (h *Repo) WorkingContentHash(c Content) (string, *Dirty, error) {
 	hash, err := h.ContentHash(h.HEAD())
 	if err != nil {
 		return "", nil, err
 	}
-	dirty, err := h.Status(skip...)
+	dirty, err := h.Status(c)
 	if err != nil {
 		return "", nil, err
 	}
@@ -302,11 +313,11 @@ func (h *Repo) WorkingContentHash(skip ...string) (string, *Dirty, error) {
 
 // Status compares the working tree with HEAD: the content paths that
 // differ, a committed file changed or deleted, or a file Provenance
-// reads that is not committed (an entity file, or anything in schema/,
-// templates/, rules/ or assets/). A file that differs only by CRLF line
-// endings, as a core.autocrlf checkout writes it, is not a difference.
-// skip are folders never read (the export output folder).
-func (h *Repo) Status(skip ...string) (*Dirty, error) {
+// reads that is not committed (a file c says holds entities, or anything
+// in schema/, templates/, rules/ or assets/). A file that differs only by
+// CRLF line endings, as a core.autocrlf checkout writes it, is not a
+// difference.
+func (h *Repo) Status(c Content) (*Dirty, error) {
 	files, err := h.files(h.HEAD())
 	if err != nil {
 		return nil, err
@@ -339,7 +350,7 @@ func (h *Repo) Status(skip ...string) (*Dirty, error) {
 			dirty = append(dirty, f.path)
 		}
 	}
-	untracked, err := contentFiles(h.root, skip)
+	untracked, err := contentFiles(h.root, c)
 	if err != nil {
 		return nil, err
 	}
@@ -356,21 +367,21 @@ func (h *Repo) Status(skip ...string) (*Dirty, error) {
 	}
 	types := map[string]bool{}
 	for _, p := range d.Paths {
-		if !strings.EqualFold(path.Ext(p), ".md") {
-			continue
+		// As now; a file that can't be read now has been deleted.
+		now, err := c.Types(p, func() ([]byte, error) { return os.ReadFile(filepath.Join(h.root, filepath.FromSlash(p))) })
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return nil, err
 		}
-		if data, err := os.ReadFile(filepath.Join(h.root, filepath.FromSlash(p))); err == nil {
-			if e, _ := entity.Parse(p, data); e != nil {
-				types[e.Type] = true
-			}
+		for _, t := range now {
+			types[t] = true
 		}
 		if f, ok := byPath[p]; ok && f.mode != filemode.Submodule {
-			data, err := h.blob(f.hash)
+			committed, err := c.Types(p, func() ([]byte, error) { return h.blob(f.hash) })
 			if err != nil {
 				return nil, err
 			}
-			if e, _ := entity.Parse(p, data); e != nil {
-				types[e.Type] = true
+			for _, t := range committed {
+				types[t] = true
 			}
 		}
 	}
@@ -386,16 +397,14 @@ func sameContent(work, committed []byte) bool {
 }
 
 // contentFiles lists the working-tree files Provenance reads as content:
-// entity files, .component, and every file under the configuration folders.
-func contentFiles(root string, skip []string) ([]string, error) {
-	entities, err := entity.Discover(root, skip...)
+// the files c says hold entities, .component, and every file under the
+// configuration folders.
+func contentFiles(root string, c Content) ([]string, error) {
+	out, err := c.Files()
 	if err != nil {
 		return nil, err
 	}
-	var out []string
-	for _, e := range entities {
-		out = append(out, e.Path)
-	}
+	out = slices.Clone(out)
 	if _, err := os.Stat(filepath.Join(root, ".component")); err == nil {
 		out = append(out, ".component")
 	}
@@ -441,8 +450,9 @@ type Log struct {
 }
 
 // Log walks the first-parent history from HEAD once, diffing each commit's
-// tree against its parent's.
-func (h *Repo) Log() (*Log, error) {
+// tree against its parent's; content tells it the entity types of the
+// files a commit changed.
+func (h *Repo) Log(content Content) (*Log, error) {
 	tags, err := h.tagsByCommit()
 	if err != nil {
 		return nil, err
@@ -455,7 +465,7 @@ func (h *Repo) Log() (*Log, error) {
 				return nil, err
 			}
 		}
-		cm, err := h.changes(c, parent)
+		cm, err := h.changes(content, c, parent)
 		if err != nil {
 			return nil, err
 		}
@@ -472,7 +482,7 @@ func (h *Repo) Log() (*Log, error) {
 
 // changes lists what c changed against parent (nil for a root commit),
 // under the component root.
-func (h *Repo) changes(c, parent *object.Commit) (*Commit, error) {
+func (h *Repo) changes(content Content, c, parent *object.Commit) (*Commit, error) {
 	tree := func(c *object.Commit) (*object.Tree, error) {
 		if c == nil {
 			return nil, nil
@@ -507,14 +517,16 @@ func (h *Repo) changes(c, parent *object.Commit) (*Commit, error) {
 				continue
 			}
 			cm.Paths = append(cm.Paths, side.Name)
-			if strings.EqualFold(path.Ext(side.Name), ".md") && side.TreeEntry.Mode != filemode.Submodule {
-				data, err := h.blob(side.TreeEntry.Hash)
-				if err != nil {
-					return nil, err
-				}
-				if e, _ := entity.Parse(side.Name, data); e != nil {
-					types[e.Type] = true
-				}
+			if side.TreeEntry.Mode == filemode.Submodule {
+				continue
+			}
+			hash := side.TreeEntry.Hash
+			ts, err := content.Types(side.Name, func() ([]byte, error) { return h.blob(hash) })
+			if err != nil {
+				return nil, err
+			}
+			for _, t := range ts {
+				types[t] = true
 			}
 		}
 	}

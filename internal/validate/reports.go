@@ -13,6 +13,7 @@ import (
 	texttemplate "text/template"
 
 	"github.com/dynamatt/provenance/internal/export/website"
+	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
@@ -51,6 +52,10 @@ func (e *UnknownReportError) Error() string {
 
 // Root is the repository the report is about.
 func (r *Report) Root() string { return r.root }
+
+// Content is what history needs to know of the repository's content, for
+// the stamps of a report.
+func (r *Report) Content() history.Content { return r.repoContent }
 
 // IsFormat reports whether name is one of Formats rather than a report
 // template.

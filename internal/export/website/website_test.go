@@ -7,12 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/export"
-	"github.com/dynamatt/provenance/internal/model"
+	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
-	"github.com/dynamatt/provenance/internal/schema"
 )
 
 const noteSchema = `type: Note
@@ -65,19 +63,14 @@ func input(t *testing.T, files map[string]string) (*export.Input, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := schema.Load(root)
+	res, err := load.Load(r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	parsed, err := entity.Discover(root)
-	if err != nil {
+	if err := res.Err(); err != nil {
 		t.Fatal(err)
 	}
-	built, err := model.Build(s, parsed)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return &export.Input{Repo: r, Schema: s, Entities: built}, root
+	return &export.Input{Repo: r, Schema: res.Schema, Entities: res.Entities}, root
 }
 
 func note(id, front, body string) string {

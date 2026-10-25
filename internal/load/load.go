@@ -7,10 +7,12 @@ package load
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/export"
+	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
@@ -55,6 +57,8 @@ type Result struct {
 	// SchemaBroken is set when the schema has problems, so the entities
 	// could not be typed.
 	SchemaBroken bool
+
+	content *content
 }
 
 // Err is the first problem export stops at, or nil.
@@ -77,18 +81,16 @@ func (r *Result) Input() *export.Input {
 // evaluate the graph, not a problem with its content.
 func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 	res := &Result{Repo: rp}
-	sc, err := entity.Scan(rp.Root, skip...)
-	if err != nil {
-		return nil, err
-	}
-	res.Parsed = sc.Entities
-	res.entityProblems(sc)
-
+	// The schema comes first, since a source may be declared in it; its
+	// problems are reported after the entity files', as export meets them.
 	s, problems, err := schema.Read(rp.Root)
 	if err != nil && len(problems) == 0 {
 		return nil, err
 	}
 	res.Schema = s
+	if err := res.read(sources(s), skip); err != nil {
+		return nil, err
+	}
 	for _, p := range problems {
 		res.add(Problem{Check: "schema/file", Path: p.Path, Line: p.Line, Msg: p.Msg, Err: p})
 	}
@@ -101,7 +103,7 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 	}
 
 	var known []*entity.Entity
-	for _, e := range sc.Entities {
+	for _, e := range res.Parsed {
 		if s.Types[e.Type] != nil {
 			known = append(known, e)
 			continue
@@ -123,52 +125,58 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 	return res, nil
 }
 
-// entityProblems adds the files that could not be read as entities. Every
-// file declaring a duplicated ID is reported, naming the others, where the
-// walk first found the duplicate.
-func (r *Result) entityProblems(sc *entity.Scanned) {
-	type place struct {
-		path string
-		line int
+// Content is what history needs to know of the repository's content: the
+// files the sources read, and the entity types a file holds.
+func (r *Result) Content() history.Content { return r.content }
+
+// ContentOf reads only what history needs of rp, for a command that needs
+// no entities, such as verify content. Folders under skip are not read.
+func ContentOf(rp *repo.Repo, skip ...string) (history.Content, error) {
+	res := &Result{Repo: rp}
+	s, problems, err := schema.Read(rp.Root)
+	if err != nil && len(problems) == 0 {
+		return nil, err
 	}
-	copies := map[string][]place{}
-	for _, p := range sc.Problems {
-		if de, ok := p.(*entity.DuplicateIDError); ok {
-			if copies[de.ID] == nil {
-				copies[de.ID] = []place{{de.First, de.FirstLine}}
+	if err := res.read(sources(s), skip); err != nil {
+		return nil, err
+	}
+	return res.content, nil
+}
+
+// read runs every source, in order, keeping the first entity of each ID.
+// An ID two sources both hold is a content/duplicate-id problem, as two
+// files of one source holding it are.
+func (r *Result) read(srcs []Source, skip []string) error {
+	var files []string
+	byID := map[string]*entity.Entity{}
+	across := map[string][]*entity.DuplicateIDError{}
+	var acrossIDs []string
+	for _, src := range srcs {
+		l, err := src.Load(r.Repo.Root, skip)
+		if err != nil {
+			return err
+		}
+		r.Problems = append(r.Problems, l.Problems...)
+		files = append(files, l.Files...)
+		for _, e := range l.Entities {
+			prev := byID[e.ID]
+			if prev == nil {
+				byID[e.ID] = e
+				r.Parsed = append(r.Parsed, e)
+				continue
 			}
-			copies[de.ID] = append(copies[de.ID], place{de.Then, de.ThenLine})
+			if across[e.ID] == nil {
+				acrossIDs = append(acrossIDs, e.ID)
+			}
+			across[e.ID] = append(across[e.ID], &entity.DuplicateIDError{ID: e.ID, First: prev.Path, Then: e.Path, FirstLine: prev.IDLine(), ThenLine: e.IDLine()})
 		}
 	}
-	for _, p := range sc.Problems {
-		switch p := p.(type) {
-		case *entity.Error:
-			r.add(Problem{Check: "content/frontmatter", Path: p.Path, Line: p.Line, Msg: p.Msg, Err: p})
-		case *entity.DuplicateIDError:
-			all := copies[p.ID]
-			if all == nil {
-				continue // already reported
-			}
-			delete(copies, p.ID)
-			for i, c := range all {
-				var others []string
-				for j, o := range all {
-					if j != i {
-						others = append(others, o.path)
-					}
-				}
-				prob := Problem{Check: "content/duplicate-id", Path: c.path, Line: c.line, Entity: p.ID,
-					Msg: fmt.Sprintf("duplicate entity ID %s, also in %s", p.ID, strings.Join(others, ", "))}
-				if i == 0 {
-					prob.Err = p
-				}
-				r.add(prob)
-			}
-		}
+	for _, id := range acrossIDs {
+		r.Problems = append(r.Problems, duplicates(across[id])...)
 	}
-	for _, p := range sc.Partial {
-		r.add(Problem{Check: "content/frontmatter", Path: p.Path, Line: p.Line, Msg: p.Msg})
-	}
+	slices.SortFunc(r.Parsed, func(a, b *entity.Entity) int { return strings.Compare(a.ID, b.ID) })
+	r.content = newContent(files, srcs)
+	return nil
 }
 
 func (r *Result) add(p Problem) { r.Problems = append(r.Problems, p) }

@@ -125,7 +125,7 @@ func renderOutputs(report *validate.Report, outs []output) ([][]byte, error) {
 	}
 	if needStamps {
 		var err error
-		if st, err = stamps(report.Root()); err != nil {
+		if st, err = stamps(report.Root(), report.Content()); err != nil {
 			return nil, err
 		}
 	}
@@ -159,7 +159,7 @@ func writeReport(path string, data []byte) error {
 // stamps are a report's git stamps: HEAD, and the content hash with
 // whether the working tree differs from it. Outside a git repository there
 // is nothing to stamp.
-func stamps(root string) (validate.Stamps, error) {
+func stamps(root string, content history.Content) (validate.Stamps, error) {
 	h, err := history.Open(root)
 	if errors.Is(err, history.ErrNotRepository) {
 		return validate.Stamps{}, nil
@@ -170,7 +170,7 @@ func stamps(root string) (validate.Stamps, error) {
 	defer h.Close()
 	st := validate.Stamps{GitSHA: h.HEAD()}
 	var dirty *history.Dirty
-	if st.ContentHash, dirty, err = h.WorkingContentHash(); err != nil {
+	if st.ContentHash, dirty, err = h.WorkingContentHash(content); err != nil {
 		return validate.Stamps{}, err
 	}
 	st.Dirty = dirty.Any()

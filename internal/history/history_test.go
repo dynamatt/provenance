@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -66,6 +67,55 @@ func (tr *testRepo) commit(msg string, files map[string]string) string {
 		tr.t.Fatal(err)
 	}
 	return h.String()
+}
+
+// mdContent is the Content of the tests: every .md file under root whose
+// frontmatter names a type holds an entity of that type. Folders in skip
+// are not read.
+type mdContent struct {
+	root string
+	skip []string
+}
+
+var typeLine = regexp.MustCompile(`(?m)^type: (\S+)$`)
+
+func (c mdContent) Files() ([]string, error) {
+	var out []string
+	err := filepath.WalkDir(c.root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() && (d.Name() == ".git" || slices.Contains(c.skip, p)) {
+			return filepath.SkipDir
+		}
+		rel, _ := filepath.Rel(c.root, p)
+		rel = filepath.ToSlash(rel)
+		if !d.IsDir() && strings.HasSuffix(rel, ".md") {
+			ts, err := c.Types(rel, func() ([]byte, error) { return os.ReadFile(p) })
+			if err != nil {
+				return err
+			}
+			if len(ts) > 0 {
+				out = append(out, rel)
+			}
+		}
+		return nil
+	})
+	return out, err
+}
+
+func (mdContent) Types(path string, data func() ([]byte, error)) ([]string, error) {
+	if !strings.HasSuffix(path, ".md") {
+		return nil, nil
+	}
+	b, err := data()
+	if err != nil {
+		return nil, err
+	}
+	if m := typeLine.FindSubmatch(b); m != nil {
+		return []string{string(m[1])}, nil
+	}
+	return nil, nil
 }
 
 func (tr *testRepo) open(sub string) *Repo {
@@ -183,7 +233,7 @@ func TestLinkedWorktree(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	got, dirty, err := h.WorkingContentHash()
+	got, dirty, err := h.WorkingContentHash(mdContent{root: work})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,14 +246,15 @@ func TestStatus(t *testing.T) {
 	tr := newRepo(t)
 	tr.commit("first", base)
 	h := tr.open("")
-	if d, err := h.Status(); err != nil || d.Any() {
+	content := mdContent{root: tr.dir, skip: []string{filepath.Join(tr.dir, "_site")}}
+	if d, err := h.Status(content); err != nil || d.Any() {
 		t.Fatalf("clean checkout: %+v, %v", d, err)
 	}
 
 	// CRLF line endings alone, as core.autocrlf writes them, are not a
 	// change.
 	tr.write(map[string]string{"DOC/DOC-1.md": strings.ReplaceAll(base["DOC/DOC-1.md"], "\n", "\r\n")})
-	if d, _ := h.Status(); d.Any() {
+	if d, _ := h.Status(content); d.Any() {
 		t.Errorf("CRLF-only difference reported dirty: %v", d.Paths)
 	}
 
@@ -216,7 +267,7 @@ func TestStatus(t *testing.T) {
 	if err := os.Remove(filepath.Join(tr.dir, "schema", "Req.yaml")); err != nil {
 		t.Fatal(err)
 	}
-	d, err := h.Status(filepath.Join(tr.dir, "_site"))
+	d, err := h.Status(content)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +290,7 @@ func TestLog(t *testing.T) {
 	if _, err := tr.r.CreateTag("v1", plumbingHash(t, tr, first), nil); err != nil {
 		t.Fatal(err)
 	}
-	l, err := tr.open("").Log()
+	l, err := tr.open("").Log(mdContent{root: tr.dir})
 	if err != nil {
 		t.Fatal(err)
 	}

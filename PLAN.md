@@ -44,7 +44,7 @@
 - [x] E2.10 Report templates
 - [x] E2.11 Epic close-out: gate in CI, docs, release
 - [x] E3.1 One loader
-- [ ] E3.2 Sources and content files
+- [x] E3.2 Sources and content files
 - [ ] E3.3 Values and positions from the source
 - [ ] E3.4 Entity-level history
 - [ ] E3.5 Epic close-out

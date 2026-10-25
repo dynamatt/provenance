@@ -16,10 +16,10 @@ identity, so builds must be reproducible.
 | `internal/cli/` | The cobra command tree: every command from DES-0019 with its arguments, flags and help text. Stubs carry the `notImplementedYet` annotation and return `exitcode.NotImplementedError`. |
 | `internal/exitcode/` | The only place exit codes are decided (`0` success, `1` expected failure via `exitcode.Failed`, `2` everything else). |
 | `internal/repo/` | Finds the repository and reads `.component`. |
-| `internal/entity/` | Parses entity files (frontmatter and body) and discovers them. |
+| `internal/entity/` | An entity as read from its file, and the Markdown file parser (frontmatter and body). |
 | `internal/schema/` | Loads `schema/`: types, fields, enums, records, facets. |
 | `internal/model/` | Entities typed against the schema: values, resolved links, incoming facets. |
-| `internal/load/` | Reads a repository the one way `export` and `validate` both use: entities, schema, typed model and graph, collecting every problem with its kind. |
+| `internal/load/` | Reads a repository the one way `export` and `validate` both use: schema, then entities from each source (`Source`; the Markdown walker is the first), typed model and graph, collecting every problem under its built-in check. Tells `history` which files are content. `load/loadtest` is a second source for tests. |
 | `internal/query/` | Condition grammar, query blocks, calculated fields and the dependency walk, over the Datalog engine in `query/datalog/`. |
 | `internal/tmpl/` | What project templates share, for the site and validation reports: reading, parsing with missing keys as errors, and errors at their file and line. |
 | `internal/markdown/` | Markdown to HTML with wikilinks, embeds, captions and fenced blocks; the caller resolves them. |
