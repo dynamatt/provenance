@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/dynamatt/provenance/internal/markdown"
+	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/query/datalog"
 	"github.com/dynamatt/provenance/internal/schema"
@@ -87,13 +87,14 @@ func Facts(entities []*model.Entity) *datalog.Database {
 }
 
 // CodeBlocks are e's code_blocks rows (schema.CodeBlocks): every fenced
-// block in the Markdown its export renders, its body and text fields, with
-// the language "none" for a bare fence and the opening fence's file line,
-// in file order.
-func CodeBlocks(e *model.Entity) []markdown.CodeBlock {
-	var out []markdown.CodeBlock
-	for _, text := range markdownSources(e) {
-		for _, b := range markdown.CodeBlocks(text) {
+// block its record finds in its body and text fields, with the language
+// "none" for a bare fence and the opening fence's file line, in file order.
+// A text with a problem, such as a misplaced caption, still has its blocks.
+func CodeBlocks(e *model.Entity) []entity.Block {
+	var out []entity.Block
+	for _, text := range textSources(e) {
+		refs, _ := e.Record.Refs(text)
+		for _, b := range refs.CodeBlocks {
 			if b.Lang == "" {
 				b.Lang = "none"
 			}
@@ -101,7 +102,7 @@ func CodeBlocks(e *model.Entity) []markdown.CodeBlock {
 			out = append(out, b)
 		}
 	}
-	slices.SortStableFunc(out, func(a, b markdown.CodeBlock) int { return cmp.Compare(a.Line, b.Line) })
+	slices.SortStableFunc(out, func(a, b entity.Block) int { return cmp.Compare(a.Line, b.Line) })
 	return out
 }
 

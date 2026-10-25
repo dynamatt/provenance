@@ -12,11 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"go.yaml.in/yaml/v4"
-
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/schema"
-	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
 // Entity is a parsed entity with its type and typed field values.
@@ -97,6 +94,10 @@ type Value struct {
 	Targets []*Entity
 	Rows    []Row    // a list's rows, when it has sub-fields
 	Items   []*Value // a list's items, when it names an item type (Field.Elem)
+
+	// Written is what the entity's record writes for the field, and
+	// where; nil when it writes nothing, and for a calculated value.
+	Written *entity.Written
 }
 
 // Row is one list row: a value per sub-field, in schema order.
@@ -119,20 +120,21 @@ func Build(s *schema.Schema, entities []*entity.Entity) ([]*Entity, error) {
 	for _, e := range entities {
 		t := s.Types[e.Type]
 		if t == nil {
-			return nil, &UnknownTypeError{Path: e.Path, Type: e.Type, Line: yamlnode.Lookup(e.Front, "type").Line}
+			return nil, &UnknownTypeError{Path: e.Path, Type: e.Type, Line: e.Record.TypeLine()}
 		}
 		m := &Entity{Entity: e, Schema: t}
+		body, _ := e.Record.Body()
 		for _, f := range t.Fields {
 			var v *Value
 			if f == t.BodyField {
-				v = bodyValue(f, e.Body)
+				v = bodyValue(f, body)
 			} else {
-				v = value(f, yamlnode.Lookup(e.Front, f.Name))
+				v = value(f, e.Record.Value(f))
 			}
 			m.Fields = append(m.Fields, v)
 		}
 		if t.BodyField == nil {
-			m.Body = bodyText(e.Body)
+			m.Body = bodyText(body)
 		}
 		out = append(out, m)
 	}
@@ -203,9 +205,10 @@ func (e *Entity) BodyText() string {
 // BodyFileLine maps a line of BodyText (from 1) to its line in the file.
 // The rendered body has leading blank lines trimmed (bodyText).
 func (e *Entity) BodyFileLine(line int) int {
-	raw := strings.ReplaceAll(e.Entity.Body, "\r\n", "\n")
+	body, first := e.Record.Body()
+	raw := strings.ReplaceAll(body, "\r\n", "\n")
 	lead := len(raw) - len(strings.TrimLeft(raw, "\n"))
-	return e.BodyLine + lead + line - 1
+	return first + lead + line - 1
 }
 
 // TextFileLine maps a line (from 1) of Markdown text rendered from e, its
@@ -219,22 +222,21 @@ func (e *Entity) TextFileLine(text string, line int) int {
 		return v.Present && !v.Invalid && v.Field.Kind == schema.Text && v.Str == text
 	}
 	for _, v := range e.Fields {
-		n := yamlnode.Lookup(e.Front, v.Field.Name)
 		switch {
 		case isText(v):
-			return textLine(n, line)
-		case v.Field.Kind != schema.List || !v.Present || v.Invalid || n == nil || n.Kind != yaml.SequenceNode:
+			return textLine(v.Written, line)
+		case v.Field.Kind != schema.List || !v.Present || v.Invalid:
 		case v.Field.Elem != nil:
-			for i, item := range v.Items {
-				if isText(item) && i < len(n.Content) {
-					return textLine(n.Content[i], line)
+			for _, item := range v.Items {
+				if isText(item) {
+					return textLine(item.Written, line)
 				}
 			}
 		default:
-			for i, row := range v.Rows {
+			for _, row := range v.Rows {
 				for _, cell := range row {
-					if isText(cell) && i < len(n.Content) {
-						return textLine(yamlnode.Lookup(n.Content[i], cell.Field.Name), line)
+					if isText(cell) {
+						return textLine(cell.Written, line)
 					}
 				}
 			}
@@ -243,15 +245,12 @@ func (e *Entity) TextFileLine(text string, line int) int {
 	return 0
 }
 
-// textLine maps line (from 1) of the text in scalar n to its file line.
-func textLine(n *yaml.Node, line int) int {
-	if n == nil {
+// textLine maps line (from 1) of the text written as w to its file line.
+func textLine(w *entity.Written, line int) int {
+	if w == nil || w.TextLine == 0 {
 		return 0
 	}
-	if n.Style&(yaml.LiteralStyle|yaml.FoldedStyle) != 0 {
-		return n.Line + line // content starts after the | or > line
-	}
-	return n.Line + line - 1
+	return w.TextLine + line - 1
 }
 
 func bodyValue(f *schema.Field, body string) *Value {
@@ -266,48 +265,52 @@ func bodyText(body string) string {
 	return strings.Trim(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
 }
 
-func value(f *schema.Field, n *yaml.Node) *Value {
+func value(f *schema.Field, w *entity.Written) *Value {
 	v := &Value{Field: f}
-	if f.Kind == schema.Calculated || n == nil || n.Tag == "!!null" {
+	if f.Kind == schema.Calculated || w == nil {
+		return v
+	}
+	v.Written = w
+	if w.Kind == entity.Null {
 		return v
 	}
 	v.Present = true
 	invalid := func(problem string) *Value {
 		v.Invalid, v.Problem = true, problem
-		v.Raw = source(n)
+		v.Raw = w.SourceText()
 		return v
 	}
 
 	switch f.Kind {
 	case schema.String, schema.Text, schema.Enum:
-		if n.Kind != yaml.ScalarNode || n.Tag != "!!str" {
+		if w.Kind != entity.Text {
 			return invalid("not text")
 		}
-		v.Str = n.Value
+		v.Str = w.Text
 	case schema.Number:
-		if n.Kind != yaml.ScalarNode || (n.Tag != "!!int" && n.Tag != "!!float") {
+		if w.Kind != entity.Number {
 			return invalid("not a number")
 		}
-		num, err := strconv.ParseFloat(strings.ReplaceAll(n.Value, "_", ""), 64)
+		num, err := strconv.ParseFloat(w.Text, 64)
 		if err != nil {
 			return invalid("not a number")
 		}
 		v.Num = num
 	case schema.Boolean:
-		if n.Kind != yaml.ScalarNode || n.Tag != "!!bool" {
+		if w.Kind != entity.Boolean {
 			return invalid("not true or false")
 		}
-		v.Bool = n.Value == "true" || n.Value == "True" || n.Value == "TRUE"
+		v.Bool = w.Text == "true"
 	case schema.Date:
-		if n.Kind != yaml.ScalarNode {
+		if !single(w) {
 			return invalid("not a date")
 		}
-		if _, err := time.Parse("2006-01-02", n.Value); err != nil {
+		if _, err := time.Parse("2006-01-02", w.Text); err != nil {
 			return invalid("not a date (YYYY-MM-DD)")
 		}
-		v.Str = n.Value
+		v.Str = w.Text
 	case schema.Link:
-		ids, ok := linkIDs(f, n)
+		ids, ok := linkIDs(f, w)
 		if !ok {
 			if f.Cardinality == "one" {
 				return invalid("not a single ID")
@@ -317,26 +320,26 @@ func value(f *schema.Field, n *yaml.Node) *Value {
 		v.IDs = ids
 	case schema.List:
 		if f.Elem != nil {
-			if n.Kind != yaml.SequenceNode {
+			if w.Kind != entity.List {
 				return invalid("not a list")
 			}
 			// An item that does not match the item type is marked on the
 			// item, like a cell in a row.
-			for _, item := range n.Content {
+			for _, item := range w.Items {
 				v.Items = append(v.Items, value(f.Elem, item))
 			}
 			break
 		}
-		if n.Kind != yaml.SequenceNode {
+		if w.Kind != entity.List {
 			return invalid("not a list of rows")
 		}
-		for _, rowNode := range n.Content {
-			if rowNode.Kind != yaml.MappingNode {
+		for _, item := range w.Items {
+			if item.Kind != entity.Mapping {
 				return invalid("not a list of rows")
 			}
 			row := make(Row, 0, len(f.Fields))
 			for _, sub := range f.Fields {
-				row = append(row, value(sub, yamlnode.Lookup(rowNode, sub.Name)))
+				row = append(row, value(sub, item.Row.Value(sub)))
 			}
 			v.Rows = append(v.Rows, row)
 		}
@@ -344,35 +347,32 @@ func value(f *schema.Field, n *yaml.Node) *Value {
 	return v
 }
 
-func linkIDs(f *schema.Field, n *yaml.Node) ([]string, bool) {
-	isID := func(n *yaml.Node) bool { return n.Kind == yaml.ScalarNode && n.Tag == "!!str" && n.Value != "" }
+// single reports a value written as one value, of any kind.
+func single(w *entity.Written) bool {
+	switch w.Kind {
+	case entity.Text, entity.Number, entity.Boolean, entity.Scalar, entity.Null:
+		return true
+	}
+	return false
+}
+
+func linkIDs(f *schema.Field, w *entity.Written) ([]string, bool) {
+	isID := func(w *entity.Written) bool { return w.Kind == entity.Text && w.Text != "" }
 	if f.Cardinality == "one" {
-		if !isID(n) {
+		if !isID(w) {
 			return nil, false
 		}
-		return []string{n.Value}, true
+		return []string{w.Text}, true
 	}
-	if n.Kind != yaml.SequenceNode {
+	if w.Kind != entity.List {
 		return nil, false
 	}
-	ids := make([]string, 0, len(n.Content))
-	for _, c := range n.Content {
+	ids := make([]string, 0, len(w.Items))
+	for _, c := range w.Items {
 		if !isID(c) {
 			return nil, false
 		}
-		ids = append(ids, c.Value)
+		ids = append(ids, c.Text)
 	}
 	return ids, true
-}
-
-// source renders a node back to YAML text for display.
-func source(n *yaml.Node) string {
-	if n.Kind == yaml.ScalarNode {
-		return n.Value
-	}
-	b, err := yaml.Marshal(n)
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(b))
 }

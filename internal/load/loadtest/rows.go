@@ -1,24 +1,27 @@
 // Package loadtest is a second source of entities for tests (G6): files
-// holding several entities each, so a test can show that a layer handles
-// entities that are not one Markdown file each.
+// holding several entities each, whose values are typed by their field
+// rather than by how they are written, so a test can show that a layer
+// handles entities that are not one Markdown file each.
 package loadtest
 
 import (
-	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
-
-	"go.yaml.in/yaml/v4"
 
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/load"
-	"github.com/dynamatt/provenance/internal/yamlnode"
+	"github.com/dynamatt/provenance/internal/schema"
 )
 
-// Rows reads every .rows file: a YAML list of entities, each a mapping with
-// its id, its type and its fields. An entity is placed at its row.
+// Rows reads every .rows file: a table of entities, one per line, its
+// cells separated by |. The first line names the columns, id and type
+// among them; an empty cell is not written, and a link or list cell holds
+// its items separated by ;. An entity and each of its values are placed at
+// its line. Blank lines are left out.
 type Rows struct{}
 
 var _ load.Source = Rows{}
@@ -32,12 +35,7 @@ func (Rows) Load(root string, skip []string) (*load.Loaded, error) {
 			return err
 		}
 		if d.IsDir() {
-			for _, s := range skip {
-				if p == s {
-					return filepath.SkipDir
-				}
-			}
-			if d.Name() == ".git" {
+			if slices.Contains(skip, p) || d.Name() == ".git" {
 				return filepath.SkipDir
 			}
 			return nil
@@ -55,14 +53,13 @@ func (Rows) Load(root string, skip []string) (*load.Loaded, error) {
 			return err
 		}
 		out.Files = append(out.Files, rel)
-		entities, err := Parse(rel, data)
-		var fe *entity.Error
-		if errors.As(err, &fe) {
+		entities, fe := Parse(rel, data)
+		if fe != nil {
 			out.Problems = append(out.Problems, load.Problem{Check: "content/frontmatter", Path: rel, Line: fe.Line, Msg: fe.Msg, Err: fe})
 			return nil
 		}
 		out.Entities = append(out.Entities, entities...)
-		return err
+		return nil
 	})
 	return out, err
 }
@@ -75,35 +72,105 @@ func (Rows) Types(path string, data func() ([]byte, error)) ([]string, bool, err
 	if err != nil {
 		return nil, true, err
 	}
-	entities, err := Parse(path, b)
+	entities, fe := Parse(path, b)
+	if fe != nil {
+		return nil, true, fe
+	}
 	var types []string
 	for _, e := range entities {
 		types = append(types, e.Type)
 	}
-	return types, true, err
+	return types, true, nil
 }
 
 // Parse reads the entities of a .rows file.
-func Parse(path string, data []byte) ([]*entity.Entity, error) {
-	var doc yaml.Node
-	if err := yamlnode.Unmarshal(data, 1, &doc); err != nil {
-		line, msg := yamlnode.ErrorLine(err)
-		return nil, &entity.Error{Path: path, Line: line, Msg: msg}
-	}
-	if len(doc.Content) == 0 {
-		return nil, nil
-	}
-	list := doc.Content[0]
-	if list.Kind != yaml.SequenceNode {
-		return nil, &entity.Error{Path: path, Line: list.Line, Msg: "a .rows file is a list of entities"}
-	}
+func Parse(path string, data []byte) ([]*entity.Entity, *entity.Error) {
+	var header []string
 	var out []*entity.Entity
-	for _, row := range list.Content {
-		id, typ := yamlnode.Lookup(row, "id"), yamlnode.Lookup(row, "type")
-		if row.Kind != yaml.MappingNode || id == nil || typ == nil {
-			return nil, &entity.Error{Path: path, Line: row.Line, Msg: "a row needs an id and a type"}
+	for i, line := range strings.Split(string(data), "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue
 		}
-		out = append(out, &entity.Entity{ID: id.Value, Type: typ.Value, Path: path, Raw: data, Front: row})
+		cells := strings.Split(line, "|")
+		for j := range cells {
+			cells[j] = strings.TrimSpace(cells[j])
+		}
+		if header == nil {
+			if !slices.Contains(cells, "id") || !slices.Contains(cells, "type") {
+				return nil, &entity.Error{Path: path, Line: i + 1, Msg: "the first line names the columns, id and type among them"}
+			}
+			header = cells
+			continue
+		}
+		if len(cells) != len(header) {
+			return nil, &entity.Error{Path: path, Line: i + 1, Msg: "a row has one cell per column"}
+		}
+		r := &record{header: header, cells: cells, line: i + 1}
+		out = append(out, &entity.Entity{ID: r.cell("id"), Type: r.cell("type"), Path: path, Record: r})
 	}
 	return out, nil
 }
+
+// record is one row.
+type record struct {
+	header, cells []string
+	line          int
+}
+
+func (r *record) cell(name string) string {
+	if i := slices.Index(r.header, name); i >= 0 {
+		return r.cells[i]
+	}
+	return ""
+}
+
+func (r *record) Value(f *schema.Field) *entity.Written {
+	text := r.cell(f.Name)
+	switch {
+	case text == "":
+		return nil
+	case f.Kind == schema.Link && f.Cardinality != "one", f.Kind == schema.List && f.Elem != nil:
+		item := &schema.Field{Kind: schema.Link}
+		if f.Elem != nil {
+			item = f.Elem
+		}
+		w := &entity.Written{Kind: entity.List, Line: r.line, Source: func() string { return text }}
+		for _, s := range strings.Split(text, ";") {
+			w.Items = append(w.Items, r.single(item, strings.TrimSpace(s)))
+		}
+		return w
+	}
+	return r.single(f, text)
+}
+
+// single is text as a value of f's kind, or as text when it isn't one.
+func (r *record) single(f *schema.Field, text string) *entity.Written {
+	w := &entity.Written{Kind: entity.Text, Text: text, Line: r.line, TextLine: r.line}
+	switch f.Kind {
+	case schema.Number:
+		if _, err := strconv.ParseFloat(text, 64); err == nil {
+			w.Kind = entity.Number
+		}
+	case schema.Boolean:
+		if text == "true" || text == "false" {
+			w.Kind = entity.Boolean
+		}
+	}
+	return w
+}
+
+// Keys are the columns the row fills.
+func (r *record) Keys() []entity.Key {
+	var out []entity.Key
+	for i, name := range r.header {
+		if r.cells[i] != "" {
+			out = append(out, entity.Key{Name: name, Line: r.line, Set: true})
+		}
+	}
+	return out
+}
+
+func (r *record) IDLine() int                       { return r.line }
+func (r *record) TypeLine() int                     { return r.line }
+func (r *record) Body() (string, int)               { return "", 0 }
+func (r *record) Refs(string) (*entity.Refs, error) { return &entity.Refs{}, nil }

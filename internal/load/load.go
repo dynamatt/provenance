@@ -17,7 +17,6 @@ import (
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/schema"
-	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
 // Problem is one problem found while loading.
@@ -108,7 +107,7 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 			known = append(known, e)
 			continue
 		}
-		line := yamlnode.Lookup(e.Front, "type").Line
+		line := e.Record.TypeLine()
 		msg := fmt.Sprintf("type %q is not declared in schema/", e.Type)
 		if names := s.TypeNames(); len(names) > 0 {
 			msg += " (declared: " + strings.Join(names, ", ") + ")"

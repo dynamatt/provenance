@@ -366,8 +366,8 @@ func conditions(cond *query.Condition) []*query.Condition {
 }
 
 // fieldLine is the line where e writes the field name: its key in the
-// frontmatter, or the body's first line for the body field; e's id line
-// when it doesn't write it (absent, a facet, a calculated field, id).
+// record, or the body's first line for the body field; e's id line when it
+// doesn't write it (absent, a facet, a calculated field, id).
 func fieldLine(e *model.Entity, name string) int {
 	if f := e.Schema.BodyField; f != nil && f.Name == name {
 		if v := e.Field(name); v != nil && v.Present {
@@ -376,8 +376,8 @@ func fieldLine(e *model.Entity, name string) int {
 		return e.IDLine()
 	}
 	if name != "id" {
-		for i := 0; i+1 < len(e.Front.Content); i += 2 {
-			if k := e.Front.Content[i]; k.Value == name && e.Front.Content[i+1].Tag != "!!null" {
+		for _, k := range e.Record.Keys() {
+			if k.Name == name && k.Set {
 				return k.Line
 			}
 		}
