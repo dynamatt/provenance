@@ -54,11 +54,11 @@ Each violation is reported at its file and line:
 
   path:line: error|warning [rule-id] message (ENTITY-ID)
 
---output name[=file] writes a report: text, json for tooling, junit or sarif so a git
-host can show violations natively, or the project's own report from
+Each --output names a report: text, json for tooling, junit or sarif so a git host
+can show violations natively, or the project's own report from
 templates/reports/<name>.tmpl (html/template when the name ends .html, otherwise
-text/template). Repeat it to write several reports from one run; each goes to its
-file, or to standard output when no file is given. With no --output the text report
+text/template). Repeat it to write several reports from one run. --output name=file
+writes the report to file; --output name writes it to standard output. With no --output the text report
 goes to standard output. Nothing is written unless every report renders. The exit
 code is the only guaranteed CI contract; the reports are a convenience.
 
@@ -72,7 +72,7 @@ Exit codes: 0 no error-severity violations, 1 violations found, 2 tool or usage 
 		RunE:        runValidate,
 	}
 	c.Flags().String("path", "", "repository `path` to validate (default: the repository containing the current directory)")
-	c.Flags().StringArray("output", nil, "write the report `name[=file]`: text, json, junit, sarif or a report template; repeatable (default text to standard output)")
+	c.Flags().StringArray("output", nil, "report to write, as `name` or name=file: text, json, junit, sarif or a report template; repeatable (default: text to standard output)")
 	return c
 }
 

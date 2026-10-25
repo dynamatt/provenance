@@ -229,7 +229,7 @@ func flagTable(b *strings.Builder, fs *pflag.FlagSet) {
 			flag += " " + varname
 		}
 		def := "—"
-		if f.DefValue != "" && f.DefValue != "false" {
+		if f.DefValue != "" && f.DefValue != "false" && f.DefValue != "[]" {
 			def = "`" + f.DefValue + "`"
 		}
 		fmt.Fprintf(b, "| `%s` | %s | %s |\n", flag, def, cell(usage))
