@@ -1036,6 +1036,8 @@ from `tools/diagrams.py`) where it changes what they show.
 | G4 | Who decodes values and positions | **The source.** Each entity carries a record, an interface with its value for a field and the position of the entity, a field, a list row or a cell. The Markdown record keeps the YAML nodes (which `fmt` needs) and the YAML-tag typing that `model.value` does today; a CSV record would type a cell by its field (C5). `model.Build` and validate's conformance checks use only the interface, and the shared typing rules (date form, enum values, link IDs) stay in `model`. | The alternative, every source producing YAML nodes, would make a CSV cell pretend to be YAML: its tags would be guesses, and conformance would report YAML problems for a file that isn't YAML. |
 | G5 | What history records | **Each commit records the entity IDs it changed beside its paths,** found by parsing both sides of each changed file through its source and comparing entities by ID. `history.Inputs` gains `Entities`; a page's inputs name the entities it shows, and paths only for files that aren't entities (schema, templates, assets, `.component`). An export problem and a violation carry their entity directly. A file moved without changing still counts as changed, as today. | For a Markdown file an entity and its path change together, so output doesn't change; a CSV dump re-exported every month then changes only the rows that differ (C7). Whether a move is a change is the CSV epic's to revisit with DES-0023. |
 | G6 | How the seam is proved | **A test-only second source** that builds entities from a Go table, with positions of its own, run through the loader, `validate`, `export` and history in unit tests. No CSV code in this epic. | Shows the layers no longer assume Markdown before the CSV epic depends on it, without designing CSV ahead of its decisions. |
+| G7 | Who reads history (*proposed 2026-10-25, for Matt*) | **`load`, after the sources, when first asked:** `Result.History()` reads the entity-level log (G5), the dirty state and the content hash once, and everything that stamps output uses it, so `cli` stops opening git itself (`gitContext` for export, `stamps` for validate's reports). A shallow clone is an error, exit 2, when something needs commits the clone cut off; today export on a shallow clone stops with `export: object not found`, which doesn't say why. The graph gets no history facts yet: what a rule can ask of history is the History-in-rules epic's (below). | REQ-0051 and REQ-0115 already ask for rules over history, and REQ-0039 lets a rule depend only on the entity graph, so history has to reach the graph, and that has to go through the loader, which alone knows the sources that parse a commit's files. Reading it only when asked keeps `validate` at the gate, which checks out one commit, working until a rule needs history. |
+| G8 | Problems and checks after loading (*agreed 2026-10-25*, from the DES-0050 diagram) | **One problem type, and the exporter's check through its interface.** `website.Problem` becomes `load.Problem` with its entity, so `validate.go`'s `byPath` goes. `Check` joins the `export.Exporter` interface and `validate` runs it on every registered exporter, not on `website.New()`. An exporter always collects its problems and `export` stops at the first, as with loading (G1), so the `check == nil` branches in `website.run` go. The graph is built only by `load` (`Input.Graph` is required). What templates see of an entity (`EntityData`, `UnresolvedEntity`, `ReportFuncs`) moves out of `export/website` into a package both the site and validate's reports import. The Markdown parse that finds a text value's embeds, query blocks, images and citations comes through the record (G4), so `query` stops importing `markdown` and `assets`. | `validate` imports the website exporter four ways, so a second exporter (PDF) would not be checked at the gate, and report templates depend on the site's package. The dependency walk assuming every text value is Markdown would be wrong for a CSV cell, which renders without wikilinks or embeds (C3). |
 
 Not in this epic: the page pipeline (the first task of Section and item
 references) and one Datalog program for derived values (the first task
@@ -1045,7 +1047,8 @@ table.
 
 **Order:** the loader first (E3.1), since the other tasks change what it
 calls; then sources (E3.2), then values and positions (E3.3), then
-history (E3.4), which needs both.
+history (E3.4), which needs both, then problems and checks (E3.5), which
+needs E3.4's entity on every problem.
 
 ### E3.1 One loader
 
@@ -1096,6 +1099,9 @@ In the example checkout, edit a schema file → `export` marks pages
   its positions.
 - `git grep yamlnode` outside the Markdown source, the schema, rule files
   and query blocks → nothing.
+- The record parses a text value for what it refers to (G8), and the
+  dependency walk uses that: `query` no longer imports `markdown` or
+  `assets`. The test source's text values refer to nothing.
 - Unit tests: every conformance problem in `testdata/violations` is placed
   as before, and the test source's problems are placed at its own
   positions.
@@ -1109,7 +1115,10 @@ entity with a wrong value is reported at its record's position.
 **Deliverables:**
 - History per G5: each commit's changed entity IDs, `Inputs.Entities`, and
   page inputs naming entities.
-- Export problems carry their entity; `validate.go`'s `byPath` goes.
+- If G7 is agreed: `Result.History()`; export's stamps and validate's
+  report stamps come from it, and `gitContext` and `stamps` leave `cli`.
+  A shallow clone fails with exit 2 when history it cut off is needed,
+  naming `fetch-depth: 0`.
 - DES-0023 says a page's inputs are entities and files, if its wording
   needs it (a clarification: last-changed commits don't change).
 - Unit tests on an in-memory git history: a file holding two test-source
@@ -1119,12 +1128,28 @@ entity with a wrong value is reported at its record's position.
 **Check it yourself:** `make ci` passes unchanged: every page keeps its
 last-changed commit and revision history. `go test ./internal/history -run
 Entities -v` → only the edited entity's last-changed commit moves.
+`git clone --depth 1 file://$PWD/.cache/example /tmp/shallow && cd /tmp/shallow && provenance export website`
+→ exit 2, naming `fetch-depth: 0`.
 
-### E3.5 Epic close-out
+### E3.5 Problems and checks
+
+**Deliverables:**
+- Per G8: one problem type, with its entity, and `byPath` gone; `Check`
+  on the `export.Exporter` interface, run by `validate` on every
+  registered exporter; the website exporter always collecting, and its
+  graph fallback gone; template data and functions in their own package.
+- Unit tests: an exporter registered in a test is checked by `validate`;
+  a test-source entity's export problem names the entity.
+
+**Check it yourself:** `make ci` passes unchanged.
+`go list -deps ./internal/validate | grep export/website` → nothing.
+
+### E3.6 Epic close-out
 
 **Deliverables:** `CLAUDE.md`'s *Where things are* lists `internal/load`
 and the sources; the CSV-backed types epic is revised against what
-landed (its tasks 3 and 6 build on E3.2–E3.4). No release of its own: it
+landed (its tasks 3 and 6 build on E3.2–E3.5); DES-0050 and DES-0051
+match the code. No release of its own: it
 ships with the next epic's.
 
 **Check it yourself:** read the CSV epic's rough shape; each task names
@@ -1156,21 +1181,24 @@ order after Epic 2, with the reason it comes where it does:
    inside them.
 7. **`report`** — coverage metrics over the shared query engine.
 8. **`diff`** — rendered/semantic diff between refs.
-9. **`rename`** — ID rewrite across links, wikilinks, tagged references,
+9. **History in rules** — rules ask what changed when, such as evidence
+   older than what it verifies (see below). Before `sign` and
+   `release tag`, whose rules (REQ-0115, REQ-0051) are built on it.
+10. **`rename`** — ID rewrite across links, wikilinks, tagged references,
    query filters and query fields.
-10. **`verify artifact`** — against the E1.14 manifest; includes deciding how
+11. **`verify artifact`** — against the E1.14 manifest; includes deciding how
    the manifest itself is signed.
-11. **`sign` / `sign verify`** — ledger format, then certificate provider, then
+12. **`sign` / `sign verify`** — ledger format, then certificate provider, then
    OIDC device flow; signatures become queryable facts, and the Signature
    Presence rules removed in E2.1 return as queries.
-12. **`component add/update/remove`** — submodules and composed-graph
+13. **`component add/update/remove`** — submodules and composed-graph
    validation.
-13. **`release tag`** — gate plus bill-of-materials; released content becomes
+14. **`release tag`** — gate plus bill-of-materials; released content becomes
    queryable, and Content Frozen After Release returns as a query.
-14. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
+15. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
    fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
    thin client over everything above.
-15. **`plugin`**.
+16. **`plugin`**.
 
 ### CSV-backed entity types (proposed 2026-10-11, for Matt's review)
 
@@ -1420,3 +1448,38 @@ scope:
    `template` given, and a loop with no answer (Q3).
 8. **Close-out:** docs (the schema reference and the template functions),
    release.
+
+### History in rules (proposed 2026-10-25, for Matt's review)
+
+**Goal:** a rule can ask what changed when. The first case: an assurance
+record is evidence for the activity and requirement it verified as they
+were, so a later change to either leaves the evidence stale, and the
+gate should say so. `sign` (a signature goes stale on a new commit,
+REQ-0115) and `release tag` (content frozen after release, REQ-0051)
+are the same question about other entities.
+
+**What it builds on:** E3.4 records which entities each commit changed,
+and G7 has `load` read history once, when asked. This epic puts history
+in the graph as facts and lets conditions use them.
+
+**Decisions (for Matt, before the epic is detailed):**
+
+| # | Decision | Proposal | Why |
+| --- | --- | --- | --- |
+| H1 | How a rule says it | **A condition operator comparing when two entities last changed,** with `^` naming the entity the rule is about, as in a sub-query: on AssuranceRecord, `{field: activity, where: {changed_since: ^}}` finds records whose activity changed after them. History is Datalog facts (an entity changed at a commit, commits ordered), so it composes with the rest of the grammar, and no entity gets implicit fields. | One general mechanism over the graph, and nothing in the files that the author didn't write. |
+| H2 | What "after" means | **Order along the first-parent history of the commit being validated, never commit dates;** a change not yet committed is the newest. | Dates can be set to anything and rebases rewrite them; first-parent order is what export's last-changed commit already uses (DES-0023). |
+| H3 | Squash and rebase merges | **Order is worked out from history when validating; no rule compares a commit hash written in a file.** A rule then gives the same answer whichever merge strategy the host uses. Signatures bind to a commit hash (DES-0040), which a squash merge discards: the `sign` epic must settle this, either by requiring merge commits or by binding a signature to the entity's content. | A record on a pull request branch names commits that a squash merge drops, so a hash-based check would report every squashed record stale. |
+| H4 | Shallow clones | **`validate` fails with exit 2 when a rule needs history the clone cut off,** naming `fetch-depth: 0`; the example's and the DDF's Validate workflows fetch full history from this epic on. | `actions/checkout` fetches one commit by default, and history read from it would make every entity look new: a gate that silently passes or fails is worse than one that stops. |
+| H5 | What counts as a change | **A change to any of the entity's values,** found by comparing the entity on both sides of a commit through its source (E3.4), so reformatting a file doesn't count; REQ-0051's "content fields" may narrow it to some fields per type. | Re-saving or reformatting a protocol must not make every record that verified it stale. |
+
+**Rough shape:**
+
+1. **Design:** DES elements for history facts and the operator; H1–H5 as
+   decided; REQ-0051 and REQ-0115 linked to them.
+2. **Example repo:** a verification record older than a change to its
+   protocol, reported by a rule.
+3. **Facts:** history in the graph, read only when a rule uses it (G7).
+4. **Grammar:** `changed_since`, with `^`.
+5. **validate:** the shallow-clone error (H4); both Validate workflows
+   fetch full history.
+6. **Close-out:** docs (the rules reference), release.
