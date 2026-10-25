@@ -28,7 +28,8 @@ import (
 //	                      type; field holds the same values, but as a set
 //
 // Every entity also has the rows of code_blocks (schema.CodeBlocks), derived
-// from its Markdown, as row and field facts like a declared list's.
+// from the fenced blocks its record finds, as row and field facts like a
+// declared list's.
 //
 // A node is an entity's ID (a string) or a list row (a datalog Node value),
 // so a row's sub-fields and links read exactly like an entity's. Values not

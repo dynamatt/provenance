@@ -179,7 +179,7 @@ func BlockFileError(e *model.Entity, text string, blockLine int, err error) *Fil
 	return &FileError{Path: e.Path, Line: e.TextFileLine(text, line), Msg: msg}
 }
 
-// ContentError is a problem in an entity's Markdown, such as a caption or
+// ContentError is a problem in an entity's text, such as a caption or
 // an image, at its file and line (0 when unknown).
 type ContentError struct {
 	Path string

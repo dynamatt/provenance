@@ -128,7 +128,7 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 }
 
 // Content is what history needs to know of the repository's content: the
-// files the sources read, and the entity types a file holds.
+// files the sources read, and the entities a file holds.
 func (r *Result) Content() history.Content { return r.content }
 
 // ContentOf reads only what history needs of rp, for a command that needs
