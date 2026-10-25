@@ -1029,7 +1029,7 @@ tests, including through the test source (G6).
 | # | Decision | Proposal | Why |
 | --- | --- | --- | --- |
 | G1 | How problems are reported | **The loader collects every problem, as `validate` does today; `export` reports the first,** in today's order and wording. | One pipeline. Export's messages are what users and the acceptance script see, so they must not move. |
-| G2 | Where it lives | **A package `internal/load`.** `load.Repo(root)` returns the repository, schema, typed entities, graph and the problems, each with a kind, its path, line and entity. `validate` keeps the rule IDs: it maps each kind to its built-in check. `export.Input` is built from the result. | Callers stop sequencing packages themselves, and the CLI shrinks to flags and output. |
+| G2 | Where it lives | **A package `internal/load`.** `load.Repo(root)` returns the repository, schema, typed entities, graph and the problems, each named by the built-in check it is reported under, with its path, line and entity (*revised 2026-10-25: not a closed list of kinds that `validate` maps, so a new problem needs no change elsewhere*). `export.Input` is built from the result. | Callers stop sequencing packages themselves, and the CLI shrinks to flags and output. |
 | G3 | What a source is | **An interface the loader runs after the schema:** it lists the files it reads (the content files for the dirty check), loads them into entities with problems, and parses one file's bytes (for a commit's blobs). The first is the Markdown walker, which ignores the schema and still runs when the schema is broken, so load errors keep being reported then. | A CSV source finds its files from the schema, so the schema has to come first. One place answers "is this file content?" and "what entities does it hold?". |
 | G4 | Who decodes values and positions | **The source.** Each entity carries a record, an interface with its value for a field and the position of the entity, a field, a list row or a cell. The Markdown record keeps the YAML nodes (which `fmt` needs) and the YAML-tag typing that `model.value` does today; a CSV record would type a cell by its field (C5). `model.Build` and validate's conformance checks use only the interface, and the shared typing rules (date form, enum values, link IDs) stay in `model`. | The alternative, every source producing YAML nodes, would make a CSV cell pretend to be YAML: its tags would be guesses, and conformance would report YAML problems for a file that isn't YAML. |
 | G5 | What history records | **Each commit records the entity IDs it changed beside its paths,** found by parsing both sides of each changed file through its source and comparing entities by ID. `history.Inputs` gains `Entities`; a page's inputs name the entities it shows, and paths only for files that aren't entities (schema, templates, assets, `.component`). An export problem and a violation carry their entity directly. A file moved without changing still counts as changed, as today. | For a Markdown file an entity and its path change together, so output doesn't change; a CSV dump re-exported every month then changes only the rows that differ (C7). Whether a move is a change is the CSV epic's to revisit with DES-0023. |
@@ -1051,9 +1051,9 @@ history (E3.4), which needs both.
 - `internal/load` per G1–G2: repository, schema, entities, model, graph,
   collecting every problem as `validate` does now.
 - `export` (`cli/export.go`'s `load`) and `validate.Run` use it. `validate`
-  maps problem kinds to its built-in checks; the website check (`Check`)
+  reports each problem under its check; the website check (`Check`)
   receives the loaded input as it does now.
-- `load` has unit tests for each problem kind and for its order.
+- `load` has unit tests for each problem and for its order.
 
 **Check it yourself:** `make ci` passes with no golden or acceptance
 change. `git grep -n 'entity.Discover\|entity.Scan\|schema.Load\|schema.Read' internal/cli internal/validate`
