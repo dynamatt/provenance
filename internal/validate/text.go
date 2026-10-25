@@ -12,15 +12,7 @@ import (
 // then a line when rules were skipped, then the summary.
 func (r *Report) WriteText(w io.Writer) error {
 	for _, v := range r.Violations {
-		loc := v.Path
-		if v.Line > 0 {
-			loc = fmt.Sprintf("%s:%d", v.Path, v.Line)
-		}
-		line := fmt.Sprintf("%s: %s [%s] %s", loc, v.Severity, v.Rule, v.Message)
-		if v.Entity != "" {
-			line += " (" + v.Entity + ")"
-		}
-		if _, err := fmt.Fprintln(w, line); err != nil {
+		if _, err := fmt.Fprintln(w, textLine(v)); err != nil {
 			return err
 		}
 	}

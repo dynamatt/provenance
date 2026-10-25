@@ -149,7 +149,7 @@ func TestUsageErrorsExitTwo(t *testing.T) {
 		{[]string{"sign", "verify", "--all", "REQ-0001"}, `sign verify: unexpected argument "REQ-0001"`},
 		{[]string{"sign", "verify", "--all", "--commit", "abc"}, "sign verify: --commit cannot be used with --all"},
 		{[]string{"sign", "verify", "REQ-0001", "--scope", "x"}, "sign verify: --scope requires --all"},
-		{[]string{"validate", "--format", "xml"}, `validate: invalid --format "xml"`},
+		{[]string{"validate", "--output", "text", "--output", "xml"}, "validate: --output text and --output xml both write to standard output"},
 		{[]string{"verify", "nope"}, `verify: unknown subcommand "nope"`},
 		{[]string{"version", "extra"}, `version: unexpected argument "extra"`},
 		{[]string{"nope"}, `unknown command "nope"`},

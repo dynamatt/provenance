@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/dynamatt/provenance/internal/cli"
+	"github.com/dynamatt/provenance/internal/validate"
 )
 
 func TestOnePagePerCommandPlusIndex(t *testing.T) {
@@ -111,5 +112,15 @@ func TestProseShowsIndentedParagraphsVerbatim(t *testing.T) {
 	want := "Each line is:\n\n```text\npath:line: [rule] *msg*\nsecond\n```\n\nAfter.\n\n"
 	if got != want {
 		t.Errorf("prose()\n got %q\nwant %q", got, want)
+	}
+}
+
+// The validate page lists every built-in check.
+func TestValidatePageListsTheBuiltInChecks(t *testing.T) {
+	pages := generate(cli.NewRootCmd())
+	for _, c := range validate.Checks {
+		if row := "| `" + c.ID + "` | " + string(c.Severity) + " | " + c.Description + " |"; !strings.Contains(pages["validate.md"], row) {
+			t.Errorf("validate.md has no row %q", row)
+		}
 	}
 }

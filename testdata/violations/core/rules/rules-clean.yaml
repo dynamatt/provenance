@@ -1,0 +1,5 @@
+# A rule that passes every rule-file check and matches nothing.
+severity: error
+message: "no widget is WID-9999"
+from: Widget
+where: {field: id, operator: equals, value: WID-9999}

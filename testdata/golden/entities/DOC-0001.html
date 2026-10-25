@@ -25,10 +25,10 @@ of the entities they resolve. Editing <a class="ref" href="REQ-0001.html" title=
 repository updates what this document renders next time it's generated,
 with nothing to keep in sync by hand.</p>
 <h2>Scope</h2>
-<p>This specification covers the closed-loop stimulation control requirements
+<p>This specification covers the <a class="ref" href="DEF-0002.html" title="Closed-loop stimulation">closed-loop stimulation</a> control requirements
 for the NeuroPulse system, decomposed from the user needs in <a class="ref" href="USR-0001.html" title="Reduced need for in-clinic titration visits">USR-0001</a>
 and <a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>. The control loop they constrain is shown in
-<a class="ref xref" href="#caption-control-loop">Figure 1</a>, and the evoked response it regulates on in
+<a class="ref xref" href="#caption-control-loop">Figure 1</a>, and the evoked response (<a class="ref" href="DEF-0001.html" title="Evoked compound action potential">ECAP</a>) it regulates on in
 <a class="ref xref" href="#caption-ecap-response">Figure 2</a>. Closed-loop control on the evoked response follows the
 approach evaluated clinically in [<a class="ref" href="REF-0003.html" title="Long-term safety and efficacy of closed-loop spinal cord stimulation to treat chronic back and leg pain (Evoke): a double-blind, randomised, controlled trial">1</a>].</p>
 <figure class="captioned captioned-figure" id="caption-control-loop">
@@ -104,7 +104,7 @@ limits at each level.</p>
 <tbody>
 <tr>
 <td>System</td>
-<td>8 mA under any single fault</td>
+<td>8 mA under any <a class="ref" href="DEF-0003.html" title="Single fault condition">single fault</a></td>
 <td><a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a></td>
 </tr>
 <tr>
@@ -140,6 +140,25 @@ REQ-0094) rather than duplicated in this document's own query blocks. Risk
 controls follow the process of [<a class="ref" href="REF-0001.html" title="Medical devices — Application of risk management to medical devices">3</a>, clause 7] and are summarised in
 <a class="ref" href="DOC-0002.html" title="Risk Management Summary — NeuroPulse Stimulator">DOC-0002</a>.</p>
 </div>
+<section class="definitions">
+<h2>Definitions</h2>
+<dl>
+<dt id="def-DEF-0002">Closed-loop stimulation</dt>
+<dd><p>Stimulation whose amplitude is adjusted pulse by pulse from a measured
+response of the nerve, rather than held at a programmed value.</p>
+</dd>
+<dt id="def-DEF-0001">Evoked compound action potential (ECAP)</dt>
+<dd><p>The summed electrical response of the nerve fibres a stimulation pulse
+recruits, recorded at a sense electrode shortly after the pulse. Its
+amplitude measures how strongly the pulse activated the nerve.</p>
+<p class="definition-source">Source: Long-term safety and efficacy of closed-loop spinal cord stimulation to treat chronic back and leg pain (Evoke): a double-blind, randomised, controlled trial (<a class="ref" href="REF-0003.html" title="Long-term safety and efficacy of closed-loop spinal cord stimulation to treat chronic back and leg pain (Evoke): a double-blind, randomised, controlled trial">REF-0003</a>)</p></dd>
+<dt id="def-DEF-0003">Single fault condition</dt>
+<dd><p>A condition in which one means of reducing a risk has failed, or one
+abnormal condition is present, while every other protective means still
+works. The system must stay safe in any single fault condition.</p>
+<p class="definition-source">Source: Medical electrical equipment — Part 1: General requirements for basic safety and essential performance (<a class="ref" href="REF-0002.html" title="Medical electrical equipment — Part 1: General requirements for basic safety and essential performance">REF-0002</a>)</p></dd>
+</dl>
+</section>
 <section class="references">
 <h2>References</h2>
 <h3>Internal</h3>
@@ -160,7 +179,8 @@ controls follow the process of [<a class="ref" href="REF-0001.html" title="Medic
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
-<tr><td><code>1e5d961</code></td><td>2026-10-11</td><td>Matt Williams</td><td>E2.1: Rules as queries, no field defaults</td></tr>
+<tr><td><code>3f4b916</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge commit &#39;8068898d3c091ab9a85d211d7a09eb61fc4a1018&#39; into epic/E2-validate</td></tr>
+<tr><td><code>58b2168</code></td><td>2026-10-11</td><td>Matt Williams</td><td>Merge pull request #12 from dynamatt/task/E2.1-validate-design</td></tr>
 <tr><td><code>55388be</code></td><td>2026-10-10</td><td>Matt Williams</td><td>Merge pull request #10 from dynamatt/ddf-references</td></tr>
 <tr><td><code>1b28c4c</code></td><td>2026-10-08</td><td>Matt Williams</td><td>Merge pull request #9 from dynamatt/cite-template</td></tr>
 <tr><td><code>b617654</code></td><td>2026-10-06</td><td>Matt Williams</td><td>Merge pull request #8 from dynamatt/references</td></tr>
@@ -177,7 +197,7 @@ controls follow the process of [<a class="ref" href="REF-0001.html" title="Medic
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>fa69c1a</code> · content hash <code>sha256:3ba2a75debd091b63f59da0483eac6687b7b31b19ddcd9d822457790de559375</code> · this page last changed in <code>1e5d961</code></p>
+<p class="dhf-stamp">Generated from commit <code>a41d6ae</code> · content hash <code>sha256:71044898e2f7dbda73d0407d77a3b792b33b17d5cbaea2c22934371e9bbea3fc</code> · this page last changed in <code>3f4b916</code></p>
 </footer>
 </body>
 </html>

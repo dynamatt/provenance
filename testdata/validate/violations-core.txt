@@ -13,7 +13,7 @@ cases/content-image/violation.md:6: error [content/image] image assets/missing.p
 cases/content-image/violation.md:8: error [content/image] image https://example.com/figure.png: images must be files in the repository, not URLs, so the site works offline (WID-0028)
 cases/content-image/violation.md:10: error [content/image] image ../../../outside.png is outside the repository (WID-0028)
 cases/content-image/violation.md:12: error [content/image] image assets/figure.bmp: the website export does not support this format (supported: .gif, .jpeg, .jpg, .png, .svg, .webp) (WID-0028)
-cases/content-query/violation.md:10: error [content/query] query block: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists) (WID-0026)
+cases/content-query/violation.md:10: error [content/query] query block: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in) (WID-0026)
 cases/content-template/violation.md:8: error [content/template] query block: unknown template "no-such-template": there is no templates/no-such-template.tmpl (named templates: spare, widget-row) (WID-0039)
 cases/content-unrendered-block/violation.md:6: error [content/unrendered-block] mermaid block: this version of Provenance cannot render it, so it would be published as its source (WID-0037)
 cases/content-unrendered-block/violation.md:10: error [content/unrendered-block] drawio block: this version of Provenance cannot render it, so it would be published as its source (WID-0037)
@@ -37,6 +37,12 @@ cases/schema-unknown-field/violation.md:5: error [schema/unknown-field] Widget h
 cases/schema-unknown-field/violation.md:6: error [schema/unknown-field] notes is the Markdown body below the frontmatter, not a frontmatter field (WID-0008)
 cases/schema-unknown-field/violation.md:7: error [schema/unknown-field] used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it (WID-0008)
 cases/schema-unknown-type/violation.md:3: error [schema/unknown-type] type "Gadget" is not declared in schema/ (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget) (GAD-0001)
+rules/Rules_Name_Violation.yaml: error [rules/name] a rule file is named for its ID, in lower-case kebab-case, with .yaml: Rules_Name_Violation.yaml is not
+rules/rules-file-violation.yaml:1: error [rules/file] invalid YAML: did not find expected node content
+rules/rules-message-violation.yaml:1: error [rules/message] no message: the text each violation is reported with
+rules/rules-query-violation.yaml:4: error [rules/query] Widget has no field "colour" (fields: id, type, title, status, due, weight, score, tags, steps, parent, uses, notes, children, used_by, code_blocks)
+rules/rules-severity-violation.yaml:1: error [rules/severity] severity is error or warning, not "fatal"
+rules/rules-unknown-key-violation.yaml:1: error [rules/unknown-key] unknown key "id": a rule's ID is its file name, rules-unknown-key-violation
 schema/DuplicatePrefixA.yaml:1: error [schema/id-format] type DuplicatePrefixA has the id_prefix DUP, which DuplicatePrefixB (schema/DuplicatePrefixB.yaml) also has
 schema/DuplicatePrefixB.yaml:1: error [schema/id-format] type DuplicatePrefixB has the id_prefix DUP, which DuplicatePrefixA (schema/DuplicatePrefixA.yaml) also has
 schema/FormulaViolation.yaml:11: error [schema/formula] field "score": formula: column 1: FormulaViolation has no field "nope" (fields: example_of, weight, score)
@@ -52,4 +58,4 @@ templates/BrokenTemplate.tmpl:2: error [content/template] bad character U+003C '
 templates/NotAType.tmpl: warning [content/template-name] NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used
 templates/_footer.tmpl: warning [content/unknown-override] _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used
 templates/spare.tmpl: warning [content/unused-template] named template spare is not chosen by any query block
-48 errors, 6 warnings
+54 errors, 6 warnings

@@ -1,0 +1,111 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DOC-0003 Design Review Checklist — NeuroPulse Stimulator — NEURO DHF</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="dhf-header">
+<a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
+<span class="dhf-label">Design History File · NEURO</span>
+</header>
+<main class="dhf-main">
+
+<article class="document" id="DOC-0003">
+<h1><span class="id">DOC-0003</span> Design Review Checklist — NeuroPulse Stimulator</h1>
+<p class="document-meta"><span class="status status-draft">draft</span></p>
+<div class="body">
+<h1>Design Review Checklist</h1>
+<p>Each section below is a check the design review makes before a design
+history file is released. Each one is a live query block (provenance-ddf
+DES-0032) asking for what would fail the check, so an empty section is a
+passed check. The same queries are the project's rules in <code>rules/</code>, which
+<code>provenance validate</code> runs at the merge gate (DES-0016): what a rule
+reports is exactly what its section here lists.</p>
+<h2>Equipment calibration</h2>
+<p>Verification evidence recorded with equipment whose calibration was due
+before the test was run (<code>rules/equipment-calibration-current.yaml</code>):</p>
+<p class="query-empty">No VerificationEvidence matches this query.</p>
+<p>The same for validation evidence
+(<code>rules/validation-equipment-calibration-current.yaml</code>):</p>
+<p class="query-empty">No ValidationEvidence matches this query.</p>
+<h2>Evidence before its build</h2>
+<p>Verification evidence executed before the build it names was built
+(<code>rules/evidence-after-build.yaml</code>):</p>
+<p class="query-empty">No VerificationEvidence matches this query.</p>
+<h2>Verification coverage</h2>
+<p>Requirements that no verification protocol verifies yet
+(<code>rules/requirement-verified.yaml</code>, a warning):</p>
+<ul class="query">
+<li><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a></li>
+</ul>
+<p>Verification protocols that verify no requirement
+(<code>rules/protocol-verifies-requirement.yaml</code>):</p>
+<p class="query-empty">No VerificationProtocol matches this query.</p>
+<h2>Risk-benefit analysis</h2>
+<p>Risks whose residual risk is unacceptable but which have no risk-benefit
+analysis (<code>rules/risk-benefit-required.yaml</code>):</p>
+<p class="query-empty">No Risk matches this query.</p>
+<h2>Change types</h2>
+<p>Change requests whose change type is outside the approved categories
+(<code>rules/eco-change-type-valid.yaml</code>):</p>
+<p class="query-empty">No ChangeRequest matches this query.</p>
+<h2>Deprecated user needs</h2>
+<p>Requirements implementing a user need that has been deprecated
+(<code>rules/no-implements-deprecated-need.yaml</code>):</p>
+<p class="query-empty">No Requirement matches this query.</p>
+<h2>Superseded requirements</h2>
+<p>Requirements that a newer requirement supersedes but that are not yet
+deprecated (<code>rules/superseded-entities-deprecated.yaml</code>):</p>
+<p class="query-empty">No Requirement matches this query.</p>
+<h2>Duplicate titles</h2>
+<p>Requirements sharing a title with another, likely a duplicate or a
+copy-paste error (<code>rules/requirement-title-unique.yaml</code>, a warning):</p>
+<p class="query-empty">No Requirement matches this query.</p>
+<h2>Decomposition cycles</h2>
+<p>Requirements that are their own ancestor through <code>parent_requirement</code>,
+followed to any depth (<code>rules/no-requirement-decomposition-cycles.yaml</code>).
+Every requirement on the cycle is listed:</p>
+<p class="query-empty">No Requirement matches this query.</p>
+<h2>Block languages</h2>
+<p>Entities with a fenced block in a language this project doesn't use
+(<code>rules/block-languages.yaml</code>). <code>none</code> is a fence with no language:</p>
+<p class="query-empty">No BuildStandard or ChangeRequest or Component or Definition or Design or Document or OccurrenceLevel or Reference or Requirement or Risk or SeverityLevel or TestEquipment or UserNeed or ValidationEvidence or VerificationEvidence or VerificationProtocol matches this query.</p>
+</div>
+</article>
+
+<section class="dhf-revisions">
+<h2>Revision history</h2>
+<table>
+<thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td><code>03997b4</code></td><td>2026-10-22</td><td>Matt Williams</td><td>Merge pull request #18 from dynamatt/task/E2.7-transitive-code-blocks</td></tr>
+<tr><td><code>3dd7c6b</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #16 from dynamatt/verification-protocol-report</td></tr>
+<tr><td><code>3f4b916</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge commit &#39;8068898d3c091ab9a85d211d7a09eb61fc4a1018&#39; into epic/E2-validate</td></tr>
+<tr><td><code>07c4560</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #13 from dynamatt/task/E2.5-grammar</td></tr>
+<tr><td><code>58b2168</code></td><td>2026-10-11</td><td>Matt Williams</td><td>Merge pull request #12 from dynamatt/task/E2.1-validate-design</td></tr>
+<tr><td><code>55388be</code></td><td>2026-10-10</td><td>Matt Williams</td><td>Merge pull request #10 from dynamatt/ddf-references</td></tr>
+<tr><td><code>1b28c4c</code></td><td>2026-10-08</td><td>Matt Williams</td><td>Merge pull request #9 from dynamatt/cite-template</td></tr>
+<tr><td><code>b617654</code></td><td>2026-10-06</td><td>Matt Williams</td><td>Merge pull request #8 from dynamatt/references</td></tr>
+<tr><td><code>bd98829</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Merge pull request #7 from dynamatt/scope-git-captions</td></tr>
+<tr><td><code>29eb0b6</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Merge pull request #6 from dynamatt/named-templates</td></tr>
+<tr><td><code>2d9182e</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Add DOC-0002, a query block over two types</td></tr>
+<tr><td><code>54de84f</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Add ValidationEvidence, reusing the Equipment record</td></tr>
+<tr><td><code>b6dfc5c</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Lists that name their type: a record, an enum and a built-in type</td></tr>
+<tr><td><code>4cf41f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Make templates/ functional: Requirement page, layout, index, stylesheet</td></tr>
+<tr><td><code>7aee1f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link on the VerificationProtocol side instead</td></tr>
+<tr><td><code>f1c5fe4</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link once, on the Requirement side</td></tr>
+<tr><td><code>32bb0cb</code></td><td>2026-09-26</td><td>Matt Williams</td><td>Initial commit.</td></tr>
+</tbody>
+</table>
+</section>
+</main>
+<footer class="dhf-footer">
+Controlled content, generated from the design repository. Printed copies are uncontrolled.
+<p class="dhf-stamp">Generated from commit <code>a41d6ae</code> · content hash <code>sha256:71044898e2f7dbda73d0407d77a3b792b33b17d5cbaea2c22934371e9bbea3fc</code> · this page last changed in <code>03997b4</code></p>
+</footer>
+</body>
+</html>

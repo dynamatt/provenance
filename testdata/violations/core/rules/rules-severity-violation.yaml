@@ -1,0 +1,4 @@
+severity: fatal
+message: "not error or warning"
+from: Widget
+where: {field: id, operator: equals, value: WID-9999}

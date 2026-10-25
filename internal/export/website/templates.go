@@ -14,6 +14,7 @@ import (
 
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/schema"
+	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
 // Project templates (DES-0031) live in the repository's templates/
@@ -87,12 +88,7 @@ func loadTemplates(root string, s *schema.Schema, check *checker) (*templateSet,
 	sort.Strings(names)
 	for _, name := range names {
 		rel := templatesDir + "/" + name
-		// Line endings are normalized to LF, like entity bodies, so a
-		// Windows core.autocrlf checkout exports the same bytes.
-		read := func() (string, error) {
-			b, err := os.ReadFile(filepath.Join(dir, name))
-			return strings.ReplaceAll(string(b), "\r\n", "\n"), err
-		}
+		read := func() (string, error) { return tmpl.Read(filepath.Join(dir, name)) }
 		switch {
 		case name == "style.css":
 			text, err := read()
@@ -180,18 +176,8 @@ var placeholderFuncs = template.FuncMap{
 // Missing map keys are errors, so a misspelt field fails the export instead
 // of rendering as empty.
 func parse(src source, fm template.FuncMap) (*template.Template, error) {
-	t, err := template.New(src.name).Option("missingkey=error").Funcs(fm).Parse(src.text)
-	if err != nil {
-		return nil, templateError(err)
-	}
-	return t, nil
+	return tmpl.HTML(src.name, src.text, fm)
 }
-
-// TemplateError is a template that failed to parse or render, reported at
-// its own location: templates/Requirement.tmpl:5:12: …
-type TemplateError struct{ Msg string }
-
-func (e *TemplateError) Error() string { return e.Msg }
 
 // templateError reports the innermost failure. An error raised while
 // rendering an embed passes up through every enclosing template; the one the
@@ -209,13 +195,9 @@ func templateError(err error) error {
 	if errors.As(err, &ce) {
 		return ce
 	}
-	var inner *TemplateError
+	var inner *tmpl.Error
 	if errors.As(err, &inner) {
 		return inner
 	}
-	msg := err.Error()
-	if rest, ok := strings.CutPrefix(msg, "template: "); ok {
-		msg = rest
-	}
-	return &TemplateError{Msg: msg}
+	return tmpl.NewError(err, "")
 }

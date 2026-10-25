@@ -3,10 +3,17 @@ Provenance is a GxP-compliant, git-native design control platform that gives pro
 
 ## Status
 
-Pre-release. `provenance export website` is complete: it renders a design
-history file kept in git as a static website, with Documents built from live
-query blocks and wikilinks, calculated fields, numbered captions, reference
-lists and the commit and content hash behind every page.
+Pre-release. Two commands are complete:
+
+- `provenance export website` renders a design history file kept in git as
+  a static website, with Documents built from live query blocks and
+  wikilinks, calculated fields, numbered captions, reference lists and the
+  commit and content hash behind every page.
+- `provenance validate` is the merge gate. It runs the built-in checks and
+  the project's rules, which are queries, and reports every violation at
+  its file and line, as text, JSON, JUnit, SARIF or a project's own report
+  template, all from one run. It exits 1 while any violation is an error.
+
 `provenance verify content` prints the content hash. The other commands are
 planned; [`PLAN.md`](PLAN.md) has the order, and the
 [CLI reference](https://github.com/dynamatt/provenance-website/tree/main/content/docs/cli)

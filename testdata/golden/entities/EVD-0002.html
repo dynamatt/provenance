@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EVD-0002 Execution record — single-fault amplitude ceiling bench test (rev 2) — NEURO DHF</title>
+<title>EVD-0002 Execution record — single-fault amplitude ceiling bench test — NEURO DHF</title>
 <link rel="stylesheet" href="../style.css">
 </head>
 <body>
@@ -14,31 +14,72 @@
 </header>
 <main class="dhf-main">
 
-<article class="entity" id="EVD-0002">
-<p class="entity-type">VerificationEvidence</p>
-<h1><span class="id">EVD-0002</span> Execution record — single-fault amplitude ceiling bench test (rev 2)</h1>
+<article class="evidence" id="EVD-0002">
+<h1><span class="id">EVD-0002</span> Execution record — single-fault amplitude ceiling bench test</h1>
+<p class="evidence-meta">
+<span class="pass-fail pass-fail-pass">pass</span> · executed 2026-08-11 · tests <a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a> at commit <code>145edd3</code>
+</p>
 <table class="fields">
 <tbody>
-<tr><th>Title</th><td>Execution record — single-fault amplitude ceiling bench test (rev 2)</td></tr>
-<tr><th>Tests</th><td><a class="id" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a></td></tr>
-<tr><th>Protocol version</th><td>2</td></tr>
-<tr><th>Execution date</th><td>2026-08-11</td></tr>
-<tr><th>Result</th><td>pass</td></tr>
-<tr><th>Equipment used</th><td><table class="list">
-<thead><tr><th>Name</th><th>Serial number</th><th>Calibration due date</th></tr></thead>
-<tbody>
-<tr><td>Fault-injection lead simulator</td><td>FLS-0042</td><td>2026-10-15</td></tr>
+<tr><th>Build tested</th><td><a class="ref" href="BLD-0002.html" title="Pulse generator, engineering build B2">BLD-0002</a>: Pulse generator, engineering build B2, <strong>HW rev B, FW 1.3.1</strong> — a build of <a class="ref" href="CMP-0001.html" title="NeuroPulse implantable pulse generator">CMP-0001</a></td></tr>
 </tbody>
-</table></td></tr>
+</table>
+<h2>Steps</h2>
+<table class="steps steps-results">
+<thead><tr><th class="step-number">Step</th><th>Description</th><th>Acceptance criteria</th><th>Result</th><th>Pass/Fail</th></tr></thead>
+<tbody>
+<tr>
+<td class="step-number"></td>
+<td><p>Connect the implant's sense electrode through the fault-injection lead simulator, with its current monitor on the stimulation lead. Enable closed-loop control with the amplitude at its configured maximum.</p>
+</td>
+<td><p>The current monitor reads the configured maximum amplitude, within ± 2 %.</p>
+</td>
+<td class="step-result"><p>Current monitor read 7.04 mA against a configured maximum of 7 mA.</p>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Through the test interface, command an amplitude of 10 mA, above the ceiling.</p>
+</td>
+<td><p>Delivered amplitude does not exceed 8 mA.</p>
+</td>
+<td class="step-result"><p>Delivered amplitude held at 7.9 mA; the ceiling engaged.</p>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+<tr>
+<td class="step-number"></td>
+<td><p>Disconnect the sense electrode during active stimulation, hold for 30 seconds and reconnect. Repeat for ten trials.</p>
+</td>
+<td><p>Delivered amplitude does not exceed 8 mA at any time in any of the ten trials.</p>
+</td>
+<td class="step-result"><p>Peak delivered amplitude 7.9 mA across the ten trials. Every trial
+looked like trial 4, in <a class="ref xref" href="#caption-evd-0002-lead-open">Figure 1</a>: with the lead open
+the loop drives amplitude up, and the hardware limit holds it below
+the ceiling until the lead is reconnected.</p>
+<figure class="captioned captioned-figure" id="caption-evd-0002-lead-open">
+<p><img src="../assets/evd-0002-lead-open.svg" alt="Trial 4 on the current monitor"></p>
+<figcaption><span class="caption-number">Figure 1</span> Trial 4 of 10 on the lead simulator (FLS-0042), 2 mA/div, 5 s/div. Delivered amplitude (CH1) against the 8 mA ceiling of <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a> while the sense lead (CH3) is open for 30 s.</figcaption>
+</figure>
+</td>
+<td><span class="pass-fail pass-fail-pass">pass</span></td>
+</tr>
+</tbody>
+</table>
+<h2>Equipment used</h2>
+<table class="list">
+<thead><tr><th>Equipment</th><th>Serial number</th><th>Calibration due date</th></tr></thead>
+<tbody>
+<tr><td><a class="ref" href="EQP-0003.html" title="Fault-injection lead simulator">EQP-0003</a>: Fault-injection lead simulator</td><td>FLS-0042</td><td>2026-10-15</td></tr>
 </tbody>
 </table>
 <h2>Notes</h2>
 <div class="body">
-<p>Executed against protocol revision 2, including the lead-disconnection
-fault-injection step. Delivered amplitude did not exceed 7.9 mA across ten
-trials. If this had instead been executed against revision 1
-(<code>protocol_version: 1</code>), rules/evidence-verified-latest-version.yaml would
-flag it as stale, since 1 &lt; VER-0002's current_version of 2.</p>
+<p>Executed against the protocol as revised by <a class="ref" href="ECO-0001.html" title="Add fault-injection step to single-fault ceiling protocol">ECO-0001</a>, including the
+lead-disconnection fault-injection step. Delivered amplitude did not exceed
+7.9 mA across ten trials. Had <a class="ref" href="BLD-0002.html" title="Pulse generator, engineering build B2">BLD-0002</a>'s <code>build_date</code> been after this
+execution's, rules/evidence-after-build.yaml would flag it.</p>
 </div>
 </article>
 
@@ -47,8 +88,11 @@ flag it as stale, since 1 &lt; VER-0002's current_version of 2.</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
-<tr><td><code>1e5d961</code></td><td>2026-10-11</td><td>Matt Williams</td><td>E2.1: Rules as queries, no field defaults</td></tr>
+<tr><td><code>3dd7c6b</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #16 from dynamatt/verification-protocol-report</td></tr>
+<tr><td><code>3f4b916</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge commit &#39;8068898d3c091ab9a85d211d7a09eb61fc4a1018&#39; into epic/E2-validate</td></tr>
+<tr><td><code>58b2168</code></td><td>2026-10-11</td><td>Matt Williams</td><td>Merge pull request #12 from dynamatt/task/E2.1-validate-design</td></tr>
 <tr><td><code>55388be</code></td><td>2026-10-10</td><td>Matt Williams</td><td>Merge pull request #10 from dynamatt/ddf-references</td></tr>
+<tr><td><code>1b28c4c</code></td><td>2026-10-08</td><td>Matt Williams</td><td>Merge pull request #9 from dynamatt/cite-template</td></tr>
 <tr><td><code>bd98829</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Merge pull request #7 from dynamatt/scope-git-captions</td></tr>
 <tr><td><code>b6dfc5c</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Lists that name their type: a record, an enum and a built-in type</td></tr>
 <tr><td><code>4cf41f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Make templates/ functional: Requirement page, layout, index, stylesheet</td></tr>
@@ -59,7 +103,7 @@ flag it as stale, since 1 &lt; VER-0002's current_version of 2.</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>fa69c1a</code> · content hash <code>sha256:3ba2a75debd091b63f59da0483eac6687b7b31b19ddcd9d822457790de559375</code> · this page last changed in <code>1e5d961</code></p>
+<p class="dhf-stamp">Generated from commit <code>a41d6ae</code> · content hash <code>sha256:71044898e2f7dbda73d0407d77a3b792b33b17d5cbaea2c22934371e9bbea3fc</code> · this page last changed in <code>3dd7c6b</code></p>
 </footer>
 </body>
 </html>

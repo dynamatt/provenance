@@ -8,8 +8,6 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -51,6 +49,14 @@ type Report struct {
 	// RulesSkipped counts the rules not run because the schema they are
 	// checked against has errors.
 	RulesSkipped int
+	// Rules are every rule file, in file name order, run or skipped.
+	Rules []RuleInfo
+
+	// For report templates: the repository's root and component, and
+	// every entity's template data by ID (nil when the schema has errors).
+	root      string
+	component repo.Component
+	entities  map[string]map[string]any
 }
 
 // Errors counts the error-severity violations.
@@ -89,7 +95,7 @@ const RulesDir = "rules"
 // first (REQ-0038). err is an I/O error: the repository could not be read.
 func Run(rp *repo.Repo) (*Report, error) {
 	root := rp.Root
-	r := &Report{}
+	r := &Report{root: root, component: rp.Component}
 	sc, err := entity.Scan(root)
 	if err != nil {
 		return nil, err
@@ -109,7 +115,7 @@ func Run(rp *repo.Repo) (*Report, error) {
 	if len(problems) > 0 {
 		// Every type, field and rule is read against the schema: with part of
 		// it missing, they would report its absence over and over.
-		if r.RulesSkipped, err = countRules(root); err != nil {
+		if r.RulesSkipped, err = r.skipRules(root, "the schema has errors"); err != nil {
 			return nil, err
 		}
 	} else {
@@ -122,6 +128,15 @@ func Run(rp *repo.Repo) (*Report, error) {
 		if err := r.content(&export.Input{Repo: rp, Schema: s, Entities: typed, Graph: graph}); err != nil {
 			return nil, err
 		}
+		if err := r.rules(root, s, graph); err != nil {
+			return nil, err
+		}
+		r.entities = website.EntityData(s, typed)
+	}
+	r.sort()
+	// Report templates are checked against everything else found.
+	if err := r.checkReports(); err != nil {
+		return nil, err
 	}
 	r.sort()
 	return r, nil
@@ -191,24 +206,6 @@ func (r *Report) unknownTypes(s *schema.Schema, entities []*entity.Entity) (know
 		})
 	}
 	return known
-}
-
-// countRules counts the rule files in root/rules.
-func countRules(root string) (int, error) {
-	entries, err := os.ReadDir(filepath.Join(root, RulesDir))
-	if errors.Is(err, os.ErrNotExist) {
-		return 0, nil
-	}
-	if err != nil {
-		return 0, err
-	}
-	n := 0
-	for _, e := range entries {
-		if !e.IsDir() && strings.EqualFold(filepath.Ext(e.Name()), ".yaml") {
-			n++
-		}
-	}
-	return n, nil
 }
 
 // content reports what would stop the website export, and what it would

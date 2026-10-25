@@ -14,6 +14,20 @@ VIOLATIONS_DIR=${VIOLATIONS_DIR:?VIOLATIONS_DIR must point at testdata/violation
 
 failures=0
 
+# The JUnit reports are checked against Jenkins' junit-10.xsd with xmllint
+# (libxml2-utils on Debian and Ubuntu).
+if ! command -v xmllint >/dev/null; then
+	echo "acceptance needs xmllint: install libxml2-utils (apt) or libxml2 (brew)" >&2
+	exit 2
+fi
+SCHEMAS_DIR=$(cd "$(dirname "$0")/../testdata/schemas" && pwd)
+
+# sarif_dev replaces the binary's version in a SARIF report with dev, as
+# the golden reports have it (make golden-update).
+sarif_dev() {
+	sed -E '/"name": "provenance",/{n;s/"version": "[^"]*"/"version": "dev"/;}' "$1"
+}
+
 # expect <exit-code> <extended-regex> <command...>
 # Runs the command, then checks its exit code and that its combined
 # stdout/stderr matches the regex (an empty regex skips the output check).
@@ -94,7 +108,7 @@ expect 1 ''                               grep -q '^verified_by:' REQ/REQ-0001.m
 # REQ-0001's file never names VER-0001, so any link to it on the page comes
 # from the derived verified_by facet (whichever template renders the page).
 expect 0 'href="VER-0001\.html"'            cat _site/entities/REQ-0001.html
-expect 0 '<th>Verifies</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/VER-0001.html
+expect 0 'verifies <a class="ref" href="REQ-0001\.html"' cat _site/entities/VER-0001.html
 expect 0 '<th>Implemented by</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/USR-0001.html
 expect 0 '<td>BES-2201</td>'                cat _site/entities/EVD-0001.html
 expect 0 '<td>PCP-0087</td>'                cat _site/entities/EVD-0001.html
@@ -161,7 +175,7 @@ sed -i.orig 's/^status: approved/status: draft/' REQ/REQ-0002.md
 expect 1 '' grep -q 'data-entity="REQ-0002"' _site/entities/DOC-0001.html
 mv REQ/REQ-0002.md.orig REQ/REQ-0002.md
 sed -i.orig 's/operator: equals/operator: "="/' DOC/DOC-0001.md
-expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: query block: unknown operator "=" \(valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists\)$' "$PROV" export website
+expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: query block: unknown operator "=" \(valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in\)$' "$PROV" export website
 mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
 
 # E1.9: calculated fields. RSK-0001's row_rating is severity × occurrence
@@ -266,8 +280,8 @@ expect 0 '<a class="ref xref" href="#caption-control-loop">Figure 1</a>' cat _si
 expect 0 '<a class="ref xref" href="#caption-ecap-response">Figure 2</a>' cat _site/entities/DOC-0001.html
 expect 0 '<span class="caption-number">Table 1</span> Stimulation amplitude limits by level\.' cat _site/entities/DOC-0001.html
 expect 0 '<img src="\.\./assets/control-loop\.svg"' cat _site/entities/DOC-0001.html
-expect 0 '<a class="ref xref" href="#caption-bench-setup">Figure 1</a>' cat _site/entities/EVD-0001.html
-expect 0 '^bench-setup\.jpg control-loop\.svg ecap-response\.png $' sh -c "ls _site/assets | tr '\\n' ' '"
+expect 0 '<a class="ref xref" href="#caption-bench-setup">Figure 3</a>' cat _site/entities/EVD-0001.html
+expect 0 '^bench-setup\.jpg control-loop\.svg ecap-response\.png evd-0001-profile-1\.svg evd-0001-pulse\.svg evd-0002-lead-open\.svg $' sh -c "ls _site/assets | tr '\\n' ' '"
 expect 0 '' cmp assets/ecap-response.png _site/assets/ecap-response.png
 cp DOC/DOC-0001.md "$WORK/DOC-0001.md"
 python3 - <<'PY'
@@ -367,18 +381,18 @@ git worktree remove --force "$WORK/worktree"
 # copy of a duplicated ID, an unknown type, a schema problem (which skips
 # the rules). Tool and usage errors exit 2. --out writes the report to a
 # file; --path validates another repository.
-expect 0 '^0 errors, 0 warnings$'         "$PROV" validate
+expect 0 '^0 errors, 1 warning$'          "$PROV" validate
 cp REQ/REQ-0002.md REQ/copy.md
-sed -i '2s/.*/id: ECO-0001: x/' ECO/ECO-0001.md
+sed -i '2s/.*/id: OCC-0003: x/' OCC/OCC-0003.md
 printf -- '---\nid: REQ-0099\ntitle: no type\n---\n' > REQ/half.md
-expect 1 '^ECO/ECO-0001\.md:2: error \[content/frontmatter\] invalid frontmatter: mapping values are not allowed in this context$' "$PROV" validate
+expect 1 '^OCC/OCC-0003\.md:2: error \[content/frontmatter\] invalid frontmatter: mapping values are not allowed in this context$' "$PROV" validate
 expect 1 '^REQ/REQ-0002\.md:2: error \[content/duplicate-id\] duplicate entity ID REQ-0002, also in REQ/copy\.md \(REQ-0002\)$' "$PROV" validate
 expect 1 '^REQ/copy\.md:2: error \[content/duplicate-id\] duplicate entity ID REQ-0002, also in REQ/REQ-0002\.md \(REQ-0002\)$' "$PROV" validate
 expect 1 '^REQ/half\.md:2: error \[content/frontmatter\] frontmatter has an id but no type, so the file is not read as an entity$' "$PROV" validate
-expect 1 '^4 errors, 0 warnings$'         "$PROV" validate
-expect 1 '^validate: 4 errors, 0 warnings$' "$PROV" validate --out "$WORK/reports/v.txt"
-expect 0 '^4 errors, 0 warnings$'         tail -n 1 "$WORK/reports/v.txt"
-git checkout -q -- ECO/ECO-0001.md && rm REQ/copy.md REQ/half.md
+expect 1 '^4 errors, 1 warning$'          "$PROV" validate
+expect 1 '^validate: 4 errors, 1 warning$' "$PROV" validate --output text="$WORK/reports/v.txt"
+expect 0 '^4 errors, 1 warning$'          tail -n 1 "$WORK/reports/v.txt"
+git checkout -q -- OCC/OCC-0003.md && rm REQ/copy.md REQ/half.md
 sed -i 's/^type: Risk/type: Rsk/' RSK/RSK-0001.md
 expect 1 '^RSK/RSK-0001\.md:3: error \[schema/unknown-type\] type "Rsk" is not declared in schema/ ' "$PROV" validate
 git checkout -q -- RSK/RSK-0001.md
@@ -386,11 +400,10 @@ sed -i 's/type: ApprovalStatus/type: AprovalStatus/' schema/Requirement.yaml
 expect 1 '^schema/Requirement\.yaml:20: error \[schema/file\] field "status": unknown type "AprovalStatus"' "$PROV" validate
 expect 1 '^12 rules not run: the schema has errors$' "$PROV" validate
 git checkout -q -- schema/Requirement.yaml
-expect 2 '^validate: invalid --format "xml"' "$PROV" validate --format xml
-expect 2 '^validate --format sarif: not implemented yet$' "$PROV" validate --format sarif
+expect 2 '^validate: unknown report "xml": not a format \(text, json, junit, sarif\)' "$PROV" validate --output xml
 expect 2 '^validate: not inside a provenance repository' "$PROV" validate --path "$WORK"
 cd "$WORK"
-expect 0 '^0 errors, 0 warnings$'         "$PROV" validate --path "$EXAMPLE_DIR/REQ"
+expect 0 '^0 errors, 1 warning$'          "$PROV" validate --path "$EXAMPLE_DIR/REQ"
 cd "$EXAMPLE_DIR"
 
 # E2.3: schema conformance. Each entity is checked against its type and
@@ -411,14 +424,14 @@ sed -i 's/^\(    type: ApprovalStatus\)/\1\n    default: draft/' schema/Design.y
 expect 1 '^schema/Design\.yaml:[0-9]+: error \[schema/unknown-key\] field "status": unknown key "default": fields have no defaults' "$PROV" validate
 git checkout -q -- schema/Design.yaml
 sed -i 's/^execution_date: .*/execution_date: 2026-13-04/' VER/EVD-0001.md
-expect 1 '^VER/EVD-0001\.md:7: error \[schema/invalid-value\] execution_date: not a date \(YYYY-MM-DD\), got 2026-13-04 \(EVD-0001\)$' "$PROV" validate
+expect 1 '^VER/EVD-0001\.md:8: error \[schema/invalid-value\] execution_date: not a date \(YYYY-MM-DD\), got 2026-13-04 \(EVD-0001\)$' "$PROV" validate
 git checkout -q -- VER/EVD-0001.md
 sed -i 's/^id: DES-0001/id: DES-01/' DES/DES-0001.md
 expect 1 '^DES/DES-0001\.md:2: error \[schema/id-format\] ID DES-01 is not DES-NNNN' "$PROV" validate
 git checkout -q -- DES/DES-0001.md
 printf 'enum: Unused\nvalues: [a]\n' > schema/enums/Unused.yaml
 expect 0 '^schema/enums/Unused\.yaml:1: warning \[schema/unused-enum\] enum Unused is not used by any field$' "$PROV" validate
-expect 0 '^0 errors, 1 warning$'               "$PROV" validate
+expect 0 '^0 errors, 2 warnings$'              "$PROV" validate
 rm schema/enums/Unused.yaml
 
 # E2.4: content and links. validate renders the site as export does but
@@ -434,7 +447,7 @@ expect 1 '^DOC/DOC-0001\.md:34: error \[content/image\] image assets/missing\.pn
 expect 1 '^DOC/DOC-0001\.md:52: error \[content/query\] query block: unknown operator "="' "$PROV" validate
 expect 1 '^DOC/DOC-0001\.md:65: error \[links/unresolved\] \[\[REQ-0999\]\]: no entity REQ-0999 \(DOC-0001\)$' "$PROV" validate
 expect 1 '^DOC/DOC-0001\.md:[0-9]+: error \[content/unrendered-block\] mermaid block: ' "$PROV" validate
-expect 1 '^4 errors, 0 warnings$'          "$PROV" validate
+expect 1 '^4 errors, 1 warning$'           "$PROV" validate
 expect 2 '^export: DOC/DOC-0001\.md:52: query block: unknown operator "="' "$PROV" export website --out "$WORK/broken"
 git checkout -q -- DOC/DOC-0001.md
 sed -i 's/^implements: \[USR-0001\]/implements: [REQ-0002]/' REQ/REQ-0001.md
@@ -444,6 +457,145 @@ printf 'x\n' > templates/spare.tmpl
 expect 0 '^templates/spare\.tmpl: warning \[content/unused-template\] named template spare is not chosen by any query block$' "$PROV" validate
 rm templates/spare.tmpl
 
+# E2.5: the grammar's sub-queries, ^name, value_of, missing and not_in.
+# DOC-0003 lists what would fail each design review check: nothing while the
+# example passes, but for REQ-0003's open verification (E2.6); a stale
+# calibration row, or evidence run before the build it tested, appears in
+# its section. The removed forms are reported with the form that replaced them.
+"$PROV" export website >/dev/null
+expect 0 '^11$'                           sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VER/EVD-0001.md
+sed -i 's/^build_date: 2026-08-06/build_date: 2026-08-20/' BLD/BLD-0002.md
+"$PROV" export website >/dev/null
+DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
+expect 0 '>Equipment calibration</h2>.*href="EVD-0001\.html".*>Evidence before its build</h2>.*href="EVD-0002\.html".*>Verification coverage</h2>' sh -c "$DOC3_FLAT"
+expect 0 '^9$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+git checkout -q -- VER BLD
+sed -i 's/^  field: equipment_used/  field: {list: equipment_used, subfield: calibration_due_date}/' DOC/DOC-0003.md
+expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: \{list: L, subfield: S\} is now a sub-query: \{field: L, where: \{field: S, …\}\} \(DOC-0003\)$' "$PROV" validate
+git checkout -q -- DOC/DOC-0003.md
+
+# E2.6: aggregation, and sub-queries on from. DOC-0003 lists REQ-0003 as
+# unverified (a count over the verified_by reverse link); removing VER-0002's
+# link adds REQ-0002 there and VER-0002 under protocols verifying nothing (a
+# count over a link); a copied title puts both requirements under duplicate
+# titles (another requirement, found by from, with an equal ^title).
+"$PROV" export website >/dev/null
+DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
+expect 0 '>Verification coverage</h2><p>[^<]*<code>[^<]*</code>[^<]*</p><ul class="query"><li><a class="ref" href="REQ-0003\.html"' sh -c "$DOC3_FLAT"
+sed -i '/^verifies: \[REQ-0002\]/d' VER/VER-0002.md
+sed -i 's/^title: Amplitude ceiling — subsystem allocation/title: Single-fault amplitude ceiling/' REQ/REQ-0003.md
+"$PROV" export website >/dev/null
+expect 0 '>Verification coverage</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html".*href="VER-0002\.html".*>Risk-benefit analysis</h2>' sh -c "$DOC3_FLAT"
+expect 0 '>Duplicate titles</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html"' sh -c "$DOC3_FLAT"
+git checkout -q -- VER REQ
+sed -i 's/^  from: Requirement/  from: Requirment/' DOC/DOC-0003.md
+expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: from: unknown type "Requirment" ' "$PROV" validate
+git checkout -q -- DOC/DOC-0003.md
+
+# E2.7: transitive links and code_blocks. DOC-0003's decomposition-cycle
+# and block-language sections are empty; making REQ-0003, which refines
+# REQ-0002, REQ-0002's parent closes a cycle that lists both (a link
+# followed to any depth), and a python block lists the entity it is in.
+"$PROV" export website >/dev/null
+expect 0 '^11$'                           sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+sed -i 's/^order: 2/order: 2\nparent_requirement: REQ-0003/' REQ/REQ-0002.md
+printf '\n```python\nprint("amplitude")\n```\n' >> DES/DES-0001.md
+"$PROV" export website >/dev/null
+DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
+expect 0 '>Decomposition cycles</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html".*>Block languages</h2>.*href="DES-0001\.html"' sh -c "$DOC3_FLAT"
+expect 0 '^9$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+git checkout -q -- REQ DES
+sed -i 's/^  transitive: true/  transitive: yes/' DOC/DOC-0003.md
+expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: transitive is true or false \(DOC-0003\)$' "$PROV" validate
+git checkout -q -- DOC/DOC-0003.md
+
+# E2.8: rule files. The example's rules run at the gate: REQ-0003's open
+# verification is a warning, and each break from E2.5–E2.7 is a violation
+# at the line D8 gives: a missing field at the id, a list row at the row,
+# an aggregate over an absent reverse link at the id, a cycle at each
+# member's link. A rule file with a problem is reported at its line and
+# skipped, so its own violations go.
+expect 0 '^REQ/REQ-0003\.md:2: warning \[requirement-verified\] requirement missing verification \(REQ-0003\)$' "$PROV" validate
+sed -i '/^risk_benefit_analysis:/,/^  "unacceptable"/d' RSK/RSK-0001.md
+expect 1 '^RSK/RSK-0001\.md:2: error \[risk-benefit-required\] risk-benefit analysis required when residual acceptability is unacceptable \(RSK-0001\)$' "$PROV" validate
+git checkout -q -- RSK
+sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VER/EVD-0001.md
+expect 1 '^VER/EVD-0001\.md:51: error \[equipment-calibration-current\] equipment calibration was not current at time of test execution \(EVD-0001\)$' "$PROV" validate
+git checkout -q -- VER
+sed -i '/^verifies: \[REQ-0002\]/d' VER/VER-0002.md
+expect 1 '^VER/VER-0002\.md:2: error \[protocol-verifies-requirement\] verification protocol not linked to any requirement \(VER-0002\)$' "$PROV" validate
+expect 1 '^REQ/REQ-0002\.md:2: warning \[requirement-verified\] requirement missing verification \(REQ-0002\)$' "$PROV" validate
+expect 1 '^1 error, 2 warnings$'           "$PROV" validate
+git checkout -q -- VER
+sed -i 's/^order: 2/order: 2\nparent_requirement: REQ-0003/' REQ/REQ-0002.md
+expect 1 '^REQ/REQ-0002\.md:9: error \[no-requirement-decomposition-cycles\] ' "$PROV" validate
+expect 1 '^REQ/REQ-0003\.md:6: error \[no-requirement-decomposition-cycles\] ' "$PROV" validate
+git checkout -q -- REQ
+sed -i 's/^severity: warning/severity: fatal/' rules/requirement-verified.yaml
+expect 1 '^rules/requirement-verified\.yaml:4: error \[rules/severity\] severity is error or warning, not "fatal"$' "$PROV" validate
+expect 1 '^1 error, 0 warnings$'           "$PROV" validate
+git checkout -q -- rules
+printf 'id: requirement-verified\n' >> rules/requirement-verified.yaml
+expect 1 '^rules/requirement-verified\.yaml:[0-9]+: error \[rules/unknown-key\] unknown key "id": a rule.s ID is its file name, requirement-verified$' "$PROV" validate
+git checkout -q -- rules
+
+# E2.9: report formats. json, junit and sarif report the same violations
+# as text, at the same lines, with the same exit code; the JUnit report
+# conforms to junit-10.xsd (the SARIF report's conformance to the 2.1.0
+# schema is a unit test). Breaking two entities puts both in every format.
+expect 0 ''                               "$PROV" validate --output json="$WORK/clean.json" --output junit="$WORK/clean.junit" --output sarif="$WORK/clean.sarif"
+expect 0 'validates$'                     xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/clean.junit"
+expect 0 '<testcase name="risk-benefit-required" classname="rules"></testcase>' cat "$WORK/clean.junit"
+sed -i '/^risk_benefit_analysis:/,/^  "unacceptable"/d' RSK/RSK-0001.md
+sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VER/EVD-0001.md
+expect 1 '"errors": 2,'                   "$PROV" validate --output json
+expect 1 ''                               "$PROV" validate --output junit="$WORK/broken.junit" --output sarif="$WORK/broken.sarif"
+expect 0 'validates$'                     xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/broken.junit"
+expect 0 '<failure type="error" message="risk-benefit analysis required when residual acceptability is unacceptable">RSK/RSK-0001\.md:2: ' cat "$WORK/broken.junit"
+SARIF_FLAT="tr -d ' \n' < $WORK/broken.sarif"
+expect 0 '"ruleId":"equipment-calibration-current".{0,400}"uri":"VER/EVD-0001\.md","uriBaseId":"%SRCROOT%"},"region":\{"startLine":51\}' sh -c "$SARIF_FLAT"
+expect 0 '"ruleId":"risk-benefit-required".{0,400}"uri":"RSK/RSK-0001\.md","uriBaseId":"%SRCROOT%"},"region":\{"startLine":2\}' sh -c "$SARIF_FLAT"
+git checkout -q -- RSK VER
+
+# E2.10: report templates. validation.html, written into the exported
+# site, lists every check and rule (all passed but the REQ-0003 warning)
+# and links each violation to its entity's page; breaking VER-0002's link
+# puts its two violations in it, and in the Markdown pull-request
+# summary. A report template that cannot render is a violation, and then
+# no output is written. One run writes every --output: the merge gate's
+# SARIF and JUnit reports, the page and the summary, and the text report
+# to the log.
+"$PROV" export website >/dev/null
+expect 0 ''                               "$PROV" validate --output validation.html=_site/validation.html
+expect 0 ''                               test -f _site/index.html
+VALIDATION_FLAT="tr -d '\\n' < _site/validation.html"
+expect 0 '<code>risk-benefit-required</code><br>[^<]*</td><td>error</td><td><span class="status status-approved">passed</span>' sh -c "$VALIDATION_FLAT"
+expect 0 '<a class="ref" href="entities/REQ-0003\.html" title="[^"]*">REQ-0003</a></td><td><code>REQ/REQ-0003\.md:2</code>' sh -c "$VALIDATION_FLAT"
+expect 0 '^### Design controls: passed$'           "$PROV" validate --output pr-summary.md
+"$PROV" validate --output validation.html >"$WORK/r1.html"
+"$PROV" validate --output validation.html >"$WORK/r2.html"
+expect 0 ''                               diff "$WORK/r1.html" "$WORK/r2.html"
+sed -i 's/^verifies: \[REQ-0002\]/verifies: [REQ-0099]/' VER/VER-0002.md
+expect 1 'validate: 2 errors, 2 warnings$' "$PROV" validate --output validation.html=_site/validation.html
+expect 0 '^2$'                            sh -c "grep -o '<a class=\"ref\" href=\"entities/VER-0002\.html\"' _site/validation.html | wc -l"
+expect 0 ''                               test -f _site/entities/VER-0002.html
+expect 1 '^\| error \| `VER/VER-0002\.md:6` \| `links/unresolved` \| verifies: no entity REQ-0099 \|$' "$PROV" validate --output pr-summary.md
+mkdir "$WORK/gate"
+expect 1 '^VER/VER-0002\.md:6: error \[links/unresolved\] verifies: no entity REQ-0099 \(VER-0002\)$' "$PROV" validate --output text --output sarif="$WORK/gate/v.sarif" --output junit="$WORK/gate/v.xml" --output pr-summary.md="$WORK/gate/summary.md" --output validation.html="$WORK/gate/validation.html"
+expect 0 '"ruleId": "links/unresolved"'   cat "$WORK/gate/v.sarif"
+expect 0 'validates$'                     xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/gate/v.xml"
+expect 0 '^### Design controls: failed$'  cat "$WORK/gate/summary.md"
+expect 0 'entities/VER-0002\.html'        cat "$WORK/gate/validation.html"
+git checkout -q -- VER
+sed -i 's/{{\.Summary\.Errors}} error/{{.Summary.Failures}} error/' templates/reports/pr-summary.md.tmpl
+expect 1 '^templates/reports/pr-summary\.md\.tmpl:[0-9]+: error \[content/template\] executing .* map has no entry for key "Failures"$' "$PROV" validate
+expect 1 '^validate: report pr-summary\.md: templates/reports/pr-summary\.md\.tmpl:[0-9]+:[0-9]+: ' "$PROV" validate --output sarif="$WORK/none.sarif" --output pr-summary.md
+expect 1 ''                               test -e "$WORK/none.sarif"
+git checkout -q -- templates
+expect 2 'unknown report "nope": not a format \(text, json, junit, sarif\) and there is no templates/reports/nope\.tmpl \(reports: pr-summary\.md, validation\.html\)' "$PROV" validate --output nope
+expect 2 '^validate: --output text and --output pr-summary\.md both write to standard output' "$PROV" validate --output text --output pr-summary.md
+
 # Standing E1 acceptance: exporting twice gives an identical site, and the
 # site matches the golden snapshot (make golden-update rewrites it).
 "$PROV" export website --out "$WORK/a" >/dev/null
@@ -452,19 +604,30 @@ expect 0 ''                               diff -r "$WORK/a" "$WORK/b"
 expect 0 ''                               diff -ru "$GOLDEN_DIR" "$WORK/a"
 
 # Standing E2 acceptance: validating twice gives an identical report, and
-# the clean example's report matches testdata/validate/clean.txt (make
-# golden-update rewrites it).
+# the clean example's report matches testdata/validate/clean.* in every
+# format (make golden-update rewrites them).
 "$PROV" validate >"$WORK/v1.txt"
 "$PROV" validate >"$WORK/v2.txt"
 expect 0 ''                               diff "$WORK/v1.txt" "$WORK/v2.txt"
 expect 0 ''                               diff -u "$VALIDATE_DIR/clean.txt" "$WORK/v1.txt"
+"$PROV" validate --output json="$WORK/clean.json" --output junit="$WORK/clean.junit.xml" --output sarif="$WORK/clean.sarif"
+sarif_dev "$WORK/clean.sarif" >"$WORK/clean.sarif.dev" && mv "$WORK/clean.sarif.dev" "$WORK/clean.sarif"
+for f in json junit.xml sarif; do
+	expect 0 ''                           diff -u "$VALIDATE_DIR/clean.$f" "$WORK/clean.$f"
+done
 
 # Standing E2 acceptance: every failure validate catches, in
-# testdata/violations, is reported as testdata/validate/violations-*.txt
-# records, and exits 1 (make golden-update rewrites them).
+# testdata/violations, is reported in every format as
+# testdata/validate/violations-* records, and exits 1 (make golden-update
+# rewrites them); the JUnit reports conform to junit-10.xsd.
 for r in core broken-schema; do
-	expect 1 '' "$PROV" validate --path "$VIOLATIONS_DIR/$r" --out "$WORK/violations-$r.txt"
-	expect 0 '' diff -u "$VALIDATE_DIR/violations-$r.txt" "$WORK/violations-$r.txt"
+	out="$WORK/violations-$r"
+	expect 1 '' "$PROV" validate --path "$VIOLATIONS_DIR/$r" --output text="$out.txt" --output json="$out.json" --output junit="$out.junit.xml" --output sarif="$out.sarif"
+	sarif_dev "$out.sarif" >"$out.sarif.dev" && mv "$out.sarif.dev" "$out.sarif"
+	for f in txt json junit.xml sarif; do
+		expect 0 '' diff -u "$VALIDATE_DIR/violations-$r.$f" "$out.$f"
+	done
+	expect 0 'validates$' xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/violations-$r.junit.xml"
 done
 
 if [ "$failures" -ne 0 ]; then

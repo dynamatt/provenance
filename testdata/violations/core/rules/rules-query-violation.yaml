@@ -1,0 +1,4 @@
+severity: error
+message: "names a field Widget lacks"
+from: Widget
+where: {field: colour, operator: exists}

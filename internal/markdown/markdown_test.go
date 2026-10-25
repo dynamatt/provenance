@@ -194,3 +194,12 @@ func TestImageRewrite(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func TestCodeBlocks(t *testing.T) {
+	src := "Intro.\n\n```query\nfrom: Requirement\n```\n\n```\nbare\n```\n\n> ```python  extra words\n> print(1)\n> ```\n\n- item\n\n  ```caption\n  kind: figure\n  ```\n\n    indented code is not fenced\n\n```\n```\n"
+	got := fmt.Sprint(CodeBlocks(src))
+	want := "[{query 3} { 7} {python 11} {caption 17} { 23}]"
+	if got != want {
+		t.Errorf("CodeBlocks = %s, want %s", got, want)
+	}
+}

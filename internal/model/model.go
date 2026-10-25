@@ -209,25 +209,49 @@ func (e *Entity) BodyFileLine(line int) int {
 }
 
 // TextFileLine maps a line (from 1) of Markdown text rendered from e, its
-// body or a top-level text field, to its line in the file; 0 when text is
-// neither.
+// body, a text field or a text sub-field or item of a list, to its line in
+// the file; 0 when text is none of them.
 func (e *Entity) TextFileLine(text string, line int) int {
 	if text == e.BodyText() {
 		return e.BodyFileLine(line)
 	}
+	isText := func(v *Value) bool {
+		return v.Present && !v.Invalid && v.Field.Kind == schema.Text && v.Str == text
+	}
 	for _, v := range e.Fields {
-		if v.Present && !v.Invalid && v.Field.Kind == schema.Text && v.Str == text {
-			n := yamlnode.Lookup(e.Front, v.Field.Name)
-			if n == nil {
-				return 0
+		n := yamlnode.Lookup(e.Front, v.Field.Name)
+		switch {
+		case isText(v):
+			return textLine(n, line)
+		case v.Field.Kind != schema.List || !v.Present || v.Invalid || n == nil || n.Kind != yaml.SequenceNode:
+		case v.Field.Elem != nil:
+			for i, item := range v.Items {
+				if isText(item) && i < len(n.Content) {
+					return textLine(n.Content[i], line)
+				}
 			}
-			if n.Style&(yaml.LiteralStyle|yaml.FoldedStyle) != 0 {
-				return n.Line + line // content starts after the | or > line
+		default:
+			for i, row := range v.Rows {
+				for _, cell := range row {
+					if isText(cell) && i < len(n.Content) {
+						return textLine(yamlnode.Lookup(n.Content[i], cell.Field.Name), line)
+					}
+				}
 			}
-			return n.Line + line - 1
 		}
 	}
 	return 0
+}
+
+// textLine maps line (from 1) of the text in scalar n to its file line.
+func textLine(n *yaml.Node, line int) int {
+	if n == nil {
+		return 0
+	}
+	if n.Style&(yaml.LiteralStyle|yaml.FoldedStyle) != 0 {
+		return n.Line + line // content starts after the | or > line
+	}
+	return n.Line + line - 1
 }
 
 func bodyValue(f *schema.Field, body string) *Value {
