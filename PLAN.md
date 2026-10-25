@@ -41,7 +41,7 @@
 - [x] E2.7 Grammar: transitive links and `code_blocks`
 - [x] E2.8 Rule files
 - [x] E2.9 Report formats
-- [ ] E2.10 Report templates
+- [x] E2.10 Report templates
 - [ ] E2.11 Epic close-out: gate in CI, docs, release
 
 ## Shape of the plan
@@ -668,8 +668,8 @@ already finds every wikilink, query block, caption and image.
 | D7 | Rules this version can't check (Signature Presence, Content Frozen After Release) | **Removed from the example and the DDF until the `sign` and `release tag` epics,** which define the facts (signatures, released content) they query. REQ-0048 and REQ-0051 stay as they are. |
 | D8 | Where a violation is placed | The matched field's line; a `missing` field or absent aggregated field at the entity's `id:` line; a matched list row at the row; a matched link target at the line in the *source* entity where that link value is written; an `aggregation` at its field; a sub-query on `from` at the entity's `id:` line, naming the entities found (*revised 2026-10-15*); a cycle on each member's link field; an `any_of` at its first matching test in file order; a rule-file problem at its line in the rule file. A rule's violations are always in the matched entity's own file. |
 | D9 | Report formats | **text:** `path:line: error\|warning [rule-id] message (ENTITY-ID)`, a line for skipped rules, then `N errors, M warnings`. **json:** `version: 1`, `violations[]` (`rule`, `severity`, `message`, `entity`, `path`, `line`), `summary` (`errors`, `warnings`, `rules_skipped`). **junit:** one test case per rule and built-in check; errors fail it, warnings go to `system-out`. **sarif:** 2.1.0, one run, a rules entry per rule and built-in check, one result per violation, repository-relative locations. No timestamps, no absolute paths. Field names are recorded in the DDF; only the exit code is guaranteed (DES-0018). |
-| D10 | Custom reports | **`validate --report <name>`** renders `templates/reports/<name>.tmpl` (`html/template` when the name ends `.html`, otherwise `text/template`) with `.Violations`, `.Rules` (every rule and built-in check, with its violations, so passing ones can be listed), `.Summary` and the git stamps. The exit code is unchanged. |
-| D11 | Where reports go | **`--out <file>`** writes any `--format` or `--report` to a file, creating its folders, never emptying one. A report goes into the exported site by running `export` first (it empties its folder) and then `validate --out _site/…`. Several reports are several runs. |
+| D10 | Custom reports | **`validate --output <name>`** renders `templates/reports/<name>.tmpl` (`html/template` when the name ends `.html`, otherwise `text/template`) with `.Violations`, `.Rules` (every rule and built-in check, with its violations, so passing ones can be listed), `.Summary` and the git stamps. The exit code is unchanged. |
+| D11 | Where reports go | **`--output <name>[=<file>]`, repeatable**, names a format (`text`, `json`, `junit`, `sarif`) or a report template (D10) and writes it to the file, creating its folders and never emptying one, or to standard output when no file is given. One run writes every report: at most one goes to standard output, no file twice, and nothing is written unless all render. With no `--output`, text goes to standard output. A report template can't take a format's name. A report goes into the exported site by running `export` first (it empties its folder) and then `validate --output <name>=_site/…`. (*Revised 2026-10-25: replaces `--format`, `--report` and `--out`, which took several runs for several reports.*) |
 
 Not in this epic: composed-graph validation across components (REQ-0025,
 the `component` epic); live feedback in the editor (REQ-0053, `serve`);
@@ -929,20 +929,23 @@ violations appear at their lines.
 
 ### E2.10 Report templates
 
-**Deliverables:** `validate --report <name>` per D10: the template data,
+**Deliverables:** `validate --output <name>` per D10 and D11: the template data,
 `html/template` or `text/template` by name, a report template that doesn't
 parse or names a missing field reported as `content/template`, and
-`templates/reports/` excluded from the unused-template warning.
+`templates/reports/` excluded from the unused-template warning. `--output`
+replaces E2.9's `--format` and `--out`, so one run writes every report.
 
 **Example-repo PR:** two report templates: `pr-summary.md` (Markdown, for a
 pull-request comment) and `validation.html` (a page listing every rule,
 passed or not, with its violations). Bump the pin.
 
 **Check it yourself:**
-`prov export website && prov validate --report validation.html --out
-_site/validation.html` → open it beside the site: every rule listed as
-passed. Break VER-0002's `verifies:` and rerun → the two violations, linked
-to their entities; exit 1.
+`prov export website && prov validate --output
+validation.html=_site/validation.html` → open it beside the site: every rule
+listed as passed. Break VER-0002's `verifies:` and rerun → the two
+violations, linked to their entities; exit 1. `prov validate --output text
+--output sarif=v.sarif --output pr-summary.md=summary.md` writes all three
+from one run.
 
 ### E2.11 Epic close-out: gate in CI, docs, release
 
@@ -953,10 +956,13 @@ to their entities; exit 1.
   require the check on GitHub and GitLab. That includes branch protection
   on `schema/` and `rules/` for stricter review (REQ-0034).
 - **Release:** `v0.2.0-alpha`, published with E1.14's workflow.
-- **Example-repo PR:** a `validate` workflow that downloads the pinned
-  release binary, checks it against `SHA256SUMS` and runs `validate --format
-  sarif`. This is the thin wrapper (REQ-0060), with no host API beyond
-  uploading the report. It becomes a required check.
+- **Example-repo PR:** the *Validate* workflow (added in E2.10, built
+  from source) downloads the pinned release binary instead and checks it
+  against `SHA256SUMS`. It runs `validate --output text --output sarif=…
+  --output pr-summary.md="$GITHUB_STEP_SUMMARY"`, one run for the log,
+  code scanning and the run's summary. This is the thin wrapper
+  (REQ-0060), with no host API beyond uploading the report. It becomes a
+  required check.
 - **DDF PR:** the same gate on `provenance-ddf`, whose own rules then run on
   every change. Any violations this finds are fixed or listed in the PR.
 

@@ -263,7 +263,7 @@ func (r *Report) WriteSARIF(w io.Writer, toolVersion string) error {
 	return enc.Encode(out)
 }
 
-// Formats are the report formats --format accepts.
+// Formats are the built-in report formats --output takes.
 var Formats = []string{"text", "json", "junit", "sarif"}
 
 // Write writes the report in format, one of Formats; toolVersion is the

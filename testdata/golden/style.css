@@ -60,6 +60,10 @@ tr.incoming th { font-style: italic; }
 .status-draft { background: #fdf1d8; color: #7a5a12; }
 .status-in_review { background: #e3ebf7; color: #274b7a; }
 .status-deprecated { background: #eee; color: #666; text-decoration: line-through; }
+/* Validation reports (templates/reports/validation.html.tmpl). */
+.status-error { background: #f9dedc; color: #8a1c13; }
+.status-warning { background: #fdf1d8; color: #7a5a12; }
+.status-skipped { background: #eee; color: #666; }
 
 .requirement-meta { color: var(--muted); font-family: system-ui, sans-serif; font-size: 0.9rem; }
 .statement { font-size: 1.05rem; border-left: 3px solid var(--brand); padding-left: 14px; }

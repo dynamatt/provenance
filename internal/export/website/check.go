@@ -6,15 +6,14 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/markdown"
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/schema"
+	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
 // Problem is something Check found: a problem that stops an export, or
@@ -68,10 +67,6 @@ func (c *checker) add(p Problem) {
 	}
 }
 
-// templateLoc splits the location from a template error's message:
-// "templates/Requirement.tmpl:5:12: …".
-var templateLoc = regexp.MustCompile(`^([^\s:]+):(\d+)(?::\d+)?: (.*)$`)
-
 // record keeps err, a problem Export would have stopped at, under the
 // check its kind belongs to.
 func (c *checker) record(err error) {
@@ -79,7 +74,7 @@ func (c *checker) record(err error) {
 		qe    *query.FileError
 		ce    *query.ContentError
 		cycle *EmbedCycleError
-		te    *TemplateError
+		te    *tmpl.Error
 	)
 	switch {
 	case errors.As(err, &qe):
@@ -89,10 +84,9 @@ func (c *checker) record(err error) {
 	case errors.As(err, &cycle):
 		c.add(Problem{Rule: "content/embed-cycle", Path: cycle.Path, Msg: "embed cycle " + strings.Join(cycle.Chain, " → ")})
 	case errors.As(err, &te):
-		p := Problem{Rule: "content/template", Path: templatesDir, Msg: te.Msg}
-		if m := templateLoc.FindStringSubmatch(te.Msg); m != nil {
-			p.Path, p.Msg = m[1], m[3]
-			p.Line, _ = strconv.Atoi(m[2])
+		p := Problem{Rule: "content/template", Path: te.Path, Line: te.Line, Msg: te.Msg}
+		if p.Path == "" {
+			p.Path = templatesDir
 		}
 		c.add(p)
 	default:
