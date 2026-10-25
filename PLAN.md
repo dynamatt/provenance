@@ -1022,7 +1022,9 @@ source, so their YAML positions stay as they are.
 **Standing acceptance for every E3 task:** output doesn't change. The
 golden site, `testdata/validate/*` and every acceptance step pass as they
 are, with no example-repo change and no pin bump. Each task adds unit
-tests, including through the test source (G6).
+tests, including through the test source (G6), and redraws the DDF's
+architecture diagrams (DES-0050 packages, DES-0051 loading pipeline,
+from `tools/diagrams.py`) where it changes what they show.
 
 **Decisions (for Matt):**
 
