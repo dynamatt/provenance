@@ -17,10 +17,12 @@ type Source interface {
 	// Load reads the source's files under root, leaving out the folders in
 	// skip (absolute paths).
 	Load(root string, skip []string) (*Loaded, error)
-	// Types lists the entity types path holds. ok is false when path is
-	// not one of the source's files, and data, which reads its bytes, is
-	// then not called.
-	Types(path string, data func() ([]byte, error)) (types []string, ok bool, err error)
+	// Entities lists the entities path holds, each with the text it is
+	// written as, for history to compare two versions of the file (G5).
+	// ok is false when path is not one of the source's files, and data,
+	// which reads its bytes, is then not called. A file that does not
+	// parse holds no entities.
+	Entities(path string, data func() ([]byte, error)) (entities []history.FileEntity, ok bool, err error)
 }
 
 // Loaded is what a source read.
@@ -51,10 +53,10 @@ type content struct {
 
 func (c *content) Files() ([]string, error) { return c.files, nil }
 
-func (c *content) Types(path string, data func() ([]byte, error)) ([]string, error) {
+func (c *content) Entities(path string, data func() ([]byte, error)) ([]history.FileEntity, error) {
 	for _, src := range c.sources {
-		if types, ok, err := src.Types(path, data); ok || err != nil {
-			return types, err
+		if entities, ok, err := src.Entities(path, data); ok || err != nil {
+			return entities, err
 		}
 	}
 	return nil, nil

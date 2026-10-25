@@ -57,7 +57,10 @@ type Result struct {
 	// could not be typed.
 	SchemaBroken bool
 
-	content *content
+	content     *content
+	history     *History
+	historyErr  error
+	historyRead bool
 }
 
 // Err is the first problem export stops at, or nil.

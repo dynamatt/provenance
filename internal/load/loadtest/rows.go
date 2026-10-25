@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/dynamatt/provenance/internal/entity"
+	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/schema"
 )
@@ -64,7 +65,8 @@ func (Rows) Load(root string, skip []string) (*load.Loaded, error) {
 	return out, err
 }
 
-func (Rows) Types(path string, data func() ([]byte, error)) ([]string, bool, error) {
+// Entities are the entities of a .rows file, each written as its line.
+func (Rows) Entities(path string, data func() ([]byte, error)) ([]history.FileEntity, bool, error) {
 	if !strings.HasSuffix(path, ext) {
 		return nil, false, nil
 	}
@@ -72,15 +74,13 @@ func (Rows) Types(path string, data func() ([]byte, error)) ([]string, bool, err
 	if err != nil {
 		return nil, true, err
 	}
-	entities, fe := Parse(path, b)
-	if fe != nil {
-		return nil, true, fe
-	}
-	var types []string
+	entities, _ := Parse(path, b)
+	lines := strings.Split(string(b), "\n")
+	var out []history.FileEntity
 	for _, e := range entities {
-		types = append(types, e.Type)
+		out = append(out, history.FileEntity{ID: e.ID, Type: e.Type, Text: lines[e.IDLine()-1]})
 	}
-	return types, true, nil
+	return out, true, nil
 }
 
 // Parse reads the entities of a .rows file.

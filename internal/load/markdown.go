@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/dynamatt/provenance/internal/entity"
+	"github.com/dynamatt/provenance/internal/history"
 )
 
 // markdown is the Markdown source (DES-0006): any .md file whose
@@ -17,7 +18,8 @@ import (
 // skipping the configuration folders at its root and .git anywhere.
 type markdown struct{}
 
-func (markdown) Types(p string, data func() ([]byte, error)) ([]string, bool, error) {
+// Entities is the entity a Markdown file holds, written as the whole file.
+func (markdown) Entities(p string, data func() ([]byte, error)) ([]history.FileEntity, bool, error) {
 	if !strings.EqualFold(path.Ext(p), ".md") {
 		return nil, false, nil
 	}
@@ -26,7 +28,7 @@ func (markdown) Types(p string, data func() ([]byte, error)) ([]string, bool, er
 		return nil, true, err
 	}
 	if e, _ := entity.Parse(p, b); e != nil {
-		return []string{e.Type}, true, nil
+		return []history.FileEntity{{ID: e.ID, Type: e.Type, Text: string(b)}}, true, nil
 	}
 	return nil, true, nil
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/load/loadtest"
 	"github.com/dynamatt/provenance/internal/query"
@@ -86,9 +87,9 @@ func TestSourceEntities(t *testing.T) {
 	if files, _ := c.Files(); !slices.Equal(files, []string{"P/a.md", "data/parts.rows"}) {
 		t.Errorf("content files %v", files)
 	}
-	types, err := c.Types("data/parts.rows", func() ([]byte, error) { return []byte(rows), nil })
-	if err != nil || !slices.Equal(types, []string{"Part", "Part"}) {
-		t.Errorf("types %v, %v", types, err)
+	es, err := c.Entities("data/parts.rows", func() ([]byte, error) { return []byte(rows), nil })
+	if err != nil || len(es) != 2 || es[1] != (history.FileEntity{ID: "PRT-0003", Type: "Part", Text: "PRT-0003 | Part | Nut   | 4"}) {
+		t.Errorf("entities %+v, %v", es, err)
 	}
 }
 

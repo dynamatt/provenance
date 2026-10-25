@@ -3,6 +3,7 @@ package history
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -77,7 +78,10 @@ type mdContent struct {
 	skip []string
 }
 
-var typeLine = regexp.MustCompile(`(?m)^type: (\S+)$`)
+var (
+	idLine   = regexp.MustCompile(`(?m)^id: (\S+)$`)
+	typeLine = regexp.MustCompile(`(?m)^type: (\S+)$`)
+)
 
 func (c mdContent) Files() ([]string, error) {
 	var out []string
@@ -91,11 +95,11 @@ func (c mdContent) Files() ([]string, error) {
 		rel, _ := filepath.Rel(c.root, p)
 		rel = filepath.ToSlash(rel)
 		if !d.IsDir() && strings.HasSuffix(rel, ".md") {
-			ts, err := c.Types(rel, func() ([]byte, error) { return os.ReadFile(p) })
+			es, err := c.Entities(rel, func() ([]byte, error) { return os.ReadFile(p) })
 			if err != nil {
 				return err
 			}
-			if len(ts) > 0 {
+			if len(es) > 0 {
 				out = append(out, rel)
 			}
 		}
@@ -104,7 +108,7 @@ func (c mdContent) Files() ([]string, error) {
 	return out, err
 }
 
-func (mdContent) Types(path string, data func() ([]byte, error)) ([]string, error) {
+func (mdContent) Entities(path string, data func() ([]byte, error)) ([]FileEntity, error) {
 	if !strings.HasSuffix(path, ".md") {
 		return nil, nil
 	}
@@ -112,8 +116,9 @@ func (mdContent) Types(path string, data func() ([]byte, error)) ([]string, erro
 	if err != nil {
 		return nil, err
 	}
-	if m := typeLine.FindSubmatch(b); m != nil {
-		return []string{string(m[1])}, nil
+	id, typ := idLine.FindSubmatch(b), typeLine.FindSubmatch(b)
+	if id != nil && typ != nil {
+		return []FileEntity{{ID: string(id[1]), Type: string(typ[1]), Text: string(b)}}, nil
 	}
 	return nil, nil
 }
@@ -274,11 +279,11 @@ func TestStatus(t *testing.T) {
 	if got := strings.Join(d.Paths, " "); got != "REQ/REQ-1.md USR/USR-1.md schema/Req.yaml" {
 		t.Errorf("dirty paths: %s", got)
 	}
-	if got := strings.Join(d.Types, " "); got != "Requirement UserNeed" {
-		t.Errorf("dirty types: %s", got)
+	if got := strings.Join(d.Entities, " ") + " / " + strings.Join(d.Types, " "); got != "REQ-1 USR-1 / Requirement UserNeed" {
+		t.Errorf("dirty entities and types: %s", got)
 	}
-	if !d.Touches(Inputs{Paths: []string{"schema/Req.yaml"}}) || !d.Touches(Inputs{Types: []string{"UserNeed"}}) || d.Touches(Inputs{Paths: []string{"DOC/DOC-1.md"}}) {
-		t.Error("Touches does not match the dirty paths and types")
+	if !d.Touches(Inputs{Paths: []string{"schema/Req.yaml"}}) || !d.Touches(Inputs{Types: []string{"UserNeed"}}) || !d.Touches(Inputs{Entities: []string{"REQ-1"}}) || d.Touches(Inputs{Entities: []string{"DOC-1"}}) {
+		t.Error("Touches does not match the dirty entities, paths and types")
 	}
 }
 
@@ -304,13 +309,39 @@ func TestLog(t *testing.T) {
 	if got := l.Commits[2].Tags; !slices.Equal(got, []string{"v1"}) {
 		t.Errorf("tags of the first commit: %v", got)
 	}
-	doc := Inputs{Paths: []string{"DOC/DOC-1.md"}}
+	if got := strings.Join(l.Commits[1].Entities, " "); got != "DOC-1" {
+		t.Errorf("the second commit changed %s, want DOC-1", got)
+	}
+	doc := Inputs{Entities: []string{"DOC-1"}}
 	if got := l.LastChanged(doc); got != l.Commits[1].SHA {
 		t.Errorf("DOC-1 last changed in %s, want the second commit", Short(got))
 	}
 	// A page querying requirements changes with any requirement.
-	if got := l.LastChanged(Inputs{Paths: []string{"DOC/DOC-1.md"}, Types: []string{"Requirement"}}); got != third {
+	if got := l.LastChanged(Inputs{Entities: []string{"DOC-1"}, Types: []string{"Requirement"}}); got != third {
 		t.Errorf("with Requirement inputs: %s, want the third commit", Short(got))
+	}
+	if got := l.LastChanged(Inputs{Paths: []string{"schema/Req.yaml"}}); got != first {
+		t.Errorf("schema/Req.yaml last changed in %s, want the first commit", Short(got))
+	}
+}
+
+// A shallow clone has HEAD, so its content hash and dirty state, but not
+// the history it cut off, which the log needs.
+func TestShallowClone(t *testing.T) {
+	tr := newRepo(t)
+	tr.commit("first", base)
+	second := tr.commit("second", map[string]string{"DOC/DOC-1.md": "---\nid: DOC-1\ntype: Document\n---\nText 2.\n"})
+	if err := os.WriteFile(filepath.Join(tr.dir, ".git", "shallow"), []byte(second+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	h := tr.open("")
+	if _, dirty, err := h.WorkingContentHash(mdContent{root: tr.dir}); err != nil || dirty.Any() {
+		t.Errorf("content hash: dirty %v, %v", dirty, err)
+	}
+	_, err := h.Log(mdContent{root: tr.dir})
+	var se *ShallowError
+	if !errors.As(err, &se) || se.Commit != second || !strings.Contains(err.Error(), "fetch-depth: 0") {
+		t.Errorf("err = %v, want a ShallowError at the second commit naming fetch-depth: 0", err)
 	}
 }
 
