@@ -956,10 +956,13 @@ from one run.
   require the check on GitHub and GitLab. That includes branch protection
   on `schema/` and `rules/` for stricter review (REQ-0034).
 - **Release:** `v0.2.0-alpha`, published with E1.14's workflow.
-- **Example-repo PR:** a `validate` workflow that downloads the pinned
-  release binary, checks it against `SHA256SUMS` and runs `validate --output
-  text --output sarif=…`, one run for the log and the uploaded report. This is the thin wrapper (REQ-0060), with no host API beyond
-  uploading the report. It becomes a required check.
+- **Example-repo PR:** the *Validate* workflow (added in E2.10, built
+  from source) downloads the pinned release binary instead and checks it
+  against `SHA256SUMS`. It runs `validate --output text --output sarif=…
+  --output pr-summary.md="$GITHUB_STEP_SUMMARY"`, one run for the log,
+  code scanning and the run's summary. This is the thin wrapper
+  (REQ-0060), with no host API beyond uploading the report. It becomes a
+  required check.
 - **DDF PR:** the same gate on `provenance-ddf`, whose own rules then run on
   every change. Any violations this finds are fixed or listed in the PR.
 
