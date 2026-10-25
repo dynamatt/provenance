@@ -8,15 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/exitcode"
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/export/website"
 	"github.com/dynamatt/provenance/internal/history"
-	"github.com/dynamatt/provenance/internal/model"
-	"github.com/dynamatt/provenance/internal/query"
+	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/repo"
-	"github.com/dynamatt/provenance/internal/schema"
 )
 
 // exporters is the registry of export formats. PDF and Word are part of the
@@ -59,7 +56,7 @@ func exportFormat(c *cobra.Command, format string) error {
 	}
 	// The output folder may sit inside the repository (the default ./_site
 	// usually does); never read it back as source.
-	in, err := load(cwd, outDir)
+	in, err := loadInput(cwd, outDir)
 	if err != nil {
 		return err
 	}
@@ -82,31 +79,21 @@ func exportFormat(c *cobra.Command, format string) error {
 	return nil
 }
 
-// load reads the repository containing cwd: its entities, typed against the
-// schema, and the graph that evaluates their calculated fields and runs
-// queries. Folders under skip are not read.
-func load(cwd string, skip ...string) (*export.Input, error) {
+// loadInput reads the repository containing cwd, stopping at its first
+// problem. Folders under skip are not read.
+func loadInput(cwd string, skip ...string) (*export.Input, error) {
 	r, err := repo.Open(cwd)
 	if err != nil {
 		return nil, err
 	}
-	parsed, err := entity.Discover(r.Root, skip...)
+	res, err := load.Load(r, skip...)
 	if err != nil {
 		return nil, err
 	}
-	s, err := schema.Load(r.Root)
-	if err != nil {
+	if err := res.Err(); err != nil {
 		return nil, err
 	}
-	entities, err := model.Build(s, parsed)
-	if err != nil {
-		return nil, err
-	}
-	graph, err := query.NewGraph(s, entities)
-	if err != nil {
-		return nil, err
-	}
-	return &export.Input{Repo: r, Schema: s, Entities: entities, Graph: graph}, nil
+	return res.Input(), nil
 }
 
 // gitContext reads what an export stamps into its output (DES-0021,

@@ -43,7 +43,7 @@
 - [x] E2.9 Report formats
 - [x] E2.10 Report templates
 - [x] E2.11 Epic close-out: gate in CI, docs, release
-- [ ] E3.1 One loader
+- [x] E3.1 One loader
 - [ ] E3.2 Sources and content files
 - [ ] E3.3 Values and positions from the source
 - [ ] E3.4 Entity-level history
@@ -989,9 +989,7 @@ on the changed file. Revert → it passes.
 
 ## Epic 3 — Architecture groundwork
 
-> **Status: proposed 2026-10-25, for Matt's review.** Decisions G1–G6 are
-> proposals. Nothing below is started until the plan PR is merged and
-> Epic 2 has closed.
+> **Status: decisions G1–G6 agreed with Matt 2026-10-25** (plan PR #49).
 
 **Goal:** loading, validation and history stop assuming that an entity is
 a Markdown file, so the CSV-backed types epic, and every command after it

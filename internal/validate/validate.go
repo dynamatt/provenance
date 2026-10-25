@@ -6,7 +6,6 @@ package validate
 
 import (
 	"cmp"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -14,9 +13,10 @@ import (
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/export/website"
+	"github.com/dynamatt/provenance/internal/load"
+	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/schema"
-	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
 // Severity is how a violation affects the gate: errors fail it, warnings
@@ -96,42 +96,25 @@ const RulesDir = "rules"
 func Run(rp *repo.Repo) (*Report, error) {
 	root := rp.Root
 	r := &Report{root: root, component: rp.Component}
-	sc, err := entity.Scan(root)
+	res, err := load.Load(rp)
 	if err != nil {
 		return nil, err
 	}
-	r.entityProblems(sc)
-
-	s, problems, err := schema.Read(root)
-	if err != nil {
-		return nil, err
-	}
-	for _, p := range problems {
-		r.add(Violation{Rule: "schema/file", Severity: Error, Message: p.Msg, Path: p.Path, Line: p.Line})
-	}
-	for _, p := range s.KeyProblems {
-		r.add(Violation{Rule: "schema/unknown-key", Severity: Error, Message: p.Msg, Path: p.Path, Line: p.Line})
-	}
-	if len(problems) > 0 {
-		// Every type, field and rule is read against the schema: with part of
-		// it missing, they would report its absence over and over.
+	r.loadProblems(res)
+	if res.SchemaBroken() {
 		if r.RulesSkipped, err = r.skipRules(root, "the schema has errors"); err != nil {
 			return nil, err
 		}
 	} else {
-		known := r.unknownTypes(s, sc.Entities)
-		r.schemaChecks(s, sc.Entities)
-		typed, graph, err := r.conformance(s, known)
-		if err != nil {
+		r.schemaChecks(res.Schema, res.Parsed)
+		r.conformance(res.Schema, res.Entities)
+		if err := r.content(res.Input()); err != nil {
 			return nil, err
 		}
-		if err := r.content(&export.Input{Repo: rp, Schema: s, Entities: typed, Graph: graph}); err != nil {
+		if err := r.rules(root, res.Schema, res.Graph); err != nil {
 			return nil, err
 		}
-		if err := r.rules(root, s, graph); err != nil {
-			return nil, err
-		}
-		r.entities = website.EntityData(s, typed)
+		r.entities = website.EntityData(res.Schema, res.Entities)
 	}
 	r.sort()
 	// Report templates are checked against everything else found.
@@ -142,33 +125,37 @@ func Run(rp *repo.Repo) (*Report, error) {
 	return r, nil
 }
 
-// entityProblems reports the files that could not be read as entities.
-func (r *Report) entityProblems(sc *entity.Scanned) {
-	frontmatter := func(e *entity.Error) {
-		r.add(Violation{Rule: "content/frontmatter", Severity: Error, Message: e.Msg, Path: e.Path, Line: e.Line})
-	}
+// loadProblems reports what loading found, each kind as its built-in
+// check.
+func (r *Report) loadProblems(res *load.Result) {
 	type place struct {
 		path string
 		line int
 	}
 	dups := map[string][]place{}
 	var dupIDs []string
-	for _, p := range sc.Problems {
-		var fe *entity.Error
-		var de *entity.DuplicateIDError
-		switch {
-		case errors.As(p, &fe):
-			frontmatter(fe)
-		case errors.As(p, &de):
+	for _, p := range res.Problems {
+		switch p.Kind {
+		case load.Frontmatter, load.Partial:
+			r.add(Violation{Rule: "content/frontmatter", Severity: Error, Message: p.Err.(*entity.Error).Msg, Path: p.Path, Line: p.Line})
+		case load.DuplicateID:
+			de := p.Err.(*entity.DuplicateIDError)
 			if dups[de.ID] == nil {
 				dupIDs = append(dupIDs, de.ID)
 				dups[de.ID] = []place{{de.First, de.FirstLine}}
 			}
 			dups[de.ID] = append(dups[de.ID], place{de.Then, de.ThenLine})
+		case load.SchemaFile:
+			r.add(Violation{Rule: "schema/file", Severity: Error, Message: p.Err.(*schema.Error).Msg, Path: p.Path, Line: p.Line})
+		case load.SchemaKey:
+			r.add(Violation{Rule: "schema/unknown-key", Severity: Error, Message: p.Err.(*schema.Error).Msg, Path: p.Path, Line: p.Line})
+		case load.UnknownType:
+			msg := fmt.Sprintf("type %q is not declared in schema/", p.Err.(*model.UnknownTypeError).Type)
+			if names := res.Schema.TypeNames(); len(names) > 0 {
+				msg += " (declared: " + strings.Join(names, ", ") + ")"
+			}
+			r.add(Violation{Rule: "schema/unknown-type", Severity: Error, Message: msg, Entity: p.Entity, Path: p.Path, Line: p.Line})
 		}
-	}
-	for _, p := range sc.Partial {
-		frontmatter(p)
 	}
 	// Every file declaring a duplicated ID is reported, naming the others.
 	for _, id := range dupIDs {
@@ -186,26 +173,6 @@ func (r *Report) entityProblems(sc *entity.Scanned) {
 			})
 		}
 	}
-}
-
-// unknownTypes reports entities whose type the schema does not declare,
-// and returns the others.
-func (r *Report) unknownTypes(s *schema.Schema, entities []*entity.Entity) (known []*entity.Entity) {
-	for _, e := range entities {
-		if s.Types[e.Type] != nil {
-			known = append(known, e)
-			continue
-		}
-		msg := fmt.Sprintf("type %q is not declared in schema/", e.Type)
-		if names := s.TypeNames(); len(names) > 0 {
-			msg += " (declared: " + strings.Join(names, ", ") + ")"
-		}
-		r.add(Violation{
-			Rule: "schema/unknown-type", Severity: Error, Message: msg, Entity: e.ID,
-			Path: e.Path, Line: yamlnode.Lookup(e.Front, "type").Line,
-		})
-	}
-	return known
 }
 
 // content reports what would stop the website export, and what it would
