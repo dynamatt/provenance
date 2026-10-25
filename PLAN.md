@@ -1064,6 +1064,10 @@ change. `git grep -n 'entity.Discover\|entity.Scan\|schema.Load\|schema.Read' in
 **Deliverables:**
 - The `Source` interface per G3, and the Markdown source: today's walker,
   moved behind it.
+- The Markdown source returns `load.Problem`s, each with its check,
+  message and the error export reports, so `entity.Scanned`'s `Problems`
+  (an `[]error` of two concrete types) and `Partial` go, with the type
+  switch in `load` that tells them apart.
 - The schema loads before sources; the Markdown source runs with a broken
   schema too.
 - The dirty check lists content files through the loader (the sources'
