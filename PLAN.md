@@ -49,6 +49,11 @@
 - [x] E3.4 Entity-level history
 - [x] E3.5 Problems and checks
 - [x] E3.6 Epic close-out
+- [ ] E4.1 Canonical form
+- [ ] E4.2 The formatter
+- [ ] E4.3 `provenance fmt`
+- [ ] E4.4 The gate
+- [ ] E4.5 Epic close-out
 
 ## Shape of the plan
 
@@ -1158,14 +1163,118 @@ ships with the next epic's.
 **Check it yourself:** read the CSV epic's rough shape; each task names
 the groundwork it builds on.
 
+## Epic 4 — `fmt`
+
+> **Status: proposed 2026-10-28, for Matt's review.** Decisions F1–F8
+> below need agreeing before E4.2 starts.
+
+**Goal:** every entity file has one canonical serialization, so edits to
+different fields merge cleanly (REQ-0103), the editor (DES-0037) has a
+form to save in (REQ-0098), and the merge gate fails a file that isn't in
+it (REQ-0104). DES-0038 says only "stable key order, one field per line,
+blocks never reflowed"; this epic settles the rest and writes it back.
+
+What the content looks like today, across the example and the DDF (306
+entity files): 206 write link lists inline (`implements: [USR-0001]`), 6
+have list rows in block style, 8 have block text (6 folded `>`, 2 literal
+`|`), 17 quote a scalar, none have comments, none have CRLF. Keys are
+mostly in schema order already. Epic 3 left the Markdown record holding the
+frontmatter's YAML nodes for this (G4).
+
+**Standing acceptance for every E4 task:** `make ci` passes; formatting a
+file changes no value, except F4's folded text, and formatting twice
+changes nothing.
+
+**Decisions (for Matt):**
+
+| # | Decision | Proposal | Why |
+| --- | --- | --- | --- |
+| F1 | What `fmt` rewrites | **The frontmatter of Markdown entity files.** The body's bytes are kept, except that the file gets LF line endings and exactly one final newline. Schema, rule and template files are not formatted, and rows of a CSV never are (C3). A canonical Markdown body is the editor epic's, after its round-trip spike (DES-0037). | The frontmatter is where merges conflict today, and its form is ours to define. Reformatting prose would be "reflowing blocks", which DES-0038 rules out, and Markdown's canonical form depends on what the editor can round-trip. |
+| F2 | Key order | **`id`, `type`, then the type's fields in schema order.** A key the schema doesn't declare (a validate error) is kept after them, in the order written: `fmt` never drops a key, a value or a comment; a comment moves with its key. | Schema order is the order the site shows fields in, and what most files already use, so the first `fmt` run is a small diff. |
+| F3 | Layout | **One field per line, two-space indents.** Link and item lists are written inline, `[A, B]`, on their field's line; an empty list is `[]`. List rows are written in block style, one `- ` per row, with sub-fields in schema order, one per line. A key written with no value stays as `key:`. | Inline lists are what 206 of 306 files use. Block-style lists would only help merges if items were sorted, and sorting links would reorder what authors meant as an order. Rows are already in block style. An empty key is an author's prompt, so it isn't removed. |
+| F4 | Text with line breaks | **A value with line breaks is a literal block (`\|`), its lines as written; one without is on one line.** `fmt` never chooses where a line breaks. A folded `>` value in a `text` field becomes a literal block keeping the author's line breaks: the value changes (the breaks were spaces), and so does the HTML (a newline inside the paragraph where there was a space), but a browser shows the paragraph the same: a line break inside a Markdown paragraph is a soft break. In a `string` field, a folded value is written on one line. | A folded block is the only YAML form that reflows, and choosing its breaks is reflowing. Literal blocks merge line by line. 8 files today. |
+| F5 | Scalars | **Plain, unless YAML would read a different value:** then double-quoted (`"yes"` in a string field, `"#3"`). Dates plain (`2026-10-28`); booleans `true` and `false`; numbers in their shortest decimal form (`2.5`, `1000`). | One way to write each value, and no quotes where none are needed. |
+| F6 | Safety | **`fmt` re-reads every file it would write, through the same source, and writes nothing unless every value is unchanged** (F4's text values compared as they render) **and formatting again changes nothing.** F4's text values are compared with each line break inside a paragraph read as a space. A file that fails this is an error, exit 2, naming the file and field. | A formatter that silently changes a design record's content would be worse than none. |
+| F7 | The gate | **A built-in validate check, `content/format` (error),** so a non-canonical file shows in the text report, SARIF and report templates like any other violation, and the Validate workflows need no new step. `fmt --check` runs the same check alone, exit 1. | One gate, one report. REQ-0104 is met either way; a separate `fmt --check` step would be a second place for CI to fail and a second report format. |
+| F8 | Files `fmt` can't read | **Skipped and reported, exit 1, the rest formatted.** A file whose frontmatter doesn't parse, or whose type isn't declared, can't be put in schema order; validate already reports it. | Formatting the readable files shouldn't wait on a broken one. |
+
+**Order:** the design first (E4.1), then the formatter as a function of a
+record (E4.2), then the command (E4.3), then the gate, with the example
+and the DDF formatted before the check turns on (E4.4).
+
+### E4.1 Canonical form
+
+**Deliverables:**
+- DES-0038 rewritten with F1–F8 as decided, with an example file before
+  and after, marked DECIDED with the date.
+- REQ-0104 reworded if F7 makes `fmt --check` one of two ways to run the
+  check (a clarification).
+
+**Check it yourself:** read DES-0038 in the DDF's export.
+
+### E4.2 The formatter
+
+**Deliverables:**
+- The Markdown record formats itself against its type
+  (`entity.Markdown`), F1–F5, as a pure function from file bytes and
+  schema to file bytes.
+- F6's checks: the formatted file re-read through the source, every value
+  compared with the original's (F4's text values with soft breaks read
+  as spaces), and formatting it again changes nothing.
+- Unit tests: one table case per rule in F1–F5, comments moving with
+  their key, and unknown keys kept. Acceptance: every entity file of the
+  example formatted with no value changed but F4's.
+
+**Check it yourself:** `go test ./internal/entity -run Format -v`.
+
+### E4.3 `provenance fmt`
+
+**Deliverables:**
+- `fmt [path...]` formats the Markdown entity files under each path
+  (default the whole repository), writing only files that change, and
+  prints each one it rewrote. `--check` writes nothing and lists each
+  file not in canonical form, exit 1. F8 for files it can't read.
+- The `notImplementedYet` annotation goes; `make docs` regenerates the
+  CLI reference in `provenance-website`.
+- Acceptance: a scrambled copy of an example file is restored byte for
+  byte; `--check` lists it, exit 1; `fmt` on the example as it is
+  (formatted in E4.4) changes nothing.
+
+**Check it yourself:** in the example checkout, reorder REQ-0001's keys,
+`provenance fmt --check` → it is listed, exit 1; `provenance fmt` →
+`git diff` is empty.
+
+### E4.4 The gate
+
+**Deliverables:**
+- `content/format` in validate (F7), with its case in
+  `testdata/violations`.
+- The example repository formatted (its own PR, then `make bump-example`)
+  and the DDF formatted, both before the check is on, so neither gate
+  turns red.
+- The golden site and `testdata/validate/*` unchanged but for the stamps
+  the pin bump moves.
+
+**Check it yourself:** `make ci` passes; in the example checkout, reorder
+a key → `provenance validate` reports `content/format` at that file.
+
+### E4.5 Epic close-out
+
+**Deliverables:** a "Formatting" concept page on the website (what
+canonical means, `fmt` at the gate, F4's text rule); the epic merged into
+`main` in each repository; release `v0.3.0-alpha`, which also carries
+Epic 3.
+
+**Check it yourself:** the release's `SHA256SUMS` verifies; the
+downloaded binary's `fmt --check` passes on the example.
+
 ## Later epics (outline)
 
 Detailed task breakdowns are written when the preceding epic closes. Proposed
 order after Epic 2, with the reason it comes where it does:
 
 1. **Architecture groundwork** — Epic 3, detailed above (closed 2026-10-28).
-2. **`fmt`** — canonical serialization; `fmt --check` joins the gate. Needed
-   before the editor can write files.
+2. **`fmt`** — Epic 4, detailed above.
 3. **`init`** — medical-device starter template embedded in the binary; a fresh
    `init` must pass `validate` and `export`.
 4. **CSV-backed entity types** — rows of a CSV file loaded as entities of a
