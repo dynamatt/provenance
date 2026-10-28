@@ -8,15 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/exitcode"
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/export/website"
 	"github.com/dynamatt/provenance/internal/history"
-	"github.com/dynamatt/provenance/internal/model"
-	"github.com/dynamatt/provenance/internal/query"
+	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/repo"
-	"github.com/dynamatt/provenance/internal/schema"
 )
 
 // exporters is the registry of export formats. PDF and Word are part of the
@@ -59,16 +56,17 @@ func exportFormat(c *cobra.Command, format string) error {
 	}
 	// The output folder may sit inside the repository (the default ./_site
 	// usually does); never read it back as source.
-	in, err := load(cwd, outDir)
+	res, err := loadRepo(cwd, outDir)
 	if err != nil {
 		return err
 	}
+	in := res.Input()
 	if path, _ := c.Flags().GetString("scope"); path != "" {
 		if in.Scope, err = export.ResolveScope(in.Graph, in.Repo.Root, cwd, path); err != nil {
 			return err
 		}
 	}
-	if in.Git, err = gitContext(in.Repo.Root, outDir); err != nil {
+	if in.Git, err = res.Git(); err != nil {
 		return err
 	}
 	files, err := exp.Export(in)
@@ -82,53 +80,21 @@ func exportFormat(c *cobra.Command, format string) error {
 	return nil
 }
 
-// load reads the repository containing cwd: its entities, typed against the
-// schema, and the graph that evaluates their calculated fields and runs
-// queries. Folders under skip are not read.
-func load(cwd string, skip ...string) (*export.Input, error) {
+// loadRepo reads the repository containing cwd, stopping at its first
+// problem. Folders under skip are not read.
+func loadRepo(cwd string, skip ...string) (*load.Result, error) {
 	r, err := repo.Open(cwd)
 	if err != nil {
 		return nil, err
 	}
-	parsed, err := entity.Discover(r.Root, skip...)
+	res, err := load.Load(r, skip...)
 	if err != nil {
 		return nil, err
 	}
-	s, err := schema.Load(r.Root)
-	if err != nil {
+	if err := res.Err(); err != nil {
 		return nil, err
 	}
-	entities, err := model.Build(s, parsed)
-	if err != nil {
-		return nil, err
-	}
-	graph, err := query.NewGraph(s, entities)
-	if err != nil {
-		return nil, err
-	}
-	return &export.Input{Repo: r, Schema: s, Entities: entities, Graph: graph}, nil
-}
-
-// gitContext reads what an export stamps into its output (DES-0021,
-// DES-0023). Outside a git repository there is nothing to stamp: export
-// still works, without commit or content hash.
-func gitContext(root, outDir string) (*export.Git, error) {
-	h, err := history.Open(root)
-	if errors.Is(err, history.ErrNotRepository) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer h.Close()
-	g := &export.Git{SHA: h.HEAD()}
-	if g.ContentHash, g.Dirty, err = h.WorkingContentHash(outDir); err != nil {
-		return nil, err
-	}
-	if g.Log, err = h.Log(); err != nil {
-		return nil, err
-	}
-	return g, nil
+	return res, nil
 }
 
 // runVerifyContent prints the DHF content hash of HEAD (suffixed -dirty when
@@ -161,8 +127,14 @@ func runVerifyContent(c *cobra.Command, _ []string) error {
 		if hash, err = h.ContentHash(sha); err != nil {
 			return fmt.Errorf("%s: %w", name, err)
 		}
-	} else if hash, _, err = h.WorkingContentHash(); err != nil {
-		return fmt.Errorf("%s: %w", name, err)
+	} else {
+		content, err := load.ContentOf(r)
+		if err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+		if hash, _, err = h.WorkingContentHash(content); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
 	}
 	fmt.Fprintln(c.OutOrStdout(), hash)
 	if expected, _ := c.Flags().GetString("expected"); expected != "" && expected != hash {

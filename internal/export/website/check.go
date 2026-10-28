@@ -11,30 +11,25 @@ import (
 
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/markdown"
+	"github.com/dynamatt/provenance/internal/problem"
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/schema"
 	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
-// Problem is something Check found: a problem that stops an export, or
-// content the export would show as a gap (DES-0048).
-type Problem struct {
-	// Rule is the built-in check's ID, e.g. "content/query".
-	Rule    string
-	Warning bool
-	// Path is slash-separated and relative to the repository root; Line is
-	// 0 when not known.
-	Path string
-	Line int
-	Msg  string
-}
+// Problem is something rendering found: a problem that stops an export,
+// or content the export would show as a gap (DES-0048).
+type Problem = problem.Problem
 
 // Check renders the site as Export does, but records every problem and
 // goes on instead of stopping at the first, so validate can report them
-// all. Nothing is written. err is a failure to read the repository.
+// all. Nothing is written, so nothing is stamped. err is a failure to read
+// the repository.
 func (e *Exporter) Check(in *export.Input) ([]Problem, error) {
-	c := &checker{seen: map[Problem]bool{}, chosen: map[string]bool{}}
-	if _, err := e.run(in, c); err != nil {
+	c := newChecker(false)
+	unstamped := *in
+	unstamped.Git = nil
+	if _, err := e.run(&unstamped, c); err != nil {
 		return nil, err
 	}
 	if err := c.templateFiles(in.Repo.Root, in.Schema); err != nil {
@@ -43,9 +38,14 @@ func (e *Exporter) Check(in *export.Input) ([]Problem, error) {
 	return c.problems, nil
 }
 
-// checker collects Check's problems. A problem in an entity embedded on
-// several pages is found on each; it is kept once.
+// checker is where rendering reports what it finds (G8). Rendering goes
+// the same way for an export and a check: an export's checker stops it at
+// the first problem that stops an export, by returning that problem's
+// Err; a check's records every problem and lets rendering go on. A
+// problem in an entity embedded on several pages is found on each; it is
+// kept once.
 type checker struct {
+	stop     bool
 	problems []Problem
 	seen     map[Problem]bool
 	// chosen are the named templates query blocks choose.
@@ -56,67 +56,92 @@ type checker struct {
 }
 
 type placed struct {
-	id, path string
-	line     int
+	id, path, entity string
+	line             int
 }
 
-func (c *checker) add(p Problem) {
-	if !c.seen[p] {
-		c.seen[p] = true
+func newChecker(stop bool) *checker {
+	return &checker{stop: stop, seen: map[Problem]bool{}, chosen: map[string]bool{}}
+}
+
+// report records p, or, while exporting, returns p.Err when p stops an
+// export.
+func (c *checker) report(p Problem) error {
+	if c.stop && p.Err != nil {
+		return p.Err
+	}
+	key := p
+	key.Err = nil
+	if !c.seen[key] {
+		c.seen[key] = true
 		c.problems = append(c.problems, p)
 	}
+	return nil
 }
 
-// record keeps err, a problem Export would have stopped at, under the
-// check its kind belongs to.
-func (c *checker) record(err error) {
+// add records p, a problem an export carries on past.
+func (c *checker) add(p Problem) { _ = c.report(p) }
+
+// record reports err, which stops an export, under the check its kind
+// belongs to.
+func (c *checker) record(err error) error {
 	var (
 		qe    *query.FileError
 		ce    *query.ContentError
 		cycle *EmbedCycleError
 		te    *tmpl.Error
 	)
+	var p Problem
 	switch {
 	case errors.As(err, &qe):
-		c.add(Problem{Rule: "content/query", Path: qe.Path, Line: qe.Line, Msg: "query block: " + qe.Msg})
+		p = Problem{Check: "content/query", Path: qe.Path, Line: qe.Line, Entity: qe.Entity, Msg: "query block: " + qe.Msg}
 	case errors.As(err, &ce):
-		c.add(Problem{Rule: "content/caption", Path: ce.Path, Line: ce.Line, Msg: ce.Msg})
+		p = Problem{Check: "content/caption", Path: ce.Path, Line: ce.Line, Entity: ce.Entity, Msg: ce.Msg}
 	case errors.As(err, &cycle):
-		c.add(Problem{Rule: "content/embed-cycle", Path: cycle.Path, Msg: "embed cycle " + strings.Join(cycle.Chain, " → ")})
+		p = Problem{Check: "content/embed-cycle", Path: cycle.Path, Entity: cycle.Chain[len(cycle.Chain)-1], Msg: "embed cycle " + strings.Join(cycle.Chain, " → ")}
 	case errors.As(err, &te):
-		p := Problem{Rule: "content/template", Path: te.Path, Line: te.Line, Msg: te.Msg}
+		p = Problem{Check: "content/template", Path: te.Path, Line: te.Line, Msg: te.Msg}
 		if p.Path == "" {
 			p.Path = templatesDir
 		}
-		c.add(p)
 	default:
-		c.add(Problem{Rule: "content/template", Path: templatesDir, Msg: err.Error()})
+		p = Problem{Check: "content/template", Path: templatesDir, Msg: err.Error()}
 	}
+	p.Err = err
+	return c.report(p)
 }
 
-// failed is how rendering reports err: returned while exporting, recorded
-// (and rendering goes on) while checking.
+// failed reports err, if any, from rendering: returned while exporting,
+// recorded while checking, when rendering goes on.
 func (s *site) failed(err error) error {
-	if err == nil || s.check == nil {
-		return err
+	if err == nil {
+		return nil
 	}
-	s.check.record(err)
-	return nil
+	return s.check.record(err)
 }
 
-// markdownProblem records a problem markdown.ConvertAll found in text
-// rendered from the entity being rendered.
-func (ctx *renderCtx) markdownProblem(err error) {
+// markdownProblem reports err, a problem markdown.ConvertAll found in text
+// rendered from the entity being rendered; exportErr is how an export
+// stops at it.
+func (ctx *renderCtx) markdownProblem(err, exportErr error) error {
 	var me *markdown.Error
 	if !errors.As(err, &me) {
-		ctx.site.check.record(err)
-		return
+		return ctx.site.check.record(exportErr)
 	}
 	rule := "content/caption"
 	if me.Image {
 		rule = "content/image"
 	}
-	ctx.site.check.add(Problem{Rule: rule, Path: ctx.path(), Line: ctx.fileLine(me.Line), Msg: me.Msg})
+	return ctx.site.check.report(Problem{Check: rule, Path: ctx.path(), Line: ctx.fileLine(me.Line), Entity: ctx.entityID(), Msg: me.Msg, Err: exportErr})
+}
+
+// entityID is the ID of the entity being rendered, or "" for the index
+// and the layout.
+func (ctx *renderCtx) entityID() string {
+	if e := ctx.entity(); e != nil {
+		return e.ID
+	}
+	return ""
 }
 
 // path is the file of the entity being rendered, or the templates folder
@@ -150,7 +175,7 @@ func (c *checker) pageEnd() {
 	for _, p := range c.captions {
 		if f, dup := first[p.id]; dup {
 			if f != p {
-				c.add(Problem{Rule: "content/caption", Path: p.path, Line: p.line,
+				c.add(Problem{Check: "content/caption", Path: p.path, Line: p.line, Entity: p.entity,
 					Msg: fmt.Sprintf("caption id %q is used twice on one page (first at %s:%d)", p.id, f.path, f.line)})
 			}
 			continue
@@ -159,7 +184,7 @@ func (c *checker) pageEnd() {
 	}
 	for _, x := range c.xrefs {
 		if _, ok := first[x.id]; !ok {
-			c.add(Problem{Rule: "content/caption", Path: x.path, Line: x.line,
+			c.add(Problem{Check: "content/caption", Path: x.path, Line: x.line, Entity: x.entity,
 				Msg: fmt.Sprintf("[[#%s]]: no caption with id %q on this page", x.id, x.id)})
 		}
 	}
@@ -192,7 +217,7 @@ func (c *checker) templateFiles(root string, s *schema.Schema) error {
 			if slices.Contains(siteOverrides, name) {
 				continue
 			}
-			p.Rule = "content/unknown-override"
+			p.Check = "content/unknown-override"
 			p.Msg = fmt.Sprintf("%s is not a site override (%s), so it is never used", name, strings.Join(siteOverrides, ", "))
 		case s.Types[base] != nil:
 			continue
@@ -200,10 +225,10 @@ func (c *checker) templateFiles(root string, s *schema.Schema) error {
 			if c.chosen[base] {
 				continue
 			}
-			p.Rule = "content/unused-template"
+			p.Check = "content/unused-template"
 			p.Msg = fmt.Sprintf("named template %s is not chosen by any query block", base)
 		default:
-			p.Rule = "content/template-name"
+			p.Check = "content/template-name"
 			p.Msg = fmt.Sprintf("%s names no declared type and is not a named template (lower-case kebab-case), so it is never used", name)
 		}
 		c.add(p)

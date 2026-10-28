@@ -12,7 +12,6 @@ import (
 	"strings"
 	texttemplate "text/template"
 
-	"github.com/dynamatt/provenance/internal/export/website"
 	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
@@ -49,8 +48,16 @@ func (e *UnknownReportError) Error() string {
 	return msg
 }
 
-// Root is the repository the report is about.
-func (r *Report) Root() string { return r.root }
+// Stamps are the report's git stamps: HEAD, and the content hash with
+// whether the working tree differs from it. They need only HEAD, so a
+// shallow clone has them too.
+func (r *Report) Stamps() (Stamps, error) {
+	h, err := r.history()
+	if err != nil || h == nil {
+		return Stamps{}, err
+	}
+	return Stamps{GitSHA: h.SHA, ContentHash: h.ContentHash, Dirty: h.Dirty.Any()}, nil
+}
 
 // IsFormat reports whether name is one of Formats rather than a report
 // template.
@@ -154,7 +161,7 @@ func readReport(root, name string) (string, error) {
 
 func (r *Report) render(w io.Writer, name, text string, st Stamps) error {
 	path := ReportsDir + "/" + name + ".tmpl"
-	funcs := website.ReportFuncs()
+	funcs := tmpl.ReportFuncs()
 	var t interface {
 		Execute(io.Writer, any) error
 	}
@@ -189,7 +196,7 @@ func (r *Report) templateData(st Stamps) map[string]any {
 			if e, ok := r.entities[v.Entity]; ok {
 				ent = e
 			} else {
-				ent = website.UnresolvedEntity(v.Entity)
+				ent = tmpl.Baseline(v.Entity)
 			}
 		}
 		return map[string]any{"Rule": v.Rule, "Severity": string(v.Severity), "Message": v.Message,

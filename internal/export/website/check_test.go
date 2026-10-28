@@ -22,7 +22,7 @@ func check(t *testing.T, files map[string]string) string {
 		if p.Warning {
 			w = " (warning)"
 		}
-		lines = append(lines, fmt.Sprintf("%s:%d %s%s %s", p.Path, p.Line, p.Rule, w, p.Msg))
+		lines = append(lines, fmt.Sprintf("%s:%d %s%s %s", p.Path, p.Line, p.Check, w, p.Msg))
 	}
 	slices.Sort(lines)
 	return strings.Join(lines, "\n")

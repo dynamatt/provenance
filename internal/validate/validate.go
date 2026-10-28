@@ -6,17 +6,14 @@ package validate
 
 import (
 	"cmp"
-	"errors"
-	"fmt"
 	"slices"
 	"strings"
 
-	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/export"
-	"github.com/dynamatt/provenance/internal/export/website"
+	"github.com/dynamatt/provenance/internal/load"
+	"github.com/dynamatt/provenance/internal/problem"
 	"github.com/dynamatt/provenance/internal/repo"
-	"github.com/dynamatt/provenance/internal/schema"
-	"github.com/dynamatt/provenance/internal/yamlnode"
+	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
 // Severity is how a violation affects the gate: errors fail it, warnings
@@ -56,7 +53,8 @@ type Report struct {
 	// every entity's template data by ID (nil when the schema has errors).
 	root      string
 	component repo.Component
-	entities  map[string]map[string]any
+	history   func() (*load.History, error)
+	entities  map[string]tmpl.Data
 }
 
 // Errors counts the error-severity violations.
@@ -91,47 +89,33 @@ func (r *Report) sort() {
 // RulesDir is the folder of rule files at the repository root (DES-0016).
 const RulesDir = "rules"
 
-// Run validates the repository rp. Every problem is reported, not just the
-// first (REQ-0038). err is an I/O error: the repository could not be read.
-func Run(rp *repo.Repo) (*Report, error) {
+// Run validates the repository rp, checking it against every exporter in
+// exporters as an export would render it. Every problem is reported, not
+// just the first (REQ-0038). err is an I/O error: the repository could not
+// be read.
+func Run(rp *repo.Repo, exporters *export.Registry) (*Report, error) {
 	root := rp.Root
 	r := &Report{root: root, component: rp.Component}
-	sc, err := entity.Scan(root)
+	res, err := load.Load(rp)
 	if err != nil {
 		return nil, err
 	}
-	r.entityProblems(sc)
-
-	s, problems, err := schema.Read(root)
-	if err != nil {
-		return nil, err
-	}
-	for _, p := range problems {
-		r.add(Violation{Rule: "schema/file", Severity: Error, Message: p.Msg, Path: p.Path, Line: p.Line})
-	}
-	for _, p := range s.KeyProblems {
-		r.add(Violation{Rule: "schema/unknown-key", Severity: Error, Message: p.Msg, Path: p.Path, Line: p.Line})
-	}
-	if len(problems) > 0 {
-		// Every type, field and rule is read against the schema: with part of
-		// it missing, they would report its absence over and over.
+	r.history = res.History
+	r.loadProblems(res)
+	if res.SchemaBroken {
 		if r.RulesSkipped, err = r.skipRules(root, "the schema has errors"); err != nil {
 			return nil, err
 		}
 	} else {
-		known := r.unknownTypes(s, sc.Entities)
-		r.schemaChecks(s, sc.Entities)
-		typed, graph, err := r.conformance(s, known)
-		if err != nil {
+		r.schemaChecks(res.Schema, res.Parsed)
+		r.conformance(res.Schema, res.Entities)
+		if err := r.content(res.Input(), exporters); err != nil {
 			return nil, err
 		}
-		if err := r.content(&export.Input{Repo: rp, Schema: s, Entities: typed, Graph: graph}); err != nil {
+		if err := r.rules(root, res.Schema, res.Graph); err != nil {
 			return nil, err
 		}
-		if err := r.rules(root, s, graph); err != nil {
-			return nil, err
-		}
-		r.entities = website.EntityData(s, typed)
+		r.entities = tmpl.NewModel(res.Schema, res.Entities).ByID
 	}
 	r.sort()
 	// Report templates are checked against everything else found.
@@ -142,90 +126,33 @@ func Run(rp *repo.Repo) (*Report, error) {
 	return r, nil
 }
 
-// entityProblems reports the files that could not be read as entities.
-func (r *Report) entityProblems(sc *entity.Scanned) {
-	frontmatter := func(e *entity.Error) {
-		r.add(Violation{Rule: "content/frontmatter", Severity: Error, Message: e.Msg, Path: e.Path, Line: e.Line})
+// violation is p as validate reports it.
+func violation(p problem.Problem) Violation {
+	sev := Error
+	if p.Warning {
+		sev = Warning
 	}
-	type place struct {
-		path string
-		line int
-	}
-	dups := map[string][]place{}
-	var dupIDs []string
-	for _, p := range sc.Problems {
-		var fe *entity.Error
-		var de *entity.DuplicateIDError
-		switch {
-		case errors.As(p, &fe):
-			frontmatter(fe)
-		case errors.As(p, &de):
-			if dups[de.ID] == nil {
-				dupIDs = append(dupIDs, de.ID)
-				dups[de.ID] = []place{{de.First, de.FirstLine}}
-			}
-			dups[de.ID] = append(dups[de.ID], place{de.Then, de.ThenLine})
-		}
-	}
-	for _, p := range sc.Partial {
-		frontmatter(p)
-	}
-	// Every file declaring a duplicated ID is reported, naming the others.
-	for _, id := range dupIDs {
-		copies := dups[id]
-		for i, c := range copies {
-			var others []string
-			for j, o := range copies {
-				if j != i {
-					others = append(others, o.path)
-				}
-			}
-			r.add(Violation{
-				Rule: "content/duplicate-id", Severity: Error, Entity: id, Path: c.path, Line: c.line,
-				Message: fmt.Sprintf("duplicate entity ID %s, also in %s", id, strings.Join(others, ", ")),
-			})
-		}
+	return Violation{Rule: p.Check, Severity: sev, Message: p.Msg, Entity: p.Entity, Path: p.Path, Line: p.Line}
+}
+
+// loadProblems reports what loading found, each under its built-in check.
+func (r *Report) loadProblems(res *load.Result) {
+	for _, p := range res.Problems {
+		r.add(violation(p))
 	}
 }
 
-// unknownTypes reports entities whose type the schema does not declare,
-// and returns the others.
-func (r *Report) unknownTypes(s *schema.Schema, entities []*entity.Entity) (known []*entity.Entity) {
-	for _, e := range entities {
-		if s.Types[e.Type] != nil {
-			known = append(known, e)
-			continue
+// content reports what would stop an export, and what it would show as a
+// gap, found by rendering as each exporter does (export.Exporter.Check).
+func (r *Report) content(in *export.Input, exporters *export.Registry) error {
+	for _, exp := range exporters.Exporters() {
+		problems, err := exp.Check(in)
+		if err != nil {
+			return err
 		}
-		msg := fmt.Sprintf("type %q is not declared in schema/", e.Type)
-		if names := s.TypeNames(); len(names) > 0 {
-			msg += " (declared: " + strings.Join(names, ", ") + ")"
+		for _, p := range problems {
+			r.add(violation(p))
 		}
-		r.add(Violation{
-			Rule: "schema/unknown-type", Severity: Error, Message: msg, Entity: e.ID,
-			Path: e.Path, Line: yamlnode.Lookup(e.Front, "type").Line,
-		})
-	}
-	return known
-}
-
-// content reports what would stop the website export, and what it would
-// show as a gap, found by rendering the site as an export does
-// (website.Exporter.Check).
-func (r *Report) content(in *export.Input) error {
-	problems, err := website.New().Check(in)
-	if err != nil {
-		return err
-	}
-	byPath := map[string]string{}
-	for _, e := range in.Entities {
-		byPath[e.Path] = e.ID
-	}
-	for _, p := range problems {
-		sev := Error
-		if p.Warning {
-			sev = Warning
-		}
-		r.add(Violation{Rule: p.Rule, Severity: sev, Message: p.Msg, Entity: byPath[p.Path], Path: p.Path, Line: p.Line})
 	}
 	return nil
 }

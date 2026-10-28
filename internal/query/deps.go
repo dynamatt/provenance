@@ -6,10 +6,7 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/yuin/goldmark/util"
-
-	"github.com/dynamatt/provenance/internal/assets"
-	"github.com/dynamatt/provenance/internal/markdown"
+	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/schema"
 )
@@ -51,20 +48,26 @@ func (g *Graph) Dependencies(root *model.Entity) (*Deps, error) {
 	for len(w.queue) > 0 {
 		e := w.queue[0]
 		w.queue = w.queue[1:]
-		for _, text := range markdownSources(e) {
-			r := &recorder{w: w}
-			opts := markdown.Options{
-				Fences: map[string]markdown.FenceFunc{"query": r.query},
-				Image: func(dest string) (string, error) {
-					rel, inline, err := assets.Resolve(e.Path, dest)
-					if err == nil && !inline {
-						w.assets[rel] = true
-					}
-					return dest, err
-				},
-			}
-			if _, err := markdown.Convert(text, r, opts); err != nil {
+		for _, text := range textSources(e) {
+			refs, err := e.Record.Refs(text)
+			if err != nil {
 				return nil, depError(e, text, err)
+			}
+			for _, id := range refs.Embeds {
+				if t := g.Entity(id); t != nil {
+					w.add(t, true)
+				}
+			}
+			for _, id := range refs.Cited {
+				w.cited[id] = true
+			}
+			for _, rel := range refs.Assets {
+				w.assets[rel] = true
+			}
+			for _, b := range refs.Queries {
+				if err := w.query(b); err != nil {
+					return nil, BlockFileError(e, text, b.Line, err)
+				}
 			}
 		}
 	}
@@ -113,9 +116,9 @@ func (w *walker) add(e *model.Entity, full bool) {
 	}
 }
 
-// markdownSources are the texts of e rendered as Markdown: its body and
+// textSources are e's texts that refer to other content: its body and
 // every text field, list rows' text sub-fields included.
-func markdownSources(e *model.Entity) []string {
+func textSources(e *model.Entity) []string {
 	var out []string
 	if e.Body != "" {
 		out = append(out, e.Body)
@@ -145,48 +148,15 @@ func markdownSources(e *model.Entity) []string {
 	return out
 }
 
-// recorder is a Markdown resolver that only notes what a text pulls in.
-type recorder struct{ w *walker }
-
-func (r *recorder) CaptionStart(util.BufWriter, markdown.Caption) error { return nil }
-func (r *recorder) CaptionEnd(util.BufWriter, markdown.Caption) error   { return nil }
-
-func (r *recorder) Reference(_ util.BufWriter, l markdown.Link) error {
-	if l.Local == "" {
-		r.w.cited[l.ID] = true
-	}
-	return nil
-}
-
-// MisplacedEmbed renders as a reference, so it is a citation too.
-func (r *recorder) MisplacedEmbed(_ util.BufWriter, l markdown.Link) error {
-	r.w.cited[l.ID] = true
-	return nil
-}
-
-func (r *recorder) Embed(_ util.BufWriter, l markdown.Link) error {
-	if e := r.w.g.Entity(l.ID); e != nil {
-		r.w.add(e, true)
-	}
-	return nil
-}
-
-// blockError is a query block that cannot be run, at Line of the Markdown
-// text it is in.
-type blockError struct {
-	Line int
-	Err  error
-}
-
-func (e *blockError) Error() string { return e.Err.Error() }
-
 // FileError is a query block that cannot be run, at its file and line (0
 // when the line is not known). A document must not be published with a
 // section silently missing.
 type FileError struct {
 	Path string
 	Line int
-	Msg  string
+	// Entity is the ID of the entity whose text holds the block.
+	Entity string
+	Msg    string
 }
 
 func (e *FileError) Error() string {
@@ -208,15 +178,18 @@ func BlockFileError(e *model.Entity, text string, blockLine int, err error) *Fil
 			line += qe.Line - 1
 		}
 	}
-	return &FileError{Path: e.Path, Line: e.TextFileLine(text, line), Msg: msg}
+	return &FileError{Path: e.Path, Line: e.TextFileLine(text, line), Entity: e.ID, Msg: msg}
 }
 
-// ContentError is a problem in an entity's Markdown, such as a caption or
+// ContentError is a problem in an entity's text, such as a caption or
 // an image, at its file and line (0 when unknown).
 type ContentError struct {
 	Path string
 	Line int
-	Msg  string
+	// Entity is the ID of the entity whose text it is in, or "" for a
+	// problem in the schema or templates.
+	Entity string
+	Msg    string
 }
 
 func (e *ContentError) Error() string {
@@ -227,37 +200,34 @@ func (e *ContentError) Error() string {
 }
 
 func depError(e *model.Entity, text string, err error) error {
-	var be *blockError
-	if !errors.As(err, &be) {
-		var me *markdown.Error
-		if errors.As(err, &me) {
-			return &ContentError{Path: e.Path, Line: e.TextFileLine(text, me.Line), Msg: me.Msg}
-		}
-		return fmt.Errorf("%s: %w", e.Path, err)
+	var te *entity.TextError
+	if errors.As(err, &te) {
+		return &ContentError{Path: e.Path, Line: e.TextFileLine(text, te.Line), Entity: e.ID, Msg: te.Msg}
 	}
-	return BlockFileError(e, text, be.Line, be.Err)
+	return fmt.Errorf("%s: %w", e.Path, err)
 }
 
-func (r *recorder) query(_ util.BufWriter, f markdown.Fence) error {
-	b, err := ParseBlock(f.Source, r.w.g.Schema)
+// query notes what the query block b reads and finds.
+func (w *walker) query(b entity.Block) error {
+	q, err := ParseBlock(b.Source, w.g.Schema)
 	if err != nil {
-		return &blockError{Line: f.Line, Err: err}
+		return err
 	}
-	results, err := r.w.g.Run(b)
+	results, err := w.g.Run(q)
 	if err != nil {
-		return &blockError{Line: f.Line, Err: err}
+		return err
 	}
-	for _, t := range b.From {
-		r.w.types[t.Name] = true
+	for _, t := range q.From {
+		w.types[t.Name] = true
 	}
-	for _, t := range viaTypes(r.w.g.Schema, b.From, b.Where) {
-		r.w.types[t] = true
+	for _, t := range viaTypes(w.g.Schema, q.From, q.Where) {
+		w.types[t] = true
 	}
-	for _, c := range b.Templates {
-		r.w.templates[c.Name] = true
+	for _, c := range q.Templates {
+		w.templates[c.Name] = true
 	}
 	for _, e := range results {
-		r.w.add(e, b.Render.Mode == RenderFull)
+		w.add(e, q.Render.Mode == RenderFull)
 	}
 	return nil
 }

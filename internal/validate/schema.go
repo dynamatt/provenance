@@ -7,13 +7,10 @@ import (
 	"slices"
 	"strings"
 
-	"go.yaml.in/yaml/v4"
-
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/schema"
-	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
 // The schema conformance checks (DES-0048): the schema's own declarations,
@@ -146,20 +143,11 @@ func linksOut(t *schema.Type) bool {
 	return false
 }
 
-// conformance checks every entity against its type, and returns them typed
-// with the graph that evaluated their calculated fields. entities all have
-// declared types.
-func (r *Report) conformance(s *schema.Schema, entities []*entity.Entity) ([]*model.Entity, *query.Graph, error) {
-	typed, err := model.Build(s, entities)
-	if err != nil {
-		return nil, nil, err
-	}
-	// Calculated values are evaluated so a value a formula cannot give is
-	// reported; one whose formula is broken is reported once, on the schema.
-	graph, err := query.NewGraph(s, typed)
-	if err != nil {
-		return nil, nil, err
-	}
+// conformance checks every typed entity against its type. Their calculated
+// values were evaluated when they were loaded, so a value a formula cannot
+// give is reported; one whose formula is broken is reported once, on the
+// schema.
+func (r *Report) conformance(s *schema.Schema, typed []*model.Entity) {
 	broken := map[*schema.Field]bool{}
 	for _, p := range query.FormulaProblems(s) {
 		broken[p.Field] = true
@@ -172,7 +160,6 @@ func (r *Report) conformance(s *schema.Schema, entities []*entity.Entity) ([]*mo
 			c.value(v)
 		}
 	}
-	return typed, graph, nil
 }
 
 type entityCheck struct {
@@ -198,13 +185,11 @@ func (c *entityCheck) id() {
 	}
 }
 
-// keys checks every frontmatter key names a field the file may set.
+// keys checks every name the record writes is a field it may set.
 func (c *entityCheck) keys() {
 	t := c.e.Schema
-	front := c.e.Front
-	for i := 0; i+1 < len(front.Content); i += 2 {
-		k := front.Content[i]
-		name := k.Value
+	for _, k := range c.e.Record.Keys() {
+		name := k.Name
 		if name == "id" || name == "type" {
 			continue
 		}
@@ -245,7 +230,7 @@ func (c *entityCheck) unknownField(name string) string {
 // for a list each row or item.
 func (c *entityCheck) value(v *model.Value) {
 	f := v.Field
-	n := yamlnode.Lookup(c.e.Front, f.Name)
+	w := v.Written
 	switch {
 	case f.Kind == schema.Calculated:
 		if v.Invalid && !c.broken[f] {
@@ -255,36 +240,36 @@ func (c *entityCheck) value(v *model.Value) {
 	case f.Required && empty(v):
 		c.add("schema/required", c.e.IDLine(), "required field %s is not set", f.Name)
 		return
-	case !v.Present || n == nil:
+	case !v.Present || w == nil:
 		return
 	}
-	c.check(f.Name, n, v)
+	c.check(f.Name, w, v)
 	if f.Kind != schema.List || v.Invalid {
 		return
 	}
 	for i, item := range v.Items {
-		c.check(fmt.Sprintf("%s item %d", f.Name, i+1), n.Content[i], item)
+		c.check(fmt.Sprintf("%s item %d", f.Name, i+1), w.Items[i], item)
 	}
 	for i, row := range v.Rows {
-		c.row(fmt.Sprintf("%s row %d", f.Name, i+1), f, n.Content[i], row)
+		c.row(fmt.Sprintf("%s row %d", f.Name, i+1), f, w.Items[i], row)
 	}
 }
 
 // check reports a present value that is not of its type, not in its enum,
 // or a link to no entity or to one of a type its field doesn't allow.
-func (c *entityCheck) check(label string, n *yaml.Node, v *model.Value) {
+func (c *entityCheck) check(label string, w *entity.Written, v *model.Value) {
 	switch {
 	case v.Invalid:
-		c.add("schema/invalid-value", n.Line, "%s: %s, got %s", label, v.Problem, v.Raw)
+		c.add("schema/invalid-value", w.Line, "%s: %s, got %s", label, v.Problem, v.Raw)
 	case v.Field.Kind == schema.Enum:
 		if e := c.s.Enums[v.Field.EnumName]; e != nil && !slices.Contains(e.Values, v.Str) {
-			c.add("schema/enum-value", n.Line, "%s: %q is not one of %s: %s", label, v.Str, e.Name, strings.Join(e.Values, ", "))
+			c.add("schema/enum-value", w.Line, "%s: %q is not one of %s: %s", label, v.Str, e.Name, strings.Join(e.Values, ", "))
 		}
 	case v.Field.Kind == schema.Link:
 		for i, id := range v.IDs {
-			line := n.Line
-			if n.Kind == yaml.SequenceNode {
-				line = n.Content[i].Line
+			line := w.Line
+			if w.Kind == entity.List {
+				line = w.Items[i].Line
 			}
 			switch t := v.Targets[i]; {
 			case t == nil:
@@ -296,13 +281,13 @@ func (c *entityCheck) check(label string, n *yaml.Node, v *model.Value) {
 	}
 }
 
-// row checks one list row: its keys, and each sub-field's value.
-func (c *entityCheck) row(label string, list *schema.Field, n *yaml.Node, row model.Row) {
-	for i := 0; i+1 < len(n.Content); i += 2 {
-		k := n.Content[i]
+// row checks one list row, written as w: its keys, and each sub-field's
+// value.
+func (c *entityCheck) row(label string, list *schema.Field, w *entity.Written, row model.Row) {
+	for _, k := range w.Row.Keys() {
 		var sub *schema.Field
 		for _, f := range list.Fields {
-			if f.Name == k.Value {
+			if f.Name == k.Name {
 				sub = f
 			}
 		}
@@ -314,23 +299,22 @@ func (c *entityCheck) row(label string, list *schema.Field, n *yaml.Node, row mo
 					names = append(names, f.Name)
 				}
 			}
-			c.add("schema/list-row", k.Line, "%s: no sub-field %q (sub-fields: %s)", label, k.Value, strings.Join(names, ", "))
+			c.add("schema/list-row", k.Line, "%s: no sub-field %q (sub-fields: %s)", label, k.Name, strings.Join(names, ", "))
 		case sub.Kind == schema.Calculated:
 			c.add("schema/calculated-set", k.Line, "%s: %s is calculated (%s); it cannot be written in the file", label, sub.Name, sub.Formula)
 		}
 	}
 	for _, cell := range row {
 		sub := cell.Field
-		cn := yamlnode.Lookup(n, sub.Name)
 		switch {
 		case sub.Kind == schema.Calculated:
 			if cell.Invalid && !c.broken[sub] {
-				c.add("schema/invalid-value", n.Line, "%s: %s: %s", label, sub.Name, cell.Problem)
+				c.add("schema/invalid-value", w.Line, "%s: %s: %s", label, sub.Name, cell.Problem)
 			}
 		case sub.Required && empty(cell):
-			c.add("schema/required", n.Line, "%s: required sub-field %s is not set", label, sub.Name)
-		case cell.Present && cn != nil:
-			c.check(label+": "+sub.Name, cn, cell)
+			c.add("schema/required", w.Line, "%s: required sub-field %s is not set", label, sub.Name)
+		case cell.Present && cell.Written != nil:
+			c.check(label+": "+sub.Name, cell.Written, cell)
 		}
 	}
 }

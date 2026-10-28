@@ -3,9 +3,11 @@ package history
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -66,6 +68,59 @@ func (tr *testRepo) commit(msg string, files map[string]string) string {
 		tr.t.Fatal(err)
 	}
 	return h.String()
+}
+
+// mdContent is the Content of the tests: every .md file under root whose
+// frontmatter names a type holds an entity of that type. Folders in skip
+// are not read.
+type mdContent struct {
+	root string
+	skip []string
+}
+
+var (
+	idLine   = regexp.MustCompile(`(?m)^id: (\S+)$`)
+	typeLine = regexp.MustCompile(`(?m)^type: (\S+)$`)
+)
+
+func (c mdContent) Files() ([]string, error) {
+	var out []string
+	err := filepath.WalkDir(c.root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() && (d.Name() == ".git" || slices.Contains(c.skip, p)) {
+			return filepath.SkipDir
+		}
+		rel, _ := filepath.Rel(c.root, p)
+		rel = filepath.ToSlash(rel)
+		if !d.IsDir() && strings.HasSuffix(rel, ".md") {
+			es, err := c.Entities(rel, func() ([]byte, error) { return os.ReadFile(p) })
+			if err != nil {
+				return err
+			}
+			if len(es) > 0 {
+				out = append(out, rel)
+			}
+		}
+		return nil
+	})
+	return out, err
+}
+
+func (mdContent) Entities(path string, data func() ([]byte, error)) ([]FileEntity, error) {
+	if !strings.HasSuffix(path, ".md") {
+		return nil, nil
+	}
+	b, err := data()
+	if err != nil {
+		return nil, err
+	}
+	id, typ := idLine.FindSubmatch(b), typeLine.FindSubmatch(b)
+	if id != nil && typ != nil {
+		return []FileEntity{{ID: string(id[1]), Type: string(typ[1]), Text: string(b)}}, nil
+	}
+	return nil, nil
 }
 
 func (tr *testRepo) open(sub string) *Repo {
@@ -183,7 +238,7 @@ func TestLinkedWorktree(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	got, dirty, err := h.WorkingContentHash()
+	got, dirty, err := h.WorkingContentHash(mdContent{root: work})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,14 +251,15 @@ func TestStatus(t *testing.T) {
 	tr := newRepo(t)
 	tr.commit("first", base)
 	h := tr.open("")
-	if d, err := h.Status(); err != nil || d.Any() {
+	content := mdContent{root: tr.dir, skip: []string{filepath.Join(tr.dir, "_site")}}
+	if d, err := h.Status(content); err != nil || d.Any() {
 		t.Fatalf("clean checkout: %+v, %v", d, err)
 	}
 
 	// CRLF line endings alone, as core.autocrlf writes them, are not a
 	// change.
 	tr.write(map[string]string{"DOC/DOC-1.md": strings.ReplaceAll(base["DOC/DOC-1.md"], "\n", "\r\n")})
-	if d, _ := h.Status(); d.Any() {
+	if d, _ := h.Status(content); d.Any() {
 		t.Errorf("CRLF-only difference reported dirty: %v", d.Paths)
 	}
 
@@ -216,18 +272,18 @@ func TestStatus(t *testing.T) {
 	if err := os.Remove(filepath.Join(tr.dir, "schema", "Req.yaml")); err != nil {
 		t.Fatal(err)
 	}
-	d, err := h.Status(filepath.Join(tr.dir, "_site"))
+	d, err := h.Status(content)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got := strings.Join(d.Paths, " "); got != "REQ/REQ-1.md USR/USR-1.md schema/Req.yaml" {
 		t.Errorf("dirty paths: %s", got)
 	}
-	if got := strings.Join(d.Types, " "); got != "Requirement UserNeed" {
-		t.Errorf("dirty types: %s", got)
+	if got := strings.Join(d.Entities, " ") + " / " + strings.Join(d.Types, " "); got != "REQ-1 USR-1 / Requirement UserNeed" {
+		t.Errorf("dirty entities and types: %s", got)
 	}
-	if !d.Touches(Inputs{Paths: []string{"schema/Req.yaml"}}) || !d.Touches(Inputs{Types: []string{"UserNeed"}}) || d.Touches(Inputs{Paths: []string{"DOC/DOC-1.md"}}) {
-		t.Error("Touches does not match the dirty paths and types")
+	if !d.Touches(Inputs{Paths: []string{"schema/Req.yaml"}}) || !d.Touches(Inputs{Types: []string{"UserNeed"}}) || !d.Touches(Inputs{Entities: []string{"REQ-1"}}) || d.Touches(Inputs{Entities: []string{"DOC-1"}}) {
+		t.Error("Touches does not match the dirty entities, paths and types")
 	}
 }
 
@@ -239,7 +295,7 @@ func TestLog(t *testing.T) {
 	if _, err := tr.r.CreateTag("v1", plumbingHash(t, tr, first), nil); err != nil {
 		t.Fatal(err)
 	}
-	l, err := tr.open("").Log()
+	l, err := tr.open("").Log(mdContent{root: tr.dir})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,13 +309,39 @@ func TestLog(t *testing.T) {
 	if got := l.Commits[2].Tags; !slices.Equal(got, []string{"v1"}) {
 		t.Errorf("tags of the first commit: %v", got)
 	}
-	doc := Inputs{Paths: []string{"DOC/DOC-1.md"}}
+	if got := strings.Join(l.Commits[1].Entities, " "); got != "DOC-1" {
+		t.Errorf("the second commit changed %s, want DOC-1", got)
+	}
+	doc := Inputs{Entities: []string{"DOC-1"}}
 	if got := l.LastChanged(doc); got != l.Commits[1].SHA {
 		t.Errorf("DOC-1 last changed in %s, want the second commit", Short(got))
 	}
 	// A page querying requirements changes with any requirement.
-	if got := l.LastChanged(Inputs{Paths: []string{"DOC/DOC-1.md"}, Types: []string{"Requirement"}}); got != third {
+	if got := l.LastChanged(Inputs{Entities: []string{"DOC-1"}, Types: []string{"Requirement"}}); got != third {
 		t.Errorf("with Requirement inputs: %s, want the third commit", Short(got))
+	}
+	if got := l.LastChanged(Inputs{Paths: []string{"schema/Req.yaml"}}); got != first {
+		t.Errorf("schema/Req.yaml last changed in %s, want the first commit", Short(got))
+	}
+}
+
+// A shallow clone has HEAD, so its content hash and dirty state, but not
+// the history it cut off, which the log needs.
+func TestShallowClone(t *testing.T) {
+	tr := newRepo(t)
+	tr.commit("first", base)
+	second := tr.commit("second", map[string]string{"DOC/DOC-1.md": "---\nid: DOC-1\ntype: Document\n---\nText 2.\n"})
+	if err := os.WriteFile(filepath.Join(tr.dir, ".git", "shallow"), []byte(second+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	h := tr.open("")
+	if _, dirty, err := h.WorkingContentHash(mdContent{root: tr.dir}); err != nil || dirty.Any() {
+		t.Errorf("content hash: dirty %v, %v", dirty, err)
+	}
+	_, err := h.Log(mdContent{root: tr.dir})
+	var se *ShallowError
+	if !errors.As(err, &se) || se.Commit != second || !strings.Contains(err.Error(), "fetch-depth: 0") {
+		t.Errorf("err = %v, want a ShallowError at the second commit naming fetch-depth: 0", err)
 	}
 }
 

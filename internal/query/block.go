@@ -10,6 +10,7 @@ import (
 
 	"go.yaml.in/yaml/v4"
 
+	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/query/datalog"
 	"github.com/dynamatt/provenance/internal/schema"
@@ -428,20 +429,20 @@ func (g *Graph) item(e *model.Entity, t *Test, v datalog.Value) Item {
 			}
 			return it
 		}
-		if list := yamlnode.Lookup(e.Front, field); list != nil && it.Row < len(list.Content) {
-			it.Line = list.Content[it.Row].Line
+		if list := written(e, field); list != nil && list.Kind == entity.List && it.Row < len(list.Items) {
+			it.Line = list.Items[it.Row].Line
 		}
 		return it
 	}
 	it.ID = v.S
 	if f := e.Schema.Field(field); f != nil {
-		n := yamlnode.Lookup(e.Front, field)
-		if it.Line = valueLine(n, it.ID); it.Line == 0 && t.Transitive && n != nil {
+		w := written(e, field)
+		if it.Line = valueLine(w, it.ID); it.Line == 0 && t.Transitive && w != nil {
 			// Reached through other entities, such as e itself around a
 			// cycle: placed at e's link, where the walk starts (D8).
-			it.Line = n.Line
-			if n.Kind == yaml.SequenceNode && len(n.Content) > 0 {
-				it.Line = n.Content[0].Line
+			it.Line = w.Line
+			if w.Kind == entity.List && len(w.Items) > 0 {
+				it.Line = w.Items[0].Line
 			}
 		}
 		return it
@@ -459,15 +460,18 @@ func (g *Graph) item(e *model.Entity, t *Test, v datalog.Value) Item {
 			continue
 		}
 		if fs.List == nil {
-			if line := valueLine(yamlnode.Lookup(src.Front, fs.Field.Name), e.ID); line > 0 {
+			if line := valueLine(written(src, fs.Field.Name), e.ID); line > 0 {
 				it.Line = line
 				return it
 			}
 			continue
 		}
-		if list := yamlnode.Lookup(src.Front, fs.List.Name); list != nil && list.Kind == yaml.SequenceNode {
-			for _, row := range list.Content {
-				if line := valueLine(yamlnode.Lookup(row, fs.Field.Name), e.ID); line > 0 {
+		if list := written(src, fs.List.Name); list != nil && list.Kind == entity.List {
+			for _, row := range list.Items {
+				if row.Kind != entity.Mapping {
+					continue
+				}
+				if line := valueLine(row.Row.Value(fs.Field), e.ID); line > 0 {
 					it.Line = line
 					return it
 				}
@@ -482,16 +486,24 @@ func (g *Graph) item(e *model.Entity, t *Test, v datalog.Value) Item {
 	return it
 }
 
-// valueLine is the line of n, a link field's value, where it names id: the
-// scalar, or the sequence item. 0 when it doesn't.
-func valueLine(n *yaml.Node, id string) int {
+// written is what e's record writes for the field name, or nil.
+func written(e *model.Entity, name string) *entity.Written {
+	if v := e.Field(name); v != nil {
+		return v.Written
+	}
+	return nil
+}
+
+// valueLine is the line of w, a link field's value, where it names id: the
+// value, or the list item. 0 when it doesn't.
+func valueLine(w *entity.Written, id string) int {
 	switch {
-	case n == nil:
-	case n.Kind == yaml.ScalarNode && n.Value == id:
-		return n.Line
-	case n.Kind == yaml.SequenceNode:
-		for _, item := range n.Content {
-			if item.Kind == yaml.ScalarNode && item.Value == id {
+	case w == nil:
+	case w.Kind == entity.Text && w.Text == id:
+		return w.Line
+	case w.Kind == entity.List:
+		for _, item := range w.Items {
+			if item.Kind == entity.Text && item.Text == id {
 				return item.Line
 			}
 		}

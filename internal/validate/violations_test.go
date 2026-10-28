@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/dynamatt/provenance/internal/entity"
+	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/repo"
 )
 
@@ -52,17 +53,17 @@ type errorClass struct {
 
 func errorClasses(t *testing.T) []errorClass {
 	t.Helper()
-	sc, err := entity.Scan(filepath.Join(violationsDir, "core"))
+	res, err := load.Load(&repo.Repo{Root: filepath.Join(violationsDir, "core")})
 	if err != nil {
 		t.Fatal(err)
 	}
 	var out []errorClass
-	for _, e := range sc.Entities {
+	for _, e := range res.Parsed {
 		if e.Type != "ErrorClass" {
 			continue
 		}
 		var c errorClass
-		if err := e.Front.Decode(&c); err != nil {
+		if err := e.Record.(*entity.Markdown).Front.Decode(&c); err != nil {
 			t.Fatalf("%s: %v", e.Path, err)
 		}
 		out = append(out, c)
@@ -75,7 +76,7 @@ func errorClasses(t *testing.T) []errorClass {
 func TestViolationsExamples(t *testing.T) {
 	reported := map[string][]Violation{} // by file, relative to violationsDir
 	for _, name := range violationRepos {
-		r, err := Run(&repo.Repo{Root: filepath.Join(violationsDir, name)})
+		r, err := Run(&repo.Repo{Root: filepath.Join(violationsDir, name)}, exporters())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -162,11 +163,11 @@ func TestViolationsCoverEveryRule(t *testing.T) {
 func TestChecksMatchTheCatalogue(t *testing.T) {
 	classes := map[string]errorClass{}
 	titles := map[string]string{}
-	sc, err := entity.Scan(filepath.Join(violationsDir, "core"))
+	res, err := load.Load(&repo.Repo{Root: filepath.Join(violationsDir, "core")})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, e := range sc.Entities {
+	for _, e := range res.Parsed {
 		if e.Type != "ErrorClass" {
 			continue
 		}
@@ -174,10 +175,10 @@ func TestChecksMatchTheCatalogue(t *testing.T) {
 		var title struct {
 			Title string `yaml:"title"`
 		}
-		if err := e.Front.Decode(&c); err != nil {
+		if err := e.Record.(*entity.Markdown).Front.Decode(&c); err != nil {
 			t.Fatal(err)
 		}
-		if err := e.Front.Decode(&title); err != nil {
+		if err := e.Record.(*entity.Markdown).Front.Decode(&title); err != nil {
 			t.Fatal(err)
 		}
 		classes[c.Rule], titles[c.Rule] = c, title.Title

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -198,10 +199,19 @@ func buildRepo(t *testing.T, files map[string]string) []*Entity {
 	if err != nil {
 		t.Fatal(err)
 	}
-	parsed, err := entity.Discover(root)
-	if err != nil {
-		t.Fatal(err)
+	var parsed []*entity.Entity
+	for rel, content := range files {
+		if strings.HasSuffix(rel, ".md") {
+			e, err := entity.Parse(rel, []byte(content))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if e != nil {
+				parsed = append(parsed, e)
+			}
+		}
 	}
+	slices.SortFunc(parsed, func(a, b *entity.Entity) int { return strings.Compare(a.ID, b.ID) })
 	built, err := Build(s, parsed)
 	if err != nil {
 		t.Fatal(err)

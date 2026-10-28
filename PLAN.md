@@ -43,11 +43,12 @@
 - [x] E2.9 Report formats
 - [x] E2.10 Report templates
 - [x] E2.11 Epic close-out: gate in CI, docs, release
-- [ ] E3.1 One loader
-- [ ] E3.2 Sources and content files
-- [ ] E3.3 Values and positions from the source
-- [ ] E3.4 Entity-level history
-- [ ] E3.5 Epic close-out
+- [x] E3.1 One loader
+- [x] E3.2 Sources and content files
+- [x] E3.3 Values and positions from the source
+- [x] E3.4 Entity-level history
+- [x] E3.5 Problems and checks
+- [x] E3.6 Epic close-out
 
 ## Shape of the plan
 
@@ -989,9 +990,9 @@ on the changed file. Revert → it passes.
 
 ## Epic 3 — Architecture groundwork
 
-> **Status: proposed 2026-10-25, for Matt's review.** Decisions G1–G6 are
-> proposals. Nothing below is started until the plan PR is merged and
-> Epic 2 has closed.
+> **Status: closed 2026-10-28.** Decisions G1–G6 agreed with Matt
+> 2026-10-25 (plan PR #49); G7 and G8 built in E3.4 and E3.5. No release
+> of its own: it ships with the next epic's.
 
 **Goal:** loading, validation and history stop assuming that an entity is
 a Markdown file, so the CSV-backed types epic, and every command after it
@@ -1024,18 +1025,22 @@ source, so their YAML positions stay as they are.
 **Standing acceptance for every E3 task:** output doesn't change. The
 golden site, `testdata/validate/*` and every acceptance step pass as they
 are, with no example-repo change and no pin bump. Each task adds unit
-tests, including through the test source (G6).
+tests, including through the test source (G6), and redraws the DDF's
+architecture diagrams (DES-0050 packages, DES-0051 loading pipeline,
+from `tools/diagrams.py`) where it changes what they show.
 
 **Decisions (for Matt):**
 
 | # | Decision | Proposal | Why |
 | --- | --- | --- | --- |
 | G1 | How problems are reported | **The loader collects every problem, as `validate` does today; `export` reports the first,** in today's order and wording. | One pipeline. Export's messages are what users and the acceptance script see, so they must not move. |
-| G2 | Where it lives | **A package `internal/load`.** `load.Repo(root)` returns the repository, schema, typed entities, graph and the problems, each with a kind, its path, line and entity. `validate` keeps the rule IDs: it maps each kind to its built-in check. `export.Input` is built from the result. | Callers stop sequencing packages themselves, and the CLI shrinks to flags and output. |
+| G2 | Where it lives | **A package `internal/load`.** `load.Repo(root)` returns the repository, schema, typed entities, graph and the problems, each named by the built-in check it is reported under, with its path, line and entity (*revised 2026-10-25: not a closed list of kinds that `validate` maps, so a new problem needs no change elsewhere*). `export.Input` is built from the result. | Callers stop sequencing packages themselves, and the CLI shrinks to flags and output. |
 | G3 | What a source is | **An interface the loader runs after the schema:** it lists the files it reads (the content files for the dirty check), loads them into entities with problems, and parses one file's bytes (for a commit's blobs). The first is the Markdown walker, which ignores the schema and still runs when the schema is broken, so load errors keep being reported then. | A CSV source finds its files from the schema, so the schema has to come first. One place answers "is this file content?" and "what entities does it hold?". |
 | G4 | Who decodes values and positions | **The source.** Each entity carries a record, an interface with its value for a field and the position of the entity, a field, a list row or a cell. The Markdown record keeps the YAML nodes (which `fmt` needs) and the YAML-tag typing that `model.value` does today; a CSV record would type a cell by its field (C5). `model.Build` and validate's conformance checks use only the interface, and the shared typing rules (date form, enum values, link IDs) stay in `model`. | The alternative, every source producing YAML nodes, would make a CSV cell pretend to be YAML: its tags would be guesses, and conformance would report YAML problems for a file that isn't YAML. |
 | G5 | What history records | **Each commit records the entity IDs it changed beside its paths,** found by parsing both sides of each changed file through its source and comparing entities by ID. `history.Inputs` gains `Entities`; a page's inputs name the entities it shows, and paths only for files that aren't entities (schema, templates, assets, `.component`). An export problem and a violation carry their entity directly. A file moved without changing still counts as changed, as today. | For a Markdown file an entity and its path change together, so output doesn't change; a CSV dump re-exported every month then changes only the rows that differ (C7). Whether a move is a change is the CSV epic's to revisit with DES-0023. |
 | G6 | How the seam is proved | **A test-only second source** that builds entities from a Go table, with positions of its own, run through the loader, `validate`, `export` and history in unit tests. No CSV code in this epic. | Shows the layers no longer assume Markdown before the CSV epic depends on it, without designing CSV ahead of its decisions. |
+| G7 | Who reads history (*proposed 2026-10-25; built in E3.4 on Matt's go-ahead*) | **`load`, after the sources, when first asked:** `Result.History()` reads the entity-level log (G5), the dirty state and the content hash once, and everything that stamps output uses it, so `cli` stops opening git itself (`gitContext` for export, `stamps` for validate's reports). A shallow clone is an error, exit 2, when something needs commits the clone cut off; today export on a shallow clone stops with `export: object not found`, which doesn't say why. The graph gets no history facts yet: what a rule can ask of history is the History-in-rules epic's (below). | REQ-0051 and REQ-0115 already ask for rules over history, and REQ-0039 lets a rule depend only on the entity graph, so history has to reach the graph, and that has to go through the loader, which alone knows the sources that parse a commit's files. Reading it only when asked keeps `validate` at the gate, which checks out one commit, working until a rule needs history. |
+| G8 | Problems and checks after loading (*agreed 2026-10-25*, from the DES-0050 diagram) | **One problem type, and the exporter's check through its interface.** `website.Problem` becomes `load.Problem` with its entity, so `validate.go`'s `byPath` goes. `Check` joins the `export.Exporter` interface and `validate` runs it on every registered exporter, not on `website.New()`. An exporter always collects its problems and `export` stops at the first, as with loading (G1), so the `check == nil` branches in `website.run` go. The graph is built only by `load` (`Input.Graph` is required). What templates see of an entity (`EntityData`, `UnresolvedEntity`, `ReportFuncs`) moves out of `export/website` into a package both the site and validate's reports import. The Markdown parse that finds a text value's embeds, query blocks, images and citations comes through the record (G4), so `query` stops importing `markdown` and `assets`. | `validate` imports the website exporter four ways, so a second exporter (PDF) would not be checked at the gate, and report templates depend on the site's package. The dependency walk assuming every text value is Markdown would be wrong for a CSV cell, which renders without wikilinks or embeds (C3). |
 
 Not in this epic: the page pipeline (the first task of Section and item
 references) and one Datalog program for derived values (the first task
@@ -1045,7 +1050,8 @@ table.
 
 **Order:** the loader first (E3.1), since the other tasks change what it
 calls; then sources (E3.2), then values and positions (E3.3), then
-history (E3.4), which needs both.
+history (E3.4), which needs both, then problems and checks (E3.5), which
+needs E3.4's entity on every problem.
 
 ### E3.1 One loader
 
@@ -1053,9 +1059,9 @@ history (E3.4), which needs both.
 - `internal/load` per G1–G2: repository, schema, entities, model, graph,
   collecting every problem as `validate` does now.
 - `export` (`cli/export.go`'s `load`) and `validate.Run` use it. `validate`
-  maps problem kinds to its built-in checks; the website check (`Check`)
+  reports each problem under its check; the website check (`Check`)
   receives the loaded input as it does now.
-- `load` has unit tests for each problem kind and for its order.
+- `load` has unit tests for each problem and for its order.
 
 **Check it yourself:** `make ci` passes with no golden or acceptance
 change. `git grep -n 'entity.Discover\|entity.Scan\|schema.Load\|schema.Read' internal/cli internal/validate`
@@ -1066,6 +1072,10 @@ change. `git grep -n 'entity.Discover\|entity.Scan\|schema.Load\|schema.Read' in
 **Deliverables:**
 - The `Source` interface per G3, and the Markdown source: today's walker,
   moved behind it.
+- The Markdown source returns `load.Problem`s, each with its check,
+  message and the error export reports, so `entity.Scanned`'s `Problems`
+  (an `[]error` of two concrete types) and `Partial` go, with the type
+  switch in `load` that tells them apart.
 - The schema loads before sources; the Markdown source runs with a broken
   schema too.
 - The dirty check lists content files through the loader (the sources'
@@ -1092,6 +1102,9 @@ In the example checkout, edit a schema file → `export` marks pages
   its positions.
 - `git grep yamlnode` outside the Markdown source, the schema, rule files
   and query blocks → nothing.
+- The record parses a text value for what it refers to (G8), and the
+  dependency walk uses that: `query` no longer imports `markdown` or
+  `assets`. The test source's text values refer to nothing.
 - Unit tests: every conformance problem in `testdata/violations` is placed
   as before, and the test source's problems are placed at its own
   positions.
@@ -1105,7 +1118,10 @@ entity with a wrong value is reported at its record's position.
 **Deliverables:**
 - History per G5: each commit's changed entity IDs, `Inputs.Entities`, and
   page inputs naming entities.
-- Export problems carry their entity; `validate.go`'s `byPath` goes.
+- If G7 is agreed: `Result.History()`; export's stamps and validate's
+  report stamps come from it, and `gitContext` and `stamps` leave `cli`.
+  A shallow clone fails with exit 2 when history it cut off is needed,
+  naming `fetch-depth: 0`.
 - DES-0023 says a page's inputs are entities and files, if its wording
   needs it (a clarification: last-changed commits don't change).
 - Unit tests on an in-memory git history: a file holding two test-source
@@ -1115,12 +1131,28 @@ entity with a wrong value is reported at its record's position.
 **Check it yourself:** `make ci` passes unchanged: every page keeps its
 last-changed commit and revision history. `go test ./internal/history -run
 Entities -v` → only the edited entity's last-changed commit moves.
+`git clone --depth 1 file://$PWD/.cache/example /tmp/shallow && cd /tmp/shallow && provenance export website`
+→ exit 2, naming `fetch-depth: 0`.
 
-### E3.5 Epic close-out
+### E3.5 Problems and checks
+
+**Deliverables:**
+- Per G8: one problem type, with its entity, and `byPath` gone; `Check`
+  on the `export.Exporter` interface, run by `validate` on every
+  registered exporter; the website exporter always collecting, and its
+  graph fallback gone; template data and functions in their own package.
+- Unit tests: an exporter registered in a test is checked by `validate`;
+  a test-source entity's export problem names the entity.
+
+**Check it yourself:** `make ci` passes unchanged.
+`go list -deps ./internal/validate | grep export/website` → nothing.
+
+### E3.6 Epic close-out
 
 **Deliverables:** `CLAUDE.md`'s *Where things are* lists `internal/load`
 and the sources; the CSV-backed types epic is revised against what
-landed (its tasks 3 and 6 build on E3.2–E3.4). No release of its own: it
+landed (its tasks 3 and 6 build on E3.2–E3.5); DES-0050 and DES-0051
+match the code. No release of its own: it
 ships with the next epic's.
 
 **Check it yourself:** read the CSV epic's rough shape; each task names
@@ -1131,7 +1163,7 @@ the groundwork it builds on.
 Detailed task breakdowns are written when the preceding epic closes. Proposed
 order after Epic 2, with the reason it comes where it does:
 
-1. **Architecture groundwork** — Epic 3, detailed above.
+1. **Architecture groundwork** — Epic 3, detailed above (closed 2026-10-28).
 2. **`fmt`** — canonical serialization; `fmt --check` joins the gate. Needed
    before the editor can write files.
 3. **`init`** — medical-device starter template embedded in the binary; a fresh
@@ -1152,21 +1184,24 @@ order after Epic 2, with the reason it comes where it does:
    inside them.
 7. **`report`** — coverage metrics over the shared query engine.
 8. **`diff`** — rendered/semantic diff between refs.
-9. **`rename`** — ID rewrite across links, wikilinks, tagged references,
+9. **History in rules** — rules ask what changed when, such as evidence
+   older than what it verifies (see below). Before `sign` and
+   `release tag`, whose rules (REQ-0115, REQ-0051) are built on it.
+10. **`rename`** — ID rewrite across links, wikilinks, tagged references,
    query filters and query fields.
-10. **`verify artifact`** — against the E1.14 manifest; includes deciding how
+11. **`verify artifact`** — against the E1.14 manifest; includes deciding how
    the manifest itself is signed.
-11. **`sign` / `sign verify`** — ledger format, then certificate provider, then
+12. **`sign` / `sign verify`** — ledger format, then certificate provider, then
    OIDC device flow; signatures become queryable facts, and the Signature
    Presence rules removed in E2.1 return as queries.
-12. **`component add/update/remove`** — submodules and composed-graph
+13. **`component add/update/remove`** — submodules and composed-graph
    validation.
-13. **`release tag`** — gate plus bill-of-materials; released content becomes
+14. **`release tag`** — gate plus bill-of-materials; released content becomes
    queryable, and Content Frozen After Release returns as a query.
-14. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
+15. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
    fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
    thin client over everything above.
-15. **`plugin`**.
+16. **`plugin`**.
 
 ### CSV-backed entity types (proposed 2026-10-11, for Matt's review)
 
@@ -1216,7 +1251,15 @@ link field targeting Complaint, reverse `cited_by_risks`), and
 **Why it needs its own epic:** a row is an entity without a file of its
 own, so every part of the product that assumes one file per entity
 (discovery, line numbers, last-changed commit, page inputs, the editor,
-`fmt`, `rename`, signing) has to say what it does with a row.
+`fmt`, `rename`, signing) has to say what it does with a row. Epic 3 did
+this for loading, validation and history: a source (E3.2), a record with
+its own values and positions (E3.3), entity-level history (E3.4) and
+problems that name their entity (E3.5), all proved with a test source,
+`load/loadtest`, that is already a table typed by field. What is left is
+the CSV source itself, the schema's `source:`, rendering a row, and the
+commands after it (`fmt`, `rename`, the editor, `sign`).
+
+*Revised 2026-10-28 against what Epic 3 built; C3 and C7 have a note each.*
 
 **Decisions (for Matt, before the epic is detailed):**
 
@@ -1224,11 +1267,11 @@ own, so every part of the product that assumes one file per entity
 | --- | --- | --- | --- |
 | C1 | Built in, or an import plugin (REQ-0070 allows import plugins) | **Built in.** The schema declares the source; there is no conversion step and no generated Markdown. Plugins remain for formats that need code (an eQMS API, XLSX). | CSV is the common denominator every system exports, and a built-in reader keeps the data's validation identity the binary's. Generating Markdown from the dump would create thousands of files no one reviews and that drift from the source. |
 | C2 | Row IDs | **The `id` column's value, used as written,** and checked to be unique within the file and across the repository. The `<id_prefix>-NNNN` form (DES-0007) applies to authored entities only; a CSV type's `id_prefix` is still required, and its IDs must start with it, so a link's type is still readable. | Complaint numbers are the identity the source system and the complaint handlers use; renumbering them would break traceability back to that system. |
-| C3 | Read-only | **Rows are read-only in Provenance.** `fmt`, `rename`, the editor and `sign` never write them; the file is replaced by the next dump. A row can't have a Markdown body; `text` columns render as Markdown **without wikilinks, embeds or rendered fences** (`[[…]]`, `![[…]]` and a ```` ```query ```` block are shown as written), so a cell can't link out (C4), pull in content or run a query. | The source system is the record; Provenance holds a dated copy. |
+| C3 | Read-only | **Rows are read-only in Provenance.** `fmt`, `rename`, the editor and `sign` never write them; the file is replaced by the next dump. A row can't have a Markdown body; `text` columns render as Markdown **without wikilinks, embeds or rendered fences** (`[[…]]`, `![[…]]` and a ```` ```query ```` block are shown as written), so a cell can't link out (C4), pull in content or run a query. *Since E3.3 the dependency walk already asks the record what a text refers to, and a CSV record answers "nothing"; the website still renders every text value as full Markdown, so task 5 makes it ask the record how a text renders.* | The source system is the record; Provenance holds a dated copy. |
 | C4 | Which way links go | **CSV rows can't link out** in the first version; authored entities link to them (Risk → Complaint), and the facet gives the reverse. A column holding IDs as a link is a later addition. | Links are stored on the later artefact (DES-0011): the risk analysis is written after, and about, the complaints. |
 | C5 | File format | **RFC 4180, UTF-8 (a BOM is ignored), a header row, comma-separated** by default with `delimiter:` to override, CRLF or LF. Values are typed by the field: dates `YYYY-MM-DD` only, unless the field gives `format:`; booleans `true/false`, `yes/no`, `1/0`; an empty cell is an absent value. Columns the schema doesn't name are ignored, and reported as a warning so a renamed column is noticed. | What Excel and most systems export, with types as strict as for authored entities. |
 | C6 | Where a row's problems are placed | **The file and the row's line** (`data/complaints.csv:142`), for validate, export errors and SARIF. | The same contract as every other violation (D8/DES-0048). |
-| C7 | History | A row's last-changed commit is the **last commit that changed that row's line content**, not the file's; the file's commit and dump date are shown on every row's page. Page inputs list the file. | Re-importing the whole file every month mustn't make every complaint look changed. |
+| C7 | History | A row's last-changed commit is the **last commit that changed that row's line content**, not the file's; the file's commit and dump date are shown on every row's page. ~~Page inputs list the file.~~ *Since E3.4 a page's inputs name the row, and each commit records the rows it changed, compared through the source by ID and text, so this needs no history work. **Open, for Matt:** the dump's commit, date and sidecar shown on every row's page are, by DES-0023, inputs of the page, so every dump would move every row's last-changed commit, which this decision exists to prevent. Proposal: the dump's provenance is shown but is not a page input, and DES-0023 says so.* | Re-importing the whole file every month mustn't make every complaint look changed. |
 | C8 | Pages | **A page per row by default,** with `pages: false` on the source for large dumps; rows are still listed by queries and cited by `[[ID]]` without a page, as an entity outside the scope is. | Thousands of near-identical pages make a site slow to build and browse. |
 | C9 | Provenance of the dump | Provenance can't tell where a copied file came from, so it records what it knows and asks for the rest. **Git** knows when the copy entered the design record: the commit that last changed the file, with its date and author. **The schema** declares `system:`, the system the dumps come from, which doesn't change between dumps. **A sidecar beside each dump** (`data/complaints.csv.yaml`) holds what only the person exporting knows: `exported:`, the dump's date, and `sha256:`, the hash of the CSV it describes (`sha256sum` prints it). `validate` fails when the sidecar is missing or its hash isn't the file's, so a new dump copied in without saying when it was exported is stopped at the merge gate. All of it is shown on each row's page and available to templates; the CSV and the sidecar are in the content hash like any other file. | ISO 13485 §8.2.2, which the QMSR incorporates: complaint records are kept by the complaint-handling process, and the copy must be traceable to it. A per-dump date in the schema would be edited on every dump and could silently go stale; the hash ties the sidecar's date to this file, not to whichever file was there when it was last typed. |
 
@@ -1240,18 +1283,27 @@ own, so every part of the product that assumes one file per entity
 2. **Example repo:** a `Complaint` type with `data/complaints.csv` (a dozen
    synthetic rows) and its sidecar, RSK-0001's failure modes linking to them, and
    `occurrence` justified by a `COUNT` over them.
-3. **Loading:** the CSV reader as a second source of the loader (E3.2),
-   `source:` in the schema, rows as entities in the model and the graph,
-   each with its row's positions (E3.3); load errors at file and row.
-4. **validate:** schema conformance for CSV types and rows (C2, C5, C6),
-   unknown columns as warnings, and the sidecar: present, and its hash the
-   file's (C9).
-5. **export:** row pages, `pages: false`, citations and queries over rows,
-   the dump's provenance on each page: system, export date, and the
-   commit that brought it in.
-6. **History:** per-row last-changed (C7) on E3.4's entity-level log,
-   which diffs the CSV by row ID; page inputs, the dirty check, content
-   hash.
+3. **Loading:** `source:` in the schema, and the CSV reader as a
+   `load.Source` the loader runs after the schema (E3.2), reading the files
+   the schema names. Its record (`entity.Record`, E3.3) types a cell by
+   its field (C5), as `loadtest.Rows` does, places the row and its cells
+   at the row's line (C6), and refers to nothing from a text (C3).
+   `Source.Entities` gives each row's text, so history compares rows
+   (E3.4). Load errors are `problem.Problem`s at file and row, naming the
+   row (E3.5). `loadtest.Rows` stays for tests.
+4. **validate:** conformance already runs through the record (E3.3), so
+   what is new is the CSV-specific checks: row IDs (C2), unknown columns
+   as warnings (C5), and the sidecar, present and its hash the file's
+   (C9). Each is a problem with its own check, and a case in
+   `testdata/violations`.
+5. **export:** row pages, `pages: false`, citations and queries over
+   rows, the dump's provenance on each page (system, export date, the
+   commit that brought it in), and text cells rendered as the record says
+   (C3). Export and validate's check share the renderer (E3.5), so the
+   check covers rows with no extra work.
+6. **History:** per-row last-changed (C7) comes from E3.4's entity-level
+   log; what is left is settling C7's open point, and checking that the
+   dirty state, content hash and a moved dump behave as DES-0023 says.
 7. **Close-out:** docs (a "Importing data" concept page), release.
 
 ### Section and item references (proposed 2026-10-18, for Matt's review)
@@ -1416,3 +1468,38 @@ scope:
    `template` given, and a loop with no answer (Q3).
 8. **Close-out:** docs (the schema reference and the template functions),
    release.
+
+### History in rules (proposed 2026-10-25, for Matt's review)
+
+**Goal:** a rule can ask what changed when. The first case: an assurance
+record is evidence for the activity and requirement it verified as they
+were, so a later change to either leaves the evidence stale, and the
+gate should say so. `sign` (a signature goes stale on a new commit,
+REQ-0115) and `release tag` (content frozen after release, REQ-0051)
+are the same question about other entities.
+
+**What it builds on:** E3.4 records which entities each commit changed,
+and G7 has `load` read history once, when asked. This epic puts history
+in the graph as facts and lets conditions use them.
+
+**Decisions (for Matt, before the epic is detailed):**
+
+| # | Decision | Proposal | Why |
+| --- | --- | --- | --- |
+| H1 | How a rule says it | **A condition operator comparing when two entities last changed,** with `^` naming the entity the rule is about, as in a sub-query: on AssuranceRecord, `{field: activity, where: {changed_since: ^}}` finds records whose activity changed after them. History is Datalog facts (an entity changed at a commit, commits ordered), so it composes with the rest of the grammar, and no entity gets implicit fields. | One general mechanism over the graph, and nothing in the files that the author didn't write. |
+| H2 | What "after" means | **Order along the first-parent history of the commit being validated, never commit dates;** a change not yet committed is the newest. | Dates can be set to anything and rebases rewrite them; first-parent order is what export's last-changed commit already uses (DES-0023). |
+| H3 | Squash and rebase merges | **Order is worked out from history when validating; no rule compares a commit hash written in a file.** A rule then gives the same answer whichever merge strategy the host uses. Signatures bind to a commit hash (DES-0040), which a squash merge discards: the `sign` epic must settle this, either by requiring merge commits or by binding a signature to the entity's content. | A record on a pull request branch names commits that a squash merge drops, so a hash-based check would report every squashed record stale. |
+| H4 | Shallow clones | **`validate` fails with exit 2 when a rule needs history the clone cut off,** naming `fetch-depth: 0`; the example's and the DDF's Validate workflows fetch full history from this epic on. | `actions/checkout` fetches one commit by default, and history read from it would make every entity look new: a gate that silently passes or fails is worse than one that stops. |
+| H5 | What counts as a change | **A change to any of the entity's values,** found by comparing the entity on both sides of a commit through its source (E3.4), so reformatting a file doesn't count; REQ-0051's "content fields" may narrow it to some fields per type. | Re-saving or reformatting a protocol must not make every record that verified it stale. |
+
+**Rough shape:**
+
+1. **Design:** DES elements for history facts and the operator; H1–H5 as
+   decided; REQ-0051 and REQ-0115 linked to them.
+2. **Example repo:** a verification record older than a change to its
+   protocol, reported by a rule.
+3. **Facts:** history in the graph, read only when a rule uses it (G7).
+4. **Grammar:** `changed_since`, with `^`.
+5. **validate:** the shallow-clone error (H4); both Validate workflows
+   fetch full history.
+6. **Close-out:** docs (the rules reference), release.

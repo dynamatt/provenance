@@ -1,6 +1,7 @@
 // Package history reads the repository's git history (DES-0022, DES-0023):
 // the DHF content hash, the working tree's dirty state, and which commit
-// last changed each file, for last_changed_sha and revision history.
+// last changed each entity and file, for last_changed_sha and revision
+// history.
 //
 // Git is read with go-git, never the git executable, so the host's git
 // version is not part of the validated configuration (DES-0026).
@@ -13,9 +14,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"maps"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -30,8 +31,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/filesystem"
 	"github.com/go-git/go-git/v5/storage/filesystem/dotgit"
-
-	"github.com/dynamatt/provenance/internal/entity"
 )
 
 // Repo is a component repository's git history. The component may sit in a
@@ -267,9 +266,10 @@ func (h *Repo) blob(hash plumbing.Hash) ([]byte, error) {
 type Dirty struct {
 	// Paths are the content paths that differ, sorted.
 	Paths []string
-	// Types are the entity types of the differing entity files, as
-	// committed or as now, sorted.
-	Types []string
+	// Entities are the IDs of the entities that differ, as committed or as
+	// now, sorted; Types are their types.
+	Entities []string
+	Types    []string
 }
 
 // Any reports whether anything differs.
@@ -280,17 +280,59 @@ func (d *Dirty) Touches(in Inputs) bool {
 	if d == nil {
 		return false
 	}
-	return in.sets().touches(&Commit{Paths: d.Paths, Types: d.Types})
+	return in.sets().touches(&Commit{Paths: d.Paths, Entities: d.Entities, Types: d.Types})
+}
+
+// Content is what history needs to know about a repository's content that
+// git can't tell it: which working-tree files hold entities, and the
+// entities a file holds. internal/load provides it from its sources, so
+// history knows no entity file format.
+type Content interface {
+	// Files lists the working-tree files that hold entities,
+	// slash-separated and relative to the component root.
+	Files() ([]string, error)
+	// Entities lists the entities path holds; data reads its bytes, and
+	// is only called for a file that can hold entities.
+	Entities(path string, data func() ([]byte, error)) ([]FileEntity, error)
+}
+
+// FileEntity is one entity a file holds.
+type FileEntity struct {
+	ID, Type string
+	// Text is what the file writes for the entity: an entity whose Text
+	// differs between two versions of its file has changed.
+	Text string
+}
+
+// changed adds to ids and types the entities that differ between two
+// versions of a file, before and after (nil for a side the file is not
+// on): those only one holds, and those whose text differs.
+func changed(before, after []FileEntity, ids, types map[string]bool) {
+	text := map[string]string{}
+	for _, e := range before {
+		text[e.ID] = e.Text
+	}
+	for _, e := range after {
+		if t, ok := text[e.ID]; !ok || t != e.Text {
+			ids[e.ID], types[e.Type] = true, true
+		}
+		delete(text, e.ID)
+	}
+	for _, e := range before {
+		if _, ok := text[e.ID]; ok {
+			ids[e.ID], types[e.Type] = true, true
+		}
+	}
 }
 
 // WorkingContentHash is HEAD's content hash, suffixed -dirty when the
-// working tree differs from it (Status, with skip), and how it differs.
-func (h *Repo) WorkingContentHash(skip ...string) (string, *Dirty, error) {
+// working tree differs from it (Status), and how it differs.
+func (h *Repo) WorkingContentHash(c Content) (string, *Dirty, error) {
 	hash, err := h.ContentHash(h.HEAD())
 	if err != nil {
 		return "", nil, err
 	}
-	dirty, err := h.Status(skip...)
+	dirty, err := h.Status(c)
 	if err != nil {
 		return "", nil, err
 	}
@@ -302,11 +344,11 @@ func (h *Repo) WorkingContentHash(skip ...string) (string, *Dirty, error) {
 
 // Status compares the working tree with HEAD: the content paths that
 // differ, a committed file changed or deleted, or a file Provenance
-// reads that is not committed (an entity file, or anything in schema/,
-// templates/, rules/ or assets/). A file that differs only by CRLF line
-// endings, as a core.autocrlf checkout writes it, is not a difference.
-// skip are folders never read (the export output folder).
-func (h *Repo) Status(skip ...string) (*Dirty, error) {
+// reads that is not committed (a file c says holds entities, or anything
+// in schema/, templates/, rules/ or assets/). A file that differs only by
+// CRLF line endings, as a core.autocrlf checkout writes it, is not a
+// difference.
+func (h *Repo) Status(c Content) (*Dirty, error) {
 	files, err := h.files(h.HEAD())
 	if err != nil {
 		return nil, err
@@ -339,7 +381,7 @@ func (h *Repo) Status(skip ...string) (*Dirty, error) {
 			dirty = append(dirty, f.path)
 		}
 	}
-	untracked, err := contentFiles(h.root, skip)
+	untracked, err := contentFiles(h.root, c)
 	if err != nil {
 		return nil, err
 	}
@@ -354,26 +396,22 @@ func (h *Repo) Status(skip ...string) (*Dirty, error) {
 	for _, f := range files {
 		byPath[f.path] = f
 	}
-	types := map[string]bool{}
+	ids, types := map[string]bool{}, map[string]bool{}
 	for _, p := range d.Paths {
-		if !strings.EqualFold(path.Ext(p), ".md") {
-			continue
+		// As now; a file that can't be read now has been deleted.
+		now, err := c.Entities(p, func() ([]byte, error) { return os.ReadFile(filepath.Join(h.root, filepath.FromSlash(p))) })
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return nil, err
 		}
-		if data, err := os.ReadFile(filepath.Join(h.root, filepath.FromSlash(p))); err == nil {
-			if e, _ := entity.Parse(p, data); e != nil {
-				types[e.Type] = true
-			}
-		}
+		var committed []FileEntity
 		if f, ok := byPath[p]; ok && f.mode != filemode.Submodule {
-			data, err := h.blob(f.hash)
-			if err != nil {
+			if committed, err = c.Entities(p, func() ([]byte, error) { return h.blob(f.hash) }); err != nil {
 				return nil, err
 			}
-			if e, _ := entity.Parse(p, data); e != nil {
-				types[e.Type] = true
-			}
 		}
+		changed(committed, now, ids, types)
 	}
+	d.Entities = slices.Sorted(maps.Keys(ids))
 	d.Types = slices.Sorted(maps.Keys(types))
 	return d, nil
 }
@@ -386,16 +424,14 @@ func sameContent(work, committed []byte) bool {
 }
 
 // contentFiles lists the working-tree files Provenance reads as content:
-// entity files, .component, and every file under the configuration folders.
-func contentFiles(root string, skip []string) ([]string, error) {
-	entities, err := entity.Discover(root, skip...)
+// the files c says hold entities, .component, and every file under the
+// configuration folders.
+func contentFiles(root string, c Content) ([]string, error) {
+	out, err := c.Files()
 	if err != nil {
 		return nil, err
 	}
-	var out []string
-	for _, e := range entities {
-		out = append(out, e.Path)
-	}
+	out = slices.Clone(out)
 	if _, err := os.Stat(filepath.Join(root, ".component")); err == nil {
 		out = append(out, ".component")
 	}
@@ -429,10 +465,12 @@ type Commit struct {
 	Subject string
 	Tags    []string // tags pointing at the commit, sorted
 	// Paths are the content paths the commit changed against its first
-	// parent (every path, for the root commit); Types the entity types of
-	// the entity files among them, before or after the change.
-	Paths []string
-	Types []string
+	// parent (every path, for the root commit); Entities the IDs of the
+	// entities it changed, added or removed, sorted, and Types their
+	// types.
+	Paths    []string
+	Entities []string
+	Types    []string
 }
 
 // Log is the first-parent history from HEAD, newest first.
@@ -441,21 +479,29 @@ type Log struct {
 }
 
 // Log walks the first-parent history from HEAD once, diffing each commit's
-// tree against its parent's.
-func (h *Repo) Log() (*Log, error) {
+// tree against its parent's; content tells it the entity types of the
+// files a commit changed.
+func (h *Repo) Log(content Content) (*Log, error) {
 	tags, err := h.tagsByCommit()
+	if err != nil {
+		return nil, err
+	}
+	shallow, err := h.st.Shallow()
 	if err != nil {
 		return nil, err
 	}
 	l := &Log{}
 	for c := h.head; c != nil; {
 		var parent *object.Commit
+		if c.NumParents() > 0 && slices.Contains(shallow, c.Hash) {
+			return nil, &ShallowError{Commit: c.Hash.String()}
+		}
 		if c.NumParents() > 0 {
 			if parent, err = c.Parent(0); err != nil {
 				return nil, err
 			}
 		}
-		cm, err := h.changes(c, parent)
+		cm, err := h.changes(content, c, parent)
 		if err != nil {
 			return nil, err
 		}
@@ -470,9 +516,17 @@ func (h *Repo) Log() (*Log, error) {
 	return l, nil
 }
 
+// ShallowError is history a shallow clone cut off: the parents of Commit
+// were not fetched.
+type ShallowError struct{ Commit string }
+
+func (e *ShallowError) Error() string {
+	return fmt.Sprintf("the history before commit %s was not fetched (a shallow clone); fetch all of it, with git fetch --unshallow, or fetch-depth: 0 for actions/checkout", Short(e.Commit))
+}
+
 // changes lists what c changed against parent (nil for a root commit),
 // under the component root.
-func (h *Repo) changes(c, parent *object.Commit) (*Commit, error) {
+func (h *Repo) changes(content Content, c, parent *object.Commit) (*Commit, error) {
 	tree := func(c *object.Commit) (*object.Tree, error) {
 		if c == nil {
 			return nil, nil
@@ -500,26 +554,40 @@ func (h *Repo) changes(c, parent *object.Commit) (*Commit, error) {
 		return nil, err
 	}
 	cm := &Commit{}
-	types := map[string]bool{}
+	ids, types := map[string]bool{}, map[string]bool{}
 	for _, ch := range changes {
-		for _, side := range []object.ChangeEntry{ch.From, ch.To} {
-			if side.Name == "" || Excluded(side.Name) {
-				continue
+		// Each side is compared with the same path on the other: a file
+		// moved is removed from one path and added at another.
+		entities := func(side object.ChangeEntry) ([]FileEntity, error) {
+			if side.Name == "" || Excluded(side.Name) || side.TreeEntry.Mode == filemode.Submodule {
+				return nil, nil
 			}
-			cm.Paths = append(cm.Paths, side.Name)
-			if strings.EqualFold(path.Ext(side.Name), ".md") && side.TreeEntry.Mode != filemode.Submodule {
-				data, err := h.blob(side.TreeEntry.Hash)
-				if err != nil {
-					return nil, err
-				}
-				if e, _ := entity.Parse(side.Name, data); e != nil {
-					types[e.Type] = true
-				}
+			hash := side.TreeEntry.Hash
+			return content.Entities(side.Name, func() ([]byte, error) { return h.blob(hash) })
+		}
+		for _, side := range []object.ChangeEntry{ch.From, ch.To} {
+			if side.Name != "" && !Excluded(side.Name) {
+				cm.Paths = append(cm.Paths, side.Name)
 			}
 		}
+		before, err := entities(ch.From)
+		if err != nil {
+			return nil, err
+		}
+		after, err := entities(ch.To)
+		if err != nil {
+			return nil, err
+		}
+		if ch.From.Name != ch.To.Name {
+			changed(before, nil, ids, types)
+			changed(nil, after, ids, types)
+			continue
+		}
+		changed(before, after, ids, types)
 	}
 	slices.Sort(cm.Paths)
 	cm.Paths = slices.Compact(cm.Paths)
+	cm.Entities = slices.Sorted(maps.Keys(ids))
 	cm.Types = slices.Sorted(maps.Keys(types))
 	return cm, nil
 }
@@ -548,30 +616,34 @@ func (h *Repo) tagsByCommit() (map[plumbing.Hash][]string, error) {
 	return out, err
 }
 
-// Inputs are what a rendered page depends on: files, and entity types whose
-// every entity can change a query result.
+// Inputs are what a rendered page depends on (DES-0023): the entities it
+// shows, the files it reads that are not entities, such as the schema and
+// templates, and entity types whose every entity can change a query
+// result.
 type Inputs struct {
-	Paths []string
-	Types []string
+	Entities []string
+	Paths    []string
+	Types    []string
 }
 
 // inputSets are Inputs as sets, to test many commits against.
-type inputSets struct{ paths, types map[string]bool }
+type inputSets struct{ entities, paths, types map[string]bool }
 
 func (in Inputs) sets() inputSets {
-	s := inputSets{paths: map[string]bool{}, types: map[string]bool{}}
-	for _, p := range in.Paths {
-		s.paths[p] = true
+	set := func(xs []string) map[string]bool {
+		m := make(map[string]bool, len(xs))
+		for _, x := range xs {
+			m[x] = true
+		}
+		return m
 	}
-	for _, t := range in.Types {
-		s.types[t] = true
-	}
-	return s
+	return inputSets{entities: set(in.Entities), paths: set(in.Paths), types: set(in.Types)}
 }
 
 // touches reports whether c changed any of the inputs.
 func (s inputSets) touches(c *Commit) bool {
-	return slices.ContainsFunc(c.Paths, func(p string) bool { return s.paths[p] }) ||
+	return slices.ContainsFunc(c.Entities, func(id string) bool { return s.entities[id] }) ||
+		slices.ContainsFunc(c.Paths, func(p string) bool { return s.paths[p] }) ||
 		slices.ContainsFunc(c.Types, func(t string) bool { return s.types[t] })
 }
 
