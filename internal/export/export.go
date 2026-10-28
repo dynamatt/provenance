@@ -12,6 +12,7 @@ import (
 
 	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/model"
+	"github.com/dynamatt/provenance/internal/problem"
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/schema"
@@ -25,7 +26,7 @@ type Input struct {
 	// sorted by ID.
 	Entities []*model.Entity
 	// Graph is the entities prepared for queries, calculated fields
-	// evaluated; nil makes the exporter build it.
+	// evaluated, as internal/load builds it.
 	Graph *query.Graph
 	// Scope limits the output; nil exports everything.
 	Scope *Scope
@@ -74,7 +75,14 @@ type Files map[string][]byte
 // outside what Input provides: writing the output folder is done separately
 // (WriteOutput), only after rendering has fully succeeded.
 type Exporter interface {
+	// Export renders the output, stopping at the first problem that stops
+	// it (problem.Problem's Err).
 	Export(in *Input) (Files, error)
+	// Check renders as Export does, writing nothing, and returns every
+	// problem it finds instead of stopping at the first, so the merge gate
+	// fails on whatever would stop an export (DES-0048). err is a failure
+	// to read the repository.
+	Check(in *Input) ([]problem.Problem, error)
 }
 
 // Registry maps format names to exporters.
@@ -92,6 +100,15 @@ func (r *Registry) Register(format string, e Exporter) { r.exporters[format] = e
 
 // Defer records a format that is recognised but not shipped in this release.
 func (r *Registry) Defer(format string) { r.deferred[format] = true }
+
+// Exporters are the available exporters, in format name order.
+func (r *Registry) Exporters() []Exporter {
+	var out []Exporter
+	for _, f := range r.Formats() {
+		out = append(out, r.exporters[f])
+	}
+	return out
+}
 
 // Formats lists the available formats in name order.
 func (r *Registry) Formats() []string {

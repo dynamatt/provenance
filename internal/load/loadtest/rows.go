@@ -15,6 +15,7 @@ import (
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/load"
+	"github.com/dynamatt/provenance/internal/problem"
 	"github.com/dynamatt/provenance/internal/schema"
 )
 
@@ -56,7 +57,7 @@ func (Rows) Load(root string, skip []string) (*load.Loaded, error) {
 		out.Files = append(out.Files, rel)
 		entities, fe := Parse(rel, data)
 		if fe != nil {
-			out.Problems = append(out.Problems, load.Problem{Check: "content/frontmatter", Path: rel, Line: fe.Line, Msg: fe.Msg, Err: fe})
+			out.Problems = append(out.Problems, problem.Problem{Check: "content/frontmatter", Path: rel, Line: fe.Line, Msg: fe.Msg, Err: fe})
 			return nil
 		}
 		out.Entities = append(out.Entities, entities...)

@@ -154,7 +154,9 @@ func textSources(e *model.Entity) []string {
 type FileError struct {
 	Path string
 	Line int
-	Msg  string
+	// Entity is the ID of the entity whose text holds the block.
+	Entity string
+	Msg    string
 }
 
 func (e *FileError) Error() string {
@@ -176,7 +178,7 @@ func BlockFileError(e *model.Entity, text string, blockLine int, err error) *Fil
 			line += qe.Line - 1
 		}
 	}
-	return &FileError{Path: e.Path, Line: e.TextFileLine(text, line), Msg: msg}
+	return &FileError{Path: e.Path, Line: e.TextFileLine(text, line), Entity: e.ID, Msg: msg}
 }
 
 // ContentError is a problem in an entity's text, such as a caption or
@@ -184,7 +186,10 @@ func BlockFileError(e *model.Entity, text string, blockLine int, err error) *Fil
 type ContentError struct {
 	Path string
 	Line int
-	Msg  string
+	// Entity is the ID of the entity whose text it is in, or "" for a
+	// problem in the schema or templates.
+	Entity string
+	Msg    string
 }
 
 func (e *ContentError) Error() string {
@@ -197,7 +202,7 @@ func (e *ContentError) Error() string {
 func depError(e *model.Entity, text string, err error) error {
 	var te *entity.TextError
 	if errors.As(err, &te) {
-		return &ContentError{Path: e.Path, Line: e.TextFileLine(text, te.Line), Msg: te.Msg}
+		return &ContentError{Path: e.Path, Line: e.TextFileLine(text, te.Line), Entity: e.ID, Msg: te.Msg}
 	}
 	return fmt.Errorf("%s: %w", e.Path, err)
 }

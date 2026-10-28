@@ -75,10 +75,8 @@ func (r *resolver) fences() map[string]markdown.FenceFunc {
 // that would read as the content itself. A check reports it, so a diagram
 // is never published as its source unnoticed (DES-0036).
 func (r *resolver) unrendered(w util.BufWriter, f markdown.Fence) error {
-	if c := r.ctx.site.check; c != nil {
-		c.add(Problem{Rule: "content/unrendered-block", Path: r.ctx.path(), Line: r.ctx.fileLine(f.Line - 1),
-			Msg: fmt.Sprintf("%s block: this version of Provenance cannot render it, so it would be published as its source", f.Lang)})
-	}
+	r.ctx.site.check.add(Problem{Check: "content/unrendered-block", Path: r.ctx.path(), Line: r.ctx.fileLine(f.Line - 1), Entity: r.ctx.entityID(),
+		Msg: fmt.Sprintf("%s block: this version of Provenance cannot render it, so it would be published as its source", f.Lang)})
 	lang := template.HTMLEscapeString(f.Lang)
 	fmt.Fprintf(w, "<div class=\"unrendered\"><p class=\"unrendered-note\">%s blocks are not rendered by this version of Provenance</p>\n<pre><code class=\"language-%s\">%s</code></pre></div>\n",
 		lang, lang, template.HTMLEscapeString(f.Source))
@@ -97,16 +95,11 @@ func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 	// Every chosen template must exist, whether or not anything matches:
 	// a typo must not wait for data to surface.
 	for _, c := range b.Templates {
-		if check := r.ctx.site.check; check != nil {
-			check.chosen[c.Name] = true
-		}
+		r.ctx.site.check.chosen[c.Name] = true
 		if _, ok := r.ctx.site.templates.named[c.Name]; !ok {
 			err := r.queryError(q, &query.Error{Line: c.Line, Msg: r.ctx.site.templates.unknownNamed(c.Name)})
-			if check := r.ctx.site.check; check != nil {
-				check.add(Problem{Rule: "content/template", Path: err.Path, Line: err.Line, Msg: "query block: " + err.Msg})
-				return nil
-			}
-			return err
+			// The block is left out, not its results guessed at.
+			return r.ctx.site.check.report(Problem{Check: "content/template", Path: err.Path, Line: err.Line, Entity: err.Entity, Msg: "query block: " + err.Msg, Err: err})
 		}
 	}
 	results, err := g.Run(b)

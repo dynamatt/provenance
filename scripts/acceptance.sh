@@ -639,6 +639,15 @@ expect 2 '^export: the history before commit [0-9a-f]{7} was not fetched \(a sha
 expect 0 'warnings? at `[0-9a-f]{7}`\.$' "$PROV" validate --output pr-summary.md
 cd "$EXAMPLE_DIR"
 
+# E3.5: one renderer, two ways to report. A wikilink to no entity is a
+# validate error from the website check, naming its entity; an export
+# shows it unresolved and carries on.
+printf '\nSee also [[NOPE-0001]].\n' >>REQ/REQ-0002.md
+expect 1 '^REQ/REQ-0002\.md:[0-9]+: error \[links/unresolved\] \[\[NOPE-0001\]\]: no entity NOPE-0001 \(REQ-0002\)$' "$PROV" validate
+expect 0 '^exported website to _site$' "$PROV" export website
+expect 0 'NOPE-0001</span> <span class="unresolved">' cat _site/entities/REQ-0002.html
+git checkout -q -- REQ/REQ-0002.md
+
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"
 	exit 1

@@ -21,7 +21,7 @@ var goldenFormats = map[string]string{"json": ".json", "junit": ".junit.xml", "s
 
 func report(t *testing.T, root, format string) []byte {
 	t.Helper()
-	r, err := Run(&repo.Repo{Root: root})
+	r, err := Run(&repo.Repo{Root: root}, exporters())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/history"
+	"github.com/dynamatt/provenance/internal/problem"
 )
 
 // markdown is the Markdown source (DES-0006): any .md file whose
@@ -54,11 +55,11 @@ func (markdown) Load(root string, skip []string) (*Loaded, error) {
 	// found are the walk's findings in order: a frontmatter problem, or
 	// the first duplicate of an ID, reported once every copy is known.
 	type finding struct {
-		problem *Problem
+		problem *problem.Problem
 		dup     *entity.DuplicateIDError
 	}
 	var found []finding
-	var partial []Problem
+	var partial []problem.Problem
 	copies := map[string][]*entity.DuplicateIDError{}
 	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -87,12 +88,12 @@ func (markdown) Load(root string, skip []string) (*Loaded, error) {
 		switch {
 		case errors.As(err, &fe):
 			out.Files = append(out.Files, rel)
-			found = append(found, finding{problem: &Problem{Check: "content/frontmatter", Path: fe.Path, Line: fe.Line, Msg: fe.Msg, Err: fe}})
+			found = append(found, finding{problem: &problem.Problem{Check: "content/frontmatter", Path: fe.Path, Line: fe.Line, Msg: fe.Msg, Err: fe}})
 		case err != nil:
 			return err
 		case half != nil:
 			out.Files = append(out.Files, rel)
-			partial = append(partial, Problem{Check: "content/frontmatter", Path: half.Path, Line: half.Line, Msg: half.Msg})
+			partial = append(partial, problem.Problem{Check: "content/frontmatter", Path: half.Path, Line: half.Line, Msg: half.Msg})
 		case e == nil:
 		case byID[e.ID] != nil:
 			out.Files = append(out.Files, rel)
@@ -132,7 +133,7 @@ func (markdown) Load(root string, skip []string) (*Loaded, error) {
 // duplicates are the problems of one duplicated ID, from the walk's
 // duplicate errors for it: every file declaring the ID, naming the others.
 // Export stops at the first.
-func duplicates(dups []*entity.DuplicateIDError) []Problem {
+func duplicates(dups []*entity.DuplicateIDError) []problem.Problem {
 	type place struct {
 		path string
 		line int
@@ -141,7 +142,7 @@ func duplicates(dups []*entity.DuplicateIDError) []Problem {
 	for _, d := range dups {
 		all = append(all, place{d.Then, d.ThenLine})
 	}
-	var out []Problem
+	var out []problem.Problem
 	for i, c := range all {
 		var others []string
 		for j, o := range all {
@@ -149,7 +150,7 @@ func duplicates(dups []*entity.DuplicateIDError) []Problem {
 				others = append(others, o.path)
 			}
 		}
-		p := Problem{Check: "content/duplicate-id", Path: c.path, Line: c.line, Entity: dups[0].ID,
+		p := problem.Problem{Check: "content/duplicate-id", Path: c.path, Line: c.line, Entity: dups[0].ID,
 			Msg: fmt.Sprintf("duplicate entity ID %s, also in %s", dups[0].ID, strings.Join(others, ", "))}
 		if i == 0 {
 			p.Err = dups[0]

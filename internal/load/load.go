@@ -14,29 +14,11 @@ import (
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/model"
+	"github.com/dynamatt/provenance/internal/problem"
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/schema"
 )
-
-// Problem is one problem found while loading.
-type Problem struct {
-	// Check is the built-in check it is reported under (DES-0048), such as
-	// "content/frontmatter". The set is open: a new problem names its own
-	// check, and validate's catalogue (validate.Checks) lists them all.
-	Check string
-	// Path is slash-separated and relative to the repository root; Line is
-	// 0 when not known; Entity is the entity's ID, when there is one.
-	Path   string
-	Line   int
-	Entity string
-	// Msg is the problem as validate reports it.
-	Msg string
-	// Err is what export stops at, worded as export has always worded it,
-	// or nil for a problem export carries on past, such as a file that is
-	// not an entity or an ignored schema key.
-	Err error
-}
 
 // Result is a loaded repository.
 type Result struct {
@@ -52,7 +34,7 @@ type Result struct {
 	Graph    *query.Graph
 	// Problems are in the order export meets them: the entity files as
 	// the walk finds them, then the schema, then unknown types by ID.
-	Problems []Problem
+	Problems []problem.Problem
 	// SchemaBroken is set when the schema has problems, so the entities
 	// could not be typed.
 	SchemaBroken bool
@@ -64,14 +46,7 @@ type Result struct {
 }
 
 // Err is the first problem export stops at, or nil.
-func (r *Result) Err() error {
-	for _, p := range r.Problems {
-		if p.Err != nil {
-			return p.Err
-		}
-	}
-	return nil
-}
+func (r *Result) Err() error { return problem.First(r.Problems) }
 
 // Input is what an exporter receives.
 func (r *Result) Input() *export.Input {
@@ -94,10 +69,10 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 		return nil, err
 	}
 	for _, p := range problems {
-		res.add(Problem{Check: "schema/file", Path: p.Path, Line: p.Line, Msg: p.Msg, Err: p})
+		res.add(problem.Problem{Check: "schema/file", Path: p.Path, Line: p.Line, Msg: p.Msg, Err: p})
 	}
 	for _, p := range s.KeyProblems {
-		res.add(Problem{Check: "schema/unknown-key", Path: p.Path, Line: p.Line, Msg: p.Msg})
+		res.add(problem.Problem{Check: "schema/unknown-key", Path: p.Path, Line: p.Line, Msg: p.Msg})
 	}
 	if len(problems) > 0 {
 		res.SchemaBroken = true
@@ -115,7 +90,7 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 		if names := s.TypeNames(); len(names) > 0 {
 			msg += " (declared: " + strings.Join(names, ", ") + ")"
 		}
-		res.add(Problem{Check: "schema/unknown-type", Path: e.Path, Line: line, Entity: e.ID, Msg: msg,
+		res.add(problem.Problem{Check: "schema/unknown-type", Path: e.Path, Line: line, Entity: e.ID, Msg: msg,
 			Err: &model.UnknownTypeError{Path: e.Path, Type: e.Type, Line: line}})
 	}
 	if res.Entities, err = model.Build(s, known); err != nil {
@@ -181,4 +156,4 @@ func (r *Result) read(srcs []Source, skip []string) error {
 	return nil
 }
 
-func (r *Result) add(p Problem) { r.Problems = append(r.Problems, p) }
+func (r *Result) add(p problem.Problem) { r.Problems = append(r.Problems, p) }

@@ -48,3 +48,17 @@ func TestSourceConformance(t *testing.T) {
 		t.Errorf("BIN-0101 reported:\n%s", got)
 	}
 }
+
+// A problem the website check finds in a test-source entity's text names
+// that entity, though the file holds others: a path no longer stands for
+// an entity.
+func TestSourceExportProblem(t *testing.T) {
+	load.UseTestSource(t, loadtest.Rows{})
+	root := ruleRepo(t, nil)
+	write(t, root, "schema/Bin.yaml", "type: Bin\nid_prefix: BIN\nfields:\n  - {name: title, type: string}\n  - {name: notes, type: text}\n")
+	write(t, root, "data/bins.rows", "id | type | title | notes\nBIN-0101 | Bin | Left | Holds bolts.\nBIN-0102 | Bin | Right | See [[BIN-0999]].\nBIN-0103 | Bin | Top | Empty.\n")
+	got := text(t, root)
+	if want := "data/bins.rows:3: error [links/unresolved] [[BIN-0999]]: no entity BIN-0999 (BIN-0102)\n"; !strings.Contains(got, want) {
+		t.Errorf("missing %q in:\n%s", want, got)
+	}
+}

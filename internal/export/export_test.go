@@ -6,11 +6,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dynamatt/provenance/internal/problem"
 )
 
 type stubExporter struct{}
 
-func (stubExporter) Export(*Input) (Files, error) { return nil, nil }
+func (stubExporter) Export(*Input) (Files, error)            { return nil, nil }
+func (stubExporter) Check(*Input) ([]problem.Problem, error) { return nil, nil }
 
 func TestRegistryLookup(t *testing.T) {
 	r := NewRegistry()
