@@ -48,7 +48,7 @@
 - [x] E3.3 Values and positions from the source
 - [x] E3.4 Entity-level history
 - [x] E3.5 Problems and checks
-- [ ] E3.6 Epic close-out
+- [x] E3.6 Epic close-out
 
 ## Shape of the plan
 
@@ -990,7 +990,9 @@ on the changed file. Revert → it passes.
 
 ## Epic 3 — Architecture groundwork
 
-> **Status: decisions G1–G6 agreed with Matt 2026-10-25** (plan PR #49).
+> **Status: closed 2026-10-28.** Decisions G1–G6 agreed with Matt
+> 2026-10-25 (plan PR #49); G7 and G8 built in E3.4 and E3.5. No release
+> of its own: it ships with the next epic's.
 
 **Goal:** loading, validation and history stop assuming that an entity is
 a Markdown file, so the CSV-backed types epic, and every command after it
@@ -1161,7 +1163,7 @@ the groundwork it builds on.
 Detailed task breakdowns are written when the preceding epic closes. Proposed
 order after Epic 2, with the reason it comes where it does:
 
-1. **Architecture groundwork** — Epic 3, detailed above.
+1. **Architecture groundwork** — Epic 3, detailed above (closed 2026-10-28).
 2. **`fmt`** — canonical serialization; `fmt --check` joins the gate. Needed
    before the editor can write files.
 3. **`init`** — medical-device starter template embedded in the binary; a fresh
@@ -1249,7 +1251,15 @@ link field targeting Complaint, reverse `cited_by_risks`), and
 **Why it needs its own epic:** a row is an entity without a file of its
 own, so every part of the product that assumes one file per entity
 (discovery, line numbers, last-changed commit, page inputs, the editor,
-`fmt`, `rename`, signing) has to say what it does with a row.
+`fmt`, `rename`, signing) has to say what it does with a row. Epic 3 did
+this for loading, validation and history: a source (E3.2), a record with
+its own values and positions (E3.3), entity-level history (E3.4) and
+problems that name their entity (E3.5), all proved with a test source,
+`load/loadtest`, that is already a table typed by field. What is left is
+the CSV source itself, the schema's `source:`, rendering a row, and the
+commands after it (`fmt`, `rename`, the editor, `sign`).
+
+*Revised 2026-10-28 against what Epic 3 built; C3 and C7 have a note each.*
 
 **Decisions (for Matt, before the epic is detailed):**
 
@@ -1257,11 +1267,11 @@ own, so every part of the product that assumes one file per entity
 | --- | --- | --- | --- |
 | C1 | Built in, or an import plugin (REQ-0070 allows import plugins) | **Built in.** The schema declares the source; there is no conversion step and no generated Markdown. Plugins remain for formats that need code (an eQMS API, XLSX). | CSV is the common denominator every system exports, and a built-in reader keeps the data's validation identity the binary's. Generating Markdown from the dump would create thousands of files no one reviews and that drift from the source. |
 | C2 | Row IDs | **The `id` column's value, used as written,** and checked to be unique within the file and across the repository. The `<id_prefix>-NNNN` form (DES-0007) applies to authored entities only; a CSV type's `id_prefix` is still required, and its IDs must start with it, so a link's type is still readable. | Complaint numbers are the identity the source system and the complaint handlers use; renumbering them would break traceability back to that system. |
-| C3 | Read-only | **Rows are read-only in Provenance.** `fmt`, `rename`, the editor and `sign` never write them; the file is replaced by the next dump. A row can't have a Markdown body; `text` columns render as Markdown **without wikilinks, embeds or rendered fences** (`[[…]]`, `![[…]]` and a ```` ```query ```` block are shown as written), so a cell can't link out (C4), pull in content or run a query. | The source system is the record; Provenance holds a dated copy. |
+| C3 | Read-only | **Rows are read-only in Provenance.** `fmt`, `rename`, the editor and `sign` never write them; the file is replaced by the next dump. A row can't have a Markdown body; `text` columns render as Markdown **without wikilinks, embeds or rendered fences** (`[[…]]`, `![[…]]` and a ```` ```query ```` block are shown as written), so a cell can't link out (C4), pull in content or run a query. *Since E3.3 the dependency walk already asks the record what a text refers to, and a CSV record answers "nothing"; the website still renders every text value as full Markdown, so task 5 makes it ask the record how a text renders.* | The source system is the record; Provenance holds a dated copy. |
 | C4 | Which way links go | **CSV rows can't link out** in the first version; authored entities link to them (Risk → Complaint), and the facet gives the reverse. A column holding IDs as a link is a later addition. | Links are stored on the later artefact (DES-0011): the risk analysis is written after, and about, the complaints. |
 | C5 | File format | **RFC 4180, UTF-8 (a BOM is ignored), a header row, comma-separated** by default with `delimiter:` to override, CRLF or LF. Values are typed by the field: dates `YYYY-MM-DD` only, unless the field gives `format:`; booleans `true/false`, `yes/no`, `1/0`; an empty cell is an absent value. Columns the schema doesn't name are ignored, and reported as a warning so a renamed column is noticed. | What Excel and most systems export, with types as strict as for authored entities. |
 | C6 | Where a row's problems are placed | **The file and the row's line** (`data/complaints.csv:142`), for validate, export errors and SARIF. | The same contract as every other violation (D8/DES-0048). |
-| C7 | History | A row's last-changed commit is the **last commit that changed that row's line content**, not the file's; the file's commit and dump date are shown on every row's page. Page inputs list the file. | Re-importing the whole file every month mustn't make every complaint look changed. |
+| C7 | History | A row's last-changed commit is the **last commit that changed that row's line content**, not the file's; the file's commit and dump date are shown on every row's page. ~~Page inputs list the file.~~ *Since E3.4 a page's inputs name the row, and each commit records the rows it changed, compared through the source by ID and text, so this needs no history work. **Open, for Matt:** the dump's commit, date and sidecar shown on every row's page are, by DES-0023, inputs of the page, so every dump would move every row's last-changed commit, which this decision exists to prevent. Proposal: the dump's provenance is shown but is not a page input, and DES-0023 says so.* | Re-importing the whole file every month mustn't make every complaint look changed. |
 | C8 | Pages | **A page per row by default,** with `pages: false` on the source for large dumps; rows are still listed by queries and cited by `[[ID]]` without a page, as an entity outside the scope is. | Thousands of near-identical pages make a site slow to build and browse. |
 | C9 | Provenance of the dump | Provenance can't tell where a copied file came from, so it records what it knows and asks for the rest. **Git** knows when the copy entered the design record: the commit that last changed the file, with its date and author. **The schema** declares `system:`, the system the dumps come from, which doesn't change between dumps. **A sidecar beside each dump** (`data/complaints.csv.yaml`) holds what only the person exporting knows: `exported:`, the dump's date, and `sha256:`, the hash of the CSV it describes (`sha256sum` prints it). `validate` fails when the sidecar is missing or its hash isn't the file's, so a new dump copied in without saying when it was exported is stopped at the merge gate. All of it is shown on each row's page and available to templates; the CSV and the sidecar are in the content hash like any other file. | ISO 13485 §8.2.2, which the QMSR incorporates: complaint records are kept by the complaint-handling process, and the copy must be traceable to it. A per-dump date in the schema would be edited on every dump and could silently go stale; the hash ties the sidecar's date to this file, not to whichever file was there when it was last typed. |
 
@@ -1273,18 +1283,27 @@ own, so every part of the product that assumes one file per entity
 2. **Example repo:** a `Complaint` type with `data/complaints.csv` (a dozen
    synthetic rows) and its sidecar, RSK-0001's failure modes linking to them, and
    `occurrence` justified by a `COUNT` over them.
-3. **Loading:** the CSV reader as a second source of the loader (E3.2),
-   `source:` in the schema, rows as entities in the model and the graph,
-   each with its row's positions (E3.3); load errors at file and row.
-4. **validate:** schema conformance for CSV types and rows (C2, C5, C6),
-   unknown columns as warnings, and the sidecar: present, and its hash the
-   file's (C9).
-5. **export:** row pages, `pages: false`, citations and queries over rows,
-   the dump's provenance on each page: system, export date, and the
-   commit that brought it in.
-6. **History:** per-row last-changed (C7) on E3.4's entity-level log,
-   which diffs the CSV by row ID; page inputs, the dirty check, content
-   hash.
+3. **Loading:** `source:` in the schema, and the CSV reader as a
+   `load.Source` the loader runs after the schema (E3.2), reading the files
+   the schema names. Its record (`entity.Record`, E3.3) types a cell by
+   its field (C5), as `loadtest.Rows` does, places the row and its cells
+   at the row's line (C6), and refers to nothing from a text (C3).
+   `Source.Entities` gives each row's text, so history compares rows
+   (E3.4). Load errors are `problem.Problem`s at file and row, naming the
+   row (E3.5). `loadtest.Rows` stays for tests.
+4. **validate:** conformance already runs through the record (E3.3), so
+   what is new is the CSV-specific checks: row IDs (C2), unknown columns
+   as warnings (C5), and the sidecar, present and its hash the file's
+   (C9). Each is a problem with its own check, and a case in
+   `testdata/violations`.
+5. **export:** row pages, `pages: false`, citations and queries over
+   rows, the dump's provenance on each page (system, export date, the
+   commit that brought it in), and text cells rendered as the record says
+   (C3). Export and validate's check share the renderer (E3.5), so the
+   check covers rows with no extra work.
+6. **History:** per-row last-changed (C7) comes from E3.4's entity-level
+   log; what is left is settling C7's open point, and checking that the
+   dirty state, content hash and a moved dump behave as DES-0023 says.
 7. **Close-out:** docs (a "Importing data" concept page), release.
 
 ### Section and item references (proposed 2026-10-18, for Matt's review)
