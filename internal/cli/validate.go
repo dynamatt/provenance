@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/dynamatt/provenance/internal/exitcode"
-	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/tmpl"
 	"github.com/dynamatt/provenance/internal/validate"
@@ -125,7 +124,7 @@ func renderOutputs(report *validate.Report, outs []output) ([][]byte, error) {
 	}
 	if needStamps {
 		var err error
-		if st, err = stamps(report.Root(), report.Content()); err != nil {
+		if st, err = report.Stamps(); err != nil {
 			return nil, err
 		}
 	}
@@ -154,25 +153,4 @@ func writeReport(path string, data []byte) error {
 		}
 	}
 	return os.WriteFile(path, data, 0o644)
-}
-
-// stamps are a report's git stamps: HEAD, and the content hash with
-// whether the working tree differs from it. Outside a git repository there
-// is nothing to stamp.
-func stamps(root string, content history.Content) (validate.Stamps, error) {
-	h, err := history.Open(root)
-	if errors.Is(err, history.ErrNotRepository) {
-		return validate.Stamps{}, nil
-	}
-	if err != nil {
-		return validate.Stamps{}, err
-	}
-	defer h.Close()
-	st := validate.Stamps{GitSHA: h.HEAD()}
-	var dirty *history.Dirty
-	if st.ContentHash, dirty, err = h.WorkingContentHash(content); err != nil {
-		return validate.Stamps{}, err
-	}
-	st.Dirty = dirty.Any()
-	return st, nil
 }

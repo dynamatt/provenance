@@ -152,13 +152,13 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 	return s.files, nil
 }
 
-// pageInputs are the files e's page shows (DES-0023): the files
-// of the entities its dependency walk pulls in and of those their calculated
-// fields read, the images it shows, every entity of the types its queries
-// select, the schema of the types it renders, and the templates it renders
-// through: the layout, the type template of each entity shown in full (a
-// path that does not exist yet still counts, so adding one is a change) and
-// the named templates its queries choose, and _cite.tmpl when it cites
+// pageInputs are what e's page shows (DES-0023): the entities its
+// dependency walk pulls in and those their calculated fields read, the
+// images it shows, every entity of the types its queries select, the
+// schema of the types it renders, and the templates it renders through:
+// the layout, the type template of each entity shown in full (a path that
+// does not exist yet still counts, so adding one is a change) and the
+// named templates its queries choose, and _cite.tmpl when it cites
 // anything. When the page lists its citations, or a _cite.tmpl renders
 // them, the entities it cites are inputs too. The stylesheet is a
 // separate file, so it is not an input of any page.
@@ -174,10 +174,10 @@ func (s *site) pageInputs(e *model.Entity) (history.Inputs, error) {
 		".component":                   true,
 		templatesDir + "/_layout.tmpl": true,
 	}
+	ids := map[string]bool{}
 	for _, id := range append(slices.Clone(deps.IDs), deps.Read...) {
-		ent := s.byID[id]
-		paths[ent.Path] = true
-		s.schemaFiles(ent.Schema, paths)
+		ids[id] = true
+		s.schemaFiles(s.byID[id].Schema, paths)
 	}
 	for _, id := range deps.Full {
 		paths[templatesDir+"/"+s.byID[id].Type+".tmpl"] = true
@@ -194,12 +194,12 @@ func (s *site) pageInputs(e *model.Entity) (history.Inputs, error) {
 	if s.listsCitations(e) || s.templates.cite != nil {
 		for _, id := range deps.Cited {
 			if ent := s.byID[id]; ent != nil {
-				paths[ent.Path] = true
+				ids[id] = true
 				s.schemaFiles(ent.Schema, paths)
 			}
 		}
 	}
-	in := history.Inputs{Paths: slices.Sorted(maps.Keys(paths)), Types: deps.Types}
+	in := history.Inputs{Entities: slices.Sorted(maps.Keys(ids)), Paths: slices.Sorted(maps.Keys(paths)), Types: deps.Types}
 	s.inputs[e.ID] = in
 	return in, nil
 }
@@ -225,11 +225,12 @@ func (s *site) indexInputs(entities []*model.Entity) history.Inputs {
 		templatesDir + "/_layout.tmpl": true,
 		templatesDir + "/_index.tmpl":  true,
 	}
+	var ids []string
 	for _, e := range entities {
-		paths[e.Path] = true
+		ids = append(ids, e.ID)
 		s.schemaFiles(e.Schema, paths)
 	}
-	return history.Inputs{Paths: slices.Sorted(maps.Keys(paths))}
+	return history.Inputs{Entities: ids, Paths: slices.Sorted(maps.Keys(paths))}
 }
 
 // revisionData is revision history as template data, newest first.

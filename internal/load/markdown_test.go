@@ -1,6 +1,7 @@
 package load
 
 import (
+	"github.com/dynamatt/provenance/internal/history"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -94,17 +95,19 @@ func TestMarkdownProblems(t *testing.T) {
 	}
 }
 
-// Types reads a .md file's bytes only, and names its entity's type.
-func TestMarkdownTypes(t *testing.T) {
+// Entities reads a .md file's bytes only, and names its entity, written as
+// the whole file.
+func TestMarkdownEntities(t *testing.T) {
 	read := func(s string) func() ([]byte, error) { return func() ([]byte, error) { return []byte(s), nil } }
-	if ts, ok, err := (markdown{}).Types("R/r.md", read(entityFile("R-1", "Requirement"))); !ok || err != nil || strings.Join(ts, ",") != "Requirement" {
-		t.Errorf("entity file: %v %v %v", ts, ok, err)
+	file := entityFile("R-1", "Requirement")
+	if es, ok, err := (markdown{}).Entities("R/r.md", read(file)); !ok || err != nil || len(es) != 1 || es[0] != (history.FileEntity{ID: "R-1", Type: "Requirement", Text: file}) {
+		t.Errorf("entity file: %v %v %v", es, ok, err)
 	}
-	if ts, ok, _ := (markdown{}).Types("README.md", read("# hi\n")); !ok || ts != nil {
-		t.Errorf("not an entity: %v %v", ts, ok)
+	if es, ok, _ := (markdown{}).Entities("README.md", read("# hi\n")); !ok || es != nil {
+		t.Errorf("not an entity: %v %v", es, ok)
 	}
 	called := false
-	if _, ok, _ := (markdown{}).Types("schema/x.yaml", func() ([]byte, error) { called = true; return nil, nil }); ok || called {
+	if _, ok, _ := (markdown{}).Entities("schema/x.yaml", func() ([]byte, error) { called = true; return nil, nil }); ok || called {
 		t.Errorf("other file: ok %v, read %v", ok, called)
 	}
 }

@@ -17,7 +17,6 @@ import (
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/schema"
-	"github.com/dynamatt/provenance/internal/yamlnode"
 )
 
 // Problem is one problem found while loading.
@@ -58,7 +57,10 @@ type Result struct {
 	// could not be typed.
 	SchemaBroken bool
 
-	content *content
+	content     *content
+	history     *History
+	historyErr  error
+	historyRead bool
 }
 
 // Err is the first problem export stops at, or nil.
@@ -108,7 +110,7 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 			known = append(known, e)
 			continue
 		}
-		line := yamlnode.Lookup(e.Front, "type").Line
+		line := e.Record.TypeLine()
 		msg := fmt.Sprintf("type %q is not declared in schema/", e.Type)
 		if names := s.TypeNames(); len(names) > 0 {
 			msg += " (declared: " + strings.Join(names, ", ") + ")"
@@ -126,7 +128,7 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 }
 
 // Content is what history needs to know of the repository's content: the
-// files the sources read, and the entity types a file holds.
+// files the sources read, and the entities a file holds.
 func (r *Result) Content() history.Content { return r.content }
 
 // ContentOf reads only what history needs of rp, for a command that needs

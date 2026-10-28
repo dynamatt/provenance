@@ -8,20 +8,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/load/loadtest"
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
 )
 
-const rows = `- id: PRT-0002
-  type: Part
-  title: Bolt
-  weight: 3
-- id: PRT-0003
-  type: Part
-  title: Nut
-  weight: 4
+const rows = `id       | type | title | weight
+PRT-0002 | Part | Bolt  | 3
+
+PRT-0003 | Part | Nut   | 4
 `
 
 func rowsRepo(t *testing.T, extra map[string]string) *load.Result {
@@ -68,7 +65,7 @@ func TestSourceEntities(t *testing.T) {
 		t.Errorf("entities %v", ids)
 	}
 	nut := res.Graph.Entity("PRT-0003")
-	if v := nut.Field("total"); v.Num != 8 || nut.IDLine() != 5 {
+	if v := nut.Field("total"); v.Num != 8 || nut.IDLine() != 4 {
 		t.Errorf("PRT-0003: total %v, id line %d", v.Num, nut.IDLine())
 	}
 	b, err := query.ParseBlock("from: Part\nwhere: {field: weight, operator: greater_than, value: 2}\n", res.Schema)
@@ -90,23 +87,23 @@ func TestSourceEntities(t *testing.T) {
 	if files, _ := c.Files(); !slices.Equal(files, []string{"P/a.md", "data/parts.rows"}) {
 		t.Errorf("content files %v", files)
 	}
-	types, err := c.Types("data/parts.rows", func() ([]byte, error) { return []byte(rows), nil })
-	if err != nil || !slices.Equal(types, []string{"Part", "Part"}) {
-		t.Errorf("types %v, %v", types, err)
+	es, err := c.Entities("data/parts.rows", func() ([]byte, error) { return []byte(rows), nil })
+	if err != nil || len(es) != 2 || es[1] != (history.FileEntity{ID: "PRT-0003", Type: "Part", Text: "PRT-0003 | Part | Nut   | 4"}) {
+		t.Errorf("entities %+v, %v", es, err)
 	}
 }
 
 // An ID two sources both hold is a duplicate, as within one source; the
 // first source's entity is kept.
 func TestSourceDuplicates(t *testing.T) {
-	res := rowsRepo(t, map[string]string{"data/more.rows": "- id: PRT-0001\n  type: Part\n"})
+	res := rowsRepo(t, map[string]string{"data/more.rows": "id | type\nPRT-0001 | Part\n"})
 	var got []string
 	for _, p := range res.Problems {
 		got = append(got, p.Check+" "+p.Path+":"+strconv.Itoa(p.Line)+" "+p.Msg)
 	}
 	want := []string{
 		"content/duplicate-id P/a.md:2 duplicate entity ID PRT-0001, also in data/more.rows",
-		"content/duplicate-id data/more.rows:1 duplicate entity ID PRT-0001, also in P/a.md",
+		"content/duplicate-id data/more.rows:2 duplicate entity ID PRT-0001, also in P/a.md",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("problems\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))

@@ -56,16 +56,17 @@ func exportFormat(c *cobra.Command, format string) error {
 	}
 	// The output folder may sit inside the repository (the default ./_site
 	// usually does); never read it back as source.
-	in, content, err := loadInput(cwd, outDir)
+	res, err := loadRepo(cwd, outDir)
 	if err != nil {
 		return err
 	}
+	in := res.Input()
 	if path, _ := c.Flags().GetString("scope"); path != "" {
 		if in.Scope, err = export.ResolveScope(in.Graph, in.Repo.Root, cwd, path); err != nil {
 			return err
 		}
 	}
-	if in.Git, err = gitContext(in.Repo.Root, content); err != nil {
+	if in.Git, err = res.Git(); err != nil {
 		return err
 	}
 	files, err := exp.Export(in)
@@ -79,44 +80,21 @@ func exportFormat(c *cobra.Command, format string) error {
 	return nil
 }
 
-// loadInput reads the repository containing cwd, stopping at its first
-// problem, and what history needs to know of its content. Folders under
-// skip are not read.
-func loadInput(cwd string, skip ...string) (*export.Input, history.Content, error) {
+// loadRepo reads the repository containing cwd, stopping at its first
+// problem. Folders under skip are not read.
+func loadRepo(cwd string, skip ...string) (*load.Result, error) {
 	r, err := repo.Open(cwd)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	res, err := load.Load(r, skip...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if err := res.Err(); err != nil {
-		return nil, nil, err
-	}
-	return res.Input(), res.Content(), nil
-}
-
-// gitContext reads what an export stamps into its output (DES-0021,
-// DES-0023). Outside a git repository there is nothing to stamp: export
-// still works, without commit or content hash.
-func gitContext(root string, content history.Content) (*export.Git, error) {
-	h, err := history.Open(root)
-	if errors.Is(err, history.ErrNotRepository) {
-		return nil, nil
-	}
-	if err != nil {
 		return nil, err
 	}
-	defer h.Close()
-	g := &export.Git{SHA: h.HEAD()}
-	if g.ContentHash, g.Dirty, err = h.WorkingContentHash(content); err != nil {
-		return nil, err
-	}
-	if g.Log, err = h.Log(content); err != nil {
-		return nil, err
-	}
-	return g, nil
+	return res, nil
 }
 
 // runVerifyContent prints the DHF content hash of HEAD (suffixed -dirty when

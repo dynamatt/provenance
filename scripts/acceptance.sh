@@ -630,6 +630,15 @@ for r in core broken-schema; do
 	expect 0 'validates$' xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/violations-$r.junit.xml"
 done
 
+# E3.4: export's last-changed commits need the whole history, which a
+# shallow clone cuts off, so it says so and exits 2; validate and its
+# report stamps need only HEAD.
+git clone -q --depth 1 "file://$EXAMPLE_DIR" "$WORK/shallow" 2>/dev/null
+cd "$WORK/shallow"
+expect 2 '^export: the history before commit [0-9a-f]{7} was not fetched \(a shallow clone\).*fetch-depth: 0' "$PROV" export website
+expect 0 'warnings? at `[0-9a-f]{7}`\.$' "$PROV" validate --output pr-summary.md
+cd "$EXAMPLE_DIR"
+
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"
 	exit 1

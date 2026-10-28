@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/repo"
 )
@@ -62,7 +63,7 @@ func errorClasses(t *testing.T) []errorClass {
 			continue
 		}
 		var c errorClass
-		if err := e.Front.Decode(&c); err != nil {
+		if err := e.Record.(*entity.Markdown).Front.Decode(&c); err != nil {
 			t.Fatalf("%s: %v", e.Path, err)
 		}
 		out = append(out, c)
@@ -174,10 +175,10 @@ func TestChecksMatchTheCatalogue(t *testing.T) {
 		var title struct {
 			Title string `yaml:"title"`
 		}
-		if err := e.Front.Decode(&c); err != nil {
+		if err := e.Record.(*entity.Markdown).Front.Decode(&c); err != nil {
 			t.Fatal(err)
 		}
-		if err := e.Front.Decode(&title); err != nil {
+		if err := e.Record.(*entity.Markdown).Front.Decode(&title); err != nil {
 			t.Fatal(err)
 		}
 		classes[c.Rule], titles[c.Rule] = c, title.Title

@@ -13,7 +13,6 @@ import (
 	texttemplate "text/template"
 
 	"github.com/dynamatt/provenance/internal/export/website"
-	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
@@ -50,12 +49,16 @@ func (e *UnknownReportError) Error() string {
 	return msg
 }
 
-// Root is the repository the report is about.
-func (r *Report) Root() string { return r.root }
-
-// Content is what history needs to know of the repository's content, for
-// the stamps of a report.
-func (r *Report) Content() history.Content { return r.repoContent }
+// Stamps are the report's git stamps: HEAD, and the content hash with
+// whether the working tree differs from it. They need only HEAD, so a
+// shallow clone has them too.
+func (r *Report) Stamps() (Stamps, error) {
+	h, err := r.history()
+	if err != nil || h == nil {
+		return Stamps{}, err
+	}
+	return Stamps{GitSHA: h.SHA, ContentHash: h.ContentHash, Dirty: h.Dirty.Any()}, nil
+}
 
 // IsFormat reports whether name is one of Formats rather than a report
 // template.
