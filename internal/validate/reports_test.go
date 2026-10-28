@@ -28,7 +28,7 @@ func reportRepo(t *testing.T, templates map[string]string) string {
 
 func runReport(t *testing.T, root string) *Report {
 	t.Helper()
-	r, err := Run(&repo.Repo{Root: root, Component: repo.Component{Code: "PRT", Name: "Parts & more"}})
+	r, err := Run(&repo.Repo{Root: root, Component: repo.Component{Code: "PRT", Name: "Parts & more"}}, exporters())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/history"
+	"github.com/dynamatt/provenance/internal/problem"
 	"github.com/dynamatt/provenance/internal/schema"
 )
 
@@ -31,7 +32,7 @@ type Loaded struct {
 	// with the same ID is a problem.
 	Entities []*entity.Entity
 	// Problems are in the order the source found them.
-	Problems []Problem
+	Problems []problem.Problem
 	// Files are the files it read that hold entities, or would but for a
 	// problem: the content files a change to which marks an export dirty.
 	Files []string

@@ -2,10 +2,14 @@ package validate
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/dynamatt/provenance/internal/export"
+	"github.com/dynamatt/provenance/internal/export/website"
+	"github.com/dynamatt/provenance/internal/problem"
 	"github.com/dynamatt/provenance/internal/repo"
 )
 
@@ -25,7 +29,7 @@ func write(t *testing.T, root, rel, content string) {
 
 func text(t *testing.T, root string) string {
 	t.Helper()
-	r, err := Run(&repo.Repo{Root: root})
+	r, err := Run(&repo.Repo{Root: root}, exporters())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,5 +205,44 @@ schema/records/Unused.yaml:1: warning [schema/unused-record] record Unused is no
 `
 	if got := text(t, root); got != want {
 		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// exporters are the exporters validate checks content against, as the CLI
+// registers them.
+func exporters() *export.Registry {
+	r := export.NewRegistry()
+	r.Register("website", website.New())
+	return r
+}
+
+// stubExporter is an exporter whose check finds one problem, at a file of
+// the repository.
+type stubExporter struct{}
+
+func (stubExporter) Export(*export.Input) (export.Files, error) { return nil, nil }
+func (stubExporter) Check(in *export.Input) ([]problem.Problem, error) {
+	return []problem.Problem{{Check: "content/template", Warning: true, Path: "REQ/REQ-0001.md", Line: 2, Entity: "REQ-0001",
+		Msg: fmt.Sprintf("the stub cannot render %d entities", len(in.Entities))}}, nil
+}
+
+// Validate checks content against every registered exporter, not only the
+// website, and reports each problem with the entity the exporter names.
+func TestEveryExporterIsChecked(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/Requirement.yaml", reqType)
+	write(t, root, "REQ/REQ-0001.md", "---\nid: REQ-0001\ntype: Requirement\ntitle: Shall\n---\n")
+	reg := exporters()
+	reg.Register("stub", stubExporter{})
+	r, err := Run(&repo.Repo{Root: root}, reg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var b bytes.Buffer
+	if err := r.WriteText(&b); err != nil {
+		t.Fatal(err)
+	}
+	if want := "REQ/REQ-0001.md:2: warning [content/template] the stub cannot render 1 entities (REQ-0001)\n0 errors, 1 warning\n"; b.String() != want {
+		t.Errorf("got\n%s\nwant\n%s", b.String(), want)
 	}
 }

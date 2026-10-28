@@ -12,7 +12,6 @@ import (
 	"strings"
 	texttemplate "text/template"
 
-	"github.com/dynamatt/provenance/internal/export/website"
 	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
@@ -162,7 +161,7 @@ func readReport(root, name string) (string, error) {
 
 func (r *Report) render(w io.Writer, name, text string, st Stamps) error {
 	path := ReportsDir + "/" + name + ".tmpl"
-	funcs := website.ReportFuncs()
+	funcs := tmpl.ReportFuncs()
 	var t interface {
 		Execute(io.Writer, any) error
 	}
@@ -197,7 +196,7 @@ func (r *Report) templateData(st Stamps) map[string]any {
 			if e, ok := r.entities[v.Entity]; ok {
 				ent = e
 			} else {
-				ent = website.UnresolvedEntity(v.Entity)
+				ent = tmpl.Baseline(v.Entity)
 			}
 		}
 		return map[string]any{"Rule": v.Rule, "Severity": string(v.Severity), "Message": v.Message,

@@ -10,9 +10,10 @@ import (
 	"strings"
 
 	"github.com/dynamatt/provenance/internal/export"
-	"github.com/dynamatt/provenance/internal/export/website"
 	"github.com/dynamatt/provenance/internal/load"
+	"github.com/dynamatt/provenance/internal/problem"
 	"github.com/dynamatt/provenance/internal/repo"
+	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
 // Severity is how a violation affects the gate: errors fail it, warnings
@@ -53,7 +54,7 @@ type Report struct {
 	root      string
 	component repo.Component
 	history   func() (*load.History, error)
-	entities  map[string]map[string]any
+	entities  map[string]tmpl.Data
 }
 
 // Errors counts the error-severity violations.
@@ -88,9 +89,11 @@ func (r *Report) sort() {
 // RulesDir is the folder of rule files at the repository root (DES-0016).
 const RulesDir = "rules"
 
-// Run validates the repository rp. Every problem is reported, not just the
-// first (REQ-0038). err is an I/O error: the repository could not be read.
-func Run(rp *repo.Repo) (*Report, error) {
+// Run validates the repository rp, checking it against every exporter in
+// exporters as an export would render it. Every problem is reported, not
+// just the first (REQ-0038). err is an I/O error: the repository could not
+// be read.
+func Run(rp *repo.Repo, exporters *export.Registry) (*Report, error) {
 	root := rp.Root
 	r := &Report{root: root, component: rp.Component}
 	res, err := load.Load(rp)
@@ -106,13 +109,13 @@ func Run(rp *repo.Repo) (*Report, error) {
 	} else {
 		r.schemaChecks(res.Schema, res.Parsed)
 		r.conformance(res.Schema, res.Entities)
-		if err := r.content(res.Input()); err != nil {
+		if err := r.content(res.Input(), exporters); err != nil {
 			return nil, err
 		}
 		if err := r.rules(root, res.Schema, res.Graph); err != nil {
 			return nil, err
 		}
-		r.entities = website.EntityData(res.Schema, res.Entities)
+		r.entities = tmpl.NewModel(res.Schema, res.Entities).ByID
 	}
 	r.sort()
 	// Report templates are checked against everything else found.
@@ -123,31 +126,33 @@ func Run(rp *repo.Repo) (*Report, error) {
 	return r, nil
 }
 
+// violation is p as validate reports it.
+func violation(p problem.Problem) Violation {
+	sev := Error
+	if p.Warning {
+		sev = Warning
+	}
+	return Violation{Rule: p.Check, Severity: sev, Message: p.Msg, Entity: p.Entity, Path: p.Path, Line: p.Line}
+}
+
 // loadProblems reports what loading found, each under its built-in check.
 func (r *Report) loadProblems(res *load.Result) {
 	for _, p := range res.Problems {
-		r.add(Violation{Rule: p.Check, Severity: Error, Message: p.Msg, Entity: p.Entity, Path: p.Path, Line: p.Line})
+		r.add(violation(p))
 	}
 }
 
-// content reports what would stop the website export, and what it would
-// show as a gap, found by rendering the site as an export does
-// (website.Exporter.Check).
-func (r *Report) content(in *export.Input) error {
-	problems, err := website.New().Check(in)
-	if err != nil {
-		return err
-	}
-	byPath := map[string]string{}
-	for _, e := range in.Entities {
-		byPath[e.Path] = e.ID
-	}
-	for _, p := range problems {
-		sev := Error
-		if p.Warning {
-			sev = Warning
+// content reports what would stop an export, and what it would show as a
+// gap, found by rendering as each exporter does (export.Exporter.Check).
+func (r *Report) content(in *export.Input, exporters *export.Registry) error {
+	for _, exp := range exporters.Exporters() {
+		problems, err := exp.Check(in)
+		if err != nil {
+			return err
 		}
-		r.add(Violation{Rule: p.Rule, Severity: sev, Message: p.Msg, Entity: byPath[p.Path], Path: p.Path, Line: p.Line})
+		for _, p := range problems {
+			r.add(violation(p))
+		}
 	}
 	return nil
 }

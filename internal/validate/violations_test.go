@@ -76,7 +76,7 @@ func errorClasses(t *testing.T) []errorClass {
 func TestViolationsExamples(t *testing.T) {
 	reported := map[string][]Violation{} // by file, relative to violationsDir
 	for _, name := range violationRepos {
-		r, err := Run(&repo.Repo{Root: filepath.Join(violationsDir, name)})
+		r, err := Run(&repo.Repo{Root: filepath.Join(violationsDir, name)}, exporters())
 		if err != nil {
 			t.Fatal(err)
 		}

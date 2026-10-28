@@ -253,7 +253,9 @@ git checkout -q DES/DES-0001.md
 PIN=$(git rev-parse HEAD)
 last_changed() { "$PROV" export website >/dev/null && grep -o 'last changed in <code>[0-9a-f]*' _site/entities/DOC-0001.html; }
 BEFORE=$(last_changed)
-gitc() { git -c user.name=Acceptance -c user.email=acceptance@example.com -c commit.gpgsign=false "$@"; }
+# gc.auto=0: a commit must not start a background repack while an export
+# reads the objects (the checkout is reused, so loose objects pile up).
+gitc() { git -c user.name=Acceptance -c user.email=acceptance@example.com -c commit.gpgsign=false -c gc.auto=0 "$@"; }
 sed -i 's/^order: 1/order: 1 /' ECO/ECO-0001.md && gitc commit -qam "Edit ECO-0001"
 expect 0 "^$BEFORE\$" last_changed
 sed -i 's/^order: 1/order: 1 /' REQ/REQ-0001.md && gitc commit -qam "Edit REQ-0001"
@@ -638,6 +640,15 @@ cd "$WORK/shallow"
 expect 2 '^export: the history before commit [0-9a-f]{7} was not fetched \(a shallow clone\).*fetch-depth: 0' "$PROV" export website
 expect 0 'warnings? at `[0-9a-f]{7}`\.$' "$PROV" validate --output pr-summary.md
 cd "$EXAMPLE_DIR"
+
+# E3.5: one renderer, two ways to report. A wikilink to no entity is a
+# validate error from the website check, naming its entity; an export
+# shows it unresolved and carries on.
+printf '\nSee also [[NOPE-0001]].\n' >>REQ/REQ-0002.md
+expect 1 '^REQ/REQ-0002\.md:[0-9]+: error \[links/unresolved\] \[\[NOPE-0001\]\]: no entity NOPE-0001 \(REQ-0002\)$' "$PROV" validate
+expect 0 '^exported website to _site$' "$PROV" export website
+expect 0 'NOPE-0001</span> <span class="unresolved">' cat _site/entities/REQ-0002.html
+git checkout -q -- REQ/REQ-0002.md
 
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"

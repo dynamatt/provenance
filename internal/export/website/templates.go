@@ -144,10 +144,9 @@ func loadTemplates(root string, s *schema.Schema, check *checker) (*templateSet,
 	}
 	for _, src := range sources {
 		if _, err := parse(src, placeholderFuncs); err != nil {
-			if check == nil {
+			if err := check.record(err); err != nil {
 				return nil, err
 			}
-			check.record(err)
 		}
 	}
 	return ts, nil

@@ -29,6 +29,7 @@ import (
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/schema"
+	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
 //go:embed templates/*.tmpl
@@ -46,55 +47,44 @@ func New() *Exporter { return &Exporter{} }
 var safeID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 
 func (e *Exporter) Export(in *export.Input) (export.Files, error) {
-	return e.run(in, nil)
+	return e.run(in, newChecker(true))
 }
 
-// run renders the site. With a checker (Check), every problem is recorded
-// and rendering goes on; the error returned is then only a failure to read
-// the repository.
+// run renders the site, reporting every problem to check (Check). An
+// export's checker stops it at the first problem that stops an export,
+// which run returns; a check's records it and rendering goes on, so the
+// error returned is then only a failure to read the repository.
 func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 	for _, ent := range in.Entities {
 		if !safeID.MatchString(ent.ID) {
-			if check == nil {
-				return nil, fmt.Errorf("%s: ID %q cannot be used as a page name (letters, digits, '.', '_' and '-' only)", ent.Path, ent.ID)
+			if err := check.report(Problem{Check: "schema/id-format", Path: ent.Path, Line: ent.IDLine(), Entity: ent.ID,
+				Msg: fmt.Sprintf("ID %s cannot be used as a page name (letters, digits, '.', '_' and '-' only)", ent.ID),
+				Err: fmt.Errorf("%s: ID %q cannot be used as a page name (letters, digits, '.', '_' and '-' only)", ent.Path, ent.ID)}); err != nil {
+				return nil, err
 			}
-			check.add(Problem{Rule: "schema/id-format", Path: ent.Path, Line: ent.IDLine(),
-				Msg: fmt.Sprintf("ID %s cannot be used as a page name (letters, digits, '.', '_' and '-' only)", ent.ID)})
 		}
 	}
-	for _, err := range templateNameErrors(in.Schema) {
-		if check == nil {
+	for _, err := range tmpl.NameErrors(in.Schema) {
+		if err := check.report(Problem{Check: "content/template", Path: err.Path, Line: err.Line, Msg: err.Msg, Err: err}); err != nil {
 			return nil, err
 		}
-		check.add(Problem{Rule: "content/template", Path: err.Path, Line: err.Line, Msg: err.Msg})
 	}
 	ts, err := loadTemplates(in.Repo.Root, in.Schema, check)
 	if err != nil {
 		return nil, err
 	}
-	// The graph evaluates calculated fields, which the template data reads.
-	graph := in.Graph
-	if graph == nil {
-		graph, err = query.NewGraph(in.Schema, in.Entities)
-		if err != nil {
-			return nil, err
-		}
-	}
 	s := &site{
 		component: in.Repo.Component,
 		root:      in.Repo.Root,
 		templates: ts,
-		data:      buildData(in.Schema, in.Entities),
-		graph:     graph,
+		data:      tmpl.NewModel(in.Schema, in.Entities),
+		graph:     in.Graph,
 		scope:     in.Scope,
 		git:       in.Git,
 		inputs:    map[string]history.Inputs{},
 		byID:      make(map[string]*model.Entity, len(in.Entities)),
 		files:     export.Files{"style.css": ts.style},
 		check:     check,
-	}
-	if check != nil {
-		s.git = nil // a check writes no pages, so has nothing to stamp
 	}
 	for _, ent := range in.Entities {
 		s.byID[ent.ID] = ent
@@ -109,7 +99,7 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 			}
 		}
 		last, revs := s.git.Page(in)
-		m := s.data.byID[ent.ID]
+		m := s.data.ByID[ent.ID]
 		m["LastChangedSHA"], m["Revisions"] = last, revisionData(revs)
 	}
 
@@ -256,7 +246,7 @@ type site struct {
 	component repo.Component
 	root      string // the repository root, for images
 	templates *templateSet
-	data      *dataModel
+	data      *tmpl.Model
 	graph     *query.Graph
 	scope     *export.Scope
 	git       *export.Git
@@ -270,8 +260,7 @@ type site struct {
 	cites    *citations
 	pageData entityData
 	cited    map[string]entityData
-	// check, while checking, collects problems instead of stopping at the
-	// first (Check); nil while exporting.
+	// check is where rendering reports the problems it finds.
 	check *checker
 }
 
@@ -308,31 +297,27 @@ func (s *site) listsCitations(e *model.Entity) bool {
 // known, as e's .Citations and to _cite.tmpl. The data returned is e's, with .Citations, for
 // the layout.
 func (s *site) renderPage(e *model.Entity, linkBase string) (string, entityData, error) {
-	if s.check != nil {
-		// The page's captions are known once it has rendered: from its
-		// second render when it cites anything, which repeats the first.
-		defer s.check.pageEnd()
-		s.check.pageStart()
-	}
+	// The page's captions are known once it has rendered: from its second
+	// render when it cites anything, which repeats the first.
+	defer s.check.pageEnd()
+	s.check.pageStart()
 	chain := []*model.Entity{e}
 	s.cites = &citations{seen: map[string]bool{}}
 	content, err := s.renderEntity(e, chain, "", linkBase)
 	cites := s.cites
 	s.cites = nil
-	data := s.data.byID[e.ID]
+	data := s.data.ByID[e.ID]
 	if err != nil || len(cites.ids) == 0 {
 		return content, data, err
 	}
 	data = maps.Clone(data)
-	list := s.data.citations(cites.ids)
+	list := s.data.Citations(cites.ids)
 	data["Citations"] = list
 	s.pageData, s.cited = data, map[string]entityData{}
 	for _, c := range list {
 		s.cited[c["ID"].(string)] = c
 	}
-	if s.check != nil {
-		s.check.pageStart()
-	}
+	s.check.pageStart()
 	content, err = s.renderEntity(e, chain, "", linkBase)
 	s.pageData, s.cited = nil, nil
 	return content, data, err
@@ -402,7 +387,7 @@ type typeGroup struct {
 func (s *site) renderIndex(entities []*model.Entity) (string, error) {
 	byType := map[string][]entityData{}
 	for _, e := range entities {
-		byType[e.Type] = append(byType[e.Type], s.data.byID[e.ID])
+		byType[e.Type] = append(byType[e.Type], s.data.ByID[e.ID])
 	}
 	d := indexData{Component: s.component}
 	for _, t := range slices.Sorted(maps.Keys(byType)) {
@@ -466,7 +451,7 @@ func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named, linkB
 		if err != nil {
 			return "", err
 		}
-		data := s.data.byID[e.ID]
+		data := s.data.ByID[e.ID]
 		if len(chain) == 1 && s.pageData != nil {
 			data = s.pageData // the page's own entity, with its citations
 		}
@@ -491,16 +476,16 @@ func (ctx *renderCtx) funcs() template.FuncMap {
 	l := ctx.linker()
 	return template.FuncMap{
 		"markdown": ctx.markdown,
-		"link":     l.link,
-		"href":     l.href,
+		"link":     l.Link,
+		"href":     l.Href,
 		"short":    history.Short,
 	}
 }
 
 // linker links from the page being rendered to the entity pages in the
 // export's scope.
-func (ctx *renderCtx) linker() linker {
-	return linker{base: ctx.linkBase, hasPage: ctx.site.scope.Has}
+func (ctx *renderCtx) linker() tmpl.Linker {
+	return tmpl.Linker{Base: ctx.linkBase, HasPage: ctx.site.scope.Has}
 }
 
 // markdown converts entity Markdown, resolving wikilinks against the site.
@@ -517,33 +502,32 @@ func (ctx *renderCtx) markdown(v any) (template.HTML, error) {
 	ctx.source = src
 	defer func() { ctx.source = prev }()
 	r := &resolver{ctx: ctx}
-	if ctx.site.check != nil {
-		out, errs := markdown.ConvertAll(src, r, r.options())
-		for _, err := range errs {
-			ctx.markdownProblem(err)
+	out, errs := markdown.ConvertAll(src, r, r.options())
+	for _, err := range errs {
+		exportErr := err
+		var me *markdown.Error
+		if e := ctx.entity(); errors.As(err, &me) && e != nil {
+			exportErr = &ContentError{Path: e.Path, Line: e.TextFileLine(src, me.Line), Entity: e.ID, Msg: me.Msg}
 		}
-		return template.HTML(out), nil
+		if err := ctx.markdownProblem(err, exportErr); err != nil {
+			return "", err
+		}
 	}
-	out, err := markdown.Convert(src, r, r.options())
-	var me *markdown.Error
-	if e := ctx.entity(); errors.As(err, &me) && e != nil {
-		err = &ContentError{Path: e.Path, Line: e.TextFileLine(src, me.Line), Msg: me.Msg}
-	}
-	return template.HTML(out), err
+	return template.HTML(out), nil
 }
 
 // anchor writes a link with the given class to target's page showing text,
 // or, when target is outside the export's scope, the text alone (Requirements
 // Spec §7: the plain citable ID for an ID).
 func (ctx *renderCtx) anchor(w io.StringWriter, class string, target *model.Entity, text string) {
-	ctx.linker().anchor(w, class, target.ID, target.Title(), text)
+	ctx.linker().Anchor(w, class, target.ID, target.Title(), text)
 }
 
 // ref renders one link target for the built-in templates: a link, the bare
 // ID marked unresolved, or the plain ID outside the scope.
 func (ctx *renderCtx) ref(id string, e *model.Entity) template.HTML {
 	if e == nil {
-		return template.HTML(unresolvedHTML(id, "unresolved"))
+		return template.HTML(tmpl.UnresolvedHTML(id, "unresolved"))
 	}
 	var b strings.Builder
 	ctx.anchor(&b, "id", e, id)
@@ -595,3 +579,6 @@ var fallbackFuncs = template.FuncMap{
 }
 
 func formatNumber(f float64) string { return strconv.FormatFloat(f, 'f', -1, 64) }
+
+// entityData is an entity as a template sees it (DES-0030).
+type entityData = tmpl.Data

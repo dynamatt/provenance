@@ -47,7 +47,7 @@
 - [x] E3.2 Sources and content files
 - [x] E3.3 Values and positions from the source
 - [x] E3.4 Entity-level history
-- [ ] E3.5 Problems and checks
+- [x] E3.5 Problems and checks
 - [ ] E3.6 Epic close-out
 
 ## Shape of the plan

@@ -70,7 +70,7 @@ func input(t *testing.T, files map[string]string) (*export.Input, string) {
 	if err := res.Err(); err != nil {
 		t.Fatal(err)
 	}
-	return &export.Input{Repo: r, Schema: res.Schema, Entities: res.Entities}, root
+	return res.Input(), root
 }
 
 func note(id, front, body string) string {
