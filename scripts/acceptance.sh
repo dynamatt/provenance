@@ -253,7 +253,9 @@ git checkout -q DES/DES-0001.md
 PIN=$(git rev-parse HEAD)
 last_changed() { "$PROV" export website >/dev/null && grep -o 'last changed in <code>[0-9a-f]*' _site/entities/DOC-0001.html; }
 BEFORE=$(last_changed)
-gitc() { git -c user.name=Acceptance -c user.email=acceptance@example.com -c commit.gpgsign=false "$@"; }
+# gc.auto=0: a commit must not start a background repack while an export
+# reads the objects (the checkout is reused, so loose objects pile up).
+gitc() { git -c user.name=Acceptance -c user.email=acceptance@example.com -c commit.gpgsign=false -c gc.auto=0 "$@"; }
 sed -i 's/^order: 1/order: 1 /' ECO/ECO-0001.md && gitc commit -qam "Edit ECO-0001"
 expect 0 "^$BEFORE\$" last_changed
 sed -i 's/^order: 1/order: 1 /' REQ/REQ-0001.md && gitc commit -qam "Edit REQ-0001"
