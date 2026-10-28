@@ -11,6 +11,7 @@ import (
 	"github.com/dynamatt/provenance/internal/markdown"
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/schema"
+	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
 // EmbedCycleError reports an entity that embeds itself, directly or through
@@ -44,7 +45,7 @@ func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
 		if l.Label != "" {
 			text = l.Label
 		}
-		_, _ = w.WriteString(xrefToken(l.Local, l.Label, unresolvedHTML(text, "no caption #"+l.Local)))
+		_, _ = w.WriteString(xrefToken(l.Local, l.Label, tmpl.UnresolvedHTML(text, "no caption #"+l.Local)))
 		return nil
 	}
 	if c := r.ctx.site.cites; c != nil {
@@ -65,7 +66,7 @@ func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
 func (r *resolver) link(w util.BufWriter, l markdown.Link) {
 	target := r.ctx.site.byID[l.ID]
 	if target == nil {
-		_, _ = w.WriteString(unresolvedHTML(l.ID, "unresolved"))
+		_, _ = w.WriteString(tmpl.UnresolvedHTML(l.ID, "unresolved"))
 		return
 	}
 	text := l.ID
@@ -86,7 +87,7 @@ func (r *resolver) link(w util.BufWriter, l markdown.Link) {
 	}
 	r.ctx.anchor(w, "ref", target, text)
 	if marker != "" {
-		_, _ = w.WriteString(unresolvedNote(marker))
+		_, _ = w.WriteString(tmpl.UnresolvedNote(marker))
 	}
 }
 
@@ -122,7 +123,7 @@ func (r *resolver) Embed(w util.BufWriter, l markdown.Link) error {
 	r.checkLink(l)
 	target := r.ctx.site.byID[l.ID]
 	if target == nil {
-		_, _ = w.WriteString(`<p class="embed-missing">` + unresolvedHTML(l.ID, "unresolved"))
+		_, _ = w.WriteString(`<p class="embed-missing">` + tmpl.UnresolvedHTML(l.ID, "unresolved"))
 		_, _ = w.WriteString("</p>\n")
 		return nil
 	}
@@ -171,7 +172,7 @@ func (r *resolver) MisplacedEmbed(w util.BufWriter, l markdown.Link) error {
 	if err := r.Reference(w, markdown.Link{ID: l.ID, Line: l.Line}); err != nil {
 		return err
 	}
-	_, _ = w.WriteString(unresolvedNote("embed must be on its own line"))
+	_, _ = w.WriteString(tmpl.UnresolvedNote("embed must be on its own line"))
 	return nil
 }
 
@@ -213,17 +214,6 @@ func wikilink(l markdown.Link) string {
 		return "![[" + s + "]]"
 	}
 	return "[[" + s + "]]"
-}
-
-// unresolvedHTML shows text, an ID or reference the export could not
-// resolve, marked with why.
-func unresolvedHTML(text, marker string) string {
-	return fmt.Sprintf(`<span class="id unresolved-id">%s</span>`, template.HTMLEscapeString(text)) + unresolvedNote(marker)
-}
-
-// unresolvedNote marks what precedes it as unresolved, saying why.
-func unresolvedNote(marker string) string {
-	return fmt.Sprintf(` <span class="unresolved">%s</span>`, template.HTMLEscapeString(marker))
 }
 
 // fieldText is a field's (or incoming facet's) value as plain text, for

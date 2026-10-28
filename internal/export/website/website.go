@@ -29,6 +29,7 @@ import (
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
 	"github.com/dynamatt/provenance/internal/schema"
+	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
 //go:embed templates/*.tmpl
@@ -62,7 +63,7 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 				Msg: fmt.Sprintf("ID %s cannot be used as a page name (letters, digits, '.', '_' and '-' only)", ent.ID)})
 		}
 	}
-	for _, err := range templateNameErrors(in.Schema) {
+	for _, err := range tmpl.NameErrors(in.Schema) {
 		if check == nil {
 			return nil, err
 		}
@@ -84,7 +85,7 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 		component: in.Repo.Component,
 		root:      in.Repo.Root,
 		templates: ts,
-		data:      buildData(in.Schema, in.Entities),
+		data:      tmpl.NewModel(in.Schema, in.Entities),
 		graph:     graph,
 		scope:     in.Scope,
 		git:       in.Git,
@@ -109,7 +110,7 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 			}
 		}
 		last, revs := s.git.Page(in)
-		m := s.data.byID[ent.ID]
+		m := s.data.ByID[ent.ID]
 		m["LastChangedSHA"], m["Revisions"] = last, revisionData(revs)
 	}
 
@@ -256,7 +257,7 @@ type site struct {
 	component repo.Component
 	root      string // the repository root, for images
 	templates *templateSet
-	data      *dataModel
+	data      *tmpl.Model
 	graph     *query.Graph
 	scope     *export.Scope
 	git       *export.Git
@@ -319,12 +320,12 @@ func (s *site) renderPage(e *model.Entity, linkBase string) (string, entityData,
 	content, err := s.renderEntity(e, chain, "", linkBase)
 	cites := s.cites
 	s.cites = nil
-	data := s.data.byID[e.ID]
+	data := s.data.ByID[e.ID]
 	if err != nil || len(cites.ids) == 0 {
 		return content, data, err
 	}
 	data = maps.Clone(data)
-	list := s.data.citations(cites.ids)
+	list := s.data.Citations(cites.ids)
 	data["Citations"] = list
 	s.pageData, s.cited = data, map[string]entityData{}
 	for _, c := range list {
@@ -402,7 +403,7 @@ type typeGroup struct {
 func (s *site) renderIndex(entities []*model.Entity) (string, error) {
 	byType := map[string][]entityData{}
 	for _, e := range entities {
-		byType[e.Type] = append(byType[e.Type], s.data.byID[e.ID])
+		byType[e.Type] = append(byType[e.Type], s.data.ByID[e.ID])
 	}
 	d := indexData{Component: s.component}
 	for _, t := range slices.Sorted(maps.Keys(byType)) {
@@ -466,7 +467,7 @@ func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named, linkB
 		if err != nil {
 			return "", err
 		}
-		data := s.data.byID[e.ID]
+		data := s.data.ByID[e.ID]
 		if len(chain) == 1 && s.pageData != nil {
 			data = s.pageData // the page's own entity, with its citations
 		}
@@ -491,16 +492,16 @@ func (ctx *renderCtx) funcs() template.FuncMap {
 	l := ctx.linker()
 	return template.FuncMap{
 		"markdown": ctx.markdown,
-		"link":     l.link,
-		"href":     l.href,
+		"link":     l.Link,
+		"href":     l.Href,
 		"short":    history.Short,
 	}
 }
 
 // linker links from the page being rendered to the entity pages in the
 // export's scope.
-func (ctx *renderCtx) linker() linker {
-	return linker{base: ctx.linkBase, hasPage: ctx.site.scope.Has}
+func (ctx *renderCtx) linker() tmpl.Linker {
+	return tmpl.Linker{Base: ctx.linkBase, HasPage: ctx.site.scope.Has}
 }
 
 // markdown converts entity Markdown, resolving wikilinks against the site.
@@ -536,14 +537,14 @@ func (ctx *renderCtx) markdown(v any) (template.HTML, error) {
 // or, when target is outside the export's scope, the text alone (Requirements
 // Spec §7: the plain citable ID for an ID).
 func (ctx *renderCtx) anchor(w io.StringWriter, class string, target *model.Entity, text string) {
-	ctx.linker().anchor(w, class, target.ID, target.Title(), text)
+	ctx.linker().Anchor(w, class, target.ID, target.Title(), text)
 }
 
 // ref renders one link target for the built-in templates: a link, the bare
 // ID marked unresolved, or the plain ID outside the scope.
 func (ctx *renderCtx) ref(id string, e *model.Entity) template.HTML {
 	if e == nil {
-		return template.HTML(unresolvedHTML(id, "unresolved"))
+		return template.HTML(tmpl.UnresolvedHTML(id, "unresolved"))
 	}
 	var b strings.Builder
 	ctx.anchor(&b, "id", e, id)
@@ -595,3 +596,6 @@ var fallbackFuncs = template.FuncMap{
 }
 
 func formatNumber(f float64) string { return strconv.FormatFloat(f, 'f', -1, 64) }
+
+// entityData is an entity as a template sees it (DES-0030).
+type entityData = tmpl.Data

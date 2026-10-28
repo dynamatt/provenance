@@ -1,4 +1,4 @@
-package website
+package tmpl
 
 import (
 	"fmt"
@@ -33,14 +33,14 @@ import (
 // item values. An unresolved link target is a map with Resolved
 // false and every field its declared target types have set to nil, so a
 // template written for resolved targets still renders.
-type entityData = map[string]any
+type Data = map[string]any
 
 // baseline is an entity map holding only the keys the engine provides on
 // every entity, empty: the start of every entity's data, and all of an
 // unresolved link target's but its declared fields.
-func baseline(id string) entityData {
-	return entityData{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false,
-		"LastChangedSHA": "", "Revisions": []entityData{}, "Citations": []entityData{}}
+func Baseline(id string) Data {
+	return Data{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false,
+		"LastChangedSHA": "", "Revisions": []Data{}, "Citations": []Data{}}
 }
 
 // citationKeys are added to each entity in a page's .Citations, and
@@ -49,7 +49,7 @@ var citationKeys = []string{"CitationIndex", "TypeCitationIndex", "CitationLabel
 
 // templateName converts a snake_case field name to its template accessor:
 // verified_by -> VerifiedBy.
-func templateName(field string) string {
+func TemplateName(field string) string {
 	var b strings.Builder
 	for _, part := range strings.Split(field, "_") {
 		if part == "" {
@@ -62,16 +62,16 @@ func templateName(field string) string {
 	return b.String()
 }
 
-// templateNameErrors lists every field or facet whose template accessor
+// NameErrors lists every field or facet whose template accessor
 // another of its type's fields or facets already has, or that hides a
 // baseline accessor ("title" is allowed: the field is the title). Export
 // stops at the first.
-func templateNameErrors(s *schema.Schema) []*query.ContentError {
+func NameErrors(s *schema.Schema) []*query.ContentError {
 	var out []*query.ContentError
 	for _, n := range s.TypeNames() {
 		t := s.Types[n]
 		seen := map[string]string{}
-		for b := range baseline("") {
+		for b := range Baseline("") {
 			seen[b] = "the engine baseline"
 		}
 		for _, b := range citationKeys {
@@ -79,7 +79,7 @@ func templateNameErrors(s *schema.Schema) []*query.ContentError {
 		}
 		delete(seen, "Title")
 		check := func(name, what, path string, line int) {
-			key := templateName(name)
+			key := TemplateName(name)
 			if prev, dup := seen[key]; dup {
 				out = append(out, &query.ContentError{Path: path, Line: line,
 					Msg: fmt.Sprintf("%s %q: its template name .%s is already used by %s", what, name, key, prev)})
@@ -99,39 +99,39 @@ func templateNameErrors(s *schema.Schema) []*query.ContentError {
 	return out
 }
 
-// dataModel holds every entity's template data, built once per export.
-type dataModel struct {
+// Model holds every entity's template data, built once per export.
+type Model struct {
 	schema *schema.Schema
-	byID   map[string]entityData
+	ByID   map[string]Data
 }
 
-func buildData(s *schema.Schema, entities []*model.Entity) *dataModel {
-	d := &dataModel{schema: s, byID: make(map[string]entityData, len(entities))}
+func NewModel(s *schema.Schema, entities []*model.Entity) *Model {
+	d := &Model{schema: s, ByID: make(map[string]Data, len(entities))}
 	// Two passes: links point at other entities' maps.
 	for _, e := range entities {
-		d.byID[e.ID] = baseline(e.ID)
+		d.ByID[e.ID] = Baseline(e.ID)
 	}
 	for _, e := range entities {
-		m := d.byID[e.ID]
+		m := d.ByID[e.ID]
 		m["Type"], m["Title"], m["Body"], m["Resolved"] = e.Type, e.Title(), e.Body, true
 		for _, v := range e.Fields {
-			m[templateName(v.Field.Name)] = d.value(v)
+			m[TemplateName(v.Field.Name)] = d.value(v)
 			if v.Field == e.Schema.BodyField {
 				m["Body"] = v.Str
 			}
 		}
 		for _, in := range e.Incoming {
-			refs := make([]entityData, len(in.From))
+			refs := make([]Data, len(in.From))
 			for i, from := range in.From {
-				refs[i] = d.byID[from.ID]
+				refs[i] = d.ByID[from.ID]
 			}
-			m[templateName(in.Facet.Name)] = refs
+			m[TemplateName(in.Facet.Name)] = refs
 		}
 	}
 	return d
 }
 
-func (d *dataModel) value(v *model.Value) any {
+func (d *Model) value(v *model.Value) any {
 	f := v.Field
 	switch {
 	case f.Kind == schema.Calculated:
@@ -146,7 +146,7 @@ func (d *dataModel) value(v *model.Value) any {
 		}
 		return v.Str
 	case f.Kind == schema.Link && f.Cardinality == "many":
-		refs := []entityData{}
+		refs := []Data{}
 		if v.Present && !v.Invalid {
 			for i, id := range v.IDs {
 				refs = append(refs, d.ref(id, v.Targets[i], f))
@@ -162,12 +162,12 @@ func (d *dataModel) value(v *model.Value) any {
 		}
 		return items
 	case f.Kind == schema.List:
-		rows := []entityData{}
+		rows := []Data{}
 		if v.Present && !v.Invalid {
 			for _, row := range v.Rows {
-				r := entityData{}
+				r := Data{}
 				for _, cell := range row {
-					r[templateName(cell.Field.Name)] = d.value(cell)
+					r[TemplateName(cell.Field.Name)] = d.value(cell)
 				}
 				rows = append(rows, r)
 			}
@@ -190,21 +190,21 @@ func (d *dataModel) value(v *model.Value) any {
 	}
 }
 
-func (d *dataModel) ref(id string, target *model.Entity, f *schema.Field) entityData {
+func (d *Model) ref(id string, target *model.Entity, f *schema.Field) Data {
 	if target != nil {
-		return d.byID[target.ID]
+		return d.ByID[target.ID]
 	}
-	m := baseline(id)
+	m := Baseline(id)
 	for _, tn := range f.Target {
 		t := d.schema.Types[tn]
 		if t == nil {
 			continue
 		}
 		for _, tf := range t.Fields {
-			m[templateName(tf.Name)] = nil
+			m[TemplateName(tf.Name)] = nil
 		}
 		for _, facet := range t.Facets {
-			m[templateName(facet.Name)] = []entityData{}
+			m[TemplateName(facet.Name)] = []Data{}
 		}
 	}
 	return m
@@ -215,12 +215,12 @@ func (d *dataModel) ref(id string, target *model.Entity, f *schema.Field) entity
 // position among them all, and .TypeCitationIndex, its position among those
 // of its type. A missing entity is a map with Resolved false, like an
 // unresolved link target.
-func (d *dataModel) citations(ids []string) []entityData {
-	out := make([]entityData, len(ids))
+func (d *Model) Citations(ids []string) []Data {
+	out := make([]Data, len(ids))
 	perType := map[string]int{}
 	for i, id := range ids {
-		var m entityData
-		if e, ok := d.byID[id]; ok {
+		var m Data
+		if e, ok := d.ByID[id]; ok {
 			m = maps.Clone(e)
 		} else {
 			m = d.ref(id, nil, &schema.Field{})

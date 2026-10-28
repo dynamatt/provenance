@@ -13,6 +13,7 @@ import (
 	"github.com/dynamatt/provenance/internal/export/website"
 	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/repo"
+	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
 // Severity is how a violation affects the gate: errors fail it, warnings
@@ -53,7 +54,7 @@ type Report struct {
 	root      string
 	component repo.Component
 	history   func() (*load.History, error)
-	entities  map[string]map[string]any
+	entities  map[string]tmpl.Data
 }
 
 // Errors counts the error-severity violations.
@@ -112,7 +113,7 @@ func Run(rp *repo.Repo) (*Report, error) {
 		if err := r.rules(root, res.Schema, res.Graph); err != nil {
 			return nil, err
 		}
-		r.entities = website.EntityData(res.Schema, res.Entities)
+		r.entities = tmpl.NewModel(res.Schema, res.Entities).ByID
 	}
 	r.sort()
 	// Report templates are checked against everything else found.

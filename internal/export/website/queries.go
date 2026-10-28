@@ -12,6 +12,7 @@ import (
 	"github.com/dynamatt/provenance/internal/assets"
 	"github.com/dynamatt/provenance/internal/markdown"
 	"github.com/dynamatt/provenance/internal/query"
+	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
 // QueryError is a query block that cannot be run, at its file and line.
@@ -139,7 +140,7 @@ func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 					// Another selected type has the field; this one's
 					// value is empty, as for an unset field.
 					r.ctx.anchor(w, "ref", e, e.ID+"#"+f)
-					_, _ = w.WriteString(unresolvedNote("empty") + "</li>\n")
+					_, _ = w.WriteString(tmpl.UnresolvedNote("empty") + "</li>\n")
 					continue
 				}
 				l.Field = f
