@@ -1260,12 +1260,17 @@ and the DDF formatted before the check turns on (E4.4).
 - The example repository formatted (its own PR, then `make bump-example`)
   and the DDF formatted, both before the check is on, so neither
   validate report gains a warning.
+- A `provenance fmt --all --check` step in the example's and the DDF's
+  Validate workflows, after `validate`, so both gates block a
+  non-canonical file (F7's blocking option, exercised end to end).
 - The golden site and `testdata/validate/*` unchanged but for the stamps
   the pin bump moves.
 
 **Check it yourself:** `make ci` passes; in the example checkout, reorder
 a key → `provenance validate` reports `warning [content/format]` at
-that file, exit 0; `provenance fmt --all --check` lists it, exit 1.
+that file, exit 0; `provenance fmt --all --check` lists it, exit 1. A
+PR to the example that reorders a key fails its Validate workflow at the
+`fmt` step.
 
 ### E4.5 Epic close-out
 
