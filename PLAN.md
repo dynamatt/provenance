@@ -49,7 +49,7 @@
 - [x] E3.4 Entity-level history
 - [x] E3.5 Problems and checks
 - [x] E3.6 Epic close-out
-- [ ] E4.1 Canonical form
+- [x] E4.1 Canonical form
 - [ ] E4.2 The formatter
 - [ ] E4.3 `provenance fmt`
 - [ ] E4.4 The gate
@@ -1165,8 +1165,8 @@ the groundwork it builds on.
 
 ## Epic 4 — `fmt`
 
-> **Status: proposed 2026-10-28, for Matt's review.** Decisions F1–F9
-> below need agreeing before E4.2 starts.
+> **Status: agreed 2026-10-29.** Decisions F1–F9 are written into
+> DES-0038 (E4.1).
 
 **Goal:** every entity file has one canonical serialization, so edits to
 different fields merge cleanly (REQ-0103), the editor (DES-0037) has a
@@ -1185,7 +1185,7 @@ frontmatter's YAML nodes for this (G4).
 file changes no value, except F4's folded text, and formatting twice
 changes nothing.
 
-**Decisions (for Matt):**
+**Decisions (agreed 2026-10-29):**
 
 | # | Decision | Proposal | Why |
 | --- | --- | --- | --- |
