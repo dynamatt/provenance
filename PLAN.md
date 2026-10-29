@@ -1165,7 +1165,7 @@ the groundwork it builds on.
 
 ## Epic 4 — `fmt`
 
-> **Status: proposed 2026-10-28, for Matt's review.** Decisions F1–F8
+> **Status: proposed 2026-10-28, for Matt's review.** Decisions F1–F9
 > below need agreeing before E4.2 starts.
 
 **Goal:** every entity file has one canonical serialization, so edits to
@@ -1195,8 +1195,9 @@ changes nothing.
 | F4 | Text with line breaks | **A value with line breaks is a literal block (`\|`), its lines as written; one without is on one line.** `fmt` never chooses where a line breaks. A folded `>` value in a `text` field becomes a literal block keeping the author's line breaks: the value changes (the breaks were spaces), and so does the HTML (a newline inside the paragraph where there was a space), but a browser shows the paragraph the same: a line break inside a Markdown paragraph is a soft break. In a `string` field, a folded value is written on one line. | A folded block is the only YAML form that reflows, and choosing its breaks is reflowing. Literal blocks merge line by line. 8 files today. |
 | F5 | Scalars | **Plain, unless YAML would read a different value:** then double-quoted (`"yes"` in a string field, `"#3"`). Dates plain (`2026-10-28`); booleans `true` and `false`; numbers in their shortest decimal form (`2.5`, `1000`). | One way to write each value, and no quotes where none are needed. |
 | F6 | Safety | **`fmt` re-reads every file it would write, through the same source, and writes nothing unless every value is unchanged** (F4's text values compared as they render) **and formatting again changes nothing.** F4's text values are compared with each line break inside a paragraph read as a space. A file that fails this is an error, exit 2, naming the file and field. | A formatter that silently changes a design record's content would be worse than none. |
-| F7 | The gate | **A built-in validate check, `content/format` (error),** so a non-canonical file shows in the text report, SARIF and report templates like any other violation, and the Validate workflows need no new step. `fmt --check` runs the same check alone, exit 1. | One gate, one report. REQ-0104 is met either way; a separate `fmt --check` step would be a second place for CI to fail and a second report format. |
+| F7 | The gate | **A built-in validate check, `content/format` (error),** so a non-canonical file shows in the text report, SARIF and report templates like any other violation, and the Validate workflows need no new step. `fmt --all --check` runs the same check alone, exit 1, and is what the merge gate runs; validate always checks every file. | One gate, one report. REQ-0104 is met either way; a separate `fmt --check` step would be a second place for CI to fail and a second report format. |
 | F8 | Files `fmt` can't read | **Skipped and reported, exit 1, the rest formatted.** A file whose frontmatter doesn't parse, or whose type isn't declared, can't be put in schema order; validate already reports it. | Formatting the readable files shouldn't wait on a broken one. |
+| F9 | Which files | **Only the entity files changed since `HEAD`** (staged, unstaged or untracked), within the paths given; a deleted file is skipped and a renamed one counts at its new path. **`--all` formats every entity file** under the paths. `--check` takes the same set, so `fmt --check` suits a pre-commit hook and `fmt --all --check` the merge gate. Whole files are formatted, not changed lines. | A file nobody touched shouldn't change by accident: a rewrite shows in that entity's history (E3.4) as an edit by whoever ran `fmt`. Rewriting every file, after a schema reorders a type's fields (F2) or a release changes the canonical form, is a deliberate `fmt --all` in a commit of its own. |
 
 **Order:** the design first (E4.1), then the formatter as a function of a
 record (E4.2), then the command (E4.3), then the gate, with the example
@@ -1205,9 +1206,9 @@ and the DDF formatted before the check turns on (E4.4).
 ### E4.1 Canonical form
 
 **Deliverables:**
-- DES-0038 rewritten with F1–F8 as decided, with an example file before
+- DES-0038 rewritten with F1–F9 as decided, with an example file before
   and after, marked DECIDED with the date.
-- REQ-0104 reworded if F7 makes `fmt --check` one of two ways to run the
+- REQ-0104 reworded if F7 makes `fmt --all --check` one of two ways to run the
   check (a clarification).
 
 **Check it yourself:** read DES-0038 in the DDF's export.
@@ -1231,18 +1232,25 @@ and the DDF formatted before the check turns on (E4.4).
 
 **Deliverables:**
 - `fmt [path...]` formats the Markdown entity files under each path
-  (default the whole repository), writing only files that change, and
-  prints each one it rewrote. `--check` writes nothing and lists each
-  file not in canonical form, exit 1. F8 for files it can't read.
+  (default the whole repository) that are changed since `HEAD`, or all
+  of them with `--all` (F9), writing only files that change, and prints
+  each one it rewrote. `--check` writes nothing and lists each file not
+  in canonical form, exit 1. F8 for files it can't read.
+- Which files are changed comes from `internal/history`'s dirty state,
+  not a second status walk.
 - The `notImplementedYet` annotation goes; `make docs` regenerates the
   CLI reference in `provenance-website`.
 - Acceptance: a scrambled copy of an example file is restored byte for
-  byte; `--check` lists it, exit 1; `fmt` on the example as it is
-  (formatted in E4.4) changes nothing.
+  byte; `--check` lists it, exit 1; a scrambled file committed is left
+  alone by `fmt` and `fmt --check`, and listed by `fmt --all --check`;
+  `fmt --all` on the example as it is (formatted in E4.4) changes
+  nothing.
 
 **Check it yourself:** in the example checkout, reorder REQ-0001's keys,
 `provenance fmt --check` → it is listed, exit 1; `provenance fmt` →
-`git diff` is empty.
+`git diff` is empty. Reorder them again and commit:
+`provenance fmt --check` → exit 0, nothing listed;
+`provenance fmt --all --check` → it is listed, exit 1.
 
 ### E4.4 The gate
 
@@ -1261,12 +1269,13 @@ a key → `provenance validate` reports `content/format` at that file.
 ### E4.5 Epic close-out
 
 **Deliverables:** a "Formatting" concept page on the website (what
-canonical means, `fmt` at the gate, F4's text rule); the epic merged into
+canonical means, changed files by default and `--all`, `fmt --all --check`
+at the gate, F4's text rule); the epic merged into
 `main` in each repository; release `v0.3.0-alpha`, which also carries
 Epic 3.
 
 **Check it yourself:** the release's `SHA256SUMS` verifies; the
-downloaded binary's `fmt --check` passes on the example.
+downloaded binary's `fmt --all --check` passes on the example.
 
 ## Later epics (outline)
 
