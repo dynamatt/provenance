@@ -105,7 +105,6 @@ func TestStubsExitTwoWithNotImplemented(t *testing.T) {
 		{"component update", []string{"component", "update", "SUBCOMPONENTS/x"}},
 		{"component remove", []string{"component", "remove", "SUBCOMPONENTS/x"}},
 		{"rename", []string{"rename", "REQ-0001", "REQ-0100"}},
-		{"fmt", []string{"fmt", "--check", "REQ/REQ-0001.md", "REQ/REQ-0002.md"}},
 		{"diff", []string{"diff", "main", "HEAD", "--entity", "REQ-0001"}},
 		{"report", []string{"report", "--metric", "coverage", "--scope", "DOC/DOC-0001.md", "--json"}},
 		{"release tag", []string{"release", "tag", "v1.0.0"}},
