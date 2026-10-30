@@ -112,7 +112,7 @@ expect 0 'verifies <a class="ref" href="REQ-0001\.html"' cat _site/entities/VER-
 expect 0 '<th>Implemented by</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/USR-0001.html
 expect 0 '<td>BES-2201</td>'                cat _site/entities/EVD-0001.html
 expect 0 '<td>PCP-0087</td>'                cat _site/entities/EVD-0001.html
-sed -i.orig 's/^implements: \[REQ-0001, REQ-0002\]/implements: [REQ-9999, REQ-0002]/' DES/DES-0001.md
+sed -i.orig 's/^  - REQ-0001$/  - REQ-9999/' DES/DES-0001.md
 expect 0 '^exported website to _site$'    "$PROV" export website
 expect 0 'REQ-9999</span> <span class="unresolved">unresolved</span>' cat _site/entities/DES-0001.html
 mv DES/DES-0001.md.orig DES/DES-0001.md
@@ -414,10 +414,10 @@ cd "$EXAMPLE_DIR"
 # a value not of its type, an ID not of its type's form. Each exits 1 at its
 # line; a declaration nothing uses is a warning only.
 sed -i 's/^order: 1/order: 1\ncolour: red/' REQ/REQ-0001.md
-expect 1 '^REQ/REQ-0001\.md:9: error \[schema/unknown-field\] Requirement has no field "colour" \(fields: ' "$PROV" validate
+expect 1 '^REQ/REQ-0001\.md:11: error \[schema/unknown-field\] Requirement has no field "colour" \(fields: ' "$PROV" validate
 git checkout -q -- REQ/REQ-0001.md
 sed -i 's/^status: approved/status: aproved/' REQ/REQ-0001.md
-expect 1 '^REQ/REQ-0001\.md:5: error \[schema/enum-value\] status: "aproved" is not one of ApprovalStatus: draft, in_review, approved, deprecated \(REQ-0001\)$' "$PROV" validate
+expect 1 '^REQ/REQ-0001\.md:7: error \[schema/enum-value\] status: "aproved" is not one of ApprovalStatus: draft, in_review, approved, deprecated \(REQ-0001\)$' "$PROV" validate
 git checkout -q -- REQ/REQ-0001.md
 sed -i '/^title:/d' REQ/REQ-0001.md
 expect 1 '^REQ/REQ-0001\.md:2: error \[schema/required\] required field title is not set \(REQ-0001\)$' "$PROV" validate
@@ -452,8 +452,8 @@ expect 1 '^DOC/DOC-0001\.md:[0-9]+: error \[content/unrendered-block\] mermaid b
 expect 1 '^4 errors, 1 warning$'           "$PROV" validate
 expect 2 '^export: DOC/DOC-0001\.md:52: query block: unknown operator "="' "$PROV" export website --out "$WORK/broken"
 git checkout -q -- DOC/DOC-0001.md
-sed -i 's/^implements: \[USR-0001\]/implements: [REQ-0002]/' REQ/REQ-0001.md
-expect 1 '^REQ/REQ-0001\.md:6: error \[links/target-type\] implements: REQ-0002 is of type Requirement, but implements links only to UserNeed \(REQ-0001\)$' "$PROV" validate
+sed -i 's/^  - USR-0001$/  - REQ-0002/' REQ/REQ-0001.md
+expect 1 '^REQ/REQ-0001\.md:9: error \[links/target-type\] implements: REQ-0002 is of type Requirement, but implements links only to UserNeed \(REQ-0001\)$' "$PROV" validate
 git checkout -q -- REQ/REQ-0001.md
 printf 'x\n' > templates/spare.tmpl
 expect 0 '^templates/spare\.tmpl: warning \[content/unused-template\] named template spare is not chosen by any query block$' "$PROV" validate
@@ -485,7 +485,7 @@ git checkout -q -- DOC/DOC-0003.md
 "$PROV" export website >/dev/null
 DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
 expect 0 '>Verification coverage</h2><p>[^<]*<code>[^<]*</code>[^<]*</p><ul class="query"><li><a class="ref" href="REQ-0003\.html"' sh -c "$DOC3_FLAT"
-sed -i '/^verifies: \[REQ-0002\]/d' VER/VER-0002.md
+sed -i '/^verifies:$/,+1d' VER/VER-0002.md
 sed -i 's/^title: Amplitude ceiling — subsystem allocation/title: Single-fault amplitude ceiling/' REQ/REQ-0003.md
 "$PROV" export website >/dev/null
 expect 0 '>Verification coverage</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html".*href="VER-0002\.html".*>Risk-benefit analysis</h2>' sh -c "$DOC3_FLAT"
@@ -525,14 +525,14 @@ git checkout -q -- RSK
 sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VER/EVD-0001.md
 expect 1 '^VER/EVD-0001\.md:51: error \[equipment-calibration-current\] equipment calibration was not current at time of test execution \(EVD-0001\)$' "$PROV" validate
 git checkout -q -- VER
-sed -i '/^verifies: \[REQ-0002\]/d' VER/VER-0002.md
+sed -i '/^verifies:$/,+1d' VER/VER-0002.md
 expect 1 '^VER/VER-0002\.md:2: error \[protocol-verifies-requirement\] verification protocol not linked to any requirement \(VER-0002\)$' "$PROV" validate
 expect 1 '^REQ/REQ-0002\.md:2: warning \[requirement-verified\] requirement missing verification \(REQ-0002\)$' "$PROV" validate
 expect 1 '^1 error, 2 warnings$'           "$PROV" validate
 git checkout -q -- VER
 sed -i 's/^order: 2/order: 2\nparent_requirement: REQ-0003/' REQ/REQ-0002.md
-expect 1 '^REQ/REQ-0002\.md:9: error \[no-requirement-decomposition-cycles\] ' "$PROV" validate
-expect 1 '^REQ/REQ-0003\.md:6: error \[no-requirement-decomposition-cycles\] ' "$PROV" validate
+expect 1 '^REQ/REQ-0002\.md:12: error \[no-requirement-decomposition-cycles\] ' "$PROV" validate
+expect 1 '^REQ/REQ-0003\.md:9: error \[no-requirement-decomposition-cycles\] ' "$PROV" validate
 git checkout -q -- REQ
 sed -i 's/^severity: warning/severity: fatal/' rules/requirement-verified.yaml
 expect 1 '^rules/requirement-verified\.yaml:4: error \[rules/severity\] severity is error or warning, not "fatal"$' "$PROV" validate
@@ -578,13 +578,13 @@ expect 0 '^### Design controls: passed$'           "$PROV" validate --output pr-
 "$PROV" validate --output validation.html >"$WORK/r1.html"
 "$PROV" validate --output validation.html >"$WORK/r2.html"
 expect 0 ''                               diff "$WORK/r1.html" "$WORK/r2.html"
-sed -i 's/^verifies: \[REQ-0002\]/verifies: [REQ-0099]/' VER/VER-0002.md
+sed -i '/^verifies:$/{n;s/REQ-0002/REQ-0099/}' VER/VER-0002.md
 expect 1 'validate: 2 errors, 2 warnings$' "$PROV" validate --output validation.html=_site/validation.html
 expect 0 '^2$'                            sh -c "grep -o '<a class=\"ref\" href=\"entities/VER-0002\.html\"' _site/validation.html | wc -l"
 expect 0 ''                               test -f _site/entities/VER-0002.html
-expect 1 '^\| error \| `VER/VER-0002\.md:6` \| `links/unresolved` \| verifies: no entity REQ-0099 \|$' "$PROV" validate --output pr-summary.md
+expect 1 '^\| error \| `VER/VER-0002\.md:25` \| `links/unresolved` \| verifies: no entity REQ-0099 \|$' "$PROV" validate --output pr-summary.md
 mkdir "$WORK/gate"
-expect 1 '^VER/VER-0002\.md:6: error \[links/unresolved\] verifies: no entity REQ-0099 \(VER-0002\)$' "$PROV" validate --output text --output sarif="$WORK/gate/v.sarif" --output junit="$WORK/gate/v.xml" --output pr-summary.md="$WORK/gate/summary.md" --output validation.html="$WORK/gate/validation.html"
+expect 1 '^VER/VER-0002\.md:25: error \[links/unresolved\] verifies: no entity REQ-0099 \(VER-0002\)$' "$PROV" validate --output text --output sarif="$WORK/gate/v.sarif" --output junit="$WORK/gate/v.xml" --output pr-summary.md="$WORK/gate/summary.md" --output validation.html="$WORK/gate/validation.html"
 expect 0 '"ruleId": "links/unresolved"'   cat "$WORK/gate/v.sarif"
 expect 0 'validates$'                     xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/gate/v.xml"
 expect 0 '^### Design controls: failed$'  cat "$WORK/gate/summary.md"
@@ -649,6 +649,31 @@ expect 1 '^REQ/REQ-0002\.md:[0-9]+: error \[links/unresolved\] \[\[NOPE-0001\]\]
 expect 0 '^exported website to _site$' "$PROV" export website
 expect 0 'NOPE-0001</span> <span class="unresolved">' cat _site/entities/REQ-0002.html
 git checkout -q -- REQ/REQ-0002.md
+
+# E4.2: every entity file of the example is in canonical form (formatted
+# in E4.4), each passing canon's checks, so fmt --all --check lists none.
+expect 0 '^$' "$PROV" fmt --all --check
+
+# E4.3: fmt takes only the files changed since HEAD. A scrambled REQ-0001
+# (id and type swapped, its title quoted) is listed by --check and restored
+# byte for byte; committed, it is left alone unless --all names it, and
+# validate warns of it without failing.
+cp REQ/REQ-0001.md "$WORK/REQ-0001.md"
+scramble() { sed -i -e '2{h;d}' -e '3G' -e 's/^title: \(.*\)$/title: "\1"/' REQ/REQ-0001.md; }
+scramble
+expect 1 '^REQ/REQ-0001\.md$' "$PROV" fmt --check
+expect 0 '^REQ/REQ-0001\.md$' "$PROV" fmt
+expect 0 '' cmp REQ/REQ-0001.md "$WORK/REQ-0001.md"
+expect 0 '^$' "$PROV" fmt --check
+PIN=$(git rev-parse HEAD)
+scramble && gitc commit -qam "Scramble REQ-0001"
+expect 0 '^$' "$PROV" fmt --check
+expect 1 '^REQ/REQ-0001\.md$' "$PROV" fmt --all --check
+expect 0 '^REQ/REQ-0001\.md:2: warning \[content/format\] not in canonical form; provenance fmt rewrites it \(REQ-0001\)$' "$PROV" validate
+expect 0 '^REQ/REQ-0001\.md$' "$PROV" fmt --all REQ/REQ-0001.md
+expect 0 '' cmp REQ/REQ-0001.md "$WORK/REQ-0001.md"
+git checkout -q -- REQ/REQ-0001.md
+git checkout -q --detach "$PIN"
 
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"

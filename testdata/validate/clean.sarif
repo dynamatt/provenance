@@ -46,6 +46,15 @@
               }
             },
             {
+              "id": "content/format",
+              "shortDescription": {
+                "text": "An entity file not in canonical form"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
               "id": "content/frontmatter",
               "shortDescription": {
                 "text": "Frontmatter that cannot be read"
@@ -454,7 +463,7 @@
       "results": [
         {
           "ruleId": "requirement-verified",
-          "ruleIndex": 44,
+          "ruleIndex": 45,
           "level": "warning",
           "message": {
             "text": "requirement missing verification"

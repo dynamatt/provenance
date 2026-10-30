@@ -24,7 +24,7 @@ fields:
       - {name: result, type: string}
   - {name: notes, type: text, body: true}
 `)
-	write(t, root, "PRT/PRT-0001.md", "---\nid: PRT-0001\ntype: Part\ntitle: Frame\nstatus: draft\nchecks:\n  - {result: pass}\n  - {result: fail}\n---\nNotes.\n")
+	write(t, root, "PRT/PRT-0001.md", "---\nid: PRT-0001\ntype: Part\ntitle: Frame\nstatus: draft\nchecks:\n  - result: pass\n  - result: fail\n---\nNotes.\n")
 	write(t, root, "PRT/PRT-0002.md", "---\nid: PRT-0002\ntype: Part\ntitle: Frame\nstatus: approved\nparent: PRT-0001\n---\n")
 	for name, src := range rules {
 		write(t, root, "rules/"+name, src)

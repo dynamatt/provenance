@@ -159,7 +159,7 @@ fields:
     reverse_name: verified_by
 `)
 	write(t, root, "schema/Note.yaml", "type: Note\nfields:\n  - name: text\n    type: text\n")
-	write(t, root, "REQ/REQ-0001.md", "---\nid: REQ-0001\ntype: Requirement\ntitle: Good\nstatus: approved\ndue: 2026-01-02\ntags: [draft]\nsteps:\n  - n: 1\n---\nBody\n")
+	write(t, root, "REQ/REQ-0001.md", "---\nid: REQ-0001\ntype: Requirement\ntitle: Good\nstatus: approved\ndue: 2026-01-02\ntags:\n  - draft\nsteps:\n  - n: 1\n---\nBody\n")
 	write(t, root, "REQ/REQ-0002.md", `---
 id: REQ-2
 type: Requirement
@@ -179,6 +179,7 @@ steps:
 
 	want := `REQ/REQ-0002.md:2: error [schema/id-format] ID REQ-2 is not REQ-NNNN, the form of a Requirement ID (REQ-2)
 REQ/REQ-0002.md:2: error [schema/required] required field title is not set (REQ-2)
+REQ/REQ-0002.md:4: warning [content/format] not in canonical form; provenance fmt rewrites it (REQ-2)
 REQ/REQ-0002.md:4: error [schema/enum-value] status: "aproved" is not one of Status: draft, approved (REQ-2)
 REQ/REQ-0002.md:5: error [schema/unknown-field] statement is the Markdown body below the frontmatter, not a frontmatter field (REQ-2)
 REQ/REQ-0002.md:6: error [schema/unknown-field] verified_by is derived from Test.verifies, set on the linking entity; a Requirement does not store it (REQ-2)
@@ -201,7 +202,7 @@ schema/Test.yaml:4: error [schema/link-target] field "verifies": target "Nothing
 schema/enums/Spare.yaml:1: warning [schema/unused-enum] enum Spare is not used by any field
 schema/enums/Spare.yaml:3: error [schema/unknown-key] enum Spare: unknown key "colour" (expected enum, values)
 schema/records/Unused.yaml:1: warning [schema/unused-record] record Unused is not used by any list
-21 errors, 3 warnings
+21 errors, 4 warnings
 `
 	if got := text(t, root); got != want {
 		t.Errorf("got:\n%s\nwant:\n%s", got, want)

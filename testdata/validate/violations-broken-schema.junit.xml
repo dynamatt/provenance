@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="provenance validate" tests="36" failures="1" errors="0">
-  <testsuite name="built-in" tests="36" failures="1" errors="0" skipped="0">
+<testsuites name="provenance validate" tests="37" failures="1" errors="0">
+  <testsuite name="built-in" tests="37" failures="1" errors="0" skipped="0">
     <testcase name="content/caption" classname="built-in"></testcase>
     <testcase name="content/duplicate-id" classname="built-in"></testcase>
     <testcase name="content/embed" classname="built-in"></testcase>
     <testcase name="content/embed-cycle" classname="built-in"></testcase>
+    <testcase name="content/format" classname="built-in"></testcase>
     <testcase name="content/frontmatter" classname="built-in"></testcase>
     <testcase name="content/image" classname="built-in"></testcase>
     <testcase name="content/query" classname="built-in"></testcase>

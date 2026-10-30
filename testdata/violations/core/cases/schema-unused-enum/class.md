@@ -10,4 +10,3 @@ examples:
   - file: core/schema/enums/Expectation.yaml
     expect: clean
 ---
-

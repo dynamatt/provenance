@@ -109,6 +109,7 @@ func Run(rp *repo.Repo, exporters *export.Registry) (*Report, error) {
 	} else {
 		r.schemaChecks(res.Schema, res.Parsed)
 		r.conformance(res.Schema, res.Entities)
+		r.format(res.Schema, res.Parsed)
 		if err := r.content(res.Input(), exporters); err != nil {
 			return nil, err
 		}
