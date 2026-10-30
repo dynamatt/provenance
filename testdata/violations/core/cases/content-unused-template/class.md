@@ -10,4 +10,3 @@ examples:
   - file: core/templates/widget-row.tmpl
     expect: clean
 ---
-

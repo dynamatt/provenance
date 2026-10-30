@@ -10,4 +10,3 @@ examples:
   - file: core/templates/_cite.tmpl
     expect: clean
 ---
-

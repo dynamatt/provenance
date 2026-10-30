@@ -46,6 +46,15 @@
               }
             },
             {
+              "id": "content/format",
+              "shortDescription": {
+                "text": "An entity file not in canonical form"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
               "id": "content/frontmatter",
               "shortDescription": {
                 "text": "Frontmatter that cannot be read"
@@ -346,7 +355,7 @@
       "results": [
         {
           "ruleId": "schema/file",
-          "ruleIndex": 23,
+          "ruleIndex": 24,
           "level": "error",
           "message": {
             "text": "did not find expected ',' or ']'"
@@ -367,7 +376,7 @@
         },
         {
           "ruleId": "schema/file",
-          "ruleIndex": 23,
+          "ruleIndex": 24,
           "level": "error",
           "message": {
             "text": "field \"status\": unknown type \"AprovalStatus\" (expected string, text, number, date, boolean, link, list, calculated)"

@@ -7,6 +7,7 @@ cases/content-duplicate-id/violation-b.md:2: error [content/duplicate-id] duplic
 cases/content-embed-cycle/violation-a.md:6: error [content/embed-cycle] embed cycle WID-0035 → WID-0034 → WID-0035 (WID-0034)
 cases/content-embed-cycle/violation-b.md:6: error [content/embed-cycle] embed cycle WID-0034 → WID-0035 → WID-0034 (WID-0035)
 cases/content-embed/violation.md:6: error [content/embed] ![[WID-0033]] is inside running text, so it is shown as a reference: an embed must stand on its own line (WID-0032)
+cases/content-format/violation.md:2: warning [content/format] not in canonical form; provenance fmt rewrites it (WID-0041)
 cases/content-frontmatter/violation-no-type.md:2: error [content/frontmatter] frontmatter has an id but no type, so the file is not read as an entity
 cases/content-frontmatter/violation-yaml.md:4: error [content/frontmatter] invalid frontmatter: did not find expected ',' or ']'
 cases/content-image/violation.md:6: error [content/image] image assets/missing.png does not exist (WID-0028)
@@ -19,12 +20,12 @@ cases/content-unrendered-block/violation.md:6: error [content/unrendered-block] 
 cases/content-unrendered-block/violation.md:10: error [content/unrendered-block] drawio block: this version of Provenance cannot render it, so it would be published as its source (WID-0037)
 cases/links-target-type/violation.md:5: error [links/target-type] parent: ERR-0019 is of type ErrorClass, but parent links only to Widget (WID-0024)
 cases/links-unknown-field/violation.md:6: error [links/unknown-field] [[WID-0023#colour]]: Widget has no field "colour" (WID-0022)
-cases/links-unresolved/violation.md:5: error [links/unresolved] uses: no entity WID-9999 (WID-0020)
-cases/links-unresolved/violation.md:7: error [links/unresolved] [[WID-9998]]: no entity WID-9998 (WID-0020)
+cases/links-unresolved/violation.md:7: error [links/unresolved] uses: no entity WID-9999 (WID-0020)
+cases/links-unresolved/violation.md:9: error [links/unresolved] [[WID-9998]]: no entity WID-9998 (WID-0020)
 cases/schema-calculated-set/violation.md:6: error [schema/calculated-set] score is calculated (weight * 2); it cannot be written in the file (WID-0010)
 cases/schema-calculated-set/violation.md:9: error [schema/calculated-set] steps row 1: double is calculated (n * 2); it cannot be written in the file (WID-0010)
 cases/schema-enum-value/violation.md:5: error [schema/enum-value] status: "aproved" is not one of Status: draft, approved (WID-0014)
-cases/schema-enum-value/violation.md:6: error [schema/enum-value] tags item 2: "final" is not one of Status: draft, approved (WID-0014)
+cases/schema-enum-value/violation.md:8: error [schema/enum-value] tags item 2: "final" is not one of Status: draft, approved (WID-0014)
 cases/schema-id-format/violation-page-name.md:2: error [schema/id-format] ID two words cannot be used as a page name (letters, digits, '.', '_' and '-' only) (two words)
 cases/schema-id-format/violation.md:2: error [schema/id-format] ID WID-7 is not WID-NNNN, the form of a Widget ID (WID-7)
 cases/schema-invalid-value/violation.md:5: error [schema/invalid-value] due: not a date (YYYY-MM-DD), got 2026-13-04 (WID-0016)
@@ -33,8 +34,8 @@ cases/schema-invalid-value/violation.md:8: error [schema/invalid-value] steps ro
 cases/schema-list-row/violation.md:7: error [schema/list-row] steps row 1: no sub-field "size" (sub-fields: n) (WID-0018)
 cases/schema-required/violation.md:2: error [schema/required] required field title is not set (WID-0012)
 cases/schema-required/violation.md:6: error [schema/required] steps row 2: required sub-field n is not set (WID-0012)
-cases/schema-unknown-field/violation.md:5: error [schema/unknown-field] Widget has no field "colour" (fields: title, status, due, weight, tags, steps, parent, uses) (WID-0008)
-cases/schema-unknown-field/violation.md:6: error [schema/unknown-field] notes is the Markdown body below the frontmatter, not a frontmatter field (WID-0008)
+cases/schema-unknown-field/violation.md:5: error [schema/unknown-field] notes is the Markdown body below the frontmatter, not a frontmatter field (WID-0008)
+cases/schema-unknown-field/violation.md:6: error [schema/unknown-field] Widget has no field "colour" (fields: title, status, due, weight, tags, steps, parent, uses) (WID-0008)
 cases/schema-unknown-field/violation.md:7: error [schema/unknown-field] used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it (WID-0008)
 cases/schema-unknown-type/violation.md:3: error [schema/unknown-type] type "Gadget" is not declared in schema/ (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget) (GAD-0001)
 rules/Rules_Name_Violation.yaml: error [rules/name] a rule file is named for its ID, in lower-case kebab-case, with .yaml: Rules_Name_Violation.yaml is not
@@ -58,4 +59,4 @@ templates/BrokenTemplate.tmpl:2: error [content/template] bad character U+003C '
 templates/NotAType.tmpl: warning [content/template-name] NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used
 templates/_footer.tmpl: warning [content/unknown-override] _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used
 templates/spare.tmpl: warning [content/unused-template] named template spare is not chosen by any query block
-54 errors, 6 warnings
+54 errors, 7 warnings

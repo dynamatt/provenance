@@ -46,6 +46,15 @@
               }
             },
             {
+              "id": "content/format",
+              "shortDescription": {
+                "text": "An entity file not in canonical form"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
               "id": "content/frontmatter",
               "shortDescription": {
                 "text": "Frontmatter that cannot be read"
@@ -618,8 +627,32 @@
           }
         },
         {
-          "ruleId": "content/frontmatter",
+          "ruleId": "content/format",
           "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "not in canonical form; provenance fmt rewrites it"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-format/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0041"
+          }
+        },
+        {
+          "ruleId": "content/frontmatter",
+          "ruleIndex": 5,
           "level": "error",
           "message": {
             "text": "frontmatter has an id but no type, so the file is not read as an entity"
@@ -640,7 +673,7 @@
         },
         {
           "ruleId": "content/frontmatter",
-          "ruleIndex": 4,
+          "ruleIndex": 5,
           "level": "error",
           "message": {
             "text": "invalid frontmatter: did not find expected ',' or ']'"
@@ -661,7 +694,7 @@
         },
         {
           "ruleId": "content/image",
-          "ruleIndex": 5,
+          "ruleIndex": 6,
           "level": "error",
           "message": {
             "text": "image assets/missing.png does not exist"
@@ -685,7 +718,7 @@
         },
         {
           "ruleId": "content/image",
-          "ruleIndex": 5,
+          "ruleIndex": 6,
           "level": "error",
           "message": {
             "text": "image https://example.com/figure.png: images must be files in the repository, not URLs, so the site works offline"
@@ -709,7 +742,7 @@
         },
         {
           "ruleId": "content/image",
-          "ruleIndex": 5,
+          "ruleIndex": 6,
           "level": "error",
           "message": {
             "text": "image ../../../outside.png is outside the repository"
@@ -733,7 +766,7 @@
         },
         {
           "ruleId": "content/image",
-          "ruleIndex": 5,
+          "ruleIndex": 6,
           "level": "error",
           "message": {
             "text": "image assets/figure.bmp: the website export does not support this format (supported: .gif, .jpeg, .jpg, .png, .svg, .webp)"
@@ -757,7 +790,7 @@
         },
         {
           "ruleId": "content/query",
-          "ruleIndex": 6,
+          "ruleIndex": 7,
           "level": "error",
           "message": {
             "text": "query block: unknown operator \"=\" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in)"
@@ -781,7 +814,7 @@
         },
         {
           "ruleId": "content/template",
-          "ruleIndex": 7,
+          "ruleIndex": 8,
           "level": "error",
           "message": {
             "text": "query block: unknown template \"no-such-template\": there is no templates/no-such-template.tmpl (named templates: spare, widget-row)"
@@ -805,7 +838,7 @@
         },
         {
           "ruleId": "content/unrendered-block",
-          "ruleIndex": 10,
+          "ruleIndex": 11,
           "level": "error",
           "message": {
             "text": "mermaid block: this version of Provenance cannot render it, so it would be published as its source"
@@ -829,7 +862,7 @@
         },
         {
           "ruleId": "content/unrendered-block",
-          "ruleIndex": 10,
+          "ruleIndex": 11,
           "level": "error",
           "message": {
             "text": "drawio block: this version of Provenance cannot render it, so it would be published as its source"
@@ -853,7 +886,7 @@
         },
         {
           "ruleId": "links/target-type",
-          "ruleIndex": 12,
+          "ruleIndex": 13,
           "level": "error",
           "message": {
             "text": "parent: ERR-0019 is of type ErrorClass, but parent links only to Widget"
@@ -877,7 +910,7 @@
         },
         {
           "ruleId": "links/unknown-field",
-          "ruleIndex": 13,
+          "ruleIndex": 14,
           "level": "error",
           "message": {
             "text": "[[WID-0023#colour]]: Widget has no field \"colour\""
@@ -901,34 +934,10 @@
         },
         {
           "ruleId": "links/unresolved",
-          "ruleIndex": 14,
+          "ruleIndex": 15,
           "level": "error",
           "message": {
             "text": "uses: no entity WID-9999"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "cases/links-unresolved/violation.md",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 5
-                }
-              }
-            }
-          ],
-          "properties": {
-            "entity": "WID-0020"
-          }
-        },
-        {
-          "ruleId": "links/unresolved",
-          "ruleIndex": 14,
-          "level": "error",
-          "message": {
-            "text": "[[WID-9998]]: no entity WID-9998"
           },
           "locations": [
             {
@@ -948,8 +957,32 @@
           }
         },
         {
+          "ruleId": "links/unresolved",
+          "ruleIndex": 15,
+          "level": "error",
+          "message": {
+            "text": "[[WID-9998]]: no entity WID-9998"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/links-unresolved/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 9
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "WID-0020"
+          }
+        },
+        {
           "ruleId": "schema/calculated-set",
-          "ruleIndex": 21,
+          "ruleIndex": 22,
           "level": "error",
           "message": {
             "text": "score is calculated (weight * 2); it cannot be written in the file"
@@ -973,7 +1006,7 @@
         },
         {
           "ruleId": "schema/calculated-set",
-          "ruleIndex": 21,
+          "ruleIndex": 22,
           "level": "error",
           "message": {
             "text": "steps row 1: double is calculated (n * 2); it cannot be written in the file"
@@ -997,7 +1030,7 @@
         },
         {
           "ruleId": "schema/enum-value",
-          "ruleIndex": 22,
+          "ruleIndex": 23,
           "level": "error",
           "message": {
             "text": "status: \"aproved\" is not one of Status: draft, approved"
@@ -1021,7 +1054,7 @@
         },
         {
           "ruleId": "schema/enum-value",
-          "ruleIndex": 22,
+          "ruleIndex": 23,
           "level": "error",
           "message": {
             "text": "tags item 2: \"final\" is not one of Status: draft, approved"
@@ -1034,7 +1067,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6
+                  "startLine": 8
                 }
               }
             }
@@ -1045,7 +1078,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 25,
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "ID two words cannot be used as a page name (letters, digits, '.', '_' and '-' only)"
@@ -1069,7 +1102,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 25,
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "ID WID-7 is not WID-NNNN, the form of a Widget ID"
@@ -1093,7 +1126,7 @@
         },
         {
           "ruleId": "schema/invalid-value",
-          "ruleIndex": 26,
+          "ruleIndex": 27,
           "level": "error",
           "message": {
             "text": "due: not a date (YYYY-MM-DD), got 2026-13-04"
@@ -1117,7 +1150,7 @@
         },
         {
           "ruleId": "schema/invalid-value",
-          "ruleIndex": 26,
+          "ruleIndex": 27,
           "level": "error",
           "message": {
             "text": "weight: not a number, got heavy"
@@ -1141,7 +1174,7 @@
         },
         {
           "ruleId": "schema/invalid-value",
-          "ruleIndex": 26,
+          "ruleIndex": 27,
           "level": "error",
           "message": {
             "text": "steps row 1: n: not a number, got one"
@@ -1165,7 +1198,7 @@
         },
         {
           "ruleId": "schema/list-row",
-          "ruleIndex": 28,
+          "ruleIndex": 29,
           "level": "error",
           "message": {
             "text": "steps row 1: no sub-field \"size\" (sub-fields: n)"
@@ -1189,7 +1222,7 @@
         },
         {
           "ruleId": "schema/required",
-          "ruleIndex": 29,
+          "ruleIndex": 30,
           "level": "error",
           "message": {
             "text": "required field title is not set"
@@ -1213,7 +1246,7 @@
         },
         {
           "ruleId": "schema/required",
-          "ruleIndex": 29,
+          "ruleIndex": 30,
           "level": "error",
           "message": {
             "text": "steps row 2: required sub-field n is not set"
@@ -1237,10 +1270,10 @@
         },
         {
           "ruleId": "schema/unknown-field",
-          "ruleIndex": 30,
+          "ruleIndex": 31,
           "level": "error",
           "message": {
-            "text": "Widget has no field \"colour\" (fields: title, status, due, weight, tags, steps, parent, uses)"
+            "text": "notes is the Markdown body below the frontmatter, not a frontmatter field"
           },
           "locations": [
             {
@@ -1261,10 +1294,10 @@
         },
         {
           "ruleId": "schema/unknown-field",
-          "ruleIndex": 30,
+          "ruleIndex": 31,
           "level": "error",
           "message": {
-            "text": "notes is the Markdown body below the frontmatter, not a frontmatter field"
+            "text": "Widget has no field \"colour\" (fields: title, status, due, weight, tags, steps, parent, uses)"
           },
           "locations": [
             {
@@ -1285,7 +1318,7 @@
         },
         {
           "ruleId": "schema/unknown-field",
-          "ruleIndex": 30,
+          "ruleIndex": 31,
           "level": "error",
           "message": {
             "text": "used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it"
@@ -1309,7 +1342,7 @@
         },
         {
           "ruleId": "schema/unknown-type",
-          "ruleIndex": 32,
+          "ruleIndex": 33,
           "level": "error",
           "message": {
             "text": "type \"Gadget\" is not declared in schema/ (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)"
@@ -1333,7 +1366,7 @@
         },
         {
           "ruleId": "rules/name",
-          "ruleIndex": 17,
+          "ruleIndex": 18,
           "level": "error",
           "message": {
             "text": "a rule file is named for its ID, in lower-case kebab-case, with .yaml: Rules_Name_Violation.yaml is not"
@@ -1351,7 +1384,7 @@
         },
         {
           "ruleId": "rules/file",
-          "ruleIndex": 15,
+          "ruleIndex": 16,
           "level": "error",
           "message": {
             "text": "invalid YAML: did not find expected node content"
@@ -1372,7 +1405,7 @@
         },
         {
           "ruleId": "rules/message",
-          "ruleIndex": 16,
+          "ruleIndex": 17,
           "level": "error",
           "message": {
             "text": "no message: the text each violation is reported with"
@@ -1393,7 +1426,7 @@
         },
         {
           "ruleId": "rules/query",
-          "ruleIndex": 18,
+          "ruleIndex": 19,
           "level": "error",
           "message": {
             "text": "Widget has no field \"colour\" (fields: id, type, title, status, due, weight, score, tags, steps, parent, uses, notes, children, used_by, code_blocks)"
@@ -1414,7 +1447,7 @@
         },
         {
           "ruleId": "rules/severity",
-          "ruleIndex": 19,
+          "ruleIndex": 20,
           "level": "error",
           "message": {
             "text": "severity is error or warning, not \"fatal\""
@@ -1435,7 +1468,7 @@
         },
         {
           "ruleId": "rules/unknown-key",
-          "ruleIndex": 20,
+          "ruleIndex": 21,
           "level": "error",
           "message": {
             "text": "unknown key \"id\": a rule's ID is its file name, rules-unknown-key-violation"
@@ -1456,7 +1489,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 25,
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "type DuplicatePrefixA has the id_prefix DUP, which DuplicatePrefixB (schema/DuplicatePrefixB.yaml) also has"
@@ -1477,7 +1510,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 25,
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "type DuplicatePrefixB has the id_prefix DUP, which DuplicatePrefixA (schema/DuplicatePrefixA.yaml) also has"
@@ -1498,7 +1531,7 @@
         },
         {
           "ruleId": "schema/formula",
-          "ruleIndex": 24,
+          "ruleIndex": 25,
           "level": "error",
           "message": {
             "text": "field \"score\": formula: column 1: FormulaViolation has no field \"nope\" (fields: example_of, weight, score)"
@@ -1519,7 +1552,7 @@
         },
         {
           "ruleId": "schema/link-target",
-          "ruleIndex": 27,
+          "ruleIndex": 28,
           "level": "error",
           "message": {
             "text": "field \"widget\": target \"Nothing\" is not a declared type (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)"
@@ -1540,7 +1573,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 25,
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "type NoPrefix has no id_prefix, so its IDs cannot be checked"
@@ -1561,7 +1594,7 @@
         },
         {
           "ruleId": "content/template",
-          "ruleIndex": 7,
+          "ruleIndex": 8,
           "level": "error",
           "message": {
             "text": "field \"citations\": its template name .Citations is already used by the engine baseline"
@@ -1582,7 +1615,7 @@
         },
         {
           "ruleId": "schema/unknown-key",
-          "ruleIndex": 31,
+          "ruleIndex": 32,
           "level": "error",
           "message": {
             "text": "field \"status\": unknown key \"default\": fields have no defaults; a field that must have a value says required: true"
@@ -1603,7 +1636,7 @@
         },
         {
           "ruleId": "schema/unused-type",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "warning",
           "message": {
             "text": "type UnusedTypeViolation has no entities and no links to or from it"
@@ -1624,7 +1657,7 @@
         },
         {
           "ruleId": "schema/unknown-key",
-          "ruleIndex": 31,
+          "ruleIndex": 32,
           "level": "error",
           "message": {
             "text": "enum Colour: unknown key \"shade\" (expected enum, values)"
@@ -1645,7 +1678,7 @@
         },
         {
           "ruleId": "schema/unused-enum",
-          "ruleIndex": 33,
+          "ruleIndex": 34,
           "level": "warning",
           "message": {
             "text": "enum UnusedEnum is not used by any field"
@@ -1666,7 +1699,7 @@
         },
         {
           "ruleId": "schema/unused-record",
-          "ruleIndex": 34,
+          "ruleIndex": 35,
           "level": "warning",
           "message": {
             "text": "record UnusedRecord is not used by any list"
@@ -1687,7 +1720,7 @@
         },
         {
           "ruleId": "content/template",
-          "ruleIndex": 7,
+          "ruleIndex": 8,
           "level": "error",
           "message": {
             "text": "bad character U+003C '<'"
@@ -1708,7 +1741,7 @@
         },
         {
           "ruleId": "content/template-name",
-          "ruleIndex": 8,
+          "ruleIndex": 9,
           "level": "warning",
           "message": {
             "text": "NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used"
@@ -1726,7 +1759,7 @@
         },
         {
           "ruleId": "content/unknown-override",
-          "ruleIndex": 9,
+          "ruleIndex": 10,
           "level": "warning",
           "message": {
             "text": "_footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used"
@@ -1744,7 +1777,7 @@
         },
         {
           "ruleId": "content/unused-template",
-          "ruleIndex": 11,
+          "ruleIndex": 12,
           "level": "warning",
           "message": {
             "text": "named template spare is not chosen by any query block"

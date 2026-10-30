@@ -10,4 +10,3 @@ examples:
   - file: core/cases/content-query/clean.md
     expect: clean
 ---
-

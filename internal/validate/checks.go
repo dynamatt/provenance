@@ -17,6 +17,7 @@ var Checks = []Check{
 	{"content/duplicate-id", Error, "Two files with one ID"},
 	{"content/embed", Error, "An embed inside running text"},
 	{"content/embed-cycle", Error, "Entities that embed each other"},
+	{"content/format", Warning, "An entity file not in canonical form"},
 	{"content/frontmatter", Error, "Frontmatter that cannot be read"},
 	{"content/image", Error, "An image the website cannot publish"},
 	{"content/query", Error, "A query block that cannot run"},
