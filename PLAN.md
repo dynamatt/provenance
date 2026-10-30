@@ -50,10 +50,10 @@
 - [x] E3.5 Problems and checks
 - [x] E3.6 Epic close-out
 - [x] E4.1 Canonical form
-- [ ] E4.2 The formatter
-- [ ] E4.3 `provenance fmt`
-- [ ] E4.4 The gate
-- [ ] E4.5 Epic close-out
+- [x] E4.2 The formatter
+- [x] E4.3 `provenance fmt`
+- [x] E4.4 The gate
+- [x] E4.5 Epic close-out
 
 ## Shape of the plan
 
@@ -1165,8 +1165,10 @@ the groundwork it builds on.
 
 ## Epic 4 — `fmt`
 
-> **Status: agreed 2026-10-29.** Decisions F1–F9 are written into
-> DES-0038 (E4.1).
+> **Status: built 2026-10-30.** Decisions F1–F9 agreed 2026-10-29 and
+> written into DES-0038 (E4.1); E4.2–E4.5 built together in one PR per
+> repository, at Matt's request. The epic closes when they merge into
+> `main` and `v0.3.0-alpha` is released.
 
 **Goal:** every entity file has one canonical serialization, so edits to
 different fields merge cleanly (REQ-0103), the editor (DES-0037) has a
@@ -1228,6 +1230,12 @@ and the DDF formatted before the check turns on (E4.4).
 
 **Check it yourself:** `go test ./internal/entity -run Format -v`.
 
+*As built:* F1–F5 are `entity.Format` (`Markdown.Format`); F6 is
+`internal/canon`, which re-reads the result through `entity.ParseFile`
+and `model.Build`, compares every typed value, checks that no comment
+is lost, and formats again. Validate's check and `fmt` both call
+`canon.File`.
+
 ### E4.3 `provenance fmt`
 
 **Deliverables:**
@@ -1282,6 +1290,12 @@ Epic 3.
 
 **Check it yourself:** the release's `SHA256SUMS` verifies; the
 downloaded binary's `fmt --all --check` passes on the example.
+
+*Still to do after the PRs merge:* tag `v0.3.0-alpha` on `main`, then move
+the example's and the DDF's Validate workflows to it
+(`PROVENANCE_VERSION` and `PROVENANCE_SHA256`). Until then their
+`fmt --all --check` step runs `v0.2.0-alpha`, whose `fmt` is a stub, and
+fails.
 
 ## Later epics (outline)
 

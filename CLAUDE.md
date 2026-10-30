@@ -16,8 +16,9 @@ identity, so builds must be reproducible.
 | `internal/cli/` | The cobra command tree: every command from DES-0019 with its arguments, flags and help text. Stubs carry the `notImplementedYet` annotation and return `exitcode.NotImplementedError`. |
 | `internal/exitcode/` | The only place exit codes are decided (`0` success, `1` expected failure via `exitcode.Failed`, `2` everything else). |
 | `internal/repo/` | Finds the repository and reads `.component`. |
-| `internal/entity/` | An entity and its record: the values and positions its source wrote, and what a text value refers to. The Markdown record and file parser (frontmatter and body) are here too. |
+| `internal/entity/` | An entity and its record: the values and positions its source wrote, and what a text value refers to. The Markdown record and file parser (frontmatter and body) are here too, and the record's canonical form (`Format`). |
 | `internal/schema/` | Loads `schema/`: types, fields, enums, records, facets. |
+| `internal/canon/` | An entity file in canonical form (DES-0038): `entity.Format`, then the checks that only how the file is written changed. Used by `fmt` and validate's `content/format`. |
 | `internal/model/` | Entities typed against the schema: values, resolved links, incoming facets. |
 | `internal/load/` | Reads a repository the one way `export` and `validate` both use: schema, then entities from each source (`Source`; the Markdown walker is the first), typed model and graph, collecting every problem under its built-in check. Tells `history` which files are content and the entities a file holds, and reads the history once (`Result.History`, `Result.Git`) for every stamp. `load/loadtest` is a second source for tests, a table typed by field. |
 | `internal/validate/` | `provenance validate`: the built-in checks (the catalogue in `validate.Checks`), rule files, every exporter's `Check`, and the reports: text, JSON, JUnit, SARIF and report templates. |
