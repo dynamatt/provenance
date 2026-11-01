@@ -4,8 +4,11 @@
 # the golden site (testdata/golden) changes only where a page does, not on
 # every move of the example pin. Which commit a page last changed in is
 # kept: it is the page's own. The real stamps are checked by their own
-# acceptance steps (E1.11).
+# acceptance steps (E1.11). Perl, not sed -i, so it runs alike on the
+# release workflow's Linux, macOS and Windows runners.
 set -euo pipefail
 dir=${1:?usage: golden-stamps.sh <dir>}
-find "$dir" -name '*.html' -exec sed -i -E \
-	's#Generated from commit <code>[0-9a-f]+</code> · content hash <code>sha256:[0-9a-f]{64}</code>#Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code>#' {} +
+find "$dir" -name '*.html' -print0 | while IFS= read -r -d '' f; do
+	perl -pe 's#Generated from commit <code>[0-9a-f]+</code> · content hash <code>sha256:[0-9a-f]{64}</code>#Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code>#' "$f" >"$f.tmp"
+	mv "$f.tmp" "$f"
+done
