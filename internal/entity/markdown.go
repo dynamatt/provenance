@@ -24,6 +24,8 @@ type Markdown struct {
 	Front    *yaml.Node
 	body     string
 	bodyLine int
+	// raw is the file as read, for Format.
+	raw []byte
 }
 
 func (m *Markdown) Value(f *schema.Field) *Written { return yamlValues{m.Front}.Value(f) }
@@ -200,7 +202,7 @@ func ParseFile(path string, raw []byte) (e *Entity, partial *Error, err error) {
 		ID:     idNode.Value,
 		Type:   typeNode.Value,
 		Path:   path,
-		Record: &Markdown{path: path, Front: m, body: body, bodyLine: bodyLine},
+		Record: &Markdown{path: path, Front: m, body: body, bodyLine: bodyLine, raw: raw},
 	}, nil, nil
 }
 

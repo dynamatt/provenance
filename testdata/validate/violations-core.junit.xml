@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="provenance validate" tests="43" failures="29" errors="0">
-  <testsuite name="built-in" tests="36" failures="29" errors="0" skipped="0">
+<testsuites name="provenance validate" tests="44" failures="29" errors="0">
+  <testsuite name="built-in" tests="37" failures="29" errors="0" skipped="0">
     <testcase name="content/caption" classname="built-in">
       <failure type="error" message="a caption must come right after the figure, table, equation or embed it captions">cases/content-caption/violation.md:8: error [content/caption] a caption must come right after the figure, table, equation or embed it captions (WID-0030)</failure>
       <failure type="error" message="caption: did not find expected &#39;,&#39; or &#39;]&#39;">cases/content-caption/violation.md:16: error [content/caption] caption: did not find expected &#39;,&#39; or &#39;]&#39; (WID-0030)</failure>
@@ -17,6 +17,9 @@
     <testcase name="content/embed-cycle" classname="built-in">
       <failure type="error" message="embed cycle WID-0035 → WID-0034 → WID-0035">cases/content-embed-cycle/violation-a.md:6: error [content/embed-cycle] embed cycle WID-0035 → WID-0034 → WID-0035 (WID-0034)</failure>
       <failure type="error" message="embed cycle WID-0034 → WID-0035 → WID-0034">cases/content-embed-cycle/violation-b.md:6: error [content/embed-cycle] embed cycle WID-0034 → WID-0035 → WID-0034 (WID-0035)</failure>
+    </testcase>
+    <testcase name="content/format" classname="built-in">
+      <system-out>cases/content-format/violation.md:2: warning [content/format] not in canonical form; provenance fmt rewrites it (WID-0041)&#xA;</system-out>
     </testcase>
     <testcase name="content/frontmatter" classname="built-in">
       <failure type="error" message="frontmatter has an id but no type, so the file is not read as an entity">cases/content-frontmatter/violation-no-type.md:2: error [content/frontmatter] frontmatter has an id but no type, so the file is not read as an entity</failure>
@@ -56,8 +59,8 @@
       <failure type="error" message="[[WID-0023#colour]]: Widget has no field &#34;colour&#34;">cases/links-unknown-field/violation.md:6: error [links/unknown-field] [[WID-0023#colour]]: Widget has no field &#34;colour&#34; (WID-0022)</failure>
     </testcase>
     <testcase name="links/unresolved" classname="built-in">
-      <failure type="error" message="uses: no entity WID-9999">cases/links-unresolved/violation.md:5: error [links/unresolved] uses: no entity WID-9999 (WID-0020)</failure>
-      <failure type="error" message="[[WID-9998]]: no entity WID-9998">cases/links-unresolved/violation.md:7: error [links/unresolved] [[WID-9998]]: no entity WID-9998 (WID-0020)</failure>
+      <failure type="error" message="uses: no entity WID-9999">cases/links-unresolved/violation.md:7: error [links/unresolved] uses: no entity WID-9999 (WID-0020)</failure>
+      <failure type="error" message="[[WID-9998]]: no entity WID-9998">cases/links-unresolved/violation.md:9: error [links/unresolved] [[WID-9998]]: no entity WID-9998 (WID-0020)</failure>
     </testcase>
     <testcase name="rules/file" classname="built-in">
       <failure type="error" message="invalid YAML: did not find expected node content">rules/rules-file-violation.yaml:1: error [rules/file] invalid YAML: did not find expected node content</failure>
@@ -83,7 +86,7 @@
     </testcase>
     <testcase name="schema/enum-value" classname="built-in">
       <failure type="error" message="status: &#34;aproved&#34; is not one of Status: draft, approved">cases/schema-enum-value/violation.md:5: error [schema/enum-value] status: &#34;aproved&#34; is not one of Status: draft, approved (WID-0014)</failure>
-      <failure type="error" message="tags item 2: &#34;final&#34; is not one of Status: draft, approved">cases/schema-enum-value/violation.md:6: error [schema/enum-value] tags item 2: &#34;final&#34; is not one of Status: draft, approved (WID-0014)</failure>
+      <failure type="error" message="tags item 2: &#34;final&#34; is not one of Status: draft, approved">cases/schema-enum-value/violation.md:8: error [schema/enum-value] tags item 2: &#34;final&#34; is not one of Status: draft, approved (WID-0014)</failure>
     </testcase>
     <testcase name="schema/file" classname="built-in"></testcase>
     <testcase name="schema/formula" classname="built-in">
@@ -112,8 +115,8 @@
       <failure type="error" message="steps row 2: required sub-field n is not set">cases/schema-required/violation.md:6: error [schema/required] steps row 2: required sub-field n is not set (WID-0012)</failure>
     </testcase>
     <testcase name="schema/unknown-field" classname="built-in">
-      <failure type="error" message="Widget has no field &#34;colour&#34; (fields: title, status, due, weight, tags, steps, parent, uses)">cases/schema-unknown-field/violation.md:5: error [schema/unknown-field] Widget has no field &#34;colour&#34; (fields: title, status, due, weight, tags, steps, parent, uses) (WID-0008)</failure>
-      <failure type="error" message="notes is the Markdown body below the frontmatter, not a frontmatter field">cases/schema-unknown-field/violation.md:6: error [schema/unknown-field] notes is the Markdown body below the frontmatter, not a frontmatter field (WID-0008)</failure>
+      <failure type="error" message="notes is the Markdown body below the frontmatter, not a frontmatter field">cases/schema-unknown-field/violation.md:5: error [schema/unknown-field] notes is the Markdown body below the frontmatter, not a frontmatter field (WID-0008)</failure>
+      <failure type="error" message="Widget has no field &#34;colour&#34; (fields: title, status, due, weight, tags, steps, parent, uses)">cases/schema-unknown-field/violation.md:6: error [schema/unknown-field] Widget has no field &#34;colour&#34; (fields: title, status, due, weight, tags, steps, parent, uses) (WID-0008)</failure>
       <failure type="error" message="used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it">cases/schema-unknown-field/violation.md:7: error [schema/unknown-field] used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it (WID-0008)</failure>
     </testcase>
     <testcase name="schema/unknown-key" classname="built-in">

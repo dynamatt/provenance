@@ -29,7 +29,8 @@ type Result struct {
 	// schema declares its type.
 	Parsed []*entity.Entity
 	// Entities are the entities of declared types, typed, and Graph
-	// evaluates them; both are nil when the schema has problems.
+	// evaluates them; both are nil when the schema has problems, and
+	// after Read, which doesn't type them.
 	Entities []*model.Entity
 	Graph    *query.Graph
 	// Problems are in the order export meets them: the entity files as
@@ -53,10 +54,36 @@ func (r *Result) Input() *export.Input {
 	return &export.Input{Repo: r.Repo, Schema: r.Schema, Entities: r.Entities, Graph: r.Graph}
 }
 
-// Load reads rp. Folders under skip (absolute paths, e.g. the export output
-// folder) are not read. err is a failure to read the repository or to
-// evaluate the graph, not a problem with its content.
+// Load reads rp and types its entities: Read, then the typed model and
+// its graph, which evaluates every calculated field. Folders under skip
+// (absolute paths, e.g. the export output folder) are not read. err is a
+// failure to read the repository or to evaluate the graph, not a problem
+// with its content.
 func Load(rp *repo.Repo, skip ...string) (*Result, error) {
+	res, err := Read(rp, skip...)
+	if err != nil || res.SchemaBroken {
+		return res, err
+	}
+	var known []*entity.Entity
+	for _, e := range res.Parsed {
+		if res.Schema.Types[e.Type] != nil {
+			known = append(known, e)
+		}
+	}
+	if res.Entities, err = model.Build(res.Schema, known); err != nil {
+		return nil, err
+	}
+	if res.Graph, err = query.NewGraph(res.Schema, res.Entities); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// Read reads rp's schema and every source's entities, with the problems
+// found doing so, but neither types the entities nor builds their graph:
+// for a command that needs only the files, such as fmt and verify
+// content. Entities and Graph are nil.
+func Read(rp *repo.Repo, skip ...string) (*Result, error) {
 	res := &Result{Repo: rp}
 	// The schema comes first, since a source may be declared in it; its
 	// problems are reported after the entity files', as export meets them.
@@ -78,11 +105,8 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 		res.SchemaBroken = true
 		return res, nil
 	}
-
-	var known []*entity.Entity
 	for _, e := range res.Parsed {
 		if s.Types[e.Type] != nil {
-			known = append(known, e)
 			continue
 		}
 		line := e.Record.TypeLine()
@@ -92,12 +116,6 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 		}
 		res.add(problem.Problem{Check: "schema/unknown-type", Path: e.Path, Line: line, Entity: e.ID, Msg: msg,
 			Err: &model.UnknownTypeError{Path: e.Path, Type: e.Type, Line: line}})
-	}
-	if res.Entities, err = model.Build(s, known); err != nil {
-		return nil, err
-	}
-	if res.Graph, err = query.NewGraph(s, res.Entities); err != nil {
-		return nil, err
 	}
 	return res, nil
 }
@@ -109,12 +127,8 @@ func (r *Result) Content() history.Content { return r.content }
 // ContentOf reads only what history needs of rp, for a command that needs
 // no entities, such as verify content. Folders under skip are not read.
 func ContentOf(rp *repo.Repo, skip ...string) (history.Content, error) {
-	res := &Result{Repo: rp}
-	s, problems, err := schema.Read(rp.Root)
-	if err != nil && len(problems) == 0 {
-		return nil, err
-	}
-	if err := res.read(sources(s), skip); err != nil {
+	res, err := Read(rp, skip...)
+	if err != nil {
 		return nil, err
 	}
 	return res.content, nil

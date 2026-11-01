@@ -74,6 +74,14 @@
       "line": 6
     },
     {
+      "rule": "content/format",
+      "severity": "warning",
+      "message": "not in canonical form; provenance fmt rewrites it",
+      "entity": "WID-0041",
+      "path": "cases/content-format/violation.md",
+      "line": 2
+    },
+    {
       "rule": "content/frontmatter",
       "severity": "error",
       "message": "frontmatter has an id but no type, so the file is not read as an entity",
@@ -175,7 +183,7 @@
       "message": "uses: no entity WID-9999",
       "entity": "WID-0020",
       "path": "cases/links-unresolved/violation.md",
-      "line": 5
+      "line": 7
     },
     {
       "rule": "links/unresolved",
@@ -183,7 +191,7 @@
       "message": "[[WID-9998]]: no entity WID-9998",
       "entity": "WID-0020",
       "path": "cases/links-unresolved/violation.md",
-      "line": 7
+      "line": 9
     },
     {
       "rule": "schema/calculated-set",
@@ -215,7 +223,7 @@
       "message": "tags item 2: \"final\" is not one of Status: draft, approved",
       "entity": "WID-0014",
       "path": "cases/schema-enum-value/violation.md",
-      "line": 6
+      "line": 8
     },
     {
       "rule": "schema/id-format",
@@ -284,7 +292,7 @@
     {
       "rule": "schema/unknown-field",
       "severity": "error",
-      "message": "Widget has no field \"colour\" (fields: title, status, due, weight, tags, steps, parent, uses)",
+      "message": "notes is the Markdown body below the frontmatter, not a frontmatter field",
       "entity": "WID-0008",
       "path": "cases/schema-unknown-field/violation.md",
       "line": 5
@@ -292,7 +300,7 @@
     {
       "rule": "schema/unknown-field",
       "severity": "error",
-      "message": "notes is the Markdown body below the frontmatter, not a frontmatter field",
+      "message": "Widget has no field \"colour\" (fields: title, status, due, weight, tags, steps, parent, uses)",
       "entity": "WID-0008",
       "path": "cases/schema-unknown-field/violation.md",
       "line": 6
@@ -484,7 +492,7 @@
   ],
   "summary": {
     "errors": 54,
-    "warnings": 6,
+    "warnings": 7,
     "rules_skipped": 0
   }
 }

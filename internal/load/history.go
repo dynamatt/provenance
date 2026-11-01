@@ -8,19 +8,17 @@ import (
 )
 
 // History is the repository's git history, read through the sources (G7):
-// HEAD, its content hash and how the working tree differs from it, and,
-// when asked, the log of the entities each commit changed.
+// HEAD and how the working tree differs from it, and, when asked, HEAD's
+// content hash and the log of the entities each commit changed.
 type History struct {
 	// SHA is HEAD's full commit hash.
-	SHA string
-	// ContentHash is the DHF content hash of HEAD, suffixed -dirty when the
-	// working tree differs from HEAD.
-	ContentHash string
-	Dirty       *history.Dirty
+	SHA   string
+	Dirty *history.Dirty
 
-	root    string
-	content history.Content
-	log     *history.Log
+	root        string
+	content     history.Content
+	contentHash string
+	log         *history.Log
 }
 
 // History reads the repository's git history the first time it is asked
@@ -43,10 +41,34 @@ func readHistory(root string, content history.Content) (*History, error) {
 	}
 	defer repo.Close()
 	h := &History{SHA: repo.HEAD(), root: root, content: content}
-	if h.ContentHash, h.Dirty, err = repo.WorkingContentHash(content); err != nil {
+	if h.Dirty, err = repo.Status(content); err != nil {
 		return nil, err
 	}
 	return h, nil
+}
+
+// ContentHash is the DHF content hash of HEAD, suffixed -dirty when the
+// working tree differs from HEAD, read the first time it is asked for:
+// it reads every committed content file, which fmt, needing only Dirty,
+// doesn't.
+func (h *History) ContentHash() (string, error) {
+	if h.contentHash != "" {
+		return h.contentHash, nil
+	}
+	repo, err := history.Open(h.root)
+	if err != nil {
+		return "", err
+	}
+	defer repo.Close()
+	hash, err := repo.ContentHash(h.SHA)
+	if err != nil {
+		return "", err
+	}
+	if h.Dirty.Any() {
+		hash += "-dirty"
+	}
+	h.contentHash = hash
+	return hash, nil
 }
 
 // Log is the first-parent history from HEAD (DES-0023), read the first
@@ -78,5 +100,9 @@ func (r *Result) Git() (*export.Git, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &export.Git{SHA: h.SHA, ContentHash: h.ContentHash, Log: log, Dirty: h.Dirty}, nil
+	hash, err := h.ContentHash()
+	if err != nil {
+		return nil, err
+	}
+	return &export.Git{SHA: h.SHA, ContentHash: hash, Log: log, Dirty: h.Dirty}, nil
 }

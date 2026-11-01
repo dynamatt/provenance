@@ -237,7 +237,7 @@ func (c *entityCheck) value(v *model.Value) {
 			c.add("schema/invalid-value", c.e.IDLine(), "%s: %s", f.Name, v.Problem)
 		}
 		return
-	case f.Required && empty(v):
+	case f.Required && v.Blank():
 		c.add("schema/required", c.e.IDLine(), "required field %s is not set", f.Name)
 		return
 	case !v.Present || w == nil:
@@ -311,30 +311,10 @@ func (c *entityCheck) row(label string, list *schema.Field, w *entity.Written, r
 			if cell.Invalid && !c.broken[sub] {
 				c.add("schema/invalid-value", w.Line, "%s: %s: %s", label, sub.Name, cell.Problem)
 			}
-		case sub.Required && empty(cell):
+		case sub.Required && cell.Blank():
 			c.add("schema/required", w.Line, "%s: required sub-field %s is not set", label, sub.Name)
 		case cell.Present && cell.Written != nil:
 			c.check(label+": "+sub.Name, cell.Written, cell)
 		}
 	}
-}
-
-// empty reports a value that does not count as set: absent, null, blank
-// text, or a list or many-link with nothing in it.
-func empty(v *model.Value) bool {
-	if !v.Present {
-		return true
-	}
-	if v.Invalid {
-		return false // set, wrongly: reported as invalid
-	}
-	switch v.Field.Kind {
-	case schema.String, schema.Text, schema.Enum:
-		return strings.TrimSpace(v.Str) == ""
-	case schema.Link:
-		return len(v.IDs) == 0
-	case schema.List:
-		return len(v.Rows) == 0 && len(v.Items) == 0
-	}
-	return false
 }

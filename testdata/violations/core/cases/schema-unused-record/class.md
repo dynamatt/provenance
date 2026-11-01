@@ -10,4 +10,3 @@ examples:
   - file: core/schema/records/Example.yaml
     expect: clean
 ---
-

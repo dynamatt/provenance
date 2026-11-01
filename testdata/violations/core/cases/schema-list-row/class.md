@@ -10,4 +10,3 @@ examples:
   - file: core/cases/schema-list-row/clean.md
     expect: clean
 ---
-

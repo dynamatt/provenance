@@ -100,6 +100,27 @@ type Value struct {
 	Written *entity.Written
 }
 
+// Blank reports a value that does not count as set: absent, null, blank
+// text, or a list or many-link with nothing in it. An omitted field reads
+// the same (DES-0010), so fmt leaves a blank one out (DES-0038).
+func (v *Value) Blank() bool {
+	if !v.Present {
+		return true
+	}
+	if v.Invalid {
+		return false // set, wrongly: reported as invalid
+	}
+	switch v.Field.Kind {
+	case schema.String, schema.Text, schema.Enum:
+		return strings.TrimSpace(v.Str) == ""
+	case schema.Link:
+		return len(v.IDs) == 0
+	case schema.List:
+		return len(v.Rows) == 0 && len(v.Items) == 0
+	}
+	return false
+}
+
 // Row is one list row: a value per sub-field, in schema order.
 type Row []*Value
 
@@ -305,7 +326,7 @@ func value(f *schema.Field, w *entity.Written) *Value {
 		if !single(w) {
 			return invalid("not a date")
 		}
-		if _, err := time.Parse("2006-01-02", w.Text); err != nil {
+		if _, err := time.Parse(schema.DateLayout, w.Text); err != nil {
 			return invalid("not a date (YYYY-MM-DD)")
 		}
 		v.Str = w.Text

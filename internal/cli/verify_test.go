@@ -12,25 +12,17 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
-// gitRepo makes a committed component repository and changes into it.
-func gitRepo(t *testing.T) string {
+// gitRepo makes a component repository of files, committed, and changes
+// into it.
+func gitRepo(t *testing.T, files map[string]string) string {
 	t.Helper()
-	root := t.TempDir()
+	root := newRepo(t)
 	r, err := git.PlainInit(root, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for rel, content := range map[string]string{
-		".component":   "code: T\nname: Test\n",
-		"REQ/REQ-1.md": "---\nid: REQ-1\ntype: Requirement\n---\nShall.\n",
-	} {
-		p := filepath.Join(root, filepath.FromSlash(rel))
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
-			t.Fatal(err)
-		}
+	for rel, content := range files {
+		writeFile(t, root, rel, content)
 	}
 	wt, err := r.Worktree()
 	if err != nil {
@@ -43,14 +35,16 @@ func gitRepo(t *testing.T) string {
 	if _, err := wt.Commit("first", &git.CommitOptions{Author: sig}); err != nil {
 		t.Fatal(err)
 	}
-	t.Chdir(root)
 	return root
 }
+
+// reqRepo is a committed repository of one requirement, REQ/REQ-1.md.
+var reqRepo = map[string]string{"REQ/REQ-1.md": "---\nid: REQ-1\ntype: Requirement\n---\nShall.\n"}
 
 var contentHash = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 
 func TestVerifyContent(t *testing.T) {
-	root := gitRepo(t)
+	root := gitRepo(t, reqRepo)
 	code, out, errOut := run("verify", "content")
 	hash := strings.TrimSpace(out)
 	if code != 0 || !contentHash.MatchString(hash) || errOut != "" {

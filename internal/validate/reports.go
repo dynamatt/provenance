@@ -56,7 +56,11 @@ func (r *Report) Stamps() (Stamps, error) {
 	if err != nil || h == nil {
 		return Stamps{}, err
 	}
-	return Stamps{GitSHA: h.SHA, ContentHash: h.ContentHash, Dirty: h.Dirty.Any()}, nil
+	hash, err := h.ContentHash()
+	if err != nil {
+		return Stamps{}, err
+	}
+	return Stamps{GitSHA: h.SHA, ContentHash: hash, Dirty: h.Dirty.Any()}, nil
 }
 
 // IsFormat reports whether name is one of Formats rather than a report

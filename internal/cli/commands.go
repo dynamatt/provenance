@@ -131,16 +131,29 @@ Unavailable once the ID is frozen by appearing in a signed release tag.`,
 func newFmtCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "fmt [path...]",
-		Short: "Reformat entity files to canonical serialization",
-		Long: `Reformat entity files (default: every entity in the repository) to canonical
-serialization: stable frontmatter key order, one field per line, stable list-row and
-block layout. Clean git merges depend on every file being in this form.
+		Short: "Write entity files in canonical form",
+		Long: `Write the Markdown entity files under each path (default: the whole repository) in
+canonical form: frontmatter keys in schema order, one field per line, lists in block
+style, empty fields left out, text with line breaks as literal blocks. The body is kept
+as written. Edits to different fields of a file in canonical form merge cleanly.
 
---check verifies without writing; it runs at the merge gate alongside validate.`,
-		Annotations: notImplementedYet,
-		RunE:        notImplemented,
+Only the files changed since HEAD (staged, unstaged or untracked) are formatted, so a
+file nobody touched never changes by accident; --all formats every entity file. Each
+file rewritten is printed. Nothing is written unless every value reads back the same
+and formatting again changes nothing.
+
+--check writes nothing and lists each file not in canonical form. fmt --all --check is
+the merge gate's check; validate reports the same files as content/format warnings.
+
+A file whose frontmatter does not parse, or whose type is not declared, is skipped and
+reported; validate reports why.
+
+Exit codes: 0 done, or every file canonical with --check; 1 files not canonical with
+--check, or a file skipped; 2 tool or usage error.`,
+		RunE: runFmt,
 	}
-	c.Flags().Bool("check", false, "report files that are not canonical instead of rewriting them")
+	c.Flags().Bool("all", false, "format every entity file, not only those changed since HEAD")
+	c.Flags().Bool("check", false, "list files not in canonical form instead of rewriting them")
 	return c
 }
 

@@ -7,7 +7,7 @@ This folder shows each way one can fail.
 
 ```bash
 make build
-bin/provenance validate --path testdata/violations/core           # 54 errors, 6 warnings
+bin/provenance validate --path testdata/violations/core           # 54 errors, 7 warnings
 bin/provenance validate --path testdata/violations/broken-schema  # 2 errors
 ```
 
