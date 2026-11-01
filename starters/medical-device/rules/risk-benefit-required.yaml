@@ -1,0 +1,11 @@
+# A residual risk that is not acceptable needs a risk-benefit analysis
+# (ISO 14971:2019 §7.4).
+severity: error
+message: "risk-benefit analysis required when residual acceptability is unacceptable"
+from: Risk
+where:
+  - field: residual_acceptability
+    operator: equals
+    value: unacceptable
+  - field: risk_benefit_analysis
+    operator: missing

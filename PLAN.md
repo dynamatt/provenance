@@ -54,11 +54,11 @@
 - [x] E4.3 `provenance fmt`
 - [x] E4.4 The gate
 - [x] E4.5 Epic close-out
-- [ ] E5.1 Starter design
-- [ ] E5.2 The medical-device starter
-- [ ] E5.3 `provenance init`
-- [ ] E5.4 Getting started from `init`
-- [ ] E5.5 Epic close-out
+- [x] E5.1 Starter design
+- [x] E5.2 The medical-device starter
+- [x] E5.3 `provenance init`
+- [x] E5.4 Getting started from `init`
+- [x] E5.5 Epic close-out
 
 ## Shape of the plan
 
@@ -1307,8 +1307,10 @@ whose `fmt` is a stub, so their `fmt --all --check` step fails.
 
 ## Epic 5 — `init`
 
-> **Status: proposed 2026-11-01, for Matt's review.** Decisions I1–I10
-> below need agreeing before E5.2 starts.
+> **Status: built 2026-11-01.** Decisions I1–I10 agreed 2026-11-01 (I7
+> revised to run `git init`) and written into DES-0052; E5.1–E5.5 built
+> together in one PR per repository, at Matt's request. It closes when
+> they merge and `v0.4.0-alpha` is released.
 
 **Goal:** a team starts a design history file with one command.
 `provenance init` writes a medical-device starter (REQ-0003, REQ-0004):
@@ -1327,7 +1329,7 @@ or how `init` behaves.
 `init` validates with `0 errors, 0 warnings`, exports, and passes
 `fmt --all --check`.
 
-**Decisions (for Matt):**
+**Decisions (agreed 2026-11-01):**
 
 | # | Decision | Proposal | Why |
 | --- | --- | --- | --- |
@@ -1388,6 +1390,16 @@ starts from it (E5.4), then the release that ships it (E5.5).
 **Check it yourself:** `provenance init /tmp/demo && cd /tmp/demo &&
 provenance validate` → `0 errors, 0 warnings`.
 
+*As built:* the starter is `starters/medical-device/` (36 files);
+`starters.Files` fills `@CODE@`, `@NAME@` and `@VERSION@` in `.component`,
+`README.md` and the workflow only, and leaves the workflow out unless the
+binary is a release (`starters.Release`). Acceptance compares a fresh
+`init` with the starter folder itself rather than a separate
+`testdata/starter` copy. A repository with no commits yet now reads as
+having no history (`history.ErrNoCommits`), so a fresh `init` validates
+and exports before its first commit, and `fmt` takes every file there as
+changed. `init` creates branch `main`, which the workflow gates.
+
 ### E5.4 Getting started from `init`
 
 **Deliverables:** the website's *Getting started* begins with `init`
@@ -1400,8 +1412,9 @@ hash).
 ### E5.5 Epic close-out
 
 **Deliverables:** the epic merged into `main` in each repository; release
-`v0.3.0-alpha`, carrying Epics 3–5; the example's and the DDF's Validate
-workflows pinned to it, which turns their `fmt --all --check` step green.
+`v0.4.0-alpha` (`v0.3.0-alpha`, carrying Epics 3 and 4, was released
+2026-11-01 from the release workflow's Run workflow); the example's and
+the DDF's Validate workflows pinned to it.
 
 **Check it yourself:** the release's `SHA256SUMS` verifies; the
 downloaded binary's `init` into an empty folder validates clean.

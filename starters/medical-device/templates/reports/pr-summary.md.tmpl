@@ -1,0 +1,15 @@
+{{/* Pull-request summary (provenance-ddf DES-0049), rendered by
+     `provenance validate --output pr-summary.md` for a CI job to post as a
+     comment. Markdown, so text/template: nothing is HTML-escaped. */ -}}
+### Design controls: {{if .Summary.Errors}}failed{{else}}passed{{end}}
+
+{{.Summary.Errors}} error{{if ne .Summary.Errors 1}}s{{end}}, {{.Summary.Warnings}} warning{{if ne .Summary.Warnings 1}}s{{end}}
+{{- with .Summary.RulesSkipped}}, {{.}} rule{{if ne . 1}}s{{end}} not run{{end}}
+{{- with .GitSHA}} at `{{short .}}`{{end}}{{if .Dirty}}, with uncommitted changes{{end}}.
+{{with .Violations}}
+| Severity | Where | Check | Message |
+| --- | --- | --- | --- |
+{{- range .}}
+| {{.Severity}} | `{{.Path}}{{with .Line}}:{{.}}{{end}}` | `{{.Rule}}` | {{.Message}} |
+{{- end}}
+{{end -}}

@@ -1,0 +1,26 @@
+# The record of showing the device meets its users' needs and intended use.
+type: ValidationEvidence
+id_prefix: VAL
+fields:
+  - name: title
+    type: string
+    required: true
+    help: "A short name for the validation. (ISO 13485:2016 §7.3.7)"
+  - name: validates
+    type: link
+    target: [UserNeed]
+    cardinality: many
+    reverse_name: validated_by
+    help: "The user needs this validation confirms are met. (ISO 13485:2016 §7.3.7)"
+  - name: execution_date
+    type: date
+    required: true
+    help: "When the validation was performed. (ISO 13485:2016 §4.2.5)"
+  - name: result
+    type: PassFail
+    required: true
+    help: "The conclusion of the validation. (ISO 13485:2016 §7.3.7)"
+  - name: notes
+    type: text
+    body: true
+    help: "The method, the product used, the users and the conditions. (ISO 13485:2016 §7.3.7)"

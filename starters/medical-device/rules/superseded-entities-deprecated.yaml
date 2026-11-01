@@ -1,0 +1,10 @@
+# A requirement another supersedes is deprecated, not edited in place.
+severity: error
+message: "requirement has been superseded but its status is not deprecated"
+from: Requirement
+where:
+  - field: superseded_by
+    operator: exists
+  - field: status
+    operator: not_equals
+    value: deprecated

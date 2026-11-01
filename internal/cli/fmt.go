@@ -13,6 +13,7 @@ import (
 	"github.com/dynamatt/provenance/internal/canon"
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/exitcode"
+	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/repo"
 )
@@ -53,14 +54,17 @@ func runFmt(c *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("%s: %w", name, err)
 		}
-		if h == nil {
+		switch {
+		case h == nil && !history.InRepository(rp.Root):
 			return exitcode.Usage(fmt.Errorf("%s: not a git repository, so no file has changed since HEAD; use --all", name))
+		case h != nil:
+			// In a repository with no commits yet, every file is new.
+			changed := map[string]bool{}
+			for _, p := range h.Dirty.Paths {
+				changed[p] = true
+			}
+			selected = func(p string) bool { return changed[p] && within(p, under) }
 		}
-		changed := map[string]bool{}
-		for _, p := range h.Dirty.Paths {
-			changed[p] = true
-		}
-		selected = func(p string) bool { return changed[p] && within(p, under) }
 	}
 
 	// A file load could not read as one entity of a declared type is

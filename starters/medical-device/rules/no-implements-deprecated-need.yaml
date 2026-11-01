@@ -1,0 +1,10 @@
+# A requirement that answers a deprecated user need needs another look.
+severity: warning
+message: "requirement implements a deprecated user need"
+from: Requirement
+where:
+  field: implements
+  where:
+    field: status
+    operator: equals
+    value: deprecated

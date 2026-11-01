@@ -1,0 +1,10 @@
+# Every requirement is verified by at least one protocol. A warning: a
+# requirement is written before its protocol.
+severity: warning
+message: "requirement missing verification"
+from: Requirement
+where:
+  field: verified_by
+  aggregation: {type: count}
+  operator: less_than
+  value: 1

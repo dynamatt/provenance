@@ -1,0 +1,2 @@
+enum: PassFail
+values: [pass, fail, pending]

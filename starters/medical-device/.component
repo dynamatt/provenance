@@ -1,0 +1,4 @@
+# This repository's component: its code prefixes cross-repository
+# references. Set once, when the repository is created.
+code: @CODE@
+name: @NAME@

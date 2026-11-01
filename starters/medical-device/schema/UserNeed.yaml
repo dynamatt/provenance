@@ -1,0 +1,18 @@
+# A need of a user or patient, in their own terms: what design inputs
+# answer and design validation confirms.
+type: UserNeed
+id_prefix: USR
+fields:
+  - name: title
+    type: string
+    required: true
+    help: "A short name for the need. (ISO 13485:2016 §7.3.3)"
+  - name: statement
+    type: text
+    body: true
+    required: true
+    help: "The need as the user or patient would put it, with the intended use it serves. (ISO 13485:2016 §7.3.3)"
+  - name: status
+    type: ApprovalStatus
+    required: true
+    help: "Where the need is in review and approval. (ISO 13485:2016 §4.2.4)"

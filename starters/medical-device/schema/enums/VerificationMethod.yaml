@@ -1,0 +1,3 @@
+# The four classic verification methods.
+enum: VerificationMethod
+values: [test, inspection, analysis, demonstration]

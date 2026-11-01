@@ -22,7 +22,8 @@ type History struct {
 }
 
 // History reads the repository's git history the first time it is asked
-// for; nil outside a git repository, which has none.
+// for; nil outside a git repository, and in one with no commits yet,
+// which have none.
 func (r *Result) History() (*History, error) {
 	if !r.historyRead {
 		r.history, r.historyErr = readHistory(r.Repo.Root, r.content)
@@ -33,7 +34,7 @@ func (r *Result) History() (*History, error) {
 
 func readHistory(root string, content history.Content) (*History, error) {
 	repo, err := history.Open(root)
-	if errors.Is(err, history.ErrNotRepository) {
+	if errors.Is(err, history.ErrNotRepository) || errors.Is(err, history.ErrNoCommits) {
 		return nil, nil
 	}
 	if err != nil {
