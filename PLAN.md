@@ -54,6 +54,11 @@
 - [x] E4.3 `provenance fmt`
 - [x] E4.4 The gate
 - [x] E4.5 Epic close-out
+- [ ] E5.1 Starter design
+- [ ] E5.2 The medical-device starter
+- [ ] E5.3 `provenance init`
+- [ ] E5.4 Getting started from `init`
+- [ ] E5.5 Epic close-out
 
 ## Shape of the plan
 
@@ -1165,10 +1170,10 @@ the groundwork it builds on.
 
 ## Epic 4 — `fmt`
 
-> **Status: built 2026-10-30.** Decisions F1–F9 agreed 2026-10-29 and
+> **Status: closed 2026-11-01.** Decisions F1–F9 agreed 2026-10-29 and
 > written into DES-0038 (E4.1); E4.2–E4.5 built together in one PR per
-> repository, at Matt's request. The epic closes when they merge into
-> `main` and `v0.3.0-alpha` is released.
+> repository, at Matt's request. The release is deferred to Epic 5's
+> close-out (Matt, 2026-11-01).
 
 **Goal:** every entity file has one canonical serialization, so edits to
 different fields merge cleanly (REQ-0103), the editor (DES-0037) has a
@@ -1296,11 +1301,110 @@ Epic 3.
 **Check it yourself:** the release's `SHA256SUMS` verifies; the
 downloaded binary's `fmt --all --check` passes on the example.
 
-*Still to do after the PRs merge:* tag `v0.3.0-alpha` on `main`, then move
-the example's and the DDF's Validate workflows to it
-(`PROVENANCE_VERSION` and `PROVENANCE_SHA256`). Until then their
-`fmt --all --check` step runs `v0.2.0-alpha`, whose `fmt` is a stub, and
-fails.
+*Deferred:* the release moved to E5.5 (Matt, 2026-11-01). Until it is
+out, the example's and the DDF's Validate workflows run `v0.2.0-alpha`,
+whose `fmt` is a stub, so their `fmt --all --check` step fails.
+
+## Epic 5 — `init`
+
+> **Status: proposed 2026-11-01, for Matt's review.** Decisions I1–I10
+> below need agreeing before E5.2 starts.
+
+**Goal:** a team starts a design history file with one command.
+`provenance init` writes a medical-device starter (REQ-0003, REQ-0004):
+the types REQ-0004 lists, each field's help citing its clause (REQ-0005),
+the rules a design review checks, and a small worked trace to copy. A
+fresh `init` passes `validate` with no errors or warnings, exports, and
+is in canonical form.
+
+What exists: the `init [path] --template` stub (DES-0019); the example's
+schema (16 types, 89 fields, 22 of them with help, 4 citing a clause);
+its 12 rules; and the DDF's paraphrased clauses of 21 CFR 820, ISO 13485
+and 21 CFR 11 (`CLS/`). Nothing in the design says what a starter holds
+or how `init` behaves.
+
+**Standing acceptance for every E5 task:** `make ci` passes; a fresh
+`init` validates with `0 errors, 0 warnings`, exports, and passes
+`fmt --all --check`.
+
+**Decisions (for Matt):**
+
+| # | Decision | Proposal | Why |
+| --- | --- | --- | --- |
+| I1 | Where starters live | **`starters/<name>/` in this repository, embedded in the binary (`go:embed`).** One, `medical-device`, the default. `--template` names a built-in starter; an unknown name exits 2 listing them. Starters from plugins come with REQ-0070's plugin epic. | The binary's hash then covers the starter it writes, so a validated binary scaffolds a known project (USR-0011). |
+| I2 | Types | **REQ-0004's: UserNeed, Requirement, Design, Risk, VerificationProtocol, VerificationEvidence, ValidationEvidence, ChangeRequest; plus Reference (DES-0047) and Document** (plans and matrices built from query blocks). Not the example's device-specific types (BuildStandard, Component, TestEquipment, Definition, Severity/OccurrenceLevel). Risk scores severity and probability as numbers 1–5, with a calculated `risk_index`. | REQ-0004's list, plus the two types every DHF uses for citing and assembling. The example's other types are NeuroPulse's own choices, which a team adds when it needs them (REQ-0003: a starter is theirs to change). |
+| I3 | Clause citations (REQ-0005) | **Every field's `help` ends with its clause, e.g. `(ISO 13485:2016 §7.3.3; 21 CFR 820.10)`**: ISO 13485 for design control, ISO 14971:2019 for risk, the QMSR's 21 CFR 820 where it adds to 13485. A unit test fails a starter field without one. | REQ-0005 says each field; a test keeps it so as the starter changes. Citing 13485 first follows the QMSR, which incorporates it. |
+| I4 | Worked content | **One small trace, every entity `draft` and titled "Example: …":** USR-0001 → REQ-0001 → DES-0001, verified by VER-0001 with evidence EVD-0001, validated by VAL-0001, with RSK-0001 mitigated by REQ-0001, and DOC-0001, a design and development plan whose query blocks list each type (a live trace matrix). | With no entities, `schema/unused-type` warns once per type, so a fresh `init` couldn't validate clean; and a worked trace shows how links are written better than a README. |
+| I5 | Rules | **The example's rules that hold for any device:** `requirement-verified` (warning), `protocol-verifies-requirement`, `risk-benefit-required`, `no-requirement-decomposition-cycles`, `superseded-entities-deprecated`, `no-implements-deprecated-need`, `requirement-title-unique` (warning). Not its equipment-calibration or build rules. | Each is a design-review check every team makes; the others depend on the example's own types. |
+| I6 | Templates | **None for pages: the built-in templates render every type (REQ-0078).** Only `templates/reports/pr-summary.md.tmpl`, for I9's workflow. | A team's look is its own; the built-ins already render a usable site, and fewer files make a starter easier to own. |
+| I7 | Where `init` writes | **`init [path]`, default the current folder, created if missing. It writes nothing if any file the starter holds already exists there, or if the folder is inside a Provenance repository** (a `.component` in it or above), listing what is in the way, exit 2. No `--force`. **It runs `git init` when the folder isn't already inside a git repository, and never commits**; it prints the next steps, the first commit among them. (*Revised 2026-11-01: was no `git init`.*) | Never overwriting is the only safe default for files that become controlled records. A new project starts as a repository, as every other command expects; but the first commit carries its author's identity and may need signing, so it stays a deliberate step, and a folder already in a repository (a fresh clone) is left as it is. |
+| I8 | `.component` | **`--code` and `--name`, defaulting to the folder's name** (code: its letters and digits, upper-case, at most 8; name: as written). Validated as `repo` reads them. | `.component` is set once at creation (its own comment); defaults let `init` run with no flags. |
+| I9 | CI gate | **`.github/workflows/validate.yml`, the example's gate (`validate`, then `fmt --all --check`), pinned to the running binary's version** with `PROVENANCE_SHA256` left as a marked placeholder, so the check fails, saying what to set, until a team pins the hash from that release's `SHA256SUMS`. A development build writes no workflow. | A gate that runs from the first commit, and that pins by hash (REQ-0060) rather than trusting a download. A binary can't know the hash of another platform's build. |
+| I10 | Determinism | **Same version and flags → byte-identical files.** No dates or anything from the clock in the starter; every file in canonical form. | Rule 6, and so `init`'s acceptance can compare against a golden starter. |
+
+**Order:** the design first (E5.1), then the starter as files (E5.2),
+then the command that writes it (E5.3), then the documentation that
+starts from it (E5.4), then the release that ships it (E5.5).
+
+### E5.1 Starter design
+
+**Deliverables:**
+- A new DES, *Starter templates and init*, with I1–I10 as decided,
+  marked DECIDED with the date; DES-0019's `init` row names its flags.
+- REQ-0005 clarified with I3's citation form, if Matt agrees.
+
+**Check it yourself:** read the new DES in the DDF's export.
+
+### E5.2 The medical-device starter
+
+**Deliverables:**
+- `starters/medical-device/`: I2's schema, I3's help on every field,
+  I4's worked trace, I5's rules, I6's report template, a `.component`
+  and README to be filled by `init`, and I9's workflow template.
+- `starters.go` embedding it, with its file list.
+- Unit tests: the starter loads and validates with `0 errors,
+  0 warnings`; it exports; `fmt --all --check` passes; every field's help
+  cites a clause; REQ-0004's types are all declared.
+
+**Check it yourself:** `go test ./starters -v`.
+
+### E5.3 `provenance init`
+
+**Deliverables:**
+- `init [path] [--template] [--code] [--name]` (I7, I8), writing the
+  starter and printing the next steps; the `notImplementedYet`
+  annotation goes; `make docs` regenerates the CLI reference.
+- Unit tests: a fresh folder (a git repository afterwards, with no
+  commit); a folder already in a git repository (left as it is); an
+  existing folder with unrelated files; a conflicting file (nothing
+  written, exit 2); inside a Provenance repository (exit 2); an unknown
+  template (exit 2, listing); `--code` and `--name`; a development build
+  writes no workflow.
+- Acceptance: `init` into a temporary folder, then `validate` →
+  `0 errors, 0 warnings`, `export website`, and `fmt --all --check`, all
+  exit 0; `init` again into it → exit 2, nothing changed; the result
+  matches `testdata/starter` (`make golden-update` rewrites it).
+
+**Check it yourself:** `provenance init /tmp/demo && cd /tmp/demo &&
+provenance validate` → `0 errors, 0 warnings`.
+
+### E5.4 Getting started from `init`
+
+**Deliverables:** the website's *Getting started* begins with `init`
+instead of cloning the example; a *Starter templates* concept page (what
+the starter holds, the clause citations, adapting it, the CI gate and its
+hash).
+
+**Check it yourself:** follow *Getting started* in an empty folder.
+
+### E5.5 Epic close-out
+
+**Deliverables:** the epic merged into `main` in each repository; release
+`v0.3.0-alpha`, carrying Epics 3–5; the example's and the DDF's Validate
+workflows pinned to it, which turns their `fmt --all --check` step green.
+
+**Check it yourself:** the release's `SHA256SUMS` verifies; the
+downloaded binary's `init` into an empty folder validates clean.
 
 ## Later epics (outline)
 
@@ -1308,9 +1412,8 @@ Detailed task breakdowns are written when the preceding epic closes. Proposed
 order after Epic 2, with the reason it comes where it does:
 
 1. **Architecture groundwork** — Epic 3, detailed above (closed 2026-10-28).
-2. **`fmt`** — Epic 4, detailed above.
-3. **`init`** — medical-device starter template embedded in the binary; a fresh
-   `init` must pass `validate` and `export`.
+2. **`fmt`** — Epic 4, detailed above (closed 2026-11-01).
+3. **`init`** — Epic 5, detailed above.
 4. **CSV-backed entity types** — rows of a CSV file loaded as entities of a
    type the schema declares (see below). After `init`, so the starter
    template can carry an example, and before `report` and `diff`, so both
