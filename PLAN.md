@@ -1230,11 +1230,16 @@ and the DDF formatted before the check turns on (E4.4).
 
 **Check it yourself:** `go test ./internal/entity -run Format -v`.
 
-*As built:* F1–F5 are `entity.Format` (`Markdown.Format`); F6 is
-`internal/canon`, which re-reads the result through `entity.ParseFile`
-and `model.Build`, compares every typed value, checks that no comment
-is lost, and formats again. Validate's check and `fmt` both call
-`canon.File`.
+*As built:* F1–F5 are `entity.Format` (`Markdown.Format`), which reads
+each value through `entity.written`, as the model does. F6 is
+`canon.Format`: a file already canonical is returned as it is; any other
+is re-read through `entity.ParseFile` and `model.Build`, every typed value
+compared (`model.Value.Blank` for removed empty fields), no comment lost,
+and formatted again. Validate's check and `fmt` both call it on the
+entities load has already parsed. `fmt` uses `load.Read`, which stops
+before typing and the graph, and only `History.Dirty`; HEAD's content
+hash is read only when asked for. On the DDF, `fmt --all --check` takes
+30 ms and validate 200 ms (from 106 ms and 277 ms before review).
 
 ### E4.3 `provenance fmt`
 

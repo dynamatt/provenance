@@ -179,7 +179,7 @@ func TestValidateReportErrors(t *testing.T) {
 // whether the working tree differs, as it does here with the template
 // not yet committed.
 func TestValidateReportStamps(t *testing.T) {
-	root := gitRepo(t)
+	root := gitRepo(t, reqRepo)
 	writeFile(t, root, "templates/reports/stamps.tmpl", "{{.GitSHA}} {{.ContentHash}} {{.Dirty}}\n")
 	_, out, _ := run("validate", "--output", "stamps")
 	if !regexp.MustCompile(`^[0-9a-f]{40} sha256:[0-9a-f]{64}-dirty true\n$`).MatchString(out) {

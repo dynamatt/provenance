@@ -6,7 +6,6 @@ package canon
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -17,22 +16,6 @@ import (
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/schema"
 )
-
-// UnreadableError is a file fmt can't put in canonical form: its
-// frontmatter doesn't parse, or its type isn't declared. Validate reports
-// it; fmt skips it.
-type UnreadableError struct {
-	Path string
-	Line int
-	Msg  string
-}
-
-func (e *UnreadableError) Error() string {
-	if e.Line > 0 {
-		return fmt.Sprintf("%s:%d: %s", e.Path, e.Line, e.Msg)
-	}
-	return e.Path + ": " + e.Msg
-}
 
 // UnsafeError is a file whose canonical form would change a value, or
 // would change again when formatted: a fault in fmt, which writes nothing.
@@ -51,58 +34,67 @@ func (e *UnsafeError) Error() string {
 	return fmt.Sprintf("%s: formatting %s", e.Path, e.Msg)
 }
 
-// File is raw, the Markdown entity file at path, in canonical form against
-// s. It is an *UnreadableError when the file can't be formatted, and an
-// *UnsafeError when its canonical form fails DES-0038's checks.
-func File(path string, raw []byte, s *schema.Schema) ([]byte, error) {
-	before, t, err := parse(path, raw, s)
-	if err != nil {
-		return nil, err
-	}
-	out, err := before.Record.(*entity.Markdown).Format(t)
-	if err != nil {
-		return nil, &UnreadableError{Path: path, Msg: err.Error()}
-	}
-	after, _, err := parse(path, out, s)
-	if err != nil {
-		return nil, &UnsafeError{Path: path, Msg: "makes the file unreadable: " + err.Error()}
-	}
-	if before.ID != after.ID || before.Type != after.Type {
-		return nil, &UnsafeError{Path: path, Field: "id or type", Msg: "not read back"}
-	}
-	if err := same(path, s, before, after); err != nil {
-		return nil, err
-	}
-	if !slices.Equal(comments(before), comments(after)) {
-		return nil, &UnsafeError{Path: path, Msg: "would lose a comment"}
-	}
-	again, err := entity.Format(out, t)
-	if err != nil || !bytes.Equal(again, out) {
-		return nil, &UnsafeError{Path: path, Msg: "again would change it"}
-	}
-	return out, nil
-}
-
-// parse reads raw as the Markdown source does, with its declared type.
-func parse(path string, raw []byte, s *schema.Schema) (*entity.Entity, *schema.Type, error) {
-	e, partial, err := entity.ParseFile(path, raw)
-	switch {
-	case err != nil:
-		var fe *entity.Error
-		if errors.As(err, &fe) {
-			return nil, nil, &UnreadableError{Path: path, Line: fe.Line, Msg: fe.Msg}
-		}
-		return nil, nil, &UnreadableError{Path: path, Msg: err.Error()}
-	case partial != nil:
-		return nil, nil, &UnreadableError{Path: path, Line: partial.Line, Msg: partial.Msg}
-	case e == nil:
-		return nil, nil, &UnreadableError{Path: path, Msg: "not an entity file"}
+// Format is e's file in canonical form against its type in s, and line,
+// the first line of the file as read that it changes: 0 when the file is
+// already in canonical form. ok is false when e's record has no
+// canonical form: only a Markdown file's has (DES-0038), not a CSV row's.
+// A file already in canonical form is returned as it is; any other is
+// an *UnsafeError unless it passes DES-0038's checks. e's type must be
+// declared in s.
+func Format(e *entity.Entity, s *schema.Schema) (out []byte, line int, ok bool, err error) {
+	m, ok := e.Record.(*entity.Markdown)
+	if !ok {
+		return nil, 0, false, nil
 	}
 	t := s.Types[e.Type]
 	if t == nil {
-		return nil, nil, &UnreadableError{Path: path, Line: e.Record.TypeLine(), Msg: fmt.Sprintf("type %q is not declared in schema/", e.Type)}
+		return nil, 0, true, &model.UnknownTypeError{Path: e.Path, Type: e.Type, Line: e.Record.TypeLine()}
 	}
-	return e, t, nil
+	if out, err = m.Format(t); err != nil {
+		return nil, 0, true, &UnsafeError{Path: e.Path, Msg: err.Error()}
+	}
+	if line = firstDiff(m.Raw(), out); line == 0 {
+		return out, 0, true, nil
+	}
+	return out, line, true, check(e, t, s, out)
+}
+
+// firstDiff is the first line, from 1, on which a and b differ; 0 when
+// they don't.
+func firstDiff(a, b []byte) int {
+	if bytes.Equal(a, b) {
+		return 0
+	}
+	al, bl := bytes.SplitAfter(a, []byte("\n")), bytes.SplitAfter(b, []byte("\n"))
+	for i := range min(len(al), len(bl)) {
+		if !bytes.Equal(al[i], bl[i]) {
+			return i + 1
+		}
+	}
+	return min(len(al), len(bl)) + 1
+}
+
+// check is DES-0038's safety check of out, e's file formatted: read back
+// through the Markdown source, every value is unchanged, no comment is
+// lost, and formatting again changes nothing.
+func check(e *entity.Entity, t *schema.Type, s *schema.Schema, out []byte) error {
+	after, _, err := entity.ParseFile(e.Path, out)
+	if err != nil || after == nil {
+		return &UnsafeError{Path: e.Path, Msg: fmt.Sprintf("makes the file unreadable: %v", err)}
+	}
+	if e.ID != after.ID || e.Type != after.Type {
+		return &UnsafeError{Path: e.Path, Field: "id or type", Msg: "not read back"}
+	}
+	if err := same(e.Path, s, e, after); err != nil {
+		return err
+	}
+	if !slices.Equal(comments(e), comments(after)) {
+		return &UnsafeError{Path: e.Path, Msg: "would lose a comment"}
+	}
+	if again, err := entity.Format(out, t); err != nil || !bytes.Equal(again, out) {
+		return &UnsafeError{Path: e.Path, Msg: "again would change it"}
+	}
+	return nil
 }
 
 // same checks that after holds every value before does, typed against s,
@@ -111,7 +103,7 @@ func parse(path string, raw []byte, s *schema.Schema) (*entity.Entity, *schema.T
 func same(path string, s *schema.Schema, before, after *entity.Entity) error {
 	built, err := model.Build(s, []*entity.Entity{before, after})
 	if err != nil {
-		return &UnreadableError{Path: path, Msg: err.Error()}
+		return err
 	}
 	a, b := built[0], built[1]
 	for i, v := range a.Fields {
@@ -141,7 +133,7 @@ func same(path string, s *schema.Schema, before, after *entity.Entity) error {
 // differ says how b differs from a, "" when it doesn't.
 func differ(a, b *model.Value) string {
 	switch {
-	case blank(a) && blank(b):
+	case a.Blank() && b.Blank():
 		return ""
 	case a.Present != b.Present:
 		return "set in one and not the other"
@@ -172,25 +164,6 @@ func differ(a, b *model.Value) string {
 		}
 	}
 	return ""
-}
-
-// blank is a value validate reads as not set.
-func blank(v *model.Value) bool {
-	if !v.Present {
-		return true
-	}
-	if v.Invalid {
-		return false
-	}
-	switch v.Field.Kind {
-	case schema.String, schema.Text, schema.Enum:
-		return strings.TrimSpace(v.Str) == ""
-	case schema.Link:
-		return len(v.IDs) == 0
-	case schema.List:
-		return len(v.Rows) == 0 && len(v.Items) == 0
-	}
-	return false
 }
 
 // comments are the comments of e's frontmatter, sorted: fmt moves a

@@ -41,6 +41,9 @@ const (
 	Calculated Kind = "calculated"
 )
 
+// DateLayout is how a date field's value is written: YYYY-MM-DD.
+const DateLayout = "2006-01-02"
+
 // builtinKinds are the type keywords a field may use directly.
 var builtinKinds = []Kind{String, Text, Number, Date, Boolean, Link, List, Calculated}
 

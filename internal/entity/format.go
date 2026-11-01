@@ -139,35 +139,34 @@ func (f formatter) value(fd *schema.Field, n *yaml.Node) {
 }
 
 // scalar writes n, a value of kind, one way (DES-0038): plain unless YAML
-// would read another value, a value with line breaks a literal block.
+// would read another value, a value with line breaks a literal block. It
+// reads n as the model does (written), so a value is formatted only when
+// the model reads it as one of kind.
 func (f formatter) scalar(kind schema.Kind, n *yaml.Node) {
 	if n.Kind != yaml.ScalarNode {
 		return
 	}
+	w := written(n)
 	switch kind {
 	case schema.Number:
-		if n.Tag != "!!int" && n.Tag != "!!float" {
+		v, err := strconv.ParseFloat(w.Text, 64)
+		if w.Kind != Number || err != nil || math.IsInf(v, 0) || math.IsNaN(v) {
 			return
 		}
-		v, err := strconv.ParseFloat(strings.ReplaceAll(n.Value, "_", ""), 64)
-		if err != nil || math.IsInf(v, 0) || math.IsNaN(v) {
-			return
-		}
-		n.Value, n.Style = strconv.FormatFloat(v, 'f', -1, 64), 0
-		n.Tag = "!!int"
+		n.Value, n.Style, n.Tag = strconv.FormatFloat(v, 'f', -1, 64), 0, "!!int"
 		if strings.Contains(n.Value, ".") {
 			n.Tag = "!!float"
 		}
 	case schema.Boolean:
-		if n.Tag == "!!bool" {
-			n.Value, n.Style = strconv.FormatBool(strings.EqualFold(n.Value, "true")), 0
+		if w.Kind == Boolean {
+			n.Value, n.Style = w.Text, 0
 		}
 	case schema.Date:
-		if _, err := time.Parse("2006-01-02", n.Value); err == nil && (n.Tag == "!!str" || n.Tag == "!!timestamp") {
+		if _, err := time.Parse(schema.DateLayout, w.Text); err == nil && (w.Kind == Text || w.Kind == Scalar) {
 			n.Tag, n.Style = "!!timestamp", 0
 		}
 	case schema.String, schema.Text, schema.Enum:
-		if n.Tag != "!!str" {
+		if w.Kind != Text {
 			return
 		}
 		if kind == schema.Text && n.Style&yaml.FoldedStyle != 0 {
@@ -176,7 +175,7 @@ func (f formatter) scalar(kind schema.Kind, n *yaml.Node) {
 		switch {
 		case strings.Contains(n.Value, "\n"):
 			n.Style = yaml.LiteralStyle
-		case plain(n.Value):
+		case plain(n):
 			n.Style = 0
 		default:
 			n.Style = yaml.DoubleQuotedStyle
@@ -257,27 +256,35 @@ func Fold(text string) string {
 	return v.V
 }
 
-// plain reports whether s can be written as a plain scalar and read back
-// as the string s, by YAML 1.2 and by readers of YAML 1.1, which read yes,
-// no, on and off as booleans.
-func plain(s string) bool {
-	switch strings.ToLower(s) {
+// plain reports whether n, a string, can be written as a plain scalar
+// and read back as the same string, by YAML 1.2 and by readers of YAML 1.1,
+// which read yes, no, on and off as booleans. A string written plain was
+// read back as one; only a quoted or block one is tried.
+func plain(n *yaml.Node) bool {
+	switch strings.ToLower(n.Value) {
 	case "y", "n", "yes", "no", "on", "off":
 		return false
 	}
-	b, err := yaml.Marshal(&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: s})
+	if n.Style == 0 {
+		return true
+	}
+	b, err := yaml.Marshal(&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: n.Value})
 	return err == nil && !bytes.HasPrefix(b, []byte("'")) && !bytes.HasPrefix(b, []byte(`"`)) &&
 		!bytes.HasPrefix(b, []byte("|")) && !bytes.HasPrefix(b, []byte(">"))
 }
 
-// empty reports a value written as nothing: null, a blank string or an
-// empty list, which reads as an omitted field (DES-0010).
+// empty reports a value written as nothing, read as the model reads it:
+// null, blank text or an empty list, the same as an omitted field
+// (DES-0010).
 func empty(n *yaml.Node) bool {
-	switch n.Kind {
-	case yaml.ScalarNode:
-		return n.Tag == "!!null" || n.Tag == "!!str" && strings.TrimSpace(n.Value) == ""
-	case yaml.SequenceNode:
-		return len(n.Content) == 0
+	w := written(n)
+	switch w.Kind {
+	case Null:
+		return true
+	case Text:
+		return strings.TrimSpace(w.Text) == ""
+	case List:
+		return len(w.Items) == 0
 	}
 	return false
 }

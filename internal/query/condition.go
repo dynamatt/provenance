@@ -812,7 +812,7 @@ func checkLiteral(t *Test, left target, v datalog.Value) error {
 			return fail("%q is not a value of %s (values: %s)", v.S, left.enum.Name, strings.Join(left.enum.Values, ", "))
 		}
 	case classDate:
-		if _, err := time.Parse("2006-01-02", v.S); err != nil {
+		if _, err := time.Parse(schema.DateLayout, v.S); err != nil {
 			return fail("%q is not a date (YYYY-MM-DD)", v.S)
 		}
 	}

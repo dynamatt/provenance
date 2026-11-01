@@ -1,17 +1,17 @@
 package cli
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
+	"maps"
 	"os"
-	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/dynamatt/provenance/internal/canon"
+	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/exitcode"
 	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/repo"
@@ -19,9 +19,11 @@ import (
 
 // runFmt writes entity files in canonical form (DES-0038): the files
 // changed since HEAD under the paths given, or every one with --all. It
-// writes nothing unless every file it would write passes canon's checks;
-// with --check it writes nothing and lists the files not in canonical
-// form. A file it can't read is skipped and reported, exit 1.
+// reads the repository without typing it (load.Read): formatting needs
+// the schema and the files, not the graph. It writes nothing unless every
+// file it would write passes canon's checks; with --check it writes
+// nothing and lists the files not in canonical form. A file it can't read
+// is skipped and reported, exit 1.
 func runFmt(c *cobra.Command, args []string) error {
 	name := commandName(c)
 	all, _ := c.Flags().GetBool("all")
@@ -38,18 +40,14 @@ func runFmt(c *cobra.Command, args []string) error {
 	if err != nil {
 		return exitcode.Usage(fmt.Errorf("%s: %w", name, err))
 	}
-	res, err := load.Load(rp)
+	res, err := load.Read(rp)
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 	if res.SchemaBroken {
 		return fmt.Errorf("%s: the schema has errors, so no file can be put in schema order; run provenance validate", name)
 	}
-	files, err := res.Content().Files()
-	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
-	}
-	changed := map[string]bool{}
+	selected := func(p string) bool { return within(p, under) }
 	if !all {
 		h, err := res.History()
 		if err != nil {
@@ -58,37 +56,42 @@ func runFmt(c *cobra.Command, args []string) error {
 		if h == nil {
 			return exitcode.Usage(fmt.Errorf("%s: not a git repository, so no file has changed since HEAD; use --all", name))
 		}
+		changed := map[string]bool{}
 		for _, p := range h.Dirty.Paths {
 			changed[p] = true
 		}
+		selected = func(p string) bool { return changed[p] && within(p, under) }
 	}
 
+	// A file load could not read as one entity of a declared type is
+	// skipped, with the problem validate reports for it.
+	skipped := map[string]string{}
+	for _, p := range res.Problems {
+		switch p.Check {
+		case "content/frontmatter", "content/duplicate-id", "schema/unknown-type":
+			if _, seen := skipped[p.Path]; !seen && selected(p.Path) {
+				skipped[p.Path] = (&entity.Error{Path: p.Path, Line: p.Line, Msg: p.Msg}).Error()
+			}
+		}
+	}
 	type rewrite struct {
 		path string
 		out  []byte
 	}
 	var rewrites []rewrite
-	var skipped []string
-	for _, p := range files {
-		if !strings.EqualFold(path.Ext(p), ".md") || !all && !changed[p] || !within(p, under) {
+	for _, e := range res.Parsed {
+		if _, skip := skipped[e.Path]; skip || !selected(e.Path) {
 			continue
 		}
-		local := filepath.Join(rp.Root, filepath.FromSlash(p))
-		raw, err := os.ReadFile(local)
-		if err != nil {
-			return fmt.Errorf("%s: %w", name, err)
-		}
-		out, err := canon.File(p, raw, res.Schema)
-		var unreadable *canon.UnreadableError
+		out, line, ok, err := canon.Format(e, res.Schema)
 		switch {
-		case errors.As(err, &unreadable):
-			skipped = append(skipped, unreadable.Error())
 		case err != nil:
 			return fmt.Errorf("%s: %w; nothing was written", name, err)
-		case !bytes.Equal(out, raw):
-			rewrites = append(rewrites, rewrite{p, out})
+		case ok && line > 0:
+			rewrites = append(rewrites, rewrite{e.Path, out})
 		}
 	}
+	slices.SortFunc(rewrites, func(a, b rewrite) int { return strings.Compare(a.path, b.path) })
 	for _, rw := range rewrites {
 		if !check {
 			local := filepath.Join(rp.Root, filepath.FromSlash(rw.path))
@@ -102,14 +105,14 @@ func runFmt(c *cobra.Command, args []string) error {
 		}
 		fmt.Fprintln(c.OutOrStdout(), rw.path)
 	}
-	for _, s := range skipped {
-		fmt.Fprintf(c.ErrOrStderr(), "%s: %s; skipped\n", name, s)
+	for _, p := range slices.Sorted(maps.Keys(skipped)) {
+		fmt.Fprintf(c.ErrOrStderr(), "%s: %s; skipped\n", name, skipped[p])
 	}
 	switch {
 	case check && len(rewrites) > 0:
-		return exitcode.Failed(fmt.Errorf("%s: %s not in canonical form", name, plural(len(rewrites), "file")))
+		return exitcode.Failed(fmt.Errorf("%s: the files listed are not in canonical form", name))
 	case len(skipped) > 0:
-		return exitcode.Failed(fmt.Errorf("%s: %s could not be read", name, plural(len(skipped), "file")))
+		return exitcode.Failed(fmt.Errorf("%s: files that could not be read were skipped", name))
 	}
 	return nil
 }
@@ -144,11 +147,4 @@ func within(p string, under []string) bool {
 		}
 	}
 	return false
-}
-
-func plural(n int, noun string) string {
-	if n == 1 {
-		return "1 " + noun
-	}
-	return fmt.Sprintf("%d %ss", n, noun)
 }
