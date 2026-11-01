@@ -1337,7 +1337,7 @@ or how `init` behaves.
 | I4 | Worked content | **One small trace, every entity `draft` and titled "Example: …":** USR-0001 → REQ-0001 → DES-0001, verified by VER-0001 with evidence EVD-0001, validated by VAL-0001, with RSK-0001 mitigated by REQ-0001, and DOC-0001, a design and development plan whose query blocks list each type (a live trace matrix). | With no entities, `schema/unused-type` warns once per type, so a fresh `init` couldn't validate clean; and a worked trace shows how links are written better than a README. |
 | I5 | Rules | **The example's rules that hold for any device:** `requirement-verified` (warning), `protocol-verifies-requirement`, `risk-benefit-required`, `no-requirement-decomposition-cycles`, `superseded-entities-deprecated`, `no-implements-deprecated-need`, `requirement-title-unique` (warning). Not its equipment-calibration or build rules. | Each is a design-review check every team makes; the others depend on the example's own types. |
 | I6 | Templates | **None for pages: the built-in templates render every type (REQ-0078).** Only `templates/reports/pr-summary.md.tmpl`, for I9's workflow. | A team's look is its own; the built-ins already render a usable site, and fewer files make a starter easier to own. |
-| I7 | Where `init` writes | **`init [path]`, default the current folder, created if missing. It writes nothing if any file the starter holds already exists there, or if the folder is inside a Provenance repository** (a `.component` in it or above), listing what is in the way, exit 2. No `--force`. It doesn't run `git init`; it prints the next steps. | Never overwriting is the only safe default for files that become controlled records. Leaving git to the user keeps `init` to files, like every other command. |
+| I7 | Where `init` writes | **`init [path]`, default the current folder, created if missing. It writes nothing if any file the starter holds already exists there, or if the folder is inside a Provenance repository** (a `.component` in it or above), listing what is in the way, exit 2. No `--force`. **It runs `git init` when the folder isn't already inside a git repository, and never commits**; it prints the next steps, the first commit among them. (*Revised 2026-11-01: was no `git init`.*) | Never overwriting is the only safe default for files that become controlled records. A new project starts as a repository, as every other command expects; but the first commit carries its author's identity and may need signing, so it stays a deliberate step, and a folder already in a repository (a fresh clone) is left as it is. |
 | I8 | `.component` | **`--code` and `--name`, defaulting to the folder's name** (code: its letters and digits, upper-case, at most 8; name: as written). Validated as `repo` reads them. | `.component` is set once at creation (its own comment); defaults let `init` run with no flags. |
 | I9 | CI gate | **`.github/workflows/validate.yml`, the example's gate (`validate`, then `fmt --all --check`), pinned to the running binary's version** with `PROVENANCE_SHA256` left as a marked placeholder, so the check fails, saying what to set, until a team pins the hash from that release's `SHA256SUMS`. A development build writes no workflow. | A gate that runs from the first commit, and that pins by hash (REQ-0060) rather than trusting a download. A binary can't know the hash of another platform's build. |
 | I10 | Determinism | **Same version and flags → byte-identical files.** No dates or anything from the clock in the starter; every file in canonical form. | Rule 6, and so `init`'s acceptance can compare against a golden starter. |
@@ -1374,10 +1374,12 @@ starts from it (E5.4), then the release that ships it (E5.5).
 - `init [path] [--template] [--code] [--name]` (I7, I8), writing the
   starter and printing the next steps; the `notImplementedYet`
   annotation goes; `make docs` regenerates the CLI reference.
-- Unit tests: a fresh folder; an existing folder with unrelated files;
-  a conflicting file (nothing written, exit 2); inside a repository
-  (exit 2); an unknown template (exit 2, listing); `--code` and `--name`;
-  a development build writes no workflow.
+- Unit tests: a fresh folder (a git repository afterwards, with no
+  commit); a folder already in a git repository (left as it is); an
+  existing folder with unrelated files; a conflicting file (nothing
+  written, exit 2); inside a Provenance repository (exit 2); an unknown
+  template (exit 2, listing); `--code` and `--name`; a development build
+  writes no workflow.
 - Acceptance: `init` into a temporary folder, then `validate` →
   `0 errors, 0 warnings`, `export website`, and `fmt --all --check`, all
   exit 0; `init` again into it → exit 2, nothing changed; the result
