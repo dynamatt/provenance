@@ -33,6 +33,7 @@ identity, so builds must be reproducible.
 | `internal/version/` | Version and commit, injected by `make build` through `-ldflags`. |
 | `tools/gendocs/` | Generates the website's CLI reference from the command tree. |
 | `scripts/acceptance.sh` | Acceptance steps run against the example repo. |
+| `scripts/golden-stamps.sh` | Replaces the commit and content-hash stamps in an exported site by placeholders, so the golden site doesn't change on every pin move. |
 | `testdata/example-repo.ref` | Pinned `provenance-example` commit. |
 | `testdata/schemas/` | The SARIF 2.1.0 JSON schema and Jenkins' JUnit XSD the reports are checked against. |
 | `testdata/violations/` | One example of every failure `validate` reports, each beside a clean counterpart (its `README.md`). |

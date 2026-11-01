@@ -21,6 +21,7 @@ if ! command -v xmllint >/dev/null; then
 	exit 2
 fi
 SCHEMAS_DIR=$(cd "$(dirname "$0")/../testdata/schemas" && pwd)
+SCRIPTS_DIR=$(cd "$(dirname "$0")" && pwd)
 
 # sarif_dev replaces the binary's version in a SARIF report with dev, as
 # the golden reports have it (make golden-update).
@@ -599,10 +600,12 @@ expect 2 'unknown report "nope": not a format \(text, json, junit, sarif\) and t
 expect 2 '^validate: --output text and --output pr-summary\.md both write to standard output' "$PROV" validate --output text --output pr-summary.md
 
 # Standing E1 acceptance: exporting twice gives an identical site, and the
-# site matches the golden snapshot (make golden-update rewrites it).
+# site matches the golden snapshot (make golden-update rewrites it), its
+# commit and content-hash stamps replaced by placeholders (golden-stamps.sh).
 "$PROV" export website --out "$WORK/a" >/dev/null
 "$PROV" export website --out "$WORK/b" >/dev/null
 expect 0 ''                               diff -r "$WORK/a" "$WORK/b"
+"$SCRIPTS_DIR/golden-stamps.sh" "$WORK/a"
 expect 0 ''                               diff -ru "$GOLDEN_DIR" "$WORK/a"
 
 # Standing E2 acceptance: validating twice gives an identical report, and
