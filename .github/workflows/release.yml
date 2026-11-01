@@ -5,14 +5,24 @@ name: Release
 # (DES-0024), and their manifest SHA256SUMS (DES-0025). Each binary is first
 # run on its own platform (REQ-0135). On a pull request that changes the
 # release recipe, it builds and checks everything but publishes nothing.
+#
+# A release starts from a pushed v* tag, or from Run workflow on a branch
+# with the version to release: the run then tags the commit it built, once
+# every check has passed, and publishes it the same way.
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release and tag on this branch's head, such as v0.3.0-alpha
+        required: true
   pull_request:
     paths:
       - .github/workflows/release.yml
       - Makefile
+      - scripts/golden-stamps.sh
 
 permissions:
   contents: read
@@ -45,15 +55,26 @@ jobs:
       - name: Acceptance tests
         run: make acceptance
 
-      # The version is the tag; on a pull request, the commit.
+      # The version is the tag, or the version asked for; on a pull
+      # request, the commit. A version asked for must be new.
       - name: Build release platforms
         id: dist
         env:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
+          REQUESTED: ${{ inputs.version }}
         run: |
           version=$(git rev-parse --short HEAD)
           if [ "$REF_TYPE" = tag ]; then version=$REF_NAME; fi
+          if [ -n "$REQUESTED" ]; then
+            if ! [[ "$REQUESTED" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+              echo "::error::version $REQUESTED is not vMAJOR.MINOR.PATCH[-PRE]"; exit 1
+            fi
+            if git ls-remote --exit-code --tags origin "refs/tags/$REQUESTED" >/dev/null; then
+              echo "::error::tag $REQUESTED already exists"; exit 1
+            fi
+            version=$REQUESTED
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           make dist VERSION="$version"
           {
@@ -127,11 +148,12 @@ jobs:
           cd "$RUNNER_TEMP/example"
           git checkout -q --detach "$(cat "$GITHUB_WORKSPACE/testdata/example-repo.ref")"
           "$GITHUB_WORKSPACE/dist/$BINARY" export website --out "$RUNNER_TEMP/site"
+          "$GITHUB_WORKSPACE/scripts/golden-stamps.sh" "$RUNNER_TEMP/site"
           diff -r "$GITHUB_WORKSPACE/testdata/golden" "$RUNNER_TEMP/site"
 
   # A tag with a hyphen (v0.1.0-alpha) is a pre-release.
   publish:
-    if: github.ref_type == 'tag'
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
     needs: [build, smoke]
     runs-on: ubuntu-latest
     permissions:
@@ -142,6 +164,20 @@ jobs:
         with:
           name: release-files
           path: dist
+
+      # Run workflow tags the commit the build job built and checked, as an
+      # annotated tag like a pushed one.
+      - name: Tag the release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.build.outputs.version }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          tag=$(gh api "repos/$GH_REPO/git/tags" -f tag="$VERSION" -f object="$GITHUB_SHA" -f type=commit \
+            -f message="$VERSION, released by $ACTOR with Run workflow" --jq .sha)
+          gh api "repos/$GH_REPO/git/refs" -f ref="refs/tags/$VERSION" -f sha="$tag" >/dev/null
 
       - name: Publish release
         env:
