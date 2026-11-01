@@ -59,6 +59,13 @@
 - [x] E5.3 `provenance init`
 - [x] E5.4 Getting started from `init`
 - [x] E5.5 Epic close-out
+- [ ] E6.1 Design
+- [ ] E6.2 Complaints in the example
+- [ ] E6.3 The CSV source
+- [ ] E6.4 CSV checks
+- [ ] E6.5 Row pages
+- [ ] E6.6 Row history
+- [ ] E6.7 Epic close-out
 
 ## Shape of the plan
 
@@ -1307,10 +1314,10 @@ whose `fmt` is a stub, so their `fmt --all --check` step fails.
 
 ## Epic 5 — `init`
 
-> **Status: built 2026-11-01.** Decisions I1–I10 agreed 2026-11-01 (I7
-> revised to run `git init`) and written into DES-0052; E5.1–E5.5 built
-> together in one PR per repository, at Matt's request. It closes when
-> they merge and `v0.4.0-alpha` is released.
+> **Status: closed 2026-11-01**, released as `v0.4.0-alpha`. Decisions
+> I1–I10 agreed 2026-11-01 (I7 revised to run `git init`) and written into
+> DES-0052; E5.1–E5.5 built together in one PR per repository, at Matt's
+> request.
 
 **Goal:** a team starts a design history file with one command.
 `provenance init` writes a medical-device starter (REQ-0003, REQ-0004):
@@ -1419,59 +1426,43 @@ the DDF's Validate workflows pinned to it.
 **Check it yourself:** the release's `SHA256SUMS` verifies; the
 downloaded binary's `init` into an empty folder validates clean.
 
-## Later epics (outline)
+## Epic 6 — CSV-backed entity types
 
-Detailed task breakdowns are written when the preceding epic closes. Proposed
-order after Epic 2, with the reason it comes where it does:
-
-1. **Architecture groundwork** — Epic 3, detailed above (closed 2026-10-28).
-2. **`fmt`** — Epic 4, detailed above (closed 2026-11-01).
-3. **`init`** — Epic 5, detailed above.
-4. **CSV-backed entity types** — rows of a CSV file loaded as entities of a
-   type the schema declares (see below). After `init`, so the starter
-   template can carry an example, and before `report` and `diff`, so both
-   cover imported rows from the start.
-5. **Section and item references** — a heading or list item is tagged,
-   and a reference to the tag shows the number it has where it is
-   rendered (see below). Its first task replaces per-page placeholder
-   resolution with a page pipeline. Before `diff` and `rename`, which must
-   both understand tagged references.
-6. **Query fields** — a field whose value is a query; the template gets
-   its results (see below). Its first task evaluates calculated fields and
-   query fields as one Datalog program. Before `report`, which can then
-   count over a plan's scope, and before `rename`, which must rewrite IDs
-   inside them.
-7. **`report`** — coverage metrics over the shared query engine.
-8. **`diff`** — rendered/semantic diff between refs.
-9. **History in rules** — rules ask what changed when, such as evidence
-   older than what it verifies (see below). Before `sign` and
-   `release tag`, whose rules (REQ-0115, REQ-0051) are built on it.
-10. **`rename`** — ID rewrite across links, wikilinks, tagged references,
-   query filters and query fields.
-11. **`verify artifact`** — against the E1.14 manifest; includes deciding how
-   the manifest itself is signed.
-12. **`sign` / `sign verify`** — ledger format, then certificate provider, then
-   OIDC device flow; signatures become queryable facts, and the Signature
-   Presence rules removed in E2.1 return as queries.
-13. **`component add/update/remove`** — submodules and composed-graph
-   validation.
-14. **`release tag`** — gate plus bill-of-materials; released content becomes
-   queryable, and Content Frozen After Release returns as a query.
-15. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
-   fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
-   thin client over everything above.
-16. **`plugin`**.
-
-### CSV-backed entity types (proposed 2026-10-11, for Matt's review)
+> **Status: proposed 2026-11-01, for Matt's review.** Drafted 2026-10-11
+> and revised 2026-10-28 against Epic 3; C1–C12 below need agreeing before
+> E6.2 starts. C2 departs from DES-0007's ID form and C7 changes DES-0023,
+> so both are Matt's call, not clarifications. *Revised 2026-11-01 at
+> Matt's request:* a cell takes the same field types and value forms as
+> an entity file, with no CSV-only types or type options (C5); rows can
+> link out through `link` columns (C4), so `text` cells render as any
+> text does (C3); a table the team keeps by hand needs no sidecar (C12).
 
 **Goal:** a project can load entities from a CSV file. The schema declares
 a type backed by a file and maps the file's columns to the type's fields;
-each row is then an entity like any Markdown one: it has an ID, can be
-linked to and cited, is selected by queries and rules, has a page in the
-export, and counts in the content hash. The use case: a periodic dump of
-complaint records from the complaint-handling system, which Risk entities
-link to so that each failure mode's occurrence rating is justified by the
-complaints behind it, counted by a calculated field or a rule.
+each row is then an entity like any Markdown one: it has an ID, can link
+and be linked to and cited, is selected by queries and rules, has a page
+in the export, and counts in the content hash. The first use case: a
+periodic dump of complaint records from the complaint-handling system,
+which Risk entities link to so that each failure mode's occurrence rating
+is justified by the complaints behind it, counted by a calculated field or
+a rule.
+
+The same mechanism serves other records kept by another system or as a
+table (the *Importing data* page lists them, E6.7):
+
+| Records | Comes from | Links |
+| --- | --- | --- |
+| Complaints, CAPAs, nonconformances, adverse-event reports, service records | eQMS, complaint handling, CRM | Authored entities link to them (Risk → Complaint) |
+| Known anomalies (IEC 62304 §5.8.3, §9) | Issue tracker | The row links out: anomaly → Requirement |
+| Verification results | CI test runner | The row links out: result → Verification Protocol |
+| SOUP and SBOM components, and their vulnerabilities (FDA §524B) | Dependency and vulnerability scanners | Vulnerability → component; component → Design |
+| Bill of materials, approved suppliers | PLM, ERP | Part → supplier |
+| Use errors from formative studies (IEC 62366-1) | Study spreadsheet | Authored entities link to them (Risk → use error) |
+| Standards register, GSPR checklist | Kept by the team (C12) | Authored entities link to the clauses |
+
+Rows that link out need C4's `link` columns; the engineering exports
+(anomalies, test results, SBOMs) change with every build, which C7 and C8
+are for.
 
 ```yaml
 # schema/Complaint.yaml
@@ -1507,6 +1498,39 @@ A Risk then links to its complaints (`complaints: [CMP-2026-0141, …]`, a
 link field targeting Complaint, reverse `cited_by_risks`), and
 `COUNT(complaints)` or a rule over the facet does the rest.
 
+A row links out through a `link` field declared as on any type (C4). An
+issue tracker's anomaly list:
+
+```yaml
+# schema/Anomaly.yaml
+type: Anomaly
+id_prefix: BUG
+source:
+  csv: data/anomalies.csv
+  system: Issue tracker (Jira)
+  id: Key
+  separator: ";"                 # between a cell's IDs or list items (C5)
+fields:
+  - name: title
+    type: string
+    column: Summary
+  - name: affects
+    type: link
+    target: [Requirement]
+    cardinality: many
+    reverse_name: anomalies
+    column: Requirements
+  - name: severity
+    type: AnomalySeverity          # an enum, as in any schema
+  - name: resolved
+    type: boolean
+```
+
+```text
+Key,Summary,Requirements,Severity,Resolved
+BUG-1042,Alarm tone clipped at max volume,REQ-0012;REQ-0031,minor,false
+```
+
 **Why it needs its own epic:** a row is an entity without a file of its
 own, so every part of the product that assumes one file per entity
 (discovery, line numbers, last-changed commit, page inputs, the editor,
@@ -1518,52 +1542,199 @@ problems that name their entity (E3.5), all proved with a test source,
 the CSV source itself, the schema's `source:`, rendering a row, and the
 commands after it (`fmt`, `rename`, the editor, `sign`).
 
-*Revised 2026-10-28 against what Epic 3 built; C3 and C7 have a note each.*
+**What Epics 3–5 left in place:** a `load.Source` interface the loader runs
+after the schema (E3.2); records that hold their own values and positions
+and answer what a text refers to (E3.3); entity-level history compared
+through the source (E3.4); problems that name their entity (E3.5);
+`load/loadtest`, a table-typed test source; `load.Read` for commands that
+need only the files (E4); and `fmt`, which formats only records that have
+a canonical form, so it already leaves rows alone (C3).
 
-**Decisions (for Matt, before the epic is detailed):**
+**Standing acceptance for every E6 task:** `make ci` passes; the example,
+with its complaints, validates with its usual one warning and exports
+with a page per complaint.
+
+**Decisions (for Matt):**
 
 | # | Decision | Proposal | Why |
 | --- | --- | --- | --- |
 | C1 | Built in, or an import plugin (REQ-0070 allows import plugins) | **Built in.** The schema declares the source; there is no conversion step and no generated Markdown. Plugins remain for formats that need code (an eQMS API, XLSX). | CSV is the common denominator every system exports, and a built-in reader keeps the data's validation identity the binary's. Generating Markdown from the dump would create thousands of files no one reviews and that drift from the source. |
-| C2 | Row IDs | **The `id` column's value, used as written,** and checked to be unique within the file and across the repository. The `<id_prefix>-NNNN` form (DES-0007) applies to authored entities only; a CSV type's `id_prefix` is still required, and its IDs must start with it, so a link's type is still readable. | Complaint numbers are the identity the source system and the complaint handlers use; renumbering them would break traceability back to that system. |
-| C3 | Read-only | **Rows are read-only in Provenance.** `fmt`, `rename`, the editor and `sign` never write them; the file is replaced by the next dump. A row can't have a Markdown body; `text` columns render as Markdown **without wikilinks, embeds or rendered fences** (`[[…]]`, `![[…]]` and a ```` ```query ```` block are shown as written), so a cell can't link out (C4), pull in content or run a query. *Since E3.3 the dependency walk already asks the record what a text refers to, and a CSV record answers "nothing"; the website still renders every text value as full Markdown, so task 5 makes it ask the record how a text renders.* | The source system is the record; Provenance holds a dated copy. |
-| C4 | Which way links go | **CSV rows can't link out** in the first version; authored entities link to them (Risk → Complaint), and the facet gives the reverse. A column holding IDs as a link is a later addition. | Links are stored on the later artefact (DES-0011): the risk analysis is written after, and about, the complaints. |
-| C5 | File format | **RFC 4180, UTF-8 (a BOM is ignored), a header row, comma-separated** by default with `delimiter:` to override, CRLF or LF. Values are typed by the field: dates `YYYY-MM-DD` only, unless the field gives `format:`; booleans `true/false`, `yes/no`, `1/0`; an empty cell is an absent value. Columns the schema doesn't name are ignored, and reported as a warning so a renamed column is noticed. | What Excel and most systems export, with types as strict as for authored entities. |
+| C2 | Row IDs | **The `id` column's value, used as written,** and checked to be unique within the file and across the repository. The `<id_prefix>-NNNN` form (DES-0007) applies to authored entities only, a table kept by hand included (C12); a dump's type still requires an `id_prefix`, and its IDs must start with it, so a link's type is still readable. | Complaint numbers are the identity the source system and the complaint handlers use; renumbering them would break traceability back to that system. |
+| C3 | Read-only | **Rows are read-only in Provenance.** `fmt`, `rename`, the editor and `sign` never write them; a dump is replaced by the next dump, a table kept by hand (C12) is edited outside Provenance. A row can't have a Markdown body (`body: true` on a CSV type is a schema problem). **A `text` cell is a `text` value like any other:** Markdown, with wikilinks, embeds and fenced blocks resolved as in an entity file, and the CSV record answers what a text refers to by the same parse as the Markdown record (E3.3). *Revised 2026-11-01: was rendered without wikilinks, embeds or fences, so a cell couldn't link out; with C4's `link` columns rows can, and one meaning for `text` whatever the source is C5's rule. A dump whose free text happens to contain `[[` gets a broken-link problem at the row's line, like any other; the website keeps rendering every text one way, so task 5 has nothing to change there.* | The source system is the record; Provenance holds a dated copy. |
+| C4 | Which way links go | **A row links out through a `link` field, declared as on any type** (`target`, `cardinality`, `reverse_name`); its cell holds one ID, or for `cardinality: many` IDs separated as C5 says. Links resolve, are checked and give their target a reverse facet as any link does, and a broken one is placed at the row's line (C6). Which side declares a link follows DES-0011, the later artefact: a Risk links to its complaints, an anomaly to the requirements it affects, a test result to its protocol. *Revised 2026-11-01: was "rows can't link out in the first version".* | Half the records teams import link out: an issue tracker's anomalies name requirements, a test runner's results name protocols, a scanner's vulnerabilities name components. Without link columns each would be retyped by hand into Markdown, which is what this epic exists to avoid. |
+| C5 | File format and cell values | **The file: RFC 4180, UTF-8 (a BOM is ignored), a header row, comma-separated** by default with `delimiter:` on the source to override, CRLF or LF. A field reads the column of its own name, or the header `column:` gives. Columns the schema doesn't name are ignored, and reported as a warning so a renamed column is noticed. **The values: the field types and value forms of an entity file, and nothing else.** No CSV-only type, and no type option a Markdown field lacks: a value is valid in a cell exactly when it is valid in a file. See the table below. *Revised 2026-11-01: dropped `format:` for dates and `yes/no`, `1/0` booleans. A system that writes dates another way is set to export ISO dates, or its dump converted before it is committed; the sidecar hashes the converted file (C9).* | What Excel and most systems export, with one set of types for the whole schema: a rule, query or template reads a row's fields as it reads any entity's, and moving a type between Markdown and CSV changes no value. |
 | C6 | Where a row's problems are placed | **The file and the row's line** (`data/complaints.csv:142`), for validate, export errors and SARIF. | The same contract as every other violation (D8/DES-0048). |
-| C7 | History | A row's last-changed commit is the **last commit that changed that row's line content**, not the file's; the file's commit and dump date are shown on every row's page. ~~Page inputs list the file.~~ *Since E3.4 a page's inputs name the row, and each commit records the rows it changed, compared through the source by ID and text, so this needs no history work. **Open, for Matt:** the dump's commit, date and sidecar shown on every row's page are, by DES-0023, inputs of the page, so every dump would move every row's last-changed commit, which this decision exists to prevent. Proposal: the dump's provenance is shown but is not a page input, and DES-0023 says so.* | Re-importing the whole file every month mustn't make every complaint look changed. |
-| C8 | Pages | **A page per row by default,** with `pages: false` on the source for large dumps; rows are still listed by queries and cited by `[[ID]]` without a page, as an entity outside the scope is. | Thousands of near-identical pages make a site slow to build and browse. |
-| C9 | Provenance of the dump | Provenance can't tell where a copied file came from, so it records what it knows and asks for the rest. **Git** knows when the copy entered the design record: the commit that last changed the file, with its date and author. **The schema** declares `system:`, the system the dumps come from, which doesn't change between dumps. **A sidecar beside each dump** (`data/complaints.csv.yaml`) holds what only the person exporting knows: `exported:`, the dump's date, and `sha256:`, the hash of the CSV it describes (`sha256sum` prints it). `validate` fails when the sidecar is missing or its hash isn't the file's, so a new dump copied in without saying when it was exported is stopped at the merge gate. All of it is shown on each row's page and available to templates; the CSV and the sidecar are in the content hash like any other file. | ISO 13485 §8.2.2, which the QMSR incorporates: complaint records are kept by the complaint-handling process, and the copy must be traceable to it. A per-dump date in the schema would be edited on every dump and could silently go stale; the hash ties the sidecar's date to this file, not to whichever file was there when it was last typed. |
+| C7 | History | A row's last-changed commit is the **last commit that changed that row's line content**, not the file's; the file's commit and dump date are shown on every row's page. ~~Page inputs list the file.~~ *Since E3.4 a page's inputs name the row, and each commit records the rows it changed, compared through the source by ID and text, so this needs no history work. The dump's commit, date and sidecar shown on every row's page are, by DES-0023, inputs of the page, so every dump would move every row's last-changed commit, which this decision exists to prevent. **Proposal (for Matt): the dump's provenance is shown on a row's page but is not one of its inputs, and DES-0023 says so;** the dump's own history is on the source's page (C8).* | Re-importing the whole file every month mustn't make every complaint look changed. |
+| C8 | Pages | **A page per row by default,** with `pages: false` on the source for large dumps, **and one page for the source itself**, listing its rows and the dump's provenance and history (C7, C9); rows are still listed by queries and cited by `[[ID]]` without a page, as an entity outside the scope is. | Thousands of near-identical pages make a site slow to build and browse, and an SBOM or a test run's results is re-dumped with every build. |
+| C9 | Provenance of the dump | For a source that declares `system:` (a dump; C12 has the other kind). Provenance can't tell where a copied file came from, so it records what it knows and asks for the rest. **Git** knows when the copy entered the design record: the commit that last changed the file, with its date and author. **The schema** declares `system:`, the system the dumps come from, which doesn't change between dumps. **A sidecar beside each dump** (`data/complaints.csv.yaml`) holds what only the person exporting knows: `exported:`, the dump's date, and `sha256:`, the hash of the CSV it describes (`sha256sum` prints it). `validate` fails when the sidecar is missing or its hash isn't the file's, so a new dump copied in without saying when it was exported is stopped at the merge gate. All of it is shown on each row's page and available to templates; the CSV and the sidecar are in the content hash like any other file. | ISO 13485 §8.2.2, which the QMSR incorporates: complaint records are kept by the complaint-handling process, and the copy must be traceable to it. A per-dump date in the schema would be edited on every dump and could silently go stale; the hash ties the sidecar's date to this file, not to whichever file was there when it was last typed. |
+| C10 | The starter | **No CSV type in the medical-device starter.** A dump's columns are its source system's, so a starter can't guess them; the *Importing data* page shows one to copy, and `provenance-example` carries a worked one (E6.2). | The outline put this epic after `init` so the starter could carry an example; on reflection a guessed `Complaint` type would be deleted or rewritten by every team, which REQ-0003 allows but is no help. |
+| C11 | The reader | **Go's `encoding/csv`,** strict (`FieldsPerRecord` from the header, `LazyQuotes` off): a row with the wrong number of cells, or a stray quote, is a problem at its line, not a guess. | No new dependency, and RFC 4180 as C5 asks. A tolerant reader would turn a corrupt dump into wrong data silently. |
+| C12 | Tables kept by hand (*added 2026-11-01*) | **A source without `system:` is a table the team keeps in the repository,** such as a standards register or a GSPR checklist: no sidecar, so `content/csv-sidecar` doesn't apply, and its IDs take the `<id_prefix>-NNNN` form as any authored entity's do (C2). Everything else is as for a dump: the same cell values (C5), read-only to Provenance's commands (C3), history per row (C7). It is edited in a spreadsheet or text editor and reviewed in its pull request, where the diff shows the rows changed. | Some records are tables by nature and are kept by hand. An export date and a source system for them would be made up, and one Markdown file per clause would be hundreds of files edited as one. |
 
-**Rough shape:**
+**How a cell is read (C5).** Each field type takes the forms the website's
+*Writing a schema* page gives it in an entity file, checked by the same
+rules in `model` (G4):
 
-1. **Design:** a user need, requirements (CSV-backed types, row IDs,
-   read-only, provenance of the dump) and a design element in the DDF,
-   with C1–C9 as decided.
-2. **Example repo:** a `Complaint` type with `data/complaints.csv` (a dozen
-   synthetic rows) and its sidecar, RSK-0001's failure modes linking to them, and
-   `occurrence` justified by a `COUNT` over them.
-3. **Loading:** `source:` in the schema, and the CSV reader as a
-   `load.Source` the loader runs after the schema (E3.2), reading the files
-   the schema names. Its record (`entity.Record`, E3.3) types a cell by
-   its field (C5), as `loadtest.Rows` does, places the row and its cells
-   at the row's line (C6), and refers to nothing from a text (C3).
-   `Source.Entities` gives each row's text, so history compares rows
-   (E3.4). Load errors are `problem.Problem`s at file and row, naming the
-   row (E3.5). `loadtest.Rows` stays for tests.
-4. **validate:** conformance already runs through the record (E3.3), so
-   what is new is the CSV-specific checks: row IDs (C2), unknown columns
-   as warnings (C5), and the sidecar, present and its hash the file's
-   (C9). Each is a problem with its own check, and a case in
-   `testdata/violations`.
-5. **export:** row pages, `pages: false`, citations and queries over
-   rows, the dump's provenance on each page (system, export date, the
-   commit that brought it in), and text cells rendered as the record says
-   (C3). Export and validate's check share the renderer (E3.5), so the
-   check covers rows with no extra work.
-6. **History:** per-row last-changed (C7) comes from E3.4's entity-level
-   log; what is left is settling C7's open point, and checking that the
-   dirty state, content hash and a moved dump behave as DES-0023 says.
-7. **Close-out:** docs (a "Importing data" concept page), release.
+| Field type | In an entity file | In a cell |
+| --- | --- | --- |
+| `string` | One line of text | The same; a line break in the cell is a problem, as in a file |
+| `text` | Markdown | The same, wikilinks and embeds included (C3) |
+| `number` | `2.5`, `-3`, `1000` | The same; no thousands separators, units or `%` |
+| `date` | `YYYY-MM-DD` | The same |
+| `boolean` | `true` or `false` | The same |
+| *an enum* | One of its values | The same |
+| `link`, `cardinality: one` | One ID | The same |
+| `link`, `cardinality: many` | A YAML list of IDs | IDs separated by the source's `separator:` (default `;`), spaces around each trimmed |
+| `list` `of` a built-in type or enum | A YAML list | Items separated as a `many` link's are, each read as its type; an item can't contain the separator |
+| `list` of rows (`fields`, or `of` a record) | Rows of sub-fields | None: a schema problem on a CSV type |
+| `calculated` | Never written | Never a column: a `column:` on it is a schema problem |
+| Any, left empty | Key omitted or blank: absent | Empty cell: absent, so `required:` reads the same |
+
+`separator:` and `delimiter:` say how the file is written, not what a
+value is, so they sit on the source, not on a field; `column:` is the one
+key a CSV type's field adds, and it names a header, not a type.
+
+**Order:** the design (E6.1), the example's tables as the fixture
+(E6.2, rule 4), then loading (E6.3), checking (E6.4), rendering (E6.5)
+and history (E6.6), then the docs and release (E6.7).
+
+### E6.1 Design
+
+**Deliverables:** in the DDF, a user need (keep a dated copy of another
+system's records in the design file), requirements for CSV-backed types,
+row IDs, read-only rows, link columns, cell values typed as in an entity
+file, tables kept by hand and the dump's provenance, and a design element
+with C1–C12 as decided; DES-0007 and DES-0023 amended for C2, C12 and C7.
+
+**Check it yourself:** read the new DES in the DDF's export.
+
+### E6.2 Complaints, anomalies and standards in the example
+
+**Deliverables:** in `provenance-example`, its own PR:
+- a `Complaint` type backed by `data/complaints.csv` (a dozen synthetic
+  rows, one with a quoted comma and one with an empty cell) and its
+  sidecar; RSK-0001's failure modes linking to them, and `occurrence`
+  justified by a `COUNT`;
+- an `Anomaly` type backed by `data/anomalies.csv`, an issue tracker's
+  dump with its sidecar, whose rows link out to requirements (C4), one
+  row to two of them through the separator, one with an empty `link`
+  cell, and a `text` cell with a wikilink (C3);
+- a `Standard` table kept by hand, `data/standards.csv` with no `system:`
+  and no sidecar (C12), and a Design linking to two of its rows.
+
+Until E6.3 the example's Validate fails on the unknown `source:` key, so
+it merges into the example's `epic/E6-csv`, and `make bump-example
+EXAMPLE_BRANCH=epic/E6-csv` follows E6.3.
+
+**Check it yourself:** read `data/*.csv`, RSK-0001 and the Design that
+cites the standards.
+
+### E6.3 The CSV source
+
+**Deliverables:**
+- `source:` in the schema (`csv`, `system`, `id`, `delimiter`,
+  `separator`, `pages`) and `column:` on a field, with schema problems
+  for a source on a type that also has Markdown entities, a column named
+  twice, and the fields with no cell form (C5): a list of rows, `body:`,
+  a `column:` on a calculated field.
+- `load`'s CSV source (C11): a record per row typing each cell by its
+  field with `model`'s rules, as an entity file's value is (C5), placed
+  at the row's line (C6), answering what a text refers to by the
+  Markdown parse (C3); `link` cells resolved like any link (C4);
+  `Source.Entities` gives each row's text, so history compares rows
+  (E3.4).
+- Unit tests over a table of CSV inputs, reusing `loadtest`'s cases where
+  they fit, and one per field type that a value valid in a file is valid
+  in a cell and one that isn't fails in both. Acceptance: the example
+  loads its three tables, RSK-0001's `COUNT` is the number linked, and a
+  requirement's `anomalies` facet lists the rows that name it.
+
+**Check it yourself:** `provenance validate` in the example →
+`0 errors, 1 warning`.
+
+### E6.4 CSV checks
+
+**Deliverables:** `content/csv-row` (a malformed row), `schema/id-format`
+for row IDs (C2: the prefix for a dump, `<id_prefix>-NNNN` for a table
+kept by hand, C12), `content/csv-column` (a column the schema doesn't
+name, warning), and `content/csv-sidecar` (a dump's sidecar missing, or
+its hash isn't the file's, C9; never for a table kept by hand); each with
+its case in `testdata/violations`. A cell's wrong value or broken link
+is reported by the check that reports it in an entity file, at the row's
+line: no new check, and each gains a CSV case beside its Markdown one.
+
+**Check it yourself:** in the example, change a cell of
+`data/complaints.csv` → `content/csv-sidecar` at the file, exit 1.
+
+### E6.5 Row pages
+
+**Deliverables:** a page per row, or none with `pages: false` (C8); the
+source's page listing its rows and the dump's provenance (C9); a row's
+`link` fields and reverse facets shown as on any page (C4); text cells
+rendered as any text is (C3); queries and citations over rows. The
+golden site gains the complaints, anomalies and standards.
+
+**Check it yourself:** export the example and open a complaint's page.
+
+### E6.6 Row history
+
+**Deliverables:** C7: a row's last-changed commit moves only when its row
+does; a new dump changes the source page's history, not every row's.
+Acceptance: commit a dump changing one row → only that row's page and the
+source page move.
+
+**Check it yourself:** the acceptance step's output.
+
+### E6.7 Epic close-out
+
+**Deliverables:** the *Importing data* concept page, drafted on
+2026-11-01 with the use cases above and C10's worked type, checked
+against what was built, published (its `draft: true` removed) and
+linked from *Core concepts* and *Writing a schema*; the epic merged into
+`main` in each repository; release `v0.5.0-alpha`.
+
+**Check it yourself:** the release's `SHA256SUMS` verifies; the
+downloaded binary validates the example with its complaints.
+
+## Later epics (outline)
+
+Detailed task breakdowns are written when the preceding epic closes. Proposed
+order after Epic 2, with the reason it comes where it does:
+
+1. **Architecture groundwork** — Epic 3, detailed above (closed 2026-10-28).
+2. **`fmt`** — Epic 4, detailed above (closed 2026-11-01).
+3. **`init`** — Epic 5, detailed above (closed 2026-11-01).
+4. **CSV-backed entity types** — Epic 6, detailed above.
+5. **Section and item references** — a heading or list item is tagged,
+   and a reference to the tag shows the number it has where it is
+   rendered (see below). Its first task replaces per-page placeholder
+   resolution with a page pipeline. Before `diff` and `rename`, which must
+   both understand tagged references.
+6. **Query fields** — a field whose value is a query; the template gets
+   its results (see below). Its first task evaluates calculated fields and
+   query fields as one Datalog program. Before `report`, which can then
+   count over a plan's scope, and before `rename`, which must rewrite IDs
+   inside them.
+7. **`report`** — coverage metrics over the shared query engine.
+8. **`diff`** — rendered/semantic diff between refs.
+9. **History in rules** — rules ask what changed when, such as evidence
+   older than what it verifies (see below). Before `sign` and
+   `release tag`, whose rules (REQ-0115, REQ-0051) are built on it.
+10. **`rename`** — ID rewrite across links, wikilinks, tagged references,
+   query filters and query fields.
+11. **`verify artifact`** — against the E1.14 manifest; includes deciding how
+   the manifest itself is signed.
+12. **`sign` / `sign verify`** — ledger format, then certificate provider, then
+   OIDC device flow; signatures become queryable facts, and the Signature
+   Presence rules removed in E2.1 return as queries.
+13. **`component add/update/remove`** — submodules and composed-graph
+   validation.
+14. **`release tag`** — gate plus bill-of-materials; released content becomes
+   queryable, and Content Frozen After Release returns as a query.
+15. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
+   fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
+   thin client over everything above.
+16. **`plugin`**.
 
 ### Section and item references (proposed 2026-10-18, for Matt's review)
 
