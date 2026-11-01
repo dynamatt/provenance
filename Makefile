@@ -98,6 +98,7 @@ validate_outputs = $(foreach f,text:txt json:json junit:junit.xml sarif:sarif,--
 golden-update: build example
 	rm -rf $(GOLDEN_DIR)
 	cd $(EXAMPLE_DIR) && $(CURDIR)/$(BIN) export website --out $(CURDIR)/$(GOLDEN_DIR) >/dev/null
+	scripts/golden-stamps.sh $(GOLDEN_DIR)
 	mkdir -p $(VALIDATE_DIR)
 	cd $(EXAMPLE_DIR) && $(CURDIR)/$(BIN) validate $(call validate_outputs,$(CURDIR)/$(VALIDATE_DIR)/clean)
 	for r in core broken-schema; do \
