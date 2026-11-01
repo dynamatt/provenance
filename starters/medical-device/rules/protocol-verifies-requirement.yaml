@@ -1,0 +1,9 @@
+# Every protocol verifies at least one requirement.
+severity: error
+message: "verification protocol not linked to any requirement"
+from: VerificationProtocol
+where:
+  field: verifies
+  aggregation: {type: count}
+  operator: less_than
+  value: 1

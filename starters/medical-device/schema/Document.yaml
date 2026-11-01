@@ -1,0 +1,13 @@
+# A document assembled from the entities: a plan, a trace matrix, a
+# review record. Its body is Markdown with query blocks.
+type: Document
+id_prefix: DOC
+fields:
+  - name: title
+    type: string
+    required: true
+    help: "The document's title. (ISO 13485:2016 §4.2.4)"
+  - name: status
+    type: ApprovalStatus
+    required: true
+    help: "Where the document is in review and approval; documents are approved before issue. (ISO 13485:2016 §4.2.4)"

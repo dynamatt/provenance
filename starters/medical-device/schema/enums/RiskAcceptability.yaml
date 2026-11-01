@@ -1,0 +1,2 @@
+enum: RiskAcceptability
+values: [acceptable, unacceptable]

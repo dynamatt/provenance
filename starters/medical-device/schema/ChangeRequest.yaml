@@ -1,0 +1,23 @@
+# A change to the design, with the review of its effects.
+type: ChangeRequest
+id_prefix: ECO
+fields:
+  - name: title
+    type: string
+    required: true
+    help: "A short name for the change. (ISO 13485:2016 §7.3.9)"
+  - name: description
+    type: text
+    body: true
+    required: true
+    help: "The change, its reason, and its effect on parts, product delivered and risk management. (ISO 13485:2016 §7.3.9)"
+  - name: status
+    type: ApprovalStatus
+    required: true
+    help: "Where the change is in review and approval; it is approved before it is made. (ISO 13485:2016 §7.3.9)"
+  - name: affects
+    type: link
+    target: [UserNeed, Requirement, Design, Risk, VerificationProtocol]
+    cardinality: many
+    reverse_name: changed_by
+    help: "Everything the change touches. (ISO 13485:2016 §7.3.9)"

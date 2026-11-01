@@ -1,0 +1,38 @@
+# The record of one run of a verification protocol.
+type: VerificationEvidence
+id_prefix: EVD
+fields:
+  - name: title
+    type: string
+    required: true
+    help: "A short name for the run. (ISO 13485:2016 §7.3.6)"
+  - name: tests
+    type: link
+    target: [VerificationProtocol]
+    cardinality: one
+    reverse_name: tested_by
+    help: "The protocol that was run. (ISO 13485:2016 §7.3.6)"
+  - name: execution_date
+    type: date
+    required: true
+    help: "When the protocol was run. (ISO 13485:2016 §4.2.5)"
+  - name: result
+    type: PassFail
+    required: true
+    help: "The conclusion of the run. (ISO 13485:2016 §7.3.6)"
+  - name: step_results
+    type: list
+    fields:
+      - name: result
+        type: text
+        required: true
+        help: "What was observed or measured at this step. (ISO 13485:2016 §7.3.6)"
+      - name: pass_fail
+        type: PassFail
+        required: true
+        help: "Whether the step met its acceptance criteria. (ISO 13485:2016 §7.3.6)"
+    help: "One result per protocol step, in the same order. (ISO 13485:2016 §7.3.6)"
+  - name: notes
+    type: text
+    body: true
+    help: "Anything else the record of the run needs: deviations, the article tested, who ran it. (ISO 13485:2016 §7.3.6)"

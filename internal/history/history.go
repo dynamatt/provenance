@@ -49,9 +49,21 @@ type Repo struct {
 // repository.
 var ErrNotRepository = errors.New("not in a git repository")
 
+// ErrNoCommits is returned by Open for a repository with no commits yet,
+// such as one provenance init has just created: there is no HEAD to
+// describe.
+var ErrNoCommits = errors.New("the git repository has no commits yet")
+
+// InRepository reports whether dir is inside a git working tree, with or
+// without commits.
+func InRepository(dir string) bool {
+	_, _, err := findGit(dir)
+	return err == nil
+}
+
 // Open opens the git repository containing the component root. A repository
-// without commits is an error: there is no HEAD to describe. Close it when
-// done.
+// without commits is ErrNoCommits: there is no HEAD to describe. Close it
+// when done.
 func Open(root string) (*Repo, error) {
 	work, gitDir, err := findGit(root)
 	if err != nil {
@@ -79,6 +91,10 @@ func Open(root string) (*Repo, error) {
 		prefix = ""
 	}
 	ref, err := r.Head()
+	if errors.Is(err, plumbing.ErrReferenceNotFound) {
+		st.Close()
+		return nil, ErrNoCommits
+	}
 	if err != nil {
 		st.Close()
 		return nil, fmt.Errorf("reading HEAD: %w", err)

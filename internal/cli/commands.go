@@ -30,15 +30,27 @@ editing surface and must not be exposed beyond the local machine.`,
 func newInitCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "init [path]",
-		Short: "Scaffold a new project from a starter template",
-		Long: `Scaffold a new project in path (default: the current directory): the folder structure
-and starter files — schema/, rules/, templates/, entity-type folders, .component and
-plugins.lock — from the default or a named starter template.`,
-		Args:        maxArgs(1),
-		Annotations: notImplementedYet,
-		RunE:        notImplemented,
+		Short: "Start a new project from a starter template",
+		Long: `Write a starter project into path (default: the current directory, created if
+missing): schema/, rules/, a worked example of linked records, a plan document,
+.component, a README and, from a release, a CI workflow that runs validate and
+fmt --all --check. Every file is the project's to change or delete. The starter
+validates with no errors or warnings.
+
+Nothing is written if any of the starter's files is already there, or if path is
+inside a Provenance repository. When path isn't in a git repository, init runs
+git init (branch main) but never commits.
+
+--code and --name fill .component; both default to the folder's name.
+
+Exit codes: 0 written, 2 nothing written (a file in the way, an unknown
+template, an invalid code) or a tool error.`,
+		Args: maxArgs(1),
+		RunE: runInit,
 	}
-	c.Flags().String("template", "", "starter template `name` (default: the built-in default template)")
+	c.Flags().String("template", "", "starter `name` (default: medical-device)")
+	c.Flags().String("code", "", "component `code`: 1 to 8 upper-case letters and digits (default: from the folder's name)")
+	c.Flags().String("name", "", "component `name` (default: the folder's name)")
 	return c
 }
 

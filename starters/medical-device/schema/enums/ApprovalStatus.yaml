@@ -1,0 +1,3 @@
+# The lifecycle every reviewed record goes through.
+enum: ApprovalStatus
+values: [draft, in_review, approved, deprecated]

@@ -1,0 +1,14 @@
+# Two requirements with one title are likely a duplicate or a copy-paste
+# error. Each is reported.
+severity: warning
+message: "two requirements share the same title"
+from: Requirement
+where:
+  from: Requirement
+  where:
+    - field: title
+      operator: equals
+      value_of: ^title
+    - field: id
+      operator: not_equals
+      value_of: ^id

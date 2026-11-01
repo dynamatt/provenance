@@ -1,0 +1,35 @@
+# How a design output is shown to meet its inputs.
+type: VerificationProtocol
+id_prefix: VER
+fields:
+  - name: title
+    type: string
+    required: true
+    help: "A short name for the protocol. (ISO 13485:2016 §7.3.6)"
+  - name: procedure
+    type: text
+    body: true
+    required: true
+    help: "The method: set-up, conditions and, where statistical, the sample size and its rationale. (ISO 13485:2016 §7.3.6)"
+  - name: steps
+    type: list
+    fields:
+      - name: description
+        type: text
+        required: true
+        help: "What to do at this step. (ISO 13485:2016 §7.3.6)"
+      - name: acceptance_criteria
+        type: text
+        required: true
+        help: "What passes this step. (ISO 13485:2016 §7.3.6)"
+    help: "The steps in order, each with its acceptance criteria. (ISO 13485:2016 §7.3.6)"
+  - name: status
+    type: ApprovalStatus
+    required: true
+    help: "Where the protocol is in review and approval; it is approved before it is run. (ISO 13485:2016 §7.3.6)"
+  - name: verifies
+    type: link
+    target: [Requirement]
+    cardinality: many
+    reverse_name: verified_by
+    help: "The design inputs this protocol verifies. (ISO 13485:2016 §7.3.6)"

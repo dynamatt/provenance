@@ -678,6 +678,24 @@ expect 0 '' cmp REQ/REQ-0001.md "$WORK/REQ-0001.md"
 git checkout -q -- REQ/REQ-0001.md
 git checkout -q --detach "$PIN"
 
+# E5.3: init writes the medical-device starter into a new folder, which
+# validates with no errors or warnings, exports, and is canonical. Its
+# files are the starter's, .component and README.md filled in (and no CI
+# workflow, from a build that isn't a release); a second init into it
+# writes nothing.
+cd "$WORK"
+expect 0 '^Wrote the medical-device starter for demo \(DEMO\) to demo: [0-9]+ files\.$' "$PROV" init demo
+expect 0 '^## No commits yet on main$' git -C demo status --short --branch --untracked-files=no
+cd demo
+expect 0 '^0 errors, 0 warnings$' "$PROV" validate
+expect 0 '^exported website to _site$' "$PROV" export website
+expect 0 '^$' "$PROV" fmt --all --check
+expect 0 '^code: DEMO$' cat .component
+expect 0 '' diff -r -x .git -x .github -x _site -x .component -x README.md "$SCRIPTS_DIR/../starters/medical-device" .
+cd "$WORK"
+expect 2 '^init: demo is inside the Provenance repository at demo$' "$PROV" init demo
+cd "$EXAMPLE_DIR"
+
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"
 	exit 1

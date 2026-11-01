@@ -1,0 +1,12 @@
+# A requirement can't be its own ancestor through parent_requirement.
+# Every requirement on the cycle is reported.
+severity: error
+message: "requirement decomposition hierarchy contains a cycle"
+from: Requirement
+where:
+  field: parent_requirement
+  transitive: true
+  where:
+    field: id
+    operator: equals
+    value_of: ^id

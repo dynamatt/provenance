@@ -1,0 +1,23 @@
+# A design output: what the design is, traced to the inputs it meets.
+type: Design
+id_prefix: DES
+fields:
+  - name: title
+    type: string
+    required: true
+    help: "A short name for the design element. (ISO 13485:2016 §7.3.4)"
+  - name: description
+    type: text
+    body: true
+    required: true
+    help: "The design output, in a form suitable for verification against its inputs. (ISO 13485:2016 §7.3.4)"
+  - name: status
+    type: ApprovalStatus
+    required: true
+    help: "Where the output is in review and approval; outputs are approved before release. (ISO 13485:2016 §7.3.4)"
+  - name: implements
+    type: link
+    target: [Requirement]
+    cardinality: many
+    reverse_name: implemented_by
+    help: "The design inputs this output meets. (ISO 13485:2016 §7.3.4)"

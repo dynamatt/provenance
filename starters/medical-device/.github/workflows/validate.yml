@@ -1,0 +1,47 @@
+name: Validate
+
+# The design-control merge gate: provenance validate, then
+# provenance fmt --all --check, on every pull request and every push to
+# main. Make it a required check on main.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      # The released binary the gate runs, pinned by its hash: the
+      # provenance-linux-amd64 line of the release's SHA256SUMS. Change
+      # both together.
+      PROVENANCE_VERSION: @VERSION@
+      PROVENANCE_SHA256: set-me-to-the-provenance-linux-amd64-hash-in-SHA256SUMS
+    steps:
+      - name: Check out this repository
+        uses: actions/checkout@v4
+
+      - name: Install Provenance
+        run: |
+          if ! [[ "$PROVENANCE_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error::Set PROVENANCE_SHA256 in this workflow to the provenance-linux-amd64 line of https://github.com/dynamatt/provenance/releases/download/$PROVENANCE_VERSION/SHA256SUMS"
+            exit 1
+          fi
+          curl -fsSLo provenance "https://github.com/dynamatt/provenance/releases/download/$PROVENANCE_VERSION/provenance-linux-amd64"
+          echo "$PROVENANCE_SHA256  provenance" | sha256sum -c -
+          install -D -m 0755 provenance "$RUNNER_TEMP/bin/provenance" && rm provenance
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Validate
+        run: >-
+          provenance validate
+          --output text
+          --output pr-summary.md="$GITHUB_STEP_SUMMARY"
+
+      - name: Check canonical form
+        if: ${{ !cancelled() }}
+        run: provenance fmt --all --check
