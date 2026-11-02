@@ -20,9 +20,10 @@ import (
 //
 //	.ID .Type .Title .Body .Resolved    engine baseline
 //	.LastChangedSHA .Revisions          git stamps (DES-0023)
-//	.Table                              for a row of a CSV file, the file and
-//	                                    where it came from (DES-0053); nil
-//	                                    for an entity file
+//	.File                               the file the entity is written in:
+//	                                    .Path, .Line, and for a row of a dump
+//	                                    of another system .System, .Exported
+//	                                    and .SHA256 (DES-0053), "" otherwise
 //	.Citations                          on the entity a page is about, what the
 //	                                    page cites (DES-0046); empty elsewhere
 //	.<PascalCaseField>                  every declared field, calculated ones included
@@ -44,7 +45,28 @@ type Data = map[string]any
 // unresolved link target's but its declared fields.
 func Baseline(id string) Data {
 	return Data{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false,
-		"LastChangedSHA": "", "Revisions": []Data{}, "Citations": []Data{}, "Table": nil}
+		"LastChangedSHA": "", "Revisions": []Data{}, "Citations": []Data{}, "File": FileData("", 0, nil)}
+}
+
+// FileData is the file an entity is written in, as a template sees it
+// (.File, DES-0053): .Path and .Line, where the entity's ID is written,
+// and .System, .Exported and .SHA256, what is known of where a dump of
+// another system came from, "" for any other file. t is the CSV file a
+// row is read from, nil for an entity file.
+func FileData(path string, line int, t *entity.Table) Data {
+	d := Data{"Path": path, "Line": line, "System": "", "Exported": "", "SHA256": ""}
+	if t != nil {
+		d["System"], d["Exported"], d["SHA256"] = t.System, t.Exported, t.SHA256
+	}
+	return d
+}
+
+// TableFile is a CSV file as a whole, for its table page and its type on
+// the main page: .File without .Line.
+func TableFile(t *entity.Table) Data {
+	d := FileData(t.Path, 0, t)
+	delete(d, "Line")
+	return d
 }
 
 // citationKeys are added to each entity in a page's .Citations, and
@@ -107,23 +129,10 @@ func NameErrors(s *schema.Schema) []*query.ContentError {
 type Model struct {
 	schema *schema.Schema
 	ByID   map[string]Data
-	// Tables are the .Table of the rows of each CSV file, by the type of
-	// its rows: one map, shared by every row.
-	Tables map[string]Data
-}
-
-// TableData is a CSV file as a template sees it (DES-0053): .Type, its
-// rows' type; .File; .System, "" for a table kept by hand; .Sidecar,
-// .Exported and .SHA256, from a dump's sidecar; .Pages, whether its rows
-// have pages; and .Commit, .Date and .Author, the commit that last changed
-// the file, which an export fills in ("" without git).
-func TableData(t *entity.Table) Data {
-	return Data{"Type": t.Type, "File": t.Path, "System": t.System, "Sidecar": t.Sidecar,
-		"Exported": t.Exported, "SHA256": t.SHA256, "Pages": t.Pages, "Commit": "", "Date": "", "Author": ""}
 }
 
 func NewModel(s *schema.Schema, entities []*model.Entity) *Model {
-	d := &Model{schema: s, ByID: make(map[string]Data, len(entities)), Tables: map[string]Data{}}
+	d := &Model{schema: s, ByID: make(map[string]Data, len(entities))}
 	// Two passes: links point at other entities' maps.
 	for _, e := range entities {
 		d.ByID[e.ID] = Baseline(e.ID)
@@ -131,12 +140,11 @@ func NewModel(s *schema.Schema, entities []*model.Entity) *Model {
 	for _, e := range entities {
 		m := d.ByID[e.ID]
 		m["Type"], m["Title"], m["Body"], m["Resolved"] = e.Type, e.Title(), e.Body, true
+		var table *entity.Table
 		if row, ok := e.Record.(*entity.Row); ok {
-			if d.Tables[e.Type] == nil {
-				d.Tables[e.Type] = TableData(row.Table())
-			}
-			m["Table"] = d.Tables[e.Type]
+			table = row.Table()
 		}
+		m["File"] = FileData(e.Path, e.IDLine(), table)
 		for _, v := range e.Fields {
 			m[TemplateName(v.Field.Name)] = d.value(v)
 			if v.Field == e.Schema.BodyField {

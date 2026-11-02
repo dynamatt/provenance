@@ -13,6 +13,7 @@ import (
 	"github.com/dynamatt/provenance/internal/load"
 	"github.com/dynamatt/provenance/internal/problem"
 	"github.com/dynamatt/provenance/internal/repo"
+	"github.com/dynamatt/provenance/internal/schema"
 	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
@@ -55,6 +56,7 @@ type Report struct {
 	component repo.Component
 	history   func() (*load.History, error)
 	entities  map[string]tmpl.Data
+	schema    *schema.Schema
 }
 
 // Errors counts the error-severity violations.
@@ -117,6 +119,7 @@ func Run(rp *repo.Repo, exporters *export.Registry) (*Report, error) {
 			return nil, err
 		}
 		r.entities = tmpl.NewModel(res.Schema, res.Entities).ByID
+		r.schema = res.Schema
 	}
 	r.sort()
 	// Report templates are checked against everything else found.

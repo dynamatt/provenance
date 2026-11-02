@@ -1,6 +1,8 @@
 package website
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"slices"
 	"strings"
 	"testing"
@@ -90,20 +92,29 @@ func TestTablePages(t *testing.T) {
 	}
 }
 
-// A template sees a row's file as .Table, and links to a row without a
-// page point at its table page.
-func TestTableTemplateData(t *testing.T) {
+// Every entity's .File is the file it is written in, the same keys for an
+// entity file and a CSV row; links to a row without a page point at its
+// table page.
+func TestFileTemplateData(t *testing.T) {
 	files, err := exportRepo(t, tableRepo(map[string]string{
-		"templates/Note.tmpl": `{{range .Bugs}}{{link .}} {{href .}} {{.Table.File}} {{.Table.Pages}}{{end}}|{{.Table}}` + "\n",
+		"data/bugs.csv":       "Key,Summary,affects,notes\nBUG-7,Crash,N-1,\n",
+		"schema/Bug.yaml":     strings.Replace(tableSchemas, "id: Key,", "id: Key, system: Tracker,", 1),
+		"data/bugs.csv.yaml":  "exported: 2026-10-15\nsha256: " + sha256Hex("Key,Summary,affects,notes\nBUG-7,Crash,N-1,\n") + "\n",
+		"templates/Note.tmpl": `{{template "file" .File}}{{range .Bugs}} {{link .}} {{href .}} {{template "file" .File}}{{end}}` + `{{define "file"}}[{{.Path}}:{{.Line}} {{.System}} {{.Exported}}]{{end}}` + "\n",
 	}))
 	if err != nil {
 		t.Fatal(err)
 	}
 	n1 := string(files["entities/N-1.html"])
-	if !strings.Contains(n1, `<a class="ref" href="Bug.html#BUG-7" title="Crash">BUG-7</a> Bug.html#BUG-7 data/bugs.csv false|
-`) {
-		t.Errorf("N-1:\n%s", n1)
+	want := `[N/N-1.md:2  ] <a class="ref" href="Bug.html#BUG-7" title="Crash">BUG-7</a> Bug.html#BUG-7 [data/bugs.csv:2 Tracker 2026-10-15]`
+	if !strings.Contains(n1, want) {
+		t.Errorf("N-1 lacks %s:\n%s", want, n1)
 	}
+}
+
+func sha256Hex(s string) string {
+	h := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(h[:])
 }
 
 // A problem in a text cell of a row without a page is found on its table

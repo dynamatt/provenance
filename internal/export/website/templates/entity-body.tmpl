@@ -18,10 +18,9 @@
 </tbody>
 </table>
 {{- end}}
-{{- with .Table}}
-<p class="table-row">Row {{$.Line}} of {{if $.TableHref}}<a href="{{$.TableHref}}">{{.File}}</a>{{else}}{{.File}}{{end}}
-{{- if .System}}, a dump of {{.System}}{{with .Exported}} exported {{.}}{{end}}{{else}}, a table kept in the repository{{end}}
-{{- with .Commit}}, committed in <code>{{short .}}</code> on {{$.Table.Date}}{{end}}.</p>
+{{- with .RowFile}}
+<p class="table-row">Row {{.Line}} of {{if $.TableHref}}<a href="{{$.TableHref}}">{{.Path}}</a>{{else}}{{.Path}}{{end}}
+{{- if .System}}, a dump of {{.System}}{{with .Exported}} exported {{.}}{{end}}{{else}}, a table kept in the repository{{end}}.</p>
 {{- end}}
 {{- with .BodyField}}
 <h2>{{humanize .Field.Name}}</h2>

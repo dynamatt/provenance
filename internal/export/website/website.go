@@ -406,9 +406,9 @@ type indexData struct {
 type typeGroup struct {
 	Type     string
 	Entities []entityData
-	// Table is the CSV file the type's entities are read from, as a
-	// row's .Table; nil for a type of entity files.
-	Table entityData
+	// File is the CSV file the type's entities are read from, as a row's
+	// .File without .Line; nil for a type of entity files.
+	File entityData
 }
 
 func (s *site) renderIndex(entities []*model.Entity) (string, error) {
@@ -418,7 +418,11 @@ func (s *site) renderIndex(entities []*model.Entity) (string, error) {
 	}
 	d := indexData{Component: s.component}
 	for _, t := range slices.Sorted(maps.Keys(byType)) {
-		d.Types = append(d.Types, typeGroup{Type: t, Entities: byType[t], Table: s.data.Tables[t]})
+		g := typeGroup{Type: t, Entities: byType[t]}
+		if table := s.tableSite.tables[t]; table != nil {
+			g.File = tmpl.TableFile(table)
+		}
+		d.Types = append(d.Types, g)
 	}
 
 	ctx := &renderCtx{site: s, linkBase: "entities/"}
@@ -492,8 +496,8 @@ func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named, linkB
 			return "", err
 		}
 		view := entityView(e)
-		if row, ok := e.Record.(*entity.Row); ok {
-			view.Table, view.Line = s.data.ByID[e.ID]["Table"], row.IDLine()
+		if _, ok := e.Record.(*entity.Row); ok {
+			view.RowFile = s.data.ByID[e.ID]["File"]
 			if href := s.tableHref(e.Type); href != "" {
 				view.TableHref = linkBase + href
 			}
@@ -577,10 +581,9 @@ type entityPage struct {
 	// Fields excludes the body field, which is rendered below the table.
 	Fields    []*model.Value
 	BodyField *model.Value
-	// Table is a row's file, as its .Table; Line the row's line and
-	// TableHref the table page, "" when it is not exported (DES-0053).
-	Table     any
-	Line      int
+	// RowFile is a CSV row's .File, nil for an entity file; TableHref
+	// its table page, "" when it is not exported (DES-0053).
+	RowFile   any
 	TableHref string
 }
 

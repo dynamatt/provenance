@@ -31,9 +31,8 @@ type tableSite struct {
 	tablePage map[string]bool
 }
 
-// setupTables records the CSV files and their rows, and fills in each
-// file's last commit (C9): shown on its rows' pages, but not one of their
-// inputs, so a new dump moves only the rows it changed (C7).
+// setupTables records the CSV files and their rows, and which rows have
+// no pages of their own.
 func (s *site) setupTables(tables []*entity.Table, entities []*model.Entity, inScope func(string) bool) {
 	s.tableSite = tableSite{tables: map[string]*entity.Table{}, rows: map[string][]*model.Entity{},
 		noPage: map[string]string{}, tablePage: map[string]bool{}}
@@ -54,18 +53,6 @@ func (s *site) setupTables(tables []*entity.Table, entities []*model.Entity, inS
 		}
 		if inScope(e.ID) {
 			s.tableSite.tablePage[e.Type] = true
-		}
-	}
-	if s.git == nil {
-		return
-	}
-	for typ, t := range s.tableSite.tables {
-		d := s.data.Tables[typ]
-		if d == nil {
-			continue
-		}
-		if revs := s.git.Log.Revisions(history.Inputs{Paths: []string{t.Path}}); len(revs) > 0 {
-			d["Commit"], d["Date"], d["Author"] = revs[0].SHA, revs[0].Date, revs[0].Author
 		}
 	}
 }
@@ -135,8 +122,9 @@ func (s *site) tableInputs(typ string) (history.Inputs, error) {
 
 // tablePageData is what the built-in table page receives.
 type tablePageData struct {
-	Type  string
-	Table tmpl.Data
+	Type string
+	// File is the file as a whole: a row's .File without .Line.
+	File tmpl.Data
 	// Rows is the number of rows; RowsHTML the rows, rendered.
 	Rows     int
 	RowsHTML template.HTML
@@ -188,10 +176,7 @@ func (s *site) renderTable(typ string) (string, error) {
 		rowsHTML.WriteString("</tbody>\n</table>\n")
 	}
 	var b bytes.Buffer
-	d := tablePageData{Type: typ, Table: s.data.Tables[typ], Rows: len(rows), RowsHTML: template.HTML(rowsHTML.String())}
-	if d.Table == nil {
-		d.Table = tmpl.TableData(t)
-	}
+	d := tablePageData{Type: typ, File: tmpl.TableFile(t), Rows: len(rows), RowsHTML: template.HTML(rowsHTML.String())}
 	if err := tp.ExecuteTemplate(&b, "table", d); err != nil {
 		return "", templateError(err)
 	}

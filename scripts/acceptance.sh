@@ -726,7 +726,7 @@ git checkout -q -- data/standards.csv
 # no pages (pages: false) and are shown in full on their table page; the
 # standards register is a table kept by hand.
 expect 0 '^exported website to _site$' "$PROV" export website
-expect 0 'Row 11 of <a href="Complaint\.html">data/complaints\.csv</a>, a dump of Complaint handling \(QMS-CH\) exported 2026-09-30, committed in <code>[0-9a-f]{7}</code>' cat _site/entities/CPL-2026-0141.html
+expect 0 'Row 11 of <a href="Complaint\.html">data/complaints\.csv</a>, a dump of Complaint handling \(QMS-CH\) exported 2026-09-30\.</p>' cat _site/entities/CPL-2026-0141.html
 expect 1 '' test -e _site/entities/BUG-1042.html
 expect 0 '<tr id="BUG-1042"><td class="id">BUG-1042</td>' cat _site/entities/Anomaly.html
 expect 0 'None: the table is kept in the repository' cat _site/entities/Standard.html
@@ -743,7 +743,7 @@ gitc commit -qam "Complaints dump of 2026-10-31"
 NEW=$(git rev-parse --short=7 HEAD)
 "$PROV" export website --out "$WORK/dump" >/dev/null
 expect 0 '^entities/CPL-2026-0115\.html entities/Complaint\.html entities/DOC-0003\.html index\.html $' sh -c "cd '$WORK/dump' && grep -rl 'last changed in <code>$NEW</code>' . | sed 's#^\./##' | sort | tr '\n' ' '"
-expect 0 'exported 2026-10-31, committed in <code>'"$NEW"'</code>' cat "$WORK/dump/entities/CPL-2026-0141.html"
+expect 0 'exported 2026-10-31\.</p>' cat "$WORK/dump/entities/CPL-2026-0141.html"
 git checkout -q --detach "$PIN"
 
 if [ "$failures" -ne 0 ]; then

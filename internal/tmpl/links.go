@@ -20,6 +20,9 @@ type Linker struct {
 	// row of a CSV file whose rows have no pages is shown on the file's
 	// table page (DES-0053). nil is none.
 	ShownOn func(id string) string
+	// NoPages are the types whose rows have no pages of their own, for a
+	// linker without HasPage, which knows an entity only by its data.
+	NoPages map[string]bool
 }
 
 // page is the URL, relative to the entity pages, that shows entity id, or
@@ -32,8 +35,8 @@ func (l Linker) page(id string, ref Data) string {
 		}
 		return ""
 	}
-	if t, ok := ref["Table"].(Data); ok && t["Pages"] == false {
-		return fmt.Sprintf("%s.html#%s", t["Type"], id)
+	if typ, _ := ref["Type"].(string); l.NoPages[typ] {
+		return fmt.Sprintf("%s.html#%s", typ, id)
 	}
 	return id + ".html"
 }
