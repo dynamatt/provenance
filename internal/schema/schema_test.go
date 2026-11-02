@@ -411,7 +411,6 @@ func TestSource(t *testing.T) {
 id_prefix: CPL
 source:
   csv: data/complaints.csv
-  system: Complaint handling
   id: Complaint No
   delimiter: ";"
   separator: "|"
@@ -428,8 +427,8 @@ fields:
 		t.Fatal(err)
 	}
 	src := s.Types["Complaint"].Source
-	want := Source{CSV: "data/complaints.csv", System: "Complaint handling", ID: "Complaint No", Delimiter: ';', Separator: "|", Pages: false, Line: 4}
-	if *src != want || !src.Dump() || src.Sidecar() != "data/complaints.csv.yaml" {
+	want := Source{CSV: "data/complaints.csv", ID: "Complaint No", Delimiter: ';', Separator: "|", Pages: false, Line: 4}
+	if *src != want {
 		t.Errorf("source: %+v", src)
 	}
 	if f := s.Types["Complaint"].Field("received"); f.ColumnName() != "Date Received" {
@@ -443,7 +442,7 @@ fields:
 	}
 	write(t, root, "schema/Table.yaml", "type: Table\nid_prefix: TAB\nsource: {csv: t.csv, id: id}\nfields: []\n")
 	s, _ = Load(root)
-	if src := s.Types["Table"].Source; src.Dump() || src.Delimiter != ',' || src.Separator != ";" || !src.Pages {
+	if src := s.Types["Table"].Source; src.Delimiter != ',' || src.Separator != ";" || !src.Pages {
 		t.Errorf("defaults: %+v", src)
 	}
 }
@@ -493,7 +492,7 @@ func TestSourceKeyProblems(t *testing.T) {
 		got = append(got, p.Error())
 	}
 	want := []string{
-		`schema/T.yaml:3: type T: source: unknown key "sheet" (expected csv, system, id, delimiter, separator, pages)`,
+		`schema/T.yaml:3: type T: source: unknown key "sheet" (expected csv, id, delimiter, separator, pages)`,
 		`schema/U.yaml:4: field "a": column applies only to a field of a type with a source`,
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {

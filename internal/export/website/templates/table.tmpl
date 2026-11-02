@@ -1,6 +1,6 @@
 {{/* table is the built-in page of a CSV file whose rows are entities
-     (DES-0053): where the file came from, then its rows. The file's
-     commits are the page's revision history, in the layout. */}}
+     (DES-0053): the file, then its rows. The file's commits are the
+     page's revision history, in the layout. */}}
 {{define "table"}}
 <article class="entity table-page" id="{{.Type}}">
 <p class="entity-type">Table</p>
@@ -8,13 +8,6 @@
 <table class="fields">
 <tbody>
 <tr><th>File</th><td><code>{{.File.Path}}</code></td></tr>
-{{- if .File.System}}
-<tr><th>Source system</th><td>{{.File.System}}</td></tr>
-<tr><th>Exported</th><td>{{with .File.Exported}}{{.}}{{else}}<span class="absent">—</span>{{end}}</td></tr>
-<tr><th>SHA-256</th><td>{{with .File.SHA256}}<code>{{.}}</code>{{else}}<span class="absent">—</span>{{end}}</td></tr>
-{{- else}}
-<tr><th>Source system</th><td>None: the table is kept in the repository</td></tr>
-{{- end}}
 <tr><th>Rows</th><td>{{.Rows}}</td></tr>
 </tbody>
 </table>

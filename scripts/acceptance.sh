@@ -704,46 +704,37 @@ expect 0 '^exported website to _site$' "$PROV" export website
 expect 0 'CPL-2026-0141</a></td><td>4</td></tr>' cat _site/entities/RSK-0001.html
 expect 0 '<a class="ref" href="Anomaly\.html#BUG-1042"' cat _site/entities/REQ-0001.html
 
-# E6.4: a cell changed after the sidecar was written stops the gate at the
-# sidecar, and the export; a dump without a sidecar, a row with a cell too
-# many, and a column no field reads (a warning) are each reported at the
-# file.
-sed -i 's/Charger does not start/Charger will not start/' data/complaints.csv
-expect 1 '^data/complaints\.csv\.yaml:4: error \[content/csv-sidecar\] sha256: [0-9a-f]{64} is not the hash of data/complaints\.csv' "$PROV" validate
-expect 2 '^export: data/complaints\.csv\.yaml:4: sha256: ' "$PROV" export website
-git checkout -q -- data/complaints.csv
-mv data/anomalies.csv.yaml "$WORK/anomalies.csv.yaml"
-expect 1 '^data/anomalies\.csv: error \[content/csv-sidecar\] no sidecar data/anomalies\.csv\.yaml' "$PROV" validate
-mv "$WORK/anomalies.csv.yaml" data/anomalies.csv.yaml
+# E6.4: a row with a cell too many is an error at its line, and a column
+# no field reads a warning at the header; a dump whose export date (a
+# required column, as the example chooses) is left empty fails at the row.
 printf 'STD-0005,Extra,X,true,,surplus\n' >>data/standards.csv
 expect 1 '^data/standards\.csv:6: error \[content/csv-row\] the row has 6 cells, but the header has 5$' "$PROV" validate
 git checkout -q -- data/standards.csv
 sed -i '1s/$/,Region/; 2,$s/$/,EU/' data/standards.csv
 expect 0 '^data/standards\.csv:1: warning \[content/csv-column\] column "Region" is not read' "$PROV" validate
 git checkout -q -- data/standards.csv
+sed -i 's/^CPL-2026-0115,2026-02-21,2026-09-30,/CPL-2026-0115,2026-02-21,,/' data/complaints.csv
+expect 1 '^data/complaints\.csv:4: error \[schema/required\] required field exported is not set \(CPL-2026-0115\)$' "$PROV" validate
+git checkout -q -- data/complaints.csv
 
-# E6.5: a complaint's page says which dump it is a row of; anomalies have
-# no pages (pages: false) and are shown in full on their table page; the
-# standards register is a table kept by hand.
+# E6.5: a complaint's page says which file it is a row of; anomalies have
+# no pages (pages: false) and are shown in full on their table page.
 expect 0 '^exported website to _site$' "$PROV" export website
-expect 0 'Row 11 of <a href="Complaint\.html">data/complaints\.csv</a>, a dump of Complaint handling \(QMS-CH\) exported 2026-09-30\.</p>' cat _site/entities/CPL-2026-0141.html
+expect 0 'Row 11 of <a href="Complaint\.html">data/complaints\.csv</a>\.</p>' cat _site/entities/CPL-2026-0141.html
 expect 1 '' test -e _site/entities/BUG-1042.html
 expect 0 '<tr id="BUG-1042"><td class="id">BUG-1042</td>' cat _site/entities/Anomaly.html
-expect 0 'None: the table is kept in the repository' cat _site/entities/Standard.html
+expect 0 '<tr><th>File</th><td><code>data/standards\.csv</code></td></tr>' cat _site/entities/Standard.html
 
-# E6.6: a new dump changing one row moves the last-changed commit of that
+# E6.6: a commit changing one row moves the last-changed commit of that
 # row's page, the table page and the index only (C7), and of DOC-0003,
-# whose queries read every type, though every row's page shows the new
-# dump's date.
+# whose queries read every type.
 PIN=$(git rev-parse HEAD)
 sed -i 's/Charger does not start/Charger will not start/' data/complaints.csv
-sed -i -e "s/^sha256: .*/sha256: $(sha256sum data/complaints.csv | cut -d' ' -f1)/" -e 's/^exported: .*/exported: 2026-10-31/' data/complaints.csv.yaml
 expect 0 '^0 errors, 1 warning$' "$PROV" validate
-gitc commit -qam "Complaints dump of 2026-10-31"
+gitc commit -qam "Complaints: correct CPL-2026-0115"
 NEW=$(git rev-parse --short=7 HEAD)
 "$PROV" export website --out "$WORK/dump" >/dev/null
 expect 0 '^entities/CPL-2026-0115\.html entities/Complaint\.html entities/DOC-0003\.html index\.html $' sh -c "cd '$WORK/dump' && grep -rl 'last changed in <code>$NEW</code>' . | sed 's#^\./##' | sort | tr '\n' ' '"
-expect 0 'exported 2026-10-31\.</p>' cat "$WORK/dump/entities/CPL-2026-0141.html"
 git checkout -q --detach "$PIN"
 
 if [ "$failures" -ne 0 ]; then

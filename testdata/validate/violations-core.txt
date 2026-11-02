@@ -6,8 +6,6 @@ cases/content-csv-column/violation.csv:1: warning [content/csv-column] column "c
 cases/content-csv-column/violation.csv:1: warning [content/csv-column] no column "Weight" for the field weight of a CsvColumnViolation, so it is empty on every row
 cases/content-csv-row/violation.csv:2: error [content/csv-row] the row has 3 cells, but the header has 2
 cases/content-csv-row/violation.csv:3: error [content/csv-row] the row has no ID in column "id"
-cases/content-csv-sidecar/violation-missing.csv: error [content/csv-sidecar] no sidecar cases/content-csv-sidecar/violation-missing.csv.yaml saying when this dump of Complaint handling (QMS-CH) was exported: write one with exported: (YYYY-MM-DD) and sha256: (the file's hash, as sha256sum prints it)
-cases/content-csv-sidecar/violation.csv.yaml:2: error [content/csv-sidecar] sha256: 0000000000000000000000000000000000000000000000000000000000000000 is not the hash of cases/content-csv-sidecar/violation.csv (8292b4a3ceab6d06453f0d7b2cf74ccd24fdb51a26f8470862070b76833094bc): the sidecar describes another dump
 cases/content-duplicate-id/violation-a.md:2: error [content/duplicate-id] duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-b.md (WID-0004)
 cases/content-duplicate-id/violation-b.md:2: error [content/duplicate-id] duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-a.md (WID-0004)
 cases/content-embed-cycle/violation-a.md:6: error [content/embed-cycle] embed cycle WID-0035 → WID-0034 → WID-0035 (WID-0034)
@@ -36,9 +34,8 @@ cases/schema-calculated-set/violation.md:9: error [schema/calculated-set] steps 
 cases/schema-enum-value/violation.csv:2: error [schema/enum-value] tags item 2: "retired" is not one of Status: draft, approved (CEV-0001)
 cases/schema-enum-value/violation.md:5: error [schema/enum-value] status: "aproved" is not one of Status: draft, approved (WID-0014)
 cases/schema-enum-value/violation.md:8: error [schema/enum-value] tags item 2: "final" is not one of Status: draft, approved (WID-0014)
-cases/schema-id-format/violation-dump.csv:2: error [schema/id-format] ID COMPLAINT-0141 does not start with IDD-, the prefix of a CsvIdDump ID (COMPLAINT-0141)
 cases/schema-id-format/violation-page-name.md:2: error [schema/id-format] ID two words cannot be used as a page name (letters, digits, '.', '_' and '-' only) (two words)
-cases/schema-id-format/violation-table.csv:2: error [schema/id-format] ID IDT-7 is not IDT-NNNN, the form of a CsvIdTable ID (IDT-7)
+cases/schema-id-format/violation-row.csv:2: error [schema/id-format] ID COMPLAINT-0141 does not start with IDD-, the prefix of a CsvIdViolation ID (COMPLAINT-0141)
 cases/schema-id-format/violation.md:2: error [schema/id-format] ID WID-7 is not WID-NNNN, the form of a Widget ID (WID-7)
 cases/schema-invalid-value/violation.csv:2: error [schema/invalid-value] done: not true or false, got yes (CVV-0001)
 cases/schema-invalid-value/violation.csv:2: error [schema/invalid-value] due: not a date (YYYY-MM-DD), got 14/08/2026 (CVV-0001)
@@ -52,7 +49,7 @@ cases/schema-required/violation.md:6: error [schema/required] steps row 2: requi
 cases/schema-unknown-field/violation.md:5: error [schema/unknown-field] notes is the Markdown body below the frontmatter, not a frontmatter field (WID-0008)
 cases/schema-unknown-field/violation.md:6: error [schema/unknown-field] Widget has no field "colour" (fields: title, status, due, weight, tags, steps, parent, uses) (WID-0008)
 cases/schema-unknown-field/violation.md:7: error [schema/unknown-field] used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it (WID-0008)
-cases/schema-unknown-type/violation.md:3: error [schema/unknown-type] type "Gadget" is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdDump, CsvIdTable, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvSidecarClean, CsvSidecarMissing, CsvSidecarViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget) (GAD-0001)
+cases/schema-unknown-type/violation.md:3: error [schema/unknown-type] type "Gadget" is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget) (GAD-0001)
 rules/Rules_Name_Violation.yaml: error [rules/name] a rule file is named for its ID, in lower-case kebab-case, with .yaml: Rules_Name_Violation.yaml is not
 rules/rules-file-violation.yaml:1: error [rules/file] invalid YAML: did not find expected node content
 rules/rules-message-violation.yaml:1: error [rules/message] no message: the text each violation is reported with
@@ -62,7 +59,7 @@ rules/rules-unknown-key-violation.yaml:1: error [rules/unknown-key] unknown key 
 schema/DuplicatePrefixA.yaml:1: error [schema/id-format] type DuplicatePrefixA has the id_prefix DUP, which DuplicatePrefixB (schema/DuplicatePrefixB.yaml) also has
 schema/DuplicatePrefixB.yaml:1: error [schema/id-format] type DuplicatePrefixB has the id_prefix DUP, which DuplicatePrefixA (schema/DuplicatePrefixA.yaml) also has
 schema/FormulaViolation.yaml:11: error [schema/formula] field "score": formula: column 1: FormulaViolation has no field "nope" (fields: example_of, weight, score)
-schema/LinkTargetViolation.yaml:9: error [schema/link-target] field "widget": target "Nothing" is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdDump, CsvIdTable, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvSidecarClean, CsvSidecarMissing, CsvSidecarViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)
+schema/LinkTargetViolation.yaml:9: error [schema/link-target] field "widget": target "Nothing" is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)
 schema/NoPrefix.yaml:1: error [schema/id-format] type NoPrefix has no id_prefix, so its IDs cannot be checked
 schema/TemplateNameClash.yaml:9: error [content/template] field "citations": its template name .Citations is already used by the engine baseline
 schema/UnknownKeyViolation.yaml:11: error [schema/unknown-key] field "status": unknown key "default": fields have no defaults; a field that must have a value says required: true
@@ -74,4 +71,4 @@ templates/BrokenTemplate.tmpl:2: error [content/template] bad character U+003C '
 templates/NotAType.tmpl: warning [content/template-name] NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used
 templates/_footer.tmpl: warning [content/unknown-override] _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used
 templates/spare.tmpl: warning [content/unused-template] named template spare is not chosen by any query block
-67 errors, 9 warnings
+64 errors, 9 warnings

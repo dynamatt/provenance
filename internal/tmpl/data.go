@@ -21,9 +21,8 @@ import (
 //	.ID .Type .Title .Body .Resolved    engine baseline
 //	.LastChangedSHA .Revisions          git stamps (DES-0023)
 //	.File                               the file the entity is written in:
-//	                                    .Path, .Line, and for a row of a dump
-//	                                    of another system .System, .Exported
-//	                                    and .SHA256 (DES-0053), "" otherwise
+//	                                    .Path, and .Line, where its ID is
+//	                                    written; a CSV file's row too (DES-0053)
 //	.Citations                          on the entity a page is about, what the
 //	                                    page cites (DES-0046); empty elsewhere
 //	.<PascalCaseField>                  every declared field, calculated ones included
@@ -45,28 +44,20 @@ type Data = map[string]any
 // unresolved link target's but its declared fields.
 func Baseline(id string) Data {
 	return Data{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false,
-		"LastChangedSHA": "", "Revisions": []Data{}, "Citations": []Data{}, "File": FileData("", 0, nil)}
+		"LastChangedSHA": "", "Revisions": []Data{}, "Citations": []Data{}, "File": FileData("", 0)}
 }
 
 // FileData is the file an entity is written in, as a template sees it
-// (.File, DES-0053): .Path and .Line, where the entity's ID is written,
-// and .System, .Exported and .SHA256, what is known of where a dump of
-// another system came from, "" for any other file. t is the CSV file a
-// row is read from, nil for an entity file.
-func FileData(path string, line int, t *entity.Table) Data {
-	d := Data{"Path": path, "Line": line, "System": "", "Exported": "", "SHA256": ""}
-	if t != nil {
-		d["System"], d["Exported"], d["SHA256"] = t.System, t.Exported, t.SHA256
-	}
-	return d
+// (.File, DES-0053): .Path, and .Line, where the entity's ID is written,
+// the same for an entity file and a row of a CSV file.
+func FileData(path string, line int) Data {
+	return Data{"Path": path, "Line": line}
 }
 
 // TableFile is a CSV file as a whole, for its table page and its type on
 // the main page: .File without .Line.
 func TableFile(t *entity.Table) Data {
-	d := FileData(t.Path, 0, t)
-	delete(d, "Line")
-	return d
+	return Data{"Path": t.Path}
 }
 
 // citationKeys are added to each entity in a page's .Citations, and
@@ -140,11 +131,7 @@ func NewModel(s *schema.Schema, entities []*model.Entity) *Model {
 	for _, e := range entities {
 		m := d.ByID[e.ID]
 		m["Type"], m["Title"], m["Body"], m["Resolved"] = e.Type, e.Title(), e.Body, true
-		var table *entity.Table
-		if row, ok := e.Record.(*entity.Row); ok {
-			table = row.Table()
-		}
-		m["File"] = FileData(e.Path, e.IDLine(), table)
+		m["File"] = FileData(e.Path, e.IDLine())
 		for _, v := range e.Fields {
 			m[TemplateName(v.Field.Name)] = d.value(v)
 			if v.Field == e.Schema.BodyField {

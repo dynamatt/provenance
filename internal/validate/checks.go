@@ -16,7 +16,6 @@ var Checks = []Check{
 	{"content/caption", Error, "A caption that cannot be placed or referred to"},
 	{"content/csv-column", Warning, "A CSV column no field reads, or a field with no column"},
 	{"content/csv-row", Error, "A CSV file or row that cannot be read"},
-	{"content/csv-sidecar", Error, "A dump without a sidecar that describes it"},
 	{"content/duplicate-id", Error, "Two files with one ID"},
 	{"content/embed", Error, "An embed inside running text"},
 	{"content/embed-cycle", Error, "Entities that embed each other"},

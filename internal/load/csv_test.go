@@ -1,8 +1,6 @@
 package load
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"slices"
 	"strings"
@@ -19,7 +17,6 @@ const complaintSchema = `type: Complaint
 id_prefix: CPL
 source:
   csv: data/complaints.csv
-  system: Complaint handling
   id: Complaint No
 fields:
   - {name: received, type: date, column: Date Received}
@@ -32,19 +29,13 @@ fields:
   - {name: double, type: calculated, formula: "count * 2"}
 `
 
-func sidecarFor(csv string) string {
-	h := sha256.Sum256([]byte(csv))
-	return "exported: 2026-09-30\nsha256: " + hex.EncodeToString(h[:]) + "\n"
-}
-
 func complaintRepo(csv string, extra map[string]string) map[string]string {
 	files := map[string]string{
-		"schema/Part.yaml":         partSchema,
-		"schema/Complaint.yaml":    complaintSchema,
-		"PRT/PRT-0001.md":          part("PRT-0001", ""),
-		"PRT/PRT-0002.md":          part("PRT-0002", ""),
-		"data/complaints.csv":      csv,
-		"data/complaints.csv.yaml": sidecarFor(csv),
+		"schema/Part.yaml":      partSchema,
+		"schema/Complaint.yaml": complaintSchema,
+		"PRT/PRT-0001.md":       part("PRT-0001", ""),
+		"PRT/PRT-0002.md":       part("PRT-0002", ""),
+		"data/complaints.csv":   csv,
 	}
 	for k, v := range extra {
 		files[k] = v
@@ -133,19 +124,19 @@ func TestCSVLoad(t *testing.T) {
 	if in := prt.Facet("complaints"); in == nil || len(in.From) != 1 || in.From[0].ID != "CPL-2026-0141" {
 		t.Errorf("facet: %+v", in)
 	}
-	// The table and its sidecar.
+	// The file.
 	if len(res.Tables) != 1 {
 		t.Fatalf("tables: %v", res.Tables)
 	}
 	tb := res.Tables[0]
-	if tb.Path != "data/complaints.csv" || tb.Sidecar != "data/complaints.csv.yaml" || tb.Exported != "2026-09-30" || tb.SHA256 == "" || !tb.Pages {
+	if tb.Path != "data/complaints.csv" || tb.Type != "Complaint" || !tb.Pages {
 		t.Errorf("table: %+v", tb)
 	}
 	if row, ok := r.Record.(*entity.Row); !ok || row.Table() != tb {
 		t.Errorf("row table")
 	}
 	files, _ := res.Content().Files()
-	if !slices.Contains(files, "data/complaints.csv") || !slices.Contains(files, "data/complaints.csv.yaml") {
+	if !slices.Equal(files, []string{"PRT/PRT-0001.md", "PRT/PRT-0002.md", "data/complaints.csv"}) {
 		t.Errorf("content files: %v", files)
 	}
 }
@@ -276,55 +267,6 @@ func TestCSVProblems(t *testing.T) {
 	}
 }
 
-// A dump's sidecar (C9).
-func TestCSVSidecar(t *testing.T) {
-	const csv = "Complaint No,Date Received,product,harm,count,summary,parts,tags\nCPL-0001,,,,,,,\n"
-	crlf := strings.ReplaceAll(csv, "\n", "\r\n")
-	cases := []struct {
-		name    string
-		csv     string
-		sidecar *string
-		want    []found
-		msg     string
-	}{
-		{"clean", csv, ptr(sidecarFor(csv)), nil, ""},
-		{"CRLF checkout", crlf, ptr(sidecarFor(csv)), nil, ""},
-		{"missing", csv, nil, []found{{"content/csv-sidecar", "data/complaints.csv", 0, true}}, "no sidecar data/complaints.csv.yaml"},
-		{"other dump", csv, ptr(sidecarFor("other")), []found{{"content/csv-sidecar", "data/complaints.csv.yaml", 2, true}}, "is not the hash of data/complaints.csv"},
-		{"no date", csv, ptr("sha256: " + strings.Repeat("0", 64) + "\n"),
-			[]found{{"content/csv-sidecar", "data/complaints.csv.yaml", 1, true}, {"content/csv-sidecar", "data/complaints.csv.yaml", 1, true}}, "no exported:"},
-		{"bad date", csv, ptr(strings.Replace(sidecarFor(csv), "2026-09-30", "30/09/2026", 1)),
-			[]found{{"content/csv-sidecar", "data/complaints.csv.yaml", 1, true}}, "is not a date"},
-		{"unknown key", csv, ptr(sidecarFor(csv) + "by: me\n"),
-			[]found{{"content/csv-sidecar", "data/complaints.csv.yaml", 3, true}}, `unknown key "by"`},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			files := complaintRepo(c.csv, nil)
-			delete(files, "data/complaints.csv.yaml")
-			if c.sidecar != nil {
-				files["data/complaints.csv.yaml"] = *c.sidecar
-			}
-			res := loadRepo(t, files)
-			if got := problems(res); !slices.Equal(got, c.want) {
-				t.Fatalf("got %v, want %v", res.Problems, c.want)
-			}
-			if c.msg != "" && !strings.Contains(res.Problems[0].Msg, c.msg) {
-				t.Errorf("message %q, want %q", res.Problems[0].Msg, c.msg)
-			}
-		})
-	}
-	// A table kept by hand has no sidecar.
-	files := complaintRepo(csv, nil)
-	delete(files, "data/complaints.csv.yaml")
-	files["schema/Complaint.yaml"] = strings.Replace(complaintSchema, "  system: Complaint handling\n", "", 1)
-	if res := loadRepo(t, files); len(res.Problems) > 0 || res.Tables[0].Sidecar != "" {
-		t.Errorf("table kept by hand: %v %+v", res.Problems, res.Tables[0])
-	}
-}
-
-func ptr(s string) *string { return &s }
-
 // History compares a row by the cells its fields read, so a dump that
 // reorders or adds columns changes no row (C7).
 func TestCSVHistoryEntities(t *testing.T) {
@@ -346,7 +288,7 @@ func TestCSVHistoryEntities(t *testing.T) {
 	if edited[0] != before[0] || edited[1] == before[1] {
 		t.Errorf("an edited row: %v", edited)
 	}
-	if got, err := c.Entities("data/complaints.csv.yaml", read("")); got != nil || err != nil {
-		t.Errorf("sidecar: %v %v", got, err)
+	if got, err := c.Entities("data/other.csv", read("")); got != nil || err != nil {
+		t.Errorf("another file: %v %v", got, err)
 	}
 }

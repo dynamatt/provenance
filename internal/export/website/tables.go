@@ -86,15 +86,12 @@ func (s *site) tableTypes() []string {
 	return slices.Sorted(maps.Keys(s.tableSite.tablePage))
 }
 
-// tableInputs are what a table page shows: the file, its sidecar and the
-// schema of its type, and its rows; for rows with no pages of their own,
+// tableInputs are what a table page shows: the file and the schema of its
+// type, and its rows; for rows with no pages of their own,
 // which it shows in full, what each row's page would show.
 func (s *site) tableInputs(typ string) (history.Inputs, error) {
 	t := s.tableSite.tables[typ]
 	paths := map[string]bool{".component": true, templatesDir + "/_layout.tmpl": true, t.Path: true}
-	if t.Sidecar != "" {
-		paths[t.Sidecar] = true
-	}
 	ids := map[string]bool{}
 	types := map[string]bool{}
 	for _, e := range s.tableSite.rows[typ] {

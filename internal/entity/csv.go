@@ -21,13 +21,6 @@ type Table struct {
 	// relative to the repository root.
 	Type string
 	Path string
-	// System is the system it is a dump of, "" for a table kept by hand.
-	System string
-	// Sidecar is the file beside a dump saying when it was exported, ""
-	// for a table kept by hand; Exported and SHA256 are what it says, ""
-	// when it can't be read.
-	Sidecar          string
-	Exported, SHA256 string
 	// Pages is false when the rows get no page of their own.
 	Pages bool
 }

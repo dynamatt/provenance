@@ -15,13 +15,11 @@ examples:
     expect: violation
   - file: core/schema/DuplicatePrefixB.yaml
     expect: violation
-  - file: core/cases/schema-id-format/violation-dump.csv
-    expect: violation
-  - file: core/cases/schema-id-format/violation-table.csv
+  - file: core/cases/schema-id-format/violation-row.csv
     expect: violation
   - file: core/cases/schema-id-format/clean.md
     expect: clean
   - file: core/schema/IdFormatClean.yaml
     expect: clean
 ---
-An entity ID that is not `PREFIX-NNNN` or cannot be a page name; a type with no `id_prefix`; two types with one `id_prefix`.
+An entity ID that is not `PREFIX-NNNN`, a CSV row's ID that doesn't start with `PREFIX-`, or an ID that cannot be a page name; a type with no `id_prefix`; two types with one `id_prefix`.

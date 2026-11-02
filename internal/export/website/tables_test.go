@@ -1,8 +1,6 @@
 package website
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"slices"
 	"strings"
 	"testing"
@@ -69,7 +67,6 @@ func TestTablePages(t *testing.T) {
 	bug := string(files["entities/Bug.html"])
 	for _, want := range []string{
 		`<tr><th>File</th><td><code>data/bugs.csv</code></td></tr>`,
-		`None: the table is kept in the repository`,
 		`<tr><th>Rows</th><td>2</td></tr>`,
 		`<tr id="BUG-7"><td class="id">BUG-7</td><td>Crash</td><td><a class="id" href="N-1.html" title="One">N-1</a></td>`,
 		`See <a class="ref" href="N-1.html" title="One">N-1</a>.`,
@@ -83,7 +80,7 @@ func TestTablePages(t *testing.T) {
 		t.Errorf("Part.html:\n%s", part)
 	}
 	row := string(files["entities/PRT-0001.html"])
-	if !strings.Contains(row, `<p class="table-row">Row 2 of <a href="Part.html">data/parts.csv</a>, a table kept in the repository.</p>`) {
+	if !strings.Contains(row, `<p class="table-row">Row 2 of <a href="Part.html">data/parts.csv</a>.</p>`) {
 		t.Errorf("PRT-0001.html:\n%s", row)
 	}
 	index := string(files["index.html"])
@@ -98,23 +95,16 @@ func TestTablePages(t *testing.T) {
 func TestFileTemplateData(t *testing.T) {
 	files, err := exportRepo(t, tableRepo(map[string]string{
 		"data/bugs.csv":       "Key,Summary,affects,notes\nBUG-7,Crash,N-1,\n",
-		"schema/Bug.yaml":     strings.Replace(tableSchemas, "id: Key,", "id: Key, system: Tracker,", 1),
-		"data/bugs.csv.yaml":  "exported: 2026-10-15\nsha256: " + sha256Hex("Key,Summary,affects,notes\nBUG-7,Crash,N-1,\n") + "\n",
-		"templates/Note.tmpl": `{{template "file" .File}}{{range .Bugs}} {{link .}} {{href .}} {{template "file" .File}}{{end}}` + `{{define "file"}}[{{.Path}}:{{.Line}} {{.System}} {{.Exported}}]{{end}}` + "\n",
+		"templates/Note.tmpl": `{{template "file" .File}}{{range .Bugs}} {{link .}} {{href .}} {{template "file" .File}}{{end}}` + `{{define "file"}}[{{.Path}}:{{.Line}}]{{end}}` + "\n",
 	}))
 	if err != nil {
 		t.Fatal(err)
 	}
 	n1 := string(files["entities/N-1.html"])
-	want := `[N/N-1.md:2  ] <a class="ref" href="Bug.html#BUG-7" title="Crash">BUG-7</a> Bug.html#BUG-7 [data/bugs.csv:2 Tracker 2026-10-15]`
+	want := `[N/N-1.md:2] <a class="ref" href="Bug.html#BUG-7" title="Crash">BUG-7</a> Bug.html#BUG-7 [data/bugs.csv:2]`
 	if !strings.Contains(n1, want) {
 		t.Errorf("N-1 lacks %s:\n%s", want, n1)
 	}
-}
-
-func sha256Hex(s string) string {
-	h := sha256.Sum256([]byte(s))
-	return hex.EncodeToString(h[:])
 }
 
 // A problem in a text cell of a row without a page is found on its table

@@ -37,15 +37,6 @@
               }
             },
             {
-              "id": "content/csv-sidecar",
-              "shortDescription": {
-                "text": "A dump without a sidecar that describes it"
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              }
-            },
-            {
               "id": "content/duplicate-id",
               "shortDescription": {
                 "text": "Two files with one ID"
@@ -382,7 +373,7 @@
       "results": [
         {
           "ruleId": "schema/file",
-          "ruleIndex": 27,
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "did not find expected ',' or ']'"
@@ -403,7 +394,7 @@
         },
         {
           "ruleId": "schema/file",
-          "ruleIndex": 27,
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "field \"steps\": a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)"
@@ -424,7 +415,7 @@
         },
         {
           "ruleId": "schema/file",
-          "ruleIndex": 27,
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "field \"status\": unknown type \"AprovalStatus\" (expected string, text, number, date, boolean, link, list, calculated)"

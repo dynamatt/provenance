@@ -66,22 +66,6 @@
       "line": 3
     },
     {
-      "rule": "content/csv-sidecar",
-      "severity": "error",
-      "message": "no sidecar cases/content-csv-sidecar/violation-missing.csv.yaml saying when this dump of Complaint handling (QMS-CH) was exported: write one with exported: (YYYY-MM-DD) and sha256: (the file's hash, as sha256sum prints it)",
-      "entity": "",
-      "path": "cases/content-csv-sidecar/violation-missing.csv",
-      "line": 0
-    },
-    {
-      "rule": "content/csv-sidecar",
-      "severity": "error",
-      "message": "sha256: 0000000000000000000000000000000000000000000000000000000000000000 is not the hash of cases/content-csv-sidecar/violation.csv (8292b4a3ceab6d06453f0d7b2cf74ccd24fdb51a26f8470862070b76833094bc): the sidecar describes another dump",
-      "entity": "",
-      "path": "cases/content-csv-sidecar/violation.csv.yaml",
-      "line": 2
-    },
-    {
       "rule": "content/duplicate-id",
       "severity": "error",
       "message": "duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-b.md",
@@ -308,14 +292,6 @@
     {
       "rule": "schema/id-format",
       "severity": "error",
-      "message": "ID COMPLAINT-0141 does not start with IDD-, the prefix of a CsvIdDump ID",
-      "entity": "COMPLAINT-0141",
-      "path": "cases/schema-id-format/violation-dump.csv",
-      "line": 2
-    },
-    {
-      "rule": "schema/id-format",
-      "severity": "error",
       "message": "ID two words cannot be used as a page name (letters, digits, '.', '_' and '-' only)",
       "entity": "two words",
       "path": "cases/schema-id-format/violation-page-name.md",
@@ -324,9 +300,9 @@
     {
       "rule": "schema/id-format",
       "severity": "error",
-      "message": "ID IDT-7 is not IDT-NNNN, the form of a CsvIdTable ID",
-      "entity": "IDT-7",
-      "path": "cases/schema-id-format/violation-table.csv",
+      "message": "ID COMPLAINT-0141 does not start with IDD-, the prefix of a CsvIdViolation ID",
+      "entity": "COMPLAINT-0141",
+      "path": "cases/schema-id-format/violation-row.csv",
       "line": 2
     },
     {
@@ -436,7 +412,7 @@
     {
       "rule": "schema/unknown-type",
       "severity": "error",
-      "message": "type \"Gadget\" is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdDump, CsvIdTable, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvSidecarClean, CsvSidecarMissing, CsvSidecarViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
+      "message": "type \"Gadget\" is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
       "entity": "GAD-0001",
       "path": "cases/schema-unknown-type/violation.md",
       "line": 3
@@ -516,7 +492,7 @@
     {
       "rule": "schema/link-target",
       "severity": "error",
-      "message": "field \"widget\": target \"Nothing\" is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdDump, CsvIdTable, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvSidecarClean, CsvSidecarMissing, CsvSidecarViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
+      "message": "field \"widget\": target \"Nothing\" is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
       "entity": "",
       "path": "schema/LinkTargetViolation.yaml",
       "line": 9
@@ -611,7 +587,7 @@
     }
   ],
   "summary": {
-    "errors": 67,
+    "errors": 64,
     "warnings": 9,
     "rules_skipped": 0
   }

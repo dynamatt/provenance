@@ -26,13 +26,13 @@ func TestLinkerNoPages(t *testing.T) {
 // Every entity's .File has the same keys, whatever its source.
 func TestFileData(t *testing.T) {
 	b := Baseline("X-1")["File"].(Data)
-	md := FileData("REQ/REQ-0001.md", 2, nil)
+	md := FileData("REQ/REQ-0001.md", 2)
 	for k := range md {
 		if _, ok := b[k]; !ok {
 			t.Errorf("baseline .File lacks %s", k)
 		}
 	}
-	if len(b) != len(md) || md["System"] != "" || md["Line"] != 2 {
+	if len(b) != len(md) || md["Path"] != "REQ/REQ-0001.md" || md["Line"] != 2 {
 		t.Errorf("file data: %v, baseline %v", md, b)
 	}
 }

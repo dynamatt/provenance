@@ -37,15 +37,6 @@
               }
             },
             {
-              "id": "content/csv-sidecar",
-              "shortDescription": {
-                "text": "A dump without a sidecar that describes it"
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              }
-            },
-            {
               "id": "content/duplicate-id",
               "shortDescription": {
                 "text": "Two files with one ID"
@@ -490,7 +481,7 @@
       "results": [
         {
           "ruleId": "requirement-verified",
-          "ruleIndex": 48,
+          "ruleIndex": 47,
           "level": "warning",
           "message": {
             "text": "requirement missing verification"

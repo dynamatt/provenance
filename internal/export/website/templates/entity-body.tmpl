@@ -19,8 +19,7 @@
 </table>
 {{- end}}
 {{- with .RowFile}}
-<p class="table-row">Row {{.Line}} of {{if $.TableHref}}<a href="{{$.TableHref}}">{{.Path}}</a>{{else}}{{.Path}}{{end}}
-{{- if .System}}, a dump of {{.System}}{{with .Exported}} exported {{.}}{{end}}{{else}}, a table kept in the repository{{end}}.</p>
+<p class="table-row">Row {{.Line}} of {{if $.TableHref}}<a href="{{$.TableHref}}">{{.Path}}</a>{{else}}{{.Path}}{{end}}.</p>
 {{- end}}
 {{- with .BodyField}}
 <h2>{{humanize .Field.Name}}</h2>

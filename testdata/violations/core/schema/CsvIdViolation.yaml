@@ -1,0 +1,10 @@
+# schema/id-format: a CSV row's ID must start with its type's prefix and a
+# hyphen.
+type: CsvIdViolation
+id_prefix: IDD
+source:
+  csv: cases/schema-id-format/violation-row.csv
+  id: id
+fields:
+  - name: title
+    type: string

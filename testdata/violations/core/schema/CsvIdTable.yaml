@@ -1,9 +1,0 @@
-# schema/id-format: a table kept by hand has authored IDs, PREFIX-NNNN.
-type: CsvIdTable
-id_prefix: IDT
-source:
-  csv: cases/schema-id-format/violation-table.csv
-  id: id
-fields:
-  - name: title
-    type: string

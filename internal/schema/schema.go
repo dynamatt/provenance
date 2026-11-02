@@ -118,9 +118,6 @@ type Type struct {
 type Source struct {
 	// CSV is the file, slash-separated and relative to the repository root.
 	CSV string
-	// System is the system the file is a dump of; "" for a table the team
-	// keeps by hand, which has no sidecar and authored IDs.
-	System string
 	// ID is the header of the column holding each row's ID.
 	ID string
 	// Delimiter separates a row's cells; Separator the IDs or items in one
@@ -131,13 +128,6 @@ type Source struct {
 	Pages bool
 	Line  int // of source:
 }
-
-// Dump reports whether the source is a dump of another system, with a
-// sidecar and the IDs that system gives, rather than a table kept by hand.
-func (s *Source) Dump() bool { return s.System != "" }
-
-// Sidecar is the file beside a dump saying when it was exported.
-func (s *Source) Sidecar() string { return s.CSV + ".yaml" }
 
 // SourceTypes are the CSV-backed types, in name order.
 func (s *Schema) SourceTypes() []*Type {
@@ -206,7 +196,7 @@ type Schema struct {
 
 var (
 	typeKeys   = []string{"type", "id_prefix", "source", "fields"}
-	sourceKeys = []string{"csv", "system", "id", "delimiter", "separator", "pages"}
+	sourceKeys = []string{"csv", "id", "delimiter", "separator", "pages"}
 	recordKeys = []string{"record", "fields"}
 	enumKeys   = []string{"enum", "values"}
 	// fieldKeys maps each field key to the kinds of field it applies to,
@@ -812,9 +802,6 @@ func (s *Schema) source(path, typeName string, n *yaml.Node) (*Source, error) {
 		return nil, &Error{Path: path, Line: line, Msg: fmt.Sprintf("%s: csv: %q must be a path from the repository root, written plainly (%s)", label, csv, clean)}
 	}
 	src.CSV = csv
-	if src.System, _, err = str("system"); err != nil {
-		return nil, err
-	}
 	if src.ID, _, err = str("id"); err != nil {
 		return nil, err
 	}
