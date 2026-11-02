@@ -59,13 +59,13 @@
 - [x] E5.3 `provenance init`
 - [x] E5.4 Getting started from `init`
 - [x] E5.5 Epic close-out
-- [ ] E6.1 Design
-- [ ] E6.2 Complaints in the example
-- [ ] E6.3 The CSV source
-- [ ] E6.4 CSV checks
-- [ ] E6.5 Row pages
-- [ ] E6.6 Row history
-- [ ] E6.7 Epic close-out
+- [x] E6.1 Design
+- [x] E6.2 Complaints in the example
+- [x] E6.3 The CSV source
+- [x] E6.4 CSV checks
+- [x] E6.5 Row pages
+- [x] E6.6 Row history
+- [ ] E6.7 Epic close-out (built; the release follows the merge)
 
 ## Shape of the plan
 
@@ -1428,11 +1428,13 @@ downloaded binary's `init` into an empty folder validates clean.
 
 ## Epic 6 — CSV-backed entity types
 
-> **Status: proposed 2026-11-01, for Matt's review.** Drafted 2026-10-11
-> and revised 2026-10-28 against Epic 3; C1–C12 below need agreeing before
-> E6.2 starts. C2 departs from DES-0007's ID form and C7 changes DES-0023,
-> so both are Matt's call, not clarifications. *Revised 2026-11-01 at
-> Matt's request:* a cell takes the same field types and value forms as
+> **Status: built 2026-11-02.** C1–C12 agreed 2026-11-01 (Matt merged
+> the plan) and written into DES-0053 (E6.1); E6.1–E6.7 built together in
+> one PR per repository, at Matt's request. What building settled is
+> under *Settled while building* below. The release, `v0.5.0-alpha`,
+> follows the merge, and with it the example's and the DDF's Validate
+> pins. Drafted 2026-10-11 and revised 2026-10-28 against Epic 3.
+> *Revised 2026-11-01 at Matt's request:* a cell takes the same field types and value forms as
 > an entity file, with no CSV-only types or type options (C5); rows can
 > link out through `link` columns (C4), so `text` cells render as any
 > text does (C3); a table the team keeps by hand needs no sidecar (C12).
@@ -1577,7 +1579,7 @@ rules in `model` (G4):
 
 | Field type | In an entity file | In a cell |
 | --- | --- | --- |
-| `string` | One line of text | The same; a line break in the cell is a problem, as in a file |
+| `string` | Text (one line by convention; neither a file nor a cell checks it, *corrected 2026-11-02*) | The same |
 | `text` | Markdown | The same, wikilinks and embeds included (C3) |
 | `number` | `2.5`, `-3`, `1000` | The same; no thousands separators, units or `%` |
 | `date` | `YYYY-MM-DD` | The same |
@@ -1593,6 +1595,17 @@ rules in `model` (G4):
 `separator:` and `delimiter:` say how the file is written, not what a
 value is, so they sit on the source, not on a field; `column:` is the one
 key a CSV type's field adds, and it names a header, not a type.
+
+**Settled while building (2026-11-02),** each in DES-0053 unless named:
+
+| What | Settled |
+| --- | --- |
+| Where a row comes from, on a page | Each file gets a table page, `entities/<Type>.html` (an ID always has a hyphen, a type name doesn't): the file, system, sidecar, the file's last commit, and its rows. With `pages: false` it shows every row in full, one column per field and facet, each at an anchor of its ID, and every link and citation of such a row points there (`tmpl.Linker` asks the row's `.Table`, so validate's report templates link the same way). A table page is exported when the scope holds one of its rows. A row's page says which file and dump it is a row of. |
+| Template data | `.Table` in every entity's data (nil for a file; DES-0030): `.Type`, `.File`, `.System`, `.Sidecar`, `.Exported`, `.SHA256`, `.Pages`, `.Commit`, `.Date`, `.Author`. A field named `table` now clashes with it (`content/template`), as `resolved` already did: the example's anomalies map `Resolved` to `fixed`. The index's type groups have `.Table` too. |
+| Cell typing details | Booleans take YAML's `True`/`TRUE` spellings as a file does; an empty item in a separated cell is left out, as YAML leaves out a flow list's trailing comma; numbers are decimal only (no hex, infinity or `_`). |
+| Problems | A missing file is `content/csv-row` at the schema's `source:`; a missing sidecar is at the CSV file, no line; a sidecar problem stops an export (exit 2), as other content errors do. A Markdown file declaring a CSV-backed type is `content/frontmatter` and not read. Source keys are checked like any schema key; a list of rows, `body:`, a `column:` on a calculated field, two fields reading one column and a field reading the ID column are `schema/file`. Two rows of one file with one ID name each other as `file:line`. |
+| When the CSV source runs | Only when the schema loads: its cells are typed by their fields (DES-0051). |
+| History | A row is written, for history, as its ID and the cells its fields read, by field. DOC-0003 in the example also moves on a new dump: its queries read every type, which the dependency walk counts as reading every entity (pre-existing). |
 
 **Order:** the design (E6.1), the example's tables as the fixture
 (E6.2, rule 4), then loading (E6.3), checking (E6.4), rendering (E6.5)

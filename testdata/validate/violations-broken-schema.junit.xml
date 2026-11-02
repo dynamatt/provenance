@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="provenance validate" tests="37" failures="1" errors="0">
-  <testsuite name="built-in" tests="37" failures="1" errors="0" skipped="0">
+<testsuites name="provenance validate" tests="40" failures="1" errors="0">
+  <testsuite name="built-in" tests="40" failures="1" errors="0" skipped="0">
     <testcase name="content/caption" classname="built-in"></testcase>
+    <testcase name="content/csv-column" classname="built-in"></testcase>
+    <testcase name="content/csv-row" classname="built-in"></testcase>
+    <testcase name="content/csv-sidecar" classname="built-in"></testcase>
     <testcase name="content/duplicate-id" classname="built-in"></testcase>
     <testcase name="content/embed" classname="built-in"></testcase>
     <testcase name="content/embed-cycle" classname="built-in"></testcase>
@@ -27,6 +30,7 @@
     <testcase name="schema/enum-value" classname="built-in"></testcase>
     <testcase name="schema/file" classname="built-in">
       <failure type="error" message="did not find expected &#39;,&#39; or &#39;]&#39;">schema/Broken.yaml:2: error [schema/file] did not find expected &#39;,&#39; or &#39;]&#39;</failure>
+      <failure type="error" message="field &#34;steps&#34;: a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)">schema/CsvListOfRows.yaml:8: error [schema/file] field &#34;steps&#34;: a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)</failure>
       <failure type="error" message="field &#34;status&#34;: unknown type &#34;AprovalStatus&#34; (expected string, text, number, date, boolean, link, list, calculated)">schema/UnknownType.yaml:6: error [schema/file] field &#34;status&#34;: unknown type &#34;AprovalStatus&#34; (expected string, text, number, date, boolean, link, list, calculated)</failure>
     </testcase>
     <testcase name="schema/formula" classname="built-in"></testcase>

@@ -174,11 +174,18 @@ func (c *entityCheck) add(rule string, line int, format string, args ...any) {
 }
 
 // id checks the ID is the type's prefix and a number of at least four
-// digits (REQ-0013, DES-0007).
+// digits (REQ-0013, DES-0007). A row of a dump keeps the ID its system gave
+// it, which must only start with the prefix and a hyphen (DES-0053).
 func (c *entityCheck) id() {
 	p := c.e.Schema.IDPrefix
 	if p == "" {
 		return // reported on the schema
+	}
+	if src := c.e.Schema.Source; src != nil && src.Dump() {
+		if !strings.HasPrefix(c.e.ID, p+"-") || len(c.e.ID) == len(p)+1 {
+			c.add("schema/id-format", c.e.IDLine(), "ID %s does not start with %s-, the prefix of a %s ID", c.e.ID, p, c.e.Schema.Name)
+		}
+		return
 	}
 	if !regexp.MustCompile(`^` + regexp.QuoteMeta(p) + `-[0-9]{4,}$`).MatchString(c.e.ID) {
 		c.add("schema/id-format", c.e.IDLine(), "ID %s is not %s-NNNN, the form of a %s ID", c.e.ID, p, c.e.Schema.Name)

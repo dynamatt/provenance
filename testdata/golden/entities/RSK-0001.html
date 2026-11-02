@@ -35,14 +35,14 @@ by rules/risk-benefit-required.yaml while residual_acceptability is
 <tr><th>Mitigated by</th><td><a class="id" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>, <a class="id" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a></td></tr>
 <tr><th>Status</th><td>in_review</td></tr>
 <tr><th>Failure modes</th><td><table class="list">
-<thead><tr><th>Description</th><th>Cause</th><th>Severity</th><th>Occurrence</th><th>Row rating</th></tr></thead>
+<thead><tr><th>Description</th><th>Cause</th><th>Severity</th><th>Occurrence</th><th>Row rating</th><th>Complaints</th><th>Complaint count</th></tr></thead>
 <tbody>
 <tr><td><div class="text"><p>Sense-electrode lead fracture causes signal loss</p>
 </div></td><td><div class="text"><p>Mechanical fatigue at the electrode-lead junction</p>
-</div></td><td><a class="id" href="SEV-0003.html" title="Critical">SEV-0003</a></td><td><a class="id" href="OCC-0001.html" title="Improbable">OCC-0001</a></td><td>5</td></tr>
+</div></td><td><a class="id" href="SEV-0003.html" title="Critical">SEV-0003</a></td><td><a class="id" href="OCC-0001.html" title="Improbable">OCC-0001</a></td><td>5</td><td><a class="id" href="CPL-2026-0101.html" title="Intermittent loss of therapy">CPL-2026-0101</a>, <a class="id" href="CPL-2026-0108.html" title="Shock sensation on posture change">CPL-2026-0108</a>, <a class="id" href="CPL-2026-0126.html" title="Therapy lost after a fall">CPL-2026-0126</a>, <a class="id" href="CPL-2026-0141.html" title="Signal loss when bending">CPL-2026-0141</a></td><td>4</td></tr>
 <tr><td><div class="text"><p>Firmware control-loop fault causes runaway amplitude command</p>
 </div></td><td><div class="text"><p>Undetected divide-by-zero in feedback gain calculation</p>
-</div></td><td><a class="id" href="SEV-0003.html" title="Critical">SEV-0003</a></td><td><a class="id" href="OCC-0002.html" title="Occasional">OCC-0002</a></td><td>15</td></tr>
+</div></td><td><a class="id" href="SEV-0003.html" title="Critical">SEV-0003</a></td><td><a class="id" href="OCC-0002.html" title="Occasional">OCC-0002</a></td><td>15</td><td><a class="id" href="CPL-2026-0117.html" title="Stimulation too strong, then stopped">CPL-2026-0117</a></td><td>1</td></tr>
 </tbody>
 </table></td></tr>
 <tr><th>Overall risk rating</th><td>15</td></tr>
@@ -62,6 +62,7 @@ by rules/risk-benefit-required.yaml while residual_acceptability is
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>3d07b7b</code></td><td>2026-11-02</td><td>Claude</td><td>Complaints, anomalies and a standards register read from CSV files</td></tr>
 <tr><td><code>4dab2f7</code></td><td>2026-11-01</td><td>Matt Williams</td><td>Merge pull request #22 from dynamatt/epic/E4-fmt</td></tr>
 <tr><td><code>5f7b810</code></td><td>2026-10-25</td><td>Matt Williams</td><td>Merge pull request #21 from dynamatt/epic/E2-validate</td></tr>
 <tr><td><code>8068898</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #14 from dynamatt/cookbook-glossary</td></tr>
@@ -80,7 +81,7 @@ by rules/risk-benefit-required.yaml while residual_acceptability is
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>4dab2f7</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>3d07b7b</code></p>
 </footer>
 </body>
 </html>

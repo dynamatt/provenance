@@ -39,6 +39,9 @@ type Result struct {
 	// SchemaBroken is set when the schema has problems, so the entities
 	// could not be typed.
 	SchemaBroken bool
+	// Tables are the CSV files entities were read from, in type name
+	// order (DES-0053).
+	Tables []*entity.Table
 
 	content     *content
 	history     *History
@@ -51,7 +54,7 @@ func (r *Result) Err() error { return problem.First(r.Problems) }
 
 // Input is what an exporter receives.
 func (r *Result) Input() *export.Input {
-	return &export.Input{Repo: r.Repo, Schema: r.Schema, Entities: r.Entities, Graph: r.Graph}
+	return &export.Input{Repo: r.Repo, Schema: r.Schema, Entities: r.Entities, Graph: r.Graph, Tables: r.Tables}
 }
 
 // Load reads rp and types its entities: Read, then the typed model and
@@ -92,7 +95,13 @@ func Read(rp *repo.Repo, skip ...string) (*Result, error) {
 		return nil, err
 	}
 	res.Schema = s
-	if err := res.read(sources(s), skip); err != nil {
+	// A CSV file is read only against a schema that loaded: its rows are
+	// typed by their fields.
+	srcs := sources(s)
+	if len(problems) > 0 {
+		srcs = slices.DeleteFunc(srcs, func(src Source) bool { _, ok := src.(csvSource); return ok })
+	}
+	if err := res.read(srcs, skip); err != nil {
 		return nil, err
 	}
 	for _, p := range problems {
@@ -149,7 +158,11 @@ func (r *Result) read(srcs []Source, skip []string) error {
 		}
 		r.Problems = append(r.Problems, l.Problems...)
 		files = append(files, l.Files...)
+		r.Tables = append(r.Tables, l.Tables...)
 		for _, e := range l.Entities {
+			if r.fromOtherSource(e) {
+				continue
+			}
 			prev := byID[e.ID]
 			if prev == nil {
 				byID[e.ID] = e
@@ -171,3 +184,22 @@ func (r *Result) read(srcs []Source, skip []string) error {
 }
 
 func (r *Result) add(p problem.Problem) { r.Problems = append(r.Problems, p) }
+
+// fromOtherSource reports, as a content/frontmatter problem, an entity of
+// a type the schema reads from a CSV file that is not one of its rows: a
+// type's entities come from its source alone (DES-0053), so it is not
+// read.
+func (r *Result) fromOtherSource(e *entity.Entity) bool {
+	t := r.Schema.Types[e.Type]
+	if t == nil || t.Source == nil {
+		return false
+	}
+	if _, row := e.Record.(*entity.Row); row {
+		return false
+	}
+	msg := fmt.Sprintf("type %s is read from %s, one entity per row, so this file is not read as an entity", t.Name, t.Source.CSV)
+	line := e.Record.TypeLine()
+	r.add(problem.Problem{Check: "content/frontmatter", Path: e.Path, Line: line, Entity: e.ID, Msg: msg,
+		Err: &entity.Error{Path: e.Path, Line: line, Msg: msg}})
+	return true
+}

@@ -72,7 +72,18 @@ type Field struct {
 	Record  string
 	Elem    *Field
 	Formula string
-	Line    int
+	// Column is the CSV header a field of a CSV-backed type reads, when it
+	// is not the field's name (DES-0053).
+	Column string
+	Line   int
+}
+
+// ColumnName is the CSV header f reads: its column:, else its name.
+func (f *Field) ColumnName() string {
+	if f.Column != "" {
+		return f.Column
+	}
+	return f.Name
 }
 
 // CodeBlocks is the list every entity derives from its Markdown, one row
@@ -98,6 +109,45 @@ type Type struct {
 	// Facets are the incoming link facets other types' reverse_name
 	// declarations give this type, in name order.
 	Facets []*Facet
+	// Source is the CSV file the type's entities are read from, one per
+	// row (DES-0053); nil for a type whose entities are Markdown files.
+	Source *Source
+}
+
+// Source is a CSV file a type's entities are read from (DES-0053).
+type Source struct {
+	// CSV is the file, slash-separated and relative to the repository root.
+	CSV string
+	// System is the system the file is a dump of; "" for a table the team
+	// keeps by hand, which has no sidecar and authored IDs.
+	System string
+	// ID is the header of the column holding each row's ID.
+	ID string
+	// Delimiter separates a row's cells; Separator the IDs or items in one
+	// cell.
+	Delimiter rune
+	Separator string
+	// Pages is false when the rows get no page of their own.
+	Pages bool
+	Line  int // of source:
+}
+
+// Dump reports whether the source is a dump of another system, with a
+// sidecar and the IDs that system gives, rather than a table kept by hand.
+func (s *Source) Dump() bool { return s.System != "" }
+
+// Sidecar is the file beside a dump saying when it was exported.
+func (s *Source) Sidecar() string { return s.CSV + ".yaml" }
+
+// SourceTypes are the CSV-backed types, in name order.
+func (s *Schema) SourceTypes() []*Type {
+	var out []*Type
+	for _, n := range s.TypeNames() {
+		if t := s.Types[n]; t.Source != nil {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 // Facet is an incoming link facet: every link field, on any type, whose
@@ -155,7 +205,8 @@ type Schema struct {
 }
 
 var (
-	typeKeys   = []string{"type", "id_prefix", "fields"}
+	typeKeys   = []string{"type", "id_prefix", "source", "fields"}
+	sourceKeys = []string{"csv", "system", "id", "delimiter", "separator", "pages"}
 	recordKeys = []string{"record", "fields"}
 	enumKeys   = []string{"enum", "values"}
 	// fieldKeys maps each field key to the kinds of field it applies to,
@@ -166,8 +217,9 @@ var (
 		"target": {Link}, "cardinality": {Link}, "reverse_name": {Link},
 		"formula": {Calculated},
 		"fields":  {List}, "of": {List},
+		"column": nil,
 	}
-	fieldKeyOrder = []string{"name", "type", "required", "help", "body", "target", "cardinality", "reverse_name", "formula", "fields", "of"}
+	fieldKeyOrder = []string{"name", "type", "required", "help", "body", "target", "cardinality", "reverse_name", "formula", "fields", "of", "column"}
 )
 
 // checkKeys records the keys of a declaration's mapping m that are not in
@@ -325,8 +377,14 @@ func (l *loader) read(root string) error {
 			}
 			continue
 		}
-		s.Types[rt.name] = &Type{Name: rt.name, IDPrefix: rt.idPrefix, File: rel, Line: rt.nameLine}
+		t := &Type{Name: rt.name, IDPrefix: rt.idPrefix, File: rel, Line: rt.nameLine}
+		s.Types[rt.name] = t
 		s.checkKeys(rel, rt.mapping, "type "+rt.name, typeKeys)
+		if n := yamlnode.Lookup(rt.mapping, "source"); n != nil {
+			if t.Source, err = s.source(rel, rt.name, n); err != nil {
+				l.keep(err)
+			}
+		}
 		raws = append(raws, rt)
 	}
 	// Resolve every record, used or not, so a broken one is reported.
@@ -346,6 +404,7 @@ func (l *loader) read(root string) error {
 			}
 			t.BodyField = f
 		}
+		l.columns(t, rt.fields)
 	}
 	s.facets(l)
 	return nil
@@ -559,6 +618,7 @@ type rawField struct {
 	Cardinality string   `yaml:"cardinality"`
 	ReverseName string   `yaml:"reverse_name"`
 	Formula     string   `yaml:"formula"`
+	Column      string   `yaml:"column"`
 }
 
 // fields converts field declarations. within names what encloses sub-fields
@@ -605,7 +665,7 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 	f := &Field{
 		Name: rf.Name, Required: rf.Required, Body: rf.Body, Help: rf.Help,
 		Target: rf.Target, Cardinality: rf.Cardinality, ReverseName: rf.ReverseName,
-		Formula: rf.Formula, Line: n.Line,
+		Formula: rf.Formula, Column: rf.Column, Line: n.Line,
 	}
 	typeLine := n.Line
 	if tn := yamlnode.Lookup(n, "type"); tn != nil {
@@ -720,4 +780,117 @@ func (s *Schema) expectedItems() string {
 		}
 	}
 	return msg
+}
+
+// source reads a type's source: mapping (DES-0053).
+func (s *Schema) source(path, typeName string, n *yaml.Node) (*Source, error) {
+	label := fmt.Sprintf("type %s: source", typeName)
+	if n.Kind != yaml.MappingNode {
+		return nil, &Error{Path: path, Line: n.Line, Msg: label + " must be a mapping with csv: and id:"}
+	}
+	s.checkKeys(path, n, label, sourceKeys)
+	src := &Source{Delimiter: ',', Separator: ";", Pages: true, Line: n.Line}
+	str := func(key string) (string, int, error) {
+		v := yamlnode.Lookup(n, key)
+		if v == nil {
+			return "", 0, nil
+		}
+		if v.Kind != yaml.ScalarNode || v.Tag == "!!null" {
+			return "", v.Line, &Error{Path: path, Line: v.Line, Msg: fmt.Sprintf("%s: %s must be a string", label, key)}
+		}
+		return v.Value, v.Line, nil
+	}
+	csv, line, err := str("csv")
+	if err != nil {
+		return nil, err
+	}
+	clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(csv)))
+	switch {
+	case csv == "":
+		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": csv: names the file, a path from the repository root"}
+	case filepath.IsAbs(csv) || strings.HasPrefix(csv, "/") || clean == ".." || strings.HasPrefix(clean, "../") || clean != csv:
+		return nil, &Error{Path: path, Line: line, Msg: fmt.Sprintf("%s: csv: %q must be a path from the repository root, written plainly (%s)", label, csv, clean)}
+	}
+	src.CSV = csv
+	if src.System, _, err = str("system"); err != nil {
+		return nil, err
+	}
+	if src.ID, _, err = str("id"); err != nil {
+		return nil, err
+	}
+	if src.ID == "" {
+		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": id: names the column holding each row's ID"}
+	}
+	d, line, err := str("delimiter")
+	if err != nil {
+		return nil, err
+	}
+	if d != "" {
+		r := []rune(d)
+		if len(r) != 1 || r[0] == '"' || r[0] == '\r' || r[0] == '\n' || r[0] == 0xFFFD {
+			return nil, &Error{Path: path, Line: line, Msg: fmt.Sprintf("%s: delimiter: %q must be one character, not a quote or a line break", label, d)}
+		}
+		src.Delimiter = r[0]
+	}
+	sep, line, err := str("separator")
+	if err != nil {
+		return nil, err
+	}
+	if sep != "" {
+		if strings.TrimSpace(sep) != sep || strings.ContainsAny(sep, "\r\n") || strings.ContainsRune(sep, src.Delimiter) {
+			return nil, &Error{Path: path, Line: line, Msg: fmt.Sprintf("%s: separator: %q must not be blank, hold a line break or the delimiter", label, sep)}
+		}
+		src.Separator = sep
+	}
+	if p := yamlnode.Lookup(n, "pages"); p != nil {
+		if p.Kind != yaml.ScalarNode || p.Tag != "!!bool" {
+			return nil, &Error{Path: path, Line: p.Line, Msg: label + ": pages: must be true or false"}
+		}
+		src.Pages = p.Value == "true" || p.Value == "True" || p.Value == "TRUE"
+	}
+	return src, nil
+}
+
+// columns checks the fields of t against its source: every field has a
+// form in a cell, and no two read the same column. column: on a type
+// without a source applies to nothing.
+func (l *loader) columns(t *Type, nodes []*yaml.Node) {
+	if t.Source == nil {
+		for _, f := range t.Fields {
+			if f.Column != "" {
+				l.KeyProblems = append(l.KeyProblems, &Error{Path: t.File, Line: f.Line,
+					Msg: fmt.Sprintf("field %q: column applies only to a field of a type with a source", f.Name)})
+			}
+		}
+		return
+	}
+	fail := func(f *Field, msg string) {
+		l.keep(&Error{Path: t.File, Line: f.Line, Msg: fmt.Sprintf("field %q: %s", f.Name, msg)})
+	}
+	read := map[string]*Field{}
+	for _, f := range t.Fields {
+		switch {
+		case f.Body:
+			fail(f, "a row read from a CSV file has no Markdown body; leave out body: true")
+			continue
+		case f.Kind == List && f.Elem == nil:
+			fail(f, "a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)")
+			continue
+		case f.Kind == Calculated:
+			if f.Column != "" {
+				fail(f, "a calculated field is never read from the file, so it has no column")
+			}
+			continue
+		}
+		col := f.ColumnName()
+		if col == t.Source.ID {
+			fail(f, fmt.Sprintf("column %q is the ID column (source id:)", col))
+			continue
+		}
+		if prev := read[col]; prev != nil {
+			fail(f, fmt.Sprintf("column %q is already read by field %q", col, prev.Name))
+			continue
+		}
+		read[col] = f
+	}
 }

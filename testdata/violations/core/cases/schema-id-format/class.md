@@ -15,6 +15,10 @@ examples:
     expect: violation
   - file: core/schema/DuplicatePrefixB.yaml
     expect: violation
+  - file: core/cases/schema-id-format/violation-dump.csv
+    expect: violation
+  - file: core/cases/schema-id-format/violation-table.csv
+    expect: violation
   - file: core/cases/schema-id-format/clean.md
     expect: clean
   - file: core/schema/IdFormatClean.yaml

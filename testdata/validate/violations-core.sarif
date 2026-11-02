@@ -19,6 +19,33 @@
               }
             },
             {
+              "id": "content/csv-column",
+              "shortDescription": {
+                "text": "A CSV column no field reads, or a field with no column"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "content/csv-row",
+              "shortDescription": {
+                "text": "A CSV file or row that cannot be read"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "content/csv-sidecar",
+              "shortDescription": {
+                "text": "A dump without a sidecar that describes it"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
               "id": "content/duplicate-id",
               "shortDescription": {
                 "text": "Two files with one ID"
@@ -507,8 +534,131 @@
           }
         },
         {
-          "ruleId": "content/duplicate-id",
+          "ruleId": "content/csv-column",
           "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "column \"colour\" is not read: no field of a CsvColumnViolation names it"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-csv-column/violation.csv",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "content/csv-column",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "no column \"Weight\" for the field weight of a CsvColumnViolation, so it is empty on every row"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-csv-column/violation.csv",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "content/csv-row",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "the row has 3 cells, but the header has 2"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-csv-row/violation.csv",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "content/csv-row",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "the row has no ID in column \"id\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-csv-row/violation.csv",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "content/csv-sidecar",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "no sidecar cases/content-csv-sidecar/violation-missing.csv.yaml saying when this dump of Complaint handling (QMS-CH) was exported: write one with exported: (YYYY-MM-DD) and sha256: (the file's hash, as sha256sum prints it)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-csv-sidecar/violation-missing.csv",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "content/csv-sidecar",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "sha256: 0000000000000000000000000000000000000000000000000000000000000000 is not the hash of cases/content-csv-sidecar/violation.csv (8292b4a3ceab6d06453f0d7b2cf74ccd24fdb51a26f8470862070b76833094bc): the sidecar describes another dump"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-csv-sidecar/violation.csv.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "content/duplicate-id",
+          "ruleIndex": 4,
           "level": "error",
           "message": {
             "text": "duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-b.md"
@@ -532,7 +682,7 @@
         },
         {
           "ruleId": "content/duplicate-id",
-          "ruleIndex": 1,
+          "ruleIndex": 4,
           "level": "error",
           "message": {
             "text": "duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-a.md"
@@ -556,7 +706,7 @@
         },
         {
           "ruleId": "content/embed-cycle",
-          "ruleIndex": 3,
+          "ruleIndex": 6,
           "level": "error",
           "message": {
             "text": "embed cycle WID-0035 → WID-0034 → WID-0035"
@@ -580,7 +730,7 @@
         },
         {
           "ruleId": "content/embed-cycle",
-          "ruleIndex": 3,
+          "ruleIndex": 6,
           "level": "error",
           "message": {
             "text": "embed cycle WID-0034 → WID-0035 → WID-0034"
@@ -604,7 +754,7 @@
         },
         {
           "ruleId": "content/embed",
-          "ruleIndex": 2,
+          "ruleIndex": 5,
           "level": "error",
           "message": {
             "text": "![[WID-0033]] is inside running text, so it is shown as a reference: an embed must stand on its own line"
@@ -628,7 +778,7 @@
         },
         {
           "ruleId": "content/format",
-          "ruleIndex": 4,
+          "ruleIndex": 7,
           "level": "warning",
           "message": {
             "text": "not in canonical form; provenance fmt rewrites it"
@@ -652,7 +802,31 @@
         },
         {
           "ruleId": "content/frontmatter",
-          "ruleIndex": 5,
+          "ruleIndex": 8,
+          "level": "error",
+          "message": {
+            "text": "type CsvRowClean is read from cases/content-csv-row/clean.csv, one entity per row, so this file is not read as an entity"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/content-frontmatter/violation-csv-type.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "CRC-0009"
+          }
+        },
+        {
+          "ruleId": "content/frontmatter",
+          "ruleIndex": 8,
           "level": "error",
           "message": {
             "text": "frontmatter has an id but no type, so the file is not read as an entity"
@@ -673,7 +847,7 @@
         },
         {
           "ruleId": "content/frontmatter",
-          "ruleIndex": 5,
+          "ruleIndex": 8,
           "level": "error",
           "message": {
             "text": "invalid frontmatter: did not find expected ',' or ']'"
@@ -694,7 +868,7 @@
         },
         {
           "ruleId": "content/image",
-          "ruleIndex": 6,
+          "ruleIndex": 9,
           "level": "error",
           "message": {
             "text": "image assets/missing.png does not exist"
@@ -718,7 +892,7 @@
         },
         {
           "ruleId": "content/image",
-          "ruleIndex": 6,
+          "ruleIndex": 9,
           "level": "error",
           "message": {
             "text": "image https://example.com/figure.png: images must be files in the repository, not URLs, so the site works offline"
@@ -742,7 +916,7 @@
         },
         {
           "ruleId": "content/image",
-          "ruleIndex": 6,
+          "ruleIndex": 9,
           "level": "error",
           "message": {
             "text": "image ../../../outside.png is outside the repository"
@@ -766,7 +940,7 @@
         },
         {
           "ruleId": "content/image",
-          "ruleIndex": 6,
+          "ruleIndex": 9,
           "level": "error",
           "message": {
             "text": "image assets/figure.bmp: the website export does not support this format (supported: .gif, .jpeg, .jpg, .png, .svg, .webp)"
@@ -790,7 +964,7 @@
         },
         {
           "ruleId": "content/query",
-          "ruleIndex": 7,
+          "ruleIndex": 10,
           "level": "error",
           "message": {
             "text": "query block: unknown operator \"=\" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in)"
@@ -814,7 +988,7 @@
         },
         {
           "ruleId": "content/template",
-          "ruleIndex": 8,
+          "ruleIndex": 11,
           "level": "error",
           "message": {
             "text": "query block: unknown template \"no-such-template\": there is no templates/no-such-template.tmpl (named templates: spare, widget-row)"
@@ -838,7 +1012,7 @@
         },
         {
           "ruleId": "content/unrendered-block",
-          "ruleIndex": 11,
+          "ruleIndex": 14,
           "level": "error",
           "message": {
             "text": "mermaid block: this version of Provenance cannot render it, so it would be published as its source"
@@ -862,7 +1036,7 @@
         },
         {
           "ruleId": "content/unrendered-block",
-          "ruleIndex": 11,
+          "ruleIndex": 14,
           "level": "error",
           "message": {
             "text": "drawio block: this version of Provenance cannot render it, so it would be published as its source"
@@ -886,7 +1060,7 @@
         },
         {
           "ruleId": "links/target-type",
-          "ruleIndex": 13,
+          "ruleIndex": 16,
           "level": "error",
           "message": {
             "text": "parent: ERR-0019 is of type ErrorClass, but parent links only to Widget"
@@ -910,7 +1084,7 @@
         },
         {
           "ruleId": "links/unknown-field",
-          "ruleIndex": 14,
+          "ruleIndex": 17,
           "level": "error",
           "message": {
             "text": "[[WID-0023#colour]]: Widget has no field \"colour\""
@@ -934,7 +1108,55 @@
         },
         {
           "ruleId": "links/unresolved",
-          "ruleIndex": 15,
+          "ruleIndex": 18,
+          "level": "error",
+          "message": {
+            "text": "[[WID-9990]]: no entity WID-9990"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/links-unresolved/violation.csv",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "CLV-0001"
+          }
+        },
+        {
+          "ruleId": "links/unresolved",
+          "ruleIndex": 18,
+          "level": "error",
+          "message": {
+            "text": "uses: no entity WID-9991"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/links-unresolved/violation.csv",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "CLV-0001"
+          }
+        },
+        {
+          "ruleId": "links/unresolved",
+          "ruleIndex": 18,
           "level": "error",
           "message": {
             "text": "uses: no entity WID-9999"
@@ -958,7 +1180,7 @@
         },
         {
           "ruleId": "links/unresolved",
-          "ruleIndex": 15,
+          "ruleIndex": 18,
           "level": "error",
           "message": {
             "text": "[[WID-9998]]: no entity WID-9998"
@@ -982,7 +1204,7 @@
         },
         {
           "ruleId": "schema/calculated-set",
-          "ruleIndex": 22,
+          "ruleIndex": 25,
           "level": "error",
           "message": {
             "text": "score is calculated (weight * 2); it cannot be written in the file"
@@ -1006,7 +1228,7 @@
         },
         {
           "ruleId": "schema/calculated-set",
-          "ruleIndex": 22,
+          "ruleIndex": 25,
           "level": "error",
           "message": {
             "text": "steps row 1: double is calculated (n * 2); it cannot be written in the file"
@@ -1030,7 +1252,31 @@
         },
         {
           "ruleId": "schema/enum-value",
-          "ruleIndex": 23,
+          "ruleIndex": 26,
+          "level": "error",
+          "message": {
+            "text": "tags item 2: \"retired\" is not one of Status: draft, approved"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-enum-value/violation.csv",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "CEV-0001"
+          }
+        },
+        {
+          "ruleId": "schema/enum-value",
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "status: \"aproved\" is not one of Status: draft, approved"
@@ -1054,7 +1300,7 @@
         },
         {
           "ruleId": "schema/enum-value",
-          "ruleIndex": 23,
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "tags item 2: \"final\" is not one of Status: draft, approved"
@@ -1078,7 +1324,31 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 26,
+          "ruleIndex": 29,
+          "level": "error",
+          "message": {
+            "text": "ID COMPLAINT-0141 does not start with IDD-, the prefix of a CsvIdDump ID"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-id-format/violation-dump.csv",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "COMPLAINT-0141"
+          }
+        },
+        {
+          "ruleId": "schema/id-format",
+          "ruleIndex": 29,
           "level": "error",
           "message": {
             "text": "ID two words cannot be used as a page name (letters, digits, '.', '_' and '-' only)"
@@ -1102,7 +1372,31 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 26,
+          "ruleIndex": 29,
+          "level": "error",
+          "message": {
+            "text": "ID IDT-7 is not IDT-NNNN, the form of a CsvIdTable ID"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-id-format/violation-table.csv",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "IDT-7"
+          }
+        },
+        {
+          "ruleId": "schema/id-format",
+          "ruleIndex": 29,
           "level": "error",
           "message": {
             "text": "ID WID-7 is not WID-NNNN, the form of a Widget ID"
@@ -1126,7 +1420,79 @@
         },
         {
           "ruleId": "schema/invalid-value",
-          "ruleIndex": 27,
+          "ruleIndex": 30,
+          "level": "error",
+          "message": {
+            "text": "done: not true or false, got yes"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-invalid-value/violation.csv",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "CVV-0001"
+          }
+        },
+        {
+          "ruleId": "schema/invalid-value",
+          "ruleIndex": 30,
+          "level": "error",
+          "message": {
+            "text": "due: not a date (YYYY-MM-DD), got 14/08/2026"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-invalid-value/violation.csv",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "CVV-0001"
+          }
+        },
+        {
+          "ruleId": "schema/invalid-value",
+          "ruleIndex": 30,
+          "level": "error",
+          "message": {
+            "text": "weight: not a number, got 1,000"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-invalid-value/violation.csv",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "CVV-0001"
+          }
+        },
+        {
+          "ruleId": "schema/invalid-value",
+          "ruleIndex": 30,
           "level": "error",
           "message": {
             "text": "due: not a date (YYYY-MM-DD), got 2026-13-04"
@@ -1150,7 +1516,7 @@
         },
         {
           "ruleId": "schema/invalid-value",
-          "ruleIndex": 27,
+          "ruleIndex": 30,
           "level": "error",
           "message": {
             "text": "weight: not a number, got heavy"
@@ -1174,7 +1540,7 @@
         },
         {
           "ruleId": "schema/invalid-value",
-          "ruleIndex": 27,
+          "ruleIndex": 30,
           "level": "error",
           "message": {
             "text": "steps row 1: n: not a number, got one"
@@ -1198,7 +1564,7 @@
         },
         {
           "ruleId": "schema/list-row",
-          "ruleIndex": 29,
+          "ruleIndex": 32,
           "level": "error",
           "message": {
             "text": "steps row 1: no sub-field \"size\" (sub-fields: n)"
@@ -1222,7 +1588,7 @@
         },
         {
           "ruleId": "schema/required",
-          "ruleIndex": 30,
+          "ruleIndex": 33,
           "level": "error",
           "message": {
             "text": "required field title is not set"
@@ -1246,7 +1612,7 @@
         },
         {
           "ruleId": "schema/required",
-          "ruleIndex": 30,
+          "ruleIndex": 33,
           "level": "error",
           "message": {
             "text": "steps row 2: required sub-field n is not set"
@@ -1270,7 +1636,7 @@
         },
         {
           "ruleId": "schema/unknown-field",
-          "ruleIndex": 31,
+          "ruleIndex": 34,
           "level": "error",
           "message": {
             "text": "notes is the Markdown body below the frontmatter, not a frontmatter field"
@@ -1294,7 +1660,7 @@
         },
         {
           "ruleId": "schema/unknown-field",
-          "ruleIndex": 31,
+          "ruleIndex": 34,
           "level": "error",
           "message": {
             "text": "Widget has no field \"colour\" (fields: title, status, due, weight, tags, steps, parent, uses)"
@@ -1318,7 +1684,7 @@
         },
         {
           "ruleId": "schema/unknown-field",
-          "ruleIndex": 31,
+          "ruleIndex": 34,
           "level": "error",
           "message": {
             "text": "used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it"
@@ -1342,10 +1708,10 @@
         },
         {
           "ruleId": "schema/unknown-type",
-          "ruleIndex": 33,
+          "ruleIndex": 36,
           "level": "error",
           "message": {
-            "text": "type \"Gadget\" is not declared in schema/ (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)"
+            "text": "type \"Gadget\" is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdDump, CsvIdTable, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvSidecarClean, CsvSidecarMissing, CsvSidecarViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)"
           },
           "locations": [
             {
@@ -1366,7 +1732,7 @@
         },
         {
           "ruleId": "rules/name",
-          "ruleIndex": 18,
+          "ruleIndex": 21,
           "level": "error",
           "message": {
             "text": "a rule file is named for its ID, in lower-case kebab-case, with .yaml: Rules_Name_Violation.yaml is not"
@@ -1384,7 +1750,7 @@
         },
         {
           "ruleId": "rules/file",
-          "ruleIndex": 16,
+          "ruleIndex": 19,
           "level": "error",
           "message": {
             "text": "invalid YAML: did not find expected node content"
@@ -1405,7 +1771,7 @@
         },
         {
           "ruleId": "rules/message",
-          "ruleIndex": 17,
+          "ruleIndex": 20,
           "level": "error",
           "message": {
             "text": "no message: the text each violation is reported with"
@@ -1426,7 +1792,7 @@
         },
         {
           "ruleId": "rules/query",
-          "ruleIndex": 19,
+          "ruleIndex": 22,
           "level": "error",
           "message": {
             "text": "Widget has no field \"colour\" (fields: id, type, title, status, due, weight, score, tags, steps, parent, uses, notes, children, used_by, code_blocks)"
@@ -1447,7 +1813,7 @@
         },
         {
           "ruleId": "rules/severity",
-          "ruleIndex": 20,
+          "ruleIndex": 23,
           "level": "error",
           "message": {
             "text": "severity is error or warning, not \"fatal\""
@@ -1468,7 +1834,7 @@
         },
         {
           "ruleId": "rules/unknown-key",
-          "ruleIndex": 21,
+          "ruleIndex": 24,
           "level": "error",
           "message": {
             "text": "unknown key \"id\": a rule's ID is its file name, rules-unknown-key-violation"
@@ -1489,7 +1855,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 26,
+          "ruleIndex": 29,
           "level": "error",
           "message": {
             "text": "type DuplicatePrefixA has the id_prefix DUP, which DuplicatePrefixB (schema/DuplicatePrefixB.yaml) also has"
@@ -1510,7 +1876,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 26,
+          "ruleIndex": 29,
           "level": "error",
           "message": {
             "text": "type DuplicatePrefixB has the id_prefix DUP, which DuplicatePrefixA (schema/DuplicatePrefixA.yaml) also has"
@@ -1531,7 +1897,7 @@
         },
         {
           "ruleId": "schema/formula",
-          "ruleIndex": 25,
+          "ruleIndex": 28,
           "level": "error",
           "message": {
             "text": "field \"score\": formula: column 1: FormulaViolation has no field \"nope\" (fields: example_of, weight, score)"
@@ -1552,10 +1918,10 @@
         },
         {
           "ruleId": "schema/link-target",
-          "ruleIndex": 28,
+          "ruleIndex": 31,
           "level": "error",
           "message": {
-            "text": "field \"widget\": target \"Nothing\" is not a declared type (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)"
+            "text": "field \"widget\": target \"Nothing\" is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdDump, CsvIdTable, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvSidecarClean, CsvSidecarMissing, CsvSidecarViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)"
           },
           "locations": [
             {
@@ -1573,7 +1939,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 26,
+          "ruleIndex": 29,
           "level": "error",
           "message": {
             "text": "type NoPrefix has no id_prefix, so its IDs cannot be checked"
@@ -1594,7 +1960,7 @@
         },
         {
           "ruleId": "content/template",
-          "ruleIndex": 8,
+          "ruleIndex": 11,
           "level": "error",
           "message": {
             "text": "field \"citations\": its template name .Citations is already used by the engine baseline"
@@ -1615,7 +1981,7 @@
         },
         {
           "ruleId": "schema/unknown-key",
-          "ruleIndex": 32,
+          "ruleIndex": 35,
           "level": "error",
           "message": {
             "text": "field \"status\": unknown key \"default\": fields have no defaults; a field that must have a value says required: true"
@@ -1636,7 +2002,7 @@
         },
         {
           "ruleId": "schema/unused-type",
-          "ruleIndex": 36,
+          "ruleIndex": 39,
           "level": "warning",
           "message": {
             "text": "type UnusedTypeViolation has no entities and no links to or from it"
@@ -1657,7 +2023,7 @@
         },
         {
           "ruleId": "schema/unknown-key",
-          "ruleIndex": 32,
+          "ruleIndex": 35,
           "level": "error",
           "message": {
             "text": "enum Colour: unknown key \"shade\" (expected enum, values)"
@@ -1678,7 +2044,7 @@
         },
         {
           "ruleId": "schema/unused-enum",
-          "ruleIndex": 34,
+          "ruleIndex": 37,
           "level": "warning",
           "message": {
             "text": "enum UnusedEnum is not used by any field"
@@ -1699,7 +2065,7 @@
         },
         {
           "ruleId": "schema/unused-record",
-          "ruleIndex": 35,
+          "ruleIndex": 38,
           "level": "warning",
           "message": {
             "text": "record UnusedRecord is not used by any list"
@@ -1720,7 +2086,7 @@
         },
         {
           "ruleId": "content/template",
-          "ruleIndex": 8,
+          "ruleIndex": 11,
           "level": "error",
           "message": {
             "text": "bad character U+003C '<'"
@@ -1741,7 +2107,7 @@
         },
         {
           "ruleId": "content/template-name",
-          "ruleIndex": 9,
+          "ruleIndex": 12,
           "level": "warning",
           "message": {
             "text": "NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used"
@@ -1759,7 +2125,7 @@
         },
         {
           "ruleId": "content/unknown-override",
-          "ruleIndex": 10,
+          "ruleIndex": 13,
           "level": "warning",
           "message": {
             "text": "_footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used"
@@ -1777,7 +2143,7 @@
         },
         {
           "ruleId": "content/unused-template",
-          "ruleIndex": 12,
+          "ruleIndex": 15,
           "level": "warning",
           "message": {
             "text": "named template spare is not chosen by any query block"

@@ -1,0 +1,10 @@
+# schema/enum-value: each item of a list cell is one of its enum's values.
+type: CsvEnumViolation
+id_prefix: CEV
+source:
+  csv: cases/schema-enum-value/violation.csv
+  id: id
+fields:
+  - name: tags
+    type: list
+    of: Status

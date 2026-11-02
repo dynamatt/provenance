@@ -1,0 +1,56 @@
+{{/* table is the built-in page of a CSV file whose rows are entities
+     (DES-0053): where the file came from, then its rows. */}}
+{{define "table"}}
+<article class="entity table-page" id="{{.Type}}">
+<p class="entity-type">Table</p>
+<h1>{{.Type}}</h1>
+<table class="fields">
+<tbody>
+<tr><th>File</th><td><code>{{.Table.File}}</code></td></tr>
+{{- if .Table.System}}
+<tr><th>Source system</th><td>{{.Table.System}}</td></tr>
+<tr><th>Exported</th><td>{{with .Table.Exported}}{{.}}{{else}}<span class="absent">—</span>{{end}}</td></tr>
+<tr><th>SHA-256</th><td>{{with .Table.SHA256}}<code>{{.}}</code>{{else}}<span class="absent">—</span>{{end}}</td></tr>
+{{- else}}
+<tr><th>Source system</th><td>None: the table is kept in the repository</td></tr>
+{{- end}}
+{{- with .Table.Commit}}
+<tr><th>Committed</th><td><code>{{short .}}</code> on {{$.Table.Date}} by {{$.Table.Author}}</td></tr>
+{{- end}}
+<tr><th>Rows</th><td>{{.Rows}}</td></tr>
+</tbody>
+</table>
+{{.RowsHTML}}</article>
+{{end}}
+
+{{/* table-list lists the rows of a file whose rows have pages. */}}
+{{define "table-list"}}
+{{- if .}}
+<table class="entity-list">
+<thead><tr><th>ID</th><th>Title</th></tr></thead>
+<tbody>
+{{- range .}}
+<tr id="{{.ID}}"><td class="id">{{ref .ID .}}</td><td>{{.Title}}</td></tr>
+{{- end}}
+</tbody>
+</table>
+{{else}}
+<p class="placeholder">The file has no rows.</p>
+{{end -}}
+{{end}}
+
+{{/* table-head opens the table of a file whose rows have no pages: one
+     column per field and incoming facet. */}}
+{{define "table-head"}}
+<table class="list table-rows">
+<thead><tr><th>ID</th>{{range .}}<th>{{humanize .}}</th>{{end}}</tr></thead>
+<tbody>
+{{end}}
+
+{{/* table-row is one row of that table, at an anchor of its ID. */}}
+{{define "table-row" -}}
+<tr id="{{.ID}}"><td class="id">{{.ID}}</td>
+{{- range .Fields}}<td>{{template "value" .}}</td>{{end}}
+{{- range .Incoming}}<td>{{range $i, $e := .From}}{{if $i}}, {{end}}{{ref $e.ID $e}}{{else}}<span class="absent">—</span>{{end}}</td>{{end -}}
+</tr>
+{{end}}

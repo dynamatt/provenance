@@ -15,9 +15,28 @@ type Linker struct {
 	Base string
 	// HasPage reports whether an entity has a page; nil is every entity.
 	HasPage func(id string) bool
+	// ShownOn is the page, relative to the entity pages and with its
+	// anchor, that shows an entity without a page of its own, or "": a
+	// row of a CSV file whose rows have no pages is shown on the file's
+	// table page (DES-0053). nil is none.
+	ShownOn func(id string) string
 }
 
-func (l Linker) pageOf(id string) bool { return l.HasPage == nil || l.HasPage(id) }
+// page is the URL, relative to the entity pages, that shows entity id, or
+// "" when none does. ref, when known, is its template data: a row whose
+// file's rows have no pages is shown on the file's table page.
+func (l Linker) page(id string, ref Data) string {
+	if l.HasPage != nil && !l.HasPage(id) {
+		if l.ShownOn != nil {
+			return l.ShownOn(id)
+		}
+		return ""
+	}
+	if t, ok := ref["Table"].(Data); ok && t["Pages"] == false {
+		return fmt.Sprintf("%s.html#%s", t["Type"], id)
+	}
+	return id + ".html"
+}
 
 // link renders a link to an entity (template data), with optional text: the
 // ID by default. nil renders nothing; an unresolved target is marked; one
@@ -37,15 +56,19 @@ func (l Linker) Link(v any, text ...any) (template.HTML, error) {
 	}
 	title, _ := ref["Title"].(string)
 	var b strings.Builder
-	l.Anchor(&b, "ref", id, title, label)
+	l.anchor(&b, "ref", l.page(id, ref), title, label)
 	return template.HTML(b.String()), nil
 }
 
-// anchor writes a link with the given class to entity id's page showing
-// text, with its title as the tooltip, or, when it has no page, the text
-// alone (Requirements Spec §7: the plain citable ID for an ID).
+// Anchor writes a link with the given class to the page showing entity
+// id, with text and its title as the tooltip, or, when no page shows it,
+// the text alone (Requirements Spec §7: the plain citable ID for an ID).
 func (l Linker) Anchor(w io.StringWriter, class, id, title, text string) {
-	if !l.pageOf(id) {
+	l.anchor(w, class, l.page(id, nil), title, text)
+}
+
+func (l Linker) anchor(w io.StringWriter, class, page, title, text string) {
+	if page == "" {
 		_, _ = w.WriteString(fmt.Sprintf(`<span class="%s out-of-scope">%s</span>`, class, template.HTMLEscapeString(text)))
 		return
 	}
@@ -53,7 +76,7 @@ func (l Linker) Anchor(w io.StringWriter, class, id, title, text string) {
 		title = fmt.Sprintf(` title="%s"`, template.HTMLEscapeString(title))
 	}
 	_, _ = w.WriteString(fmt.Sprintf(`<a class="%s" href="%s"%s>%s</a>`, class,
-		template.HTMLEscapeString(l.Base+id+".html"), title, template.HTMLEscapeString(text)))
+		template.HTMLEscapeString(l.Base+page), title, template.HTMLEscapeString(text)))
 }
 
 // href is the relative URL of an entity's page, for custom links; "" for an
@@ -64,10 +87,11 @@ func (l Linker) Href(v any) (string, error) {
 		return "", err
 	}
 	id, _ := ref["ID"].(string)
-	if resolved, _ := ref["Resolved"].(bool); !resolved || !l.pageOf(id) {
+	page := l.page(id, ref)
+	if resolved, _ := ref["Resolved"].(bool); !resolved || page == "" {
 		return "", nil
 	}
-	return l.Base + id + ".html", nil
+	return l.Base + page, nil
 }
 
 func asRef(v any, fn string) (Data, error) {

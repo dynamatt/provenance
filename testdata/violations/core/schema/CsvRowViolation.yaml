@@ -1,0 +1,9 @@
+# content/csv-row: rows that can't be read.
+type: CsvRowViolation
+id_prefix: CRV
+source:
+  csv: cases/content-csv-row/violation.csv
+  id: id
+fields:
+  - name: title
+    type: string

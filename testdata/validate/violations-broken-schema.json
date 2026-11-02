@@ -12,6 +12,14 @@
     {
       "rule": "schema/file",
       "severity": "error",
+      "message": "field \"steps\": a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)",
+      "entity": "",
+      "path": "schema/CsvListOfRows.yaml",
+      "line": 8
+    },
+    {
+      "rule": "schema/file",
+      "severity": "error",
       "message": "field \"status\": unknown type \"AprovalStatus\" (expected string, text, number, date, boolean, link, list, calculated)",
       "entity": "",
       "path": "schema/UnknownType.yaml",
@@ -19,7 +27,7 @@
     }
   ],
   "summary": {
-    "errors": 2,
+    "errors": 3,
     "warnings": 0,
     "rules_skipped": 0
   }

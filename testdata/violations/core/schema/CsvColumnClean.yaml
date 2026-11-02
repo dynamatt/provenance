@@ -1,0 +1,12 @@
+# content/csv-column: every column read, every field's column there.
+type: CsvColumnClean
+id_prefix: CCC
+source:
+  csv: cases/content-csv-column/clean.csv
+  id: id
+fields:
+  - name: title
+    type: string
+  - name: weight
+    type: number
+    column: Weight

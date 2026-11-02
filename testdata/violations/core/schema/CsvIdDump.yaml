@@ -1,0 +1,10 @@
+# schema/id-format: a dump's ID must start with its type's prefix.
+type: CsvIdDump
+id_prefix: IDD
+source:
+  csv: cases/schema-id-format/violation-dump.csv
+  system: Complaint handling (QMS-CH)
+  id: id
+fields:
+  - name: title
+    type: string

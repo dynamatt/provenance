@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/markdown"
@@ -89,6 +90,7 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 	for _, ent := range in.Entities {
 		s.byID[ent.ID] = ent
 	}
+	s.setupTables(in.Tables, in.Entities, in.Scope.Has)
 	// Every entity's data carries its git stamps, embedded or not: a
 	// template naming .LastChangedSHA must render wherever it is used.
 	for _, ent := range in.Entities {
@@ -131,11 +133,32 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 		}
 	}
 	for _, ent := range inScope {
+		if !s.hasPage(ent.ID) {
+			continue // a row shown on its table page
+		}
 		content, data, err := s.renderPage(ent, "")
 		if err := s.failed(err); err != nil {
 			return nil, err
 		}
 		if err := s.failed(s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), s.finalize(content), data)); err != nil {
+			return nil, err
+		}
+	}
+	for _, typ := range s.tableTypes() {
+		var stamps entityData
+		if s.git != nil {
+			in, err := s.tableInputs(typ)
+			if err != nil {
+				return nil, err
+			}
+			last, revs := s.git.Page(in)
+			stamps = entityData{"LastChangedSHA": last, "Revisions": revisionData(revs)}
+		}
+		content, err := s.renderTable(typ)
+		if err := s.failed(err); err != nil {
+			return nil, err
+		}
+		if err := s.failed(s.page("entities/"+typ+".html", "../", tablePageTitle(s.tableSite.tables[typ]), s.finalize(content), stamps)); err != nil {
 			return nil, err
 		}
 	}
@@ -262,6 +285,7 @@ type site struct {
 	cited    map[string]entityData
 	// check is where rendering reports the problems it finds.
 	check *checker
+	tableSite
 }
 
 // citations are the IDs a page cites, in order of first citation.
@@ -382,6 +406,9 @@ type indexData struct {
 type typeGroup struct {
 	Type     string
 	Entities []entityData
+	// Table is the CSV file the type's entities are read from, as a
+	// row's .Table; nil for a type of entity files.
+	Table entityData
 }
 
 func (s *site) renderIndex(entities []*model.Entity) (string, error) {
@@ -391,7 +418,7 @@ func (s *site) renderIndex(entities []*model.Entity) (string, error) {
 	}
 	d := indexData{Component: s.component}
 	for _, t := range slices.Sorted(maps.Keys(byType)) {
-		d.Types = append(d.Types, typeGroup{Type: t, Entities: byType[t]})
+		d.Types = append(d.Types, typeGroup{Type: t, Entities: byType[t], Table: s.data.Tables[t]})
 	}
 
 	ctx := &renderCtx{site: s, linkBase: "entities/"}
@@ -464,7 +491,14 @@ func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named, linkB
 		if err != nil {
 			return "", err
 		}
-		if err := t.ExecuteTemplate(&b, "entity", entityView(e)); err != nil {
+		view := entityView(e)
+		if row, ok := e.Record.(*entity.Row); ok {
+			view.Table, view.Line = s.data.ByID[e.ID]["Table"], row.IDLine()
+			if href := s.tableHref(e.Type); href != "" {
+				view.TableHref = linkBase + href
+			}
+		}
+		if err := t.ExecuteTemplate(&b, "entity", view); err != nil {
 			return "", templateError(err)
 		}
 	}
@@ -485,7 +519,7 @@ func (ctx *renderCtx) funcs() template.FuncMap {
 // linker links from the page being rendered to the entity pages in the
 // export's scope.
 func (ctx *renderCtx) linker() tmpl.Linker {
-	return tmpl.Linker{Base: ctx.linkBase, HasPage: ctx.site.scope.Has}
+	return tmpl.Linker{Base: ctx.linkBase, HasPage: ctx.site.hasPage, ShownOn: ctx.site.shownOn}
 }
 
 // markdown converts entity Markdown, resolving wikilinks against the site.
@@ -543,6 +577,11 @@ type entityPage struct {
 	// Fields excludes the body field, which is rendered below the table.
 	Fields    []*model.Value
 	BodyField *model.Value
+	// Table is a row's file, as its .Table; Line the row's line and
+	// TableHref the table page, "" when it is not exported (DES-0053).
+	Table     any
+	Line      int
+	TableHref string
 }
 
 func entityView(e *model.Entity) entityPage {

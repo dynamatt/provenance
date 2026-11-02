@@ -37,7 +37,12 @@ func (m *Markdown) Body() (string, int)            { return m.body, m.bodyLine }
 // Refs parses text as Markdown: its embeds, wikilinks, query blocks,
 // images and fenced blocks. A misplaced caption or an image that is not a
 // repository file is a TextError, and only the code blocks are returned.
-func (m *Markdown) Refs(text string) (*Refs, error) {
+func (m *Markdown) Refs(text string) (*Refs, error) { return MarkdownRefs(m.path, text) }
+
+// MarkdownRefs is what text, Markdown in the file at path, refers to: its
+// embeds, wikilinks, query blocks, images (relative to path) and fenced
+// blocks. Every source whose text values are Markdown answers Refs with it.
+func MarkdownRefs(path, text string) (*Refs, error) {
 	refs := &Refs{}
 	for _, b := range markdown.CodeBlocks(text) {
 		refs.CodeBlocks = append(refs.CodeBlocks, Block{Lang: b.Lang, Line: b.Line})
@@ -48,7 +53,7 @@ func (m *Markdown) Refs(text string) (*Refs, error) {
 			return nil
 		}},
 		Image: func(dest string) (string, error) {
-			rel, inline, err := assets.Resolve(m.path, dest)
+			rel, inline, err := assets.Resolve(path, dest)
 			if err == nil && !inline {
 				refs.Assets = append(refs.Assets, rel)
 			}

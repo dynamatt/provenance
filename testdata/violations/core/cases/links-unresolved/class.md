@@ -7,6 +7,8 @@ severity: error
 examples:
   - file: core/cases/links-unresolved/violation.md
     expect: violation
+  - file: core/cases/links-unresolved/violation.csv
+    expect: violation
   - file: core/cases/links-unresolved/clean.md
     expect: clean
 ---

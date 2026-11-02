@@ -7,6 +7,8 @@ severity: error
 examples:
   - file: core/cases/schema-enum-value/violation.md
     expect: violation
+  - file: core/cases/schema-enum-value/violation.csv
+    expect: violation
   - file: core/cases/schema-enum-value/clean.md
     expect: clean
 ---

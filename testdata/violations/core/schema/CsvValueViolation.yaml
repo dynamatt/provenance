@@ -1,0 +1,13 @@
+# schema/invalid-value: a cell takes the forms an entity file's value does.
+type: CsvValueViolation
+id_prefix: CVV
+source:
+  csv: cases/schema-invalid-value/violation.csv
+  id: id
+fields:
+  - name: due
+    type: date
+  - name: weight
+    type: number
+  - name: done
+    type: boolean

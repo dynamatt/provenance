@@ -1,0 +1,13 @@
+# links/unresolved: a link cell and a wikilink in a text cell resolve as in an entity file.
+type: CsvLinkViolation
+id_prefix: CLV
+source:
+  csv: cases/links-unresolved/violation.csv
+  id: id
+fields:
+  - name: uses
+    type: link
+    target: [Widget]
+    cardinality: many
+  - name: note
+    type: text

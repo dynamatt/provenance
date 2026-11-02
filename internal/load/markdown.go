@@ -146,7 +146,11 @@ func duplicates(dups []*entity.DuplicateIDError) []problem.Problem {
 	for i, c := range all {
 		var others []string
 		for j, o := range all {
-			if j != i {
+			switch {
+			case j == i:
+			case o.path == c.path: // two rows of one CSV file
+				others = append(others, fmt.Sprintf("%s:%d", o.path, o.line))
+			default:
 				others = append(others, o.path)
 			}
 		}

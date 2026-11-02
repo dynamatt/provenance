@@ -7,6 +7,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/schema"
@@ -19,6 +20,9 @@ import (
 //
 //	.ID .Type .Title .Body .Resolved    engine baseline
 //	.LastChangedSHA .Revisions          git stamps (DES-0023)
+//	.Table                              for a row of a CSV file, the file and
+//	                                    where it came from (DES-0053); nil
+//	                                    for an entity file
 //	.Citations                          on the entity a page is about, what the
 //	                                    page cites (DES-0046); empty elsewhere
 //	.<PascalCaseField>                  every declared field, calculated ones included
@@ -40,7 +44,7 @@ type Data = map[string]any
 // unresolved link target's but its declared fields.
 func Baseline(id string) Data {
 	return Data{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false,
-		"LastChangedSHA": "", "Revisions": []Data{}, "Citations": []Data{}}
+		"LastChangedSHA": "", "Revisions": []Data{}, "Citations": []Data{}, "Table": nil}
 }
 
 // citationKeys are added to each entity in a page's .Citations, and
@@ -103,10 +107,23 @@ func NameErrors(s *schema.Schema) []*query.ContentError {
 type Model struct {
 	schema *schema.Schema
 	ByID   map[string]Data
+	// Tables are the .Table of the rows of each CSV file, by the type of
+	// its rows: one map, shared by every row.
+	Tables map[string]Data
+}
+
+// TableData is a CSV file as a template sees it (DES-0053): .Type, its
+// rows' type; .File; .System, "" for a table kept by hand; .Sidecar,
+// .Exported and .SHA256, from a dump's sidecar; .Pages, whether its rows
+// have pages; and .Commit, .Date and .Author, the commit that last changed
+// the file, which an export fills in ("" without git).
+func TableData(t *entity.Table) Data {
+	return Data{"Type": t.Type, "File": t.Path, "System": t.System, "Sidecar": t.Sidecar,
+		"Exported": t.Exported, "SHA256": t.SHA256, "Pages": t.Pages, "Commit": "", "Date": "", "Author": ""}
 }
 
 func NewModel(s *schema.Schema, entities []*model.Entity) *Model {
-	d := &Model{schema: s, ByID: make(map[string]Data, len(entities))}
+	d := &Model{schema: s, ByID: make(map[string]Data, len(entities)), Tables: map[string]Data{}}
 	// Two passes: links point at other entities' maps.
 	for _, e := range entities {
 		d.ByID[e.ID] = Baseline(e.ID)
@@ -114,6 +131,12 @@ func NewModel(s *schema.Schema, entities []*model.Entity) *Model {
 	for _, e := range entities {
 		m := d.ByID[e.ID]
 		m["Type"], m["Title"], m["Body"], m["Resolved"] = e.Type, e.Title(), e.Body, true
+		if row, ok := e.Record.(*entity.Row); ok {
+			if d.Tables[e.Type] == nil {
+				d.Tables[e.Type] = TableData(row.Table())
+			}
+			m["Table"] = d.Tables[e.Type]
+		}
 		for _, v := range e.Fields {
 			m[TemplateName(v.Field.Name)] = d.value(v)
 			if v.Field == e.Schema.BodyField {

@@ -1,0 +1,9 @@
+# content/csv-row: a quoted comma, a doubled quote and a line break in a cell.
+type: CsvRowClean
+id_prefix: CRC
+source:
+  csv: cases/content-csv-row/clean.csv
+  id: id
+fields:
+  - name: title
+    type: string
