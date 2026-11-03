@@ -705,16 +705,16 @@ expect 0 'CPL-2026-0141</a></td><td>4</td></tr>' cat _site/entities/RSK-0001.htm
 expect 0 '<a class="ref" href="Anomaly\.html#BUG-1042"' cat _site/entities/REQ-0001.html
 
 # E6.4: a row with a cell too many is an error at its line, and a column
-# no field reads a warning at the header; a dump whose export date (a
-# required column, as the example chooses) is left empty fails at the row.
+# no field reads a warning at the header; a required cell left empty fails
+# at its row, as a required field left out of an entity file does.
 printf 'STD-0005,Extra,X,true,,surplus\n' >>data/standards.csv
 expect 1 '^data/standards\.csv:6: error \[content/csv-row\] the row has 6 cells, but the header has 5$' "$PROV" validate
 git checkout -q -- data/standards.csv
 sed -i '1s/$/,Region/; 2,$s/$/,EU/' data/standards.csv
 expect 0 '^data/standards\.csv:1: warning \[content/csv-column\] column "Region" is not read' "$PROV" validate
 git checkout -q -- data/standards.csv
-sed -i 's/^CPL-2026-0115,2026-02-21,2026-09-30,/CPL-2026-0115,2026-02-21,,/' data/complaints.csv
-expect 1 '^data/complaints\.csv:4: error \[schema/required\] required field exported is not set \(CPL-2026-0115\)$' "$PROV" validate
+sed -i 's/^CPL-2026-0115,2026-02-21,/CPL-2026-0115,,/' data/complaints.csv
+expect 1 '^data/complaints\.csv:4: error \[schema/required\] required field received is not set \(CPL-2026-0115\)$' "$PROV" validate
 git checkout -q -- data/complaints.csv
 
 # E6.5: a complaint's page says which file it is a row of; anomalies have
@@ -725,13 +725,13 @@ expect 1 '' test -e _site/entities/BUG-1042.html
 expect 0 '<tr id="BUG-1042"><td class="id">BUG-1042</td>' cat _site/entities/Anomaly.html
 expect 0 '<tr><th>File</th><td><code>data/standards\.csv</code></td></tr>' cat _site/entities/Standard.html
 
-# E6.6: a commit changing one row moves the last-changed commit of that
+# E6.6: a new dump changing one row moves the last-changed commit of that
 # row's page, the table page and the index only (C7), and of DOC-0003,
-# whose queries read every type.
+# whose queries read every type: git dates each row.
 PIN=$(git rev-parse HEAD)
 sed -i 's/Charger does not start/Charger will not start/' data/complaints.csv
 expect 0 '^0 errors, 1 warning$' "$PROV" validate
-gitc commit -qam "Complaints: correct CPL-2026-0115"
+gitc commit -qam "Complaints dump of 2026-10-31"
 NEW=$(git rev-parse --short=7 HEAD)
 "$PROV" export website --out "$WORK/dump" >/dev/null
 expect 0 '^entities/CPL-2026-0115\.html entities/Complaint\.html entities/DOC-0003\.html index\.html $' sh -c "cd '$WORK/dump' && grep -rl 'last changed in <code>$NEW</code>' . | sed 's#^\./##' | sort | tr '\n' ' '"
