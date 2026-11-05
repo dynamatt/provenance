@@ -27,6 +27,8 @@ import (
 //	templates/_layout.tmpl      the layout wrapping every page
 //	templates/_index.tmpl       the site's main page
 //	templates/_cite.tmpl        an inline citation (DES-0046)
+//	templates/_<TypeName>.tmpl  the page of a type with pages: false
+//	                            (DES-0054)
 //	templates/style.css         the stylesheet
 //
 // Other files there (a README, drafts) are ignored, as is a type template
@@ -42,6 +44,7 @@ type source struct {
 type templateSet struct {
 	layout, index source
 	types         map[string]source // project type templates by type name
+	typePages     map[string]source // project type-page templates by type name
 	named         map[string]source // named presentation templates by name
 	// cite renders inline citations; nil without a project _cite.tmpl,
 	// which has no built-in counterpart.
@@ -65,11 +68,12 @@ func builtin(file string) source {
 // instead, and err is only a failure to read one.
 func loadTemplates(root string, s *schema.Schema, check *checker) (*templateSet, error) {
 	ts := &templateSet{
-		layout: builtin("layout.tmpl"),
-		index:  builtin("index.tmpl"),
-		types:  map[string]source{},
-		named:  map[string]source{},
-		style:  styleCSS,
+		layout:    builtin("layout.tmpl"),
+		index:     builtin("index.tmpl"),
+		types:     map[string]source{},
+		typePages: map[string]source{},
+		named:     map[string]source{},
+		style:     styleCSS,
 	}
 	dir := filepath.Join(root, templatesDir)
 	entries, err := os.ReadDir(dir)
@@ -115,6 +119,13 @@ func loadTemplates(root string, s *schema.Schema, check *checker) (*templateSet,
 				ts.index = source{rel, text}
 			}
 			ts.project = true
+		case strings.HasPrefix(name, "_") && strings.HasSuffix(name, ".tmpl") && typePageType(s, name) != nil:
+			text, err := read()
+			if err != nil {
+				return nil, err
+			}
+			ts.typePages[typePageType(s, name).Name] = source{rel, text}
+			ts.project = true
 		case strings.HasSuffix(name, ".tmpl") && s.Types[strings.TrimSuffix(name, ".tmpl")] != nil:
 			text, err := read()
 			if err != nil {
@@ -139,6 +150,9 @@ func loadTemplates(root string, s *schema.Schema, check *checker) (*templateSet,
 	for _, name := range slices.Sorted(maps.Keys(ts.types)) {
 		sources = append(sources, ts.types[name])
 	}
+	for _, name := range slices.Sorted(maps.Keys(ts.typePages)) {
+		sources = append(sources, ts.typePages[name])
+	}
 	for _, name := range slices.Sorted(maps.Keys(ts.named)) {
 		sources = append(sources, ts.named[name])
 	}
@@ -150,6 +164,17 @@ func loadTemplates(root string, s *schema.Schema, check *checker) (*templateSet,
 		}
 	}
 	return ts, nil
+}
+
+// typePageType is the type whose page templates/<name> renders,
+// _<TypeName>.tmpl, or nil. A type whose entities have their own pages has
+// no type page, so its _<TypeName>.tmpl is used for nothing.
+func typePageType(s *schema.Schema, name string) *schema.Type {
+	base, ok := strings.CutSuffix(strings.TrimPrefix(name, "_"), ".tmpl")
+	if t := s.Types[base]; ok && t != nil && !t.Pages {
+		return t
+	}
+	return nil
 }
 
 // unknownNamed explains a named template that does not exist.

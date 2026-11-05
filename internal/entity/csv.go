@@ -21,8 +21,6 @@ type Table struct {
 	// relative to the repository root.
 	Type string
 	Path string
-	// Pages is false when the rows get no page of their own.
-	Pages bool
 }
 
 // Row is the record of one CSV row (DES-0053): each cell typed by its

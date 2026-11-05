@@ -129,7 +129,7 @@ func TestCSVLoad(t *testing.T) {
 		t.Fatalf("tables: %v", res.Tables)
 	}
 	tb := res.Tables[0]
-	if tb.Path != "data/complaints.csv" || tb.Type != "Complaint" || !tb.Pages {
+	if tb.Path != "data/complaints.csv" || tb.Type != "Complaint" {
 		t.Errorf("table: %+v", tb)
 	}
 	if row, ok := r.Record.(*entity.Row); !ok || row.Table() != tb {

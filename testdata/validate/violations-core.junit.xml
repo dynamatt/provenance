@@ -51,7 +51,7 @@
       <system-out>templates/NotAType.tmpl: warning [content/template-name] NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used&#xA;</system-out>
     </testcase>
     <testcase name="content/unknown-override" classname="built-in">
-      <system-out>templates/_footer.tmpl: warning [content/unknown-override] _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used&#xA;</system-out>
+      <system-out>templates/_footer.tmpl: warning [content/unknown-override] _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl, or _&lt;Type&gt;.tmpl for a type with pages: false), so it is never used&#xA;</system-out>
     </testcase>
     <testcase name="content/unrendered-block" classname="built-in">
       <failure type="error" message="mermaid block: this version of Provenance cannot render it, so it would be published as its source">cases/content-unrendered-block/violation.md:6: error [content/unrendered-block] mermaid block: this version of Provenance cannot render it, so it would be published as its source (WID-0037)</failure>

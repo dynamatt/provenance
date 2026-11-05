@@ -112,6 +112,9 @@ type Type struct {
 	// Source is the CSV file the type's entities are read from, one per
 	// row (DES-0053); nil for a type whose entities are Markdown files.
 	Source *Source
+	// Pages is false when the type's entities get no page of their own:
+	// they are shown, all together, on the type's page (DES-0054).
+	Pages bool
 }
 
 // Source is a CSV file a type's entities are read from (DES-0053).
@@ -124,9 +127,7 @@ type Source struct {
 	// cell.
 	Delimiter rune
 	Separator string
-	// Pages is false when the rows get no page of their own.
-	Pages bool
-	Line  int // of source:
+	Line      int // of source:
 }
 
 // SourceTypes are the CSV-backed types, in name order.
@@ -195,8 +196,8 @@ type Schema struct {
 }
 
 var (
-	typeKeys   = []string{"type", "id_prefix", "source", "fields"}
-	sourceKeys = []string{"csv", "id", "delimiter", "separator", "pages"}
+	typeKeys   = []string{"type", "id_prefix", "pages", "source", "fields"}
+	sourceKeys = []string{"csv", "id", "delimiter", "separator"}
 	recordKeys = []string{"record", "fields"}
 	enumKeys   = []string{"enum", "values"}
 	// fieldKeys maps each field key to the kinds of field it applies to,
@@ -367,8 +368,15 @@ func (l *loader) read(root string) error {
 			}
 			continue
 		}
-		t := &Type{Name: rt.name, IDPrefix: rt.idPrefix, File: rel, Line: rt.nameLine}
+		t := &Type{Name: rt.name, IDPrefix: rt.idPrefix, File: rel, Line: rt.nameLine, Pages: true}
 		s.Types[rt.name] = t
+		if p := yamlnode.Lookup(rt.mapping, "pages"); p != nil {
+			if p.Kind != yaml.ScalarNode || p.Tag != "!!bool" {
+				l.keep(&Error{Path: rel, Line: p.Line, Msg: fmt.Sprintf("type %s: pages: must be true or false", rt.name)})
+			} else {
+				t.Pages = p.Value == "true" || p.Value == "True" || p.Value == "TRUE"
+			}
+		}
 		s.checkKeys(rel, rt.mapping, "type "+rt.name, typeKeys)
 		if n := yamlnode.Lookup(rt.mapping, "source"); n != nil {
 			if t.Source, err = s.source(rel, rt.name, n); err != nil {
@@ -779,7 +787,7 @@ func (s *Schema) source(path, typeName string, n *yaml.Node) (*Source, error) {
 		return nil, &Error{Path: path, Line: n.Line, Msg: label + " must be a mapping with csv: and id:"}
 	}
 	s.checkKeys(path, n, label, sourceKeys)
-	src := &Source{Delimiter: ',', Separator: ";", Pages: true, Line: n.Line}
+	src := &Source{Delimiter: ',', Separator: ";", Line: n.Line}
 	str := func(key string) (string, int, error) {
 		v := yamlnode.Lookup(n, key)
 		if v == nil {
@@ -828,12 +836,6 @@ func (s *Schema) source(path, typeName string, n *yaml.Node) (*Source, error) {
 			return nil, &Error{Path: path, Line: line, Msg: fmt.Sprintf("%s: separator: %q must not be blank, hold a line break or the delimiter", label, sep)}
 		}
 		src.Separator = sep
-	}
-	if p := yamlnode.Lookup(n, "pages"); p != nil {
-		if p.Kind != yaml.ScalarNode || p.Tag != "!!bool" {
-			return nil, &Error{Path: path, Line: p.Line, Msg: label + ": pages: must be true or false"}
-		}
-		src.Pages = p.Value == "true" || p.Value == "True" || p.Value == "TRUE"
 	}
 	return src, nil
 }

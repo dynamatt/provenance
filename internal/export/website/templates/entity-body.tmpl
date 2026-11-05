@@ -19,7 +19,7 @@
 </table>
 {{- end}}
 {{- with .RowFile}}
-<p class="table-row">Row {{.Line}} of {{if $.TableHref}}<a href="{{$.TableHref}}">{{.Path}}</a>{{else}}{{.Path}}{{end}}.</p>
+<p class="table-row">Row {{.Line}} of <code>{{.Path}}</code>.</p>
 {{- end}}
 {{- with .BodyField}}
 <h2>{{humanize .Field.Name}}</h2>

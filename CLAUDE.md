@@ -29,7 +29,7 @@ identity, so builds must be reproducible.
 | `internal/assets/` | Resolves and reads the image files Markdown refers to. |
 | `internal/yamlnode/` | Reading YAML nodes with file line numbers, and YAML errors at their line. |
 | `internal/history/` | Git via go-git: content hash, dirty state, first-parent log of the entities and files each commit changed, revisions. |
-| `internal/export/` | The `Exporter` interface (`Export`, and `Check` for validate), the registry, `--scope`, git stamps and the output folder; `export/website/` is the website exporter and its built-in templates, a table page per CSV file among them (`tables.go`). |
+| `internal/export/` | The `Exporter` interface (`Export`, and `Check` for validate), the registry, `--scope`, git stamps and the output folder; `export/website/` is the website exporter and its built-in templates, and type pages, for types with `pages: false` (`typepages.go`). |
 | `internal/version/` | Version and commit, injected by `make build` through `-ldflags`. |
 | `starters/` | The starter projects `provenance init` writes (DES-0052), one folder each, embedded in the binary; its tests check each validates clean, exports, is canonical and cites a clause on every field. |
 | `tools/gendocs/` | Generates the website's CLI reference from the command tree. |

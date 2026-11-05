@@ -1,9 +1,8 @@
 <h1>{{.Component.Name}} ({{.Component.Code}})</h1>
 {{range .Types}}
-<h2>{{.Type}}</h2>
-{{- $type := .Type}}
+<h2>{{if .Page}}<a href="{{.Page}}">{{.Type}}</a>{{else}}{{.Type}}{{end}}</h2>
 {{- with .File}}
-<p class="table-source">Read from <a href="entities/{{$type}}.html">{{.Path}}</a>.</p>
+<p class="table-source">Read from <code>{{.Path}}</code>.</p>
 {{- end}}
 <table class="entity-list">
 <thead><tr><th>ID</th><th>Title</th></tr></thead>

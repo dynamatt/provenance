@@ -16,18 +16,19 @@ type Linker struct {
 	// HasPage reports whether an entity has a page; nil is every entity.
 	HasPage func(id string) bool
 	// ShownOn is the page, relative to the entity pages and with its
-	// anchor, that shows an entity without a page of its own, or "": a
-	// row of a CSV file whose rows have no pages is shown on the file's
-	// table page (DES-0053). nil is none.
+	// anchor, that shows an entity without a page of its own, or "": an
+	// entity of a type with pages: false is shown on the type's page
+	// (DES-0054). nil is none.
 	ShownOn func(id string) string
-	// NoPages are the types whose rows have no pages of their own, for a
-	// linker without HasPage, which knows an entity only by its data.
+	// NoPages are the types whose entities have no pages of their own,
+	// for a linker without HasPage, which knows an entity only by its
+	// data.
 	NoPages map[string]bool
 }
 
 // page is the URL, relative to the entity pages, that shows entity id, or
-// "" when none does. ref, when known, is its template data: a row whose
-// file's rows have no pages is shown on the file's table page.
+// "" when none does. ref, when known, is its template data: an entity of
+// a type with pages: false is shown on the type's page.
 func (l Linker) page(id string, ref Data) string {
 	if l.HasPage != nil && !l.HasPage(id) {
 		if l.ShownOn != nil {

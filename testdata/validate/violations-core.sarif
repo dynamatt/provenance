@@ -2056,7 +2056,7 @@
           "ruleIndex": 12,
           "level": "warning",
           "message": {
-            "text": "_footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used"
+            "text": "_footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl, or _<Type>.tmpl for a type with pages: false), so it is never used"
           },
           "locations": [
             {

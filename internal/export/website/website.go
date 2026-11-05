@@ -90,7 +90,7 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 	for _, ent := range in.Entities {
 		s.byID[ent.ID] = ent
 	}
-	s.setupTables(in.Tables, in.Entities, in.Scope.Has)
+	s.setupTypePages(in.Tables, in.Entities, in.Scope.Has)
 	// Every entity's data carries its git stamps, embedded or not: a
 	// template naming .LastChangedSHA must render wherever it is used.
 	for _, ent := range in.Entities {
@@ -134,7 +134,7 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 	}
 	for _, ent := range inScope {
 		if !s.hasPage(ent.ID) {
-			continue // a row shown on its table page
+			continue // shown on its type's page
 		}
 		content, data, err := s.renderPage(ent, "")
 		if err := s.failed(err); err != nil {
@@ -144,21 +144,21 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 			return nil, err
 		}
 	}
-	for _, typ := range s.tableTypes() {
+	for _, typ := range s.typePages() {
 		var stamps entityData
 		if s.git != nil {
-			in, err := s.tableInputs(typ)
+			in, err := s.typePageInputs(typ)
 			if err != nil {
 				return nil, err
 			}
 			last, revs := s.git.Page(in)
 			stamps = entityData{"LastChangedSHA": last, "Revisions": revisionData(revs)}
 		}
-		content, err := s.renderTable(typ)
+		content, err := s.renderTypePage(typ)
 		if err := s.failed(err); err != nil {
 			return nil, err
 		}
-		if err := s.failed(s.page("entities/"+typ+".html", "../", tablePageTitle(s.tableSite.tables[typ]), s.finalize(content), stamps)); err != nil {
+		if err := s.failed(s.page("entities/"+typ+".html", "../", typ, s.finalize(content), stamps)); err != nil {
 			return nil, err
 		}
 	}
@@ -285,7 +285,7 @@ type site struct {
 	cited    map[string]entityData
 	// check is where rendering reports the problems it finds.
 	check *checker
-	tableSite
+	typeSite
 }
 
 // citations are the IDs a page cites, in order of first citation.
@@ -409,6 +409,9 @@ type typeGroup struct {
 	// File is the CSV file the type's entities are read from, as a row's
 	// .File without .Line; nil for a type of entity files.
 	File entityData
+	// Page is the type's page, relative to the main page, for a type
+	// with pages: false (DES-0054); "" for any other.
+	Page string
 }
 
 func (s *site) renderIndex(entities []*model.Entity) (string, error) {
@@ -419,8 +422,11 @@ func (s *site) renderIndex(entities []*model.Entity) (string, error) {
 	d := indexData{Component: s.component}
 	for _, t := range slices.Sorted(maps.Keys(byType)) {
 		g := typeGroup{Type: t, Entities: byType[t]}
-		if table := s.tableSite.tables[t]; table != nil {
+		if table := s.typeSite.tables[t]; table != nil {
 			g.File = tmpl.TableFile(table)
+		}
+		if href := s.typePageHref(t); href != "" {
+			g.Page = "entities/" + href
 		}
 		d.Types = append(d.Types, g)
 	}
@@ -498,9 +504,6 @@ func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named, linkB
 		view := entityView(e)
 		if _, ok := e.Record.(*entity.Row); ok {
 			view.RowFile = s.data.ByID[e.ID]["File"]
-			if href := s.tableHref(e.Type); href != "" {
-				view.TableHref = linkBase + href
-			}
 		}
 		if err := t.ExecuteTemplate(&b, "entity", view); err != nil {
 			return "", templateError(err)
@@ -581,10 +584,8 @@ type entityPage struct {
 	// Fields excludes the body field, which is rendered below the table.
 	Fields    []*model.Value
 	BodyField *model.Value
-	// RowFile is a CSV row's .File, nil for an entity file; TableHref
-	// its table page, "" when it is not exported (DES-0053).
-	RowFile   any
-	TableHref string
+	// RowFile is a CSV row's .File, nil for an entity file (DES-0053).
+	RowFile any
 }
 
 func entityView(e *model.Entity) entityPage {

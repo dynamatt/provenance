@@ -69,6 +69,6 @@ schema/enums/UnusedEnum.yaml:2: warning [schema/unused-enum] enum UnusedEnum is 
 schema/records/UnusedRecord.yaml:2: warning [schema/unused-record] record UnusedRecord is not used by any list
 templates/BrokenTemplate.tmpl:2: error [content/template] bad character U+003C '<'
 templates/NotAType.tmpl: warning [content/template-name] NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used
-templates/_footer.tmpl: warning [content/unknown-override] _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used
+templates/_footer.tmpl: warning [content/unknown-override] _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl, or _<Type>.tmpl for a type with pages: false), so it is never used
 templates/spare.tmpl: warning [content/unused-template] named template spare is not chosen by any query block
 64 errors, 9 warnings

@@ -394,7 +394,7 @@ fields:
 		got = append(got, p.Error())
 	}
 	want := []string{
-		`schema/A.yaml:3: type A: unknown key "extends" (expected type, id_prefix, source, fields)`,
+		`schema/A.yaml:3: type A: unknown key "extends" (expected type, id_prefix, pages, source, fields)`,
 		`schema/A.yaml:7: field "x": unknown key "default": fields have no defaults; a field that must have a value says required: true`,
 		`schema/A.yaml:8: field "x": formula applies only to a calculated field`,
 		`schema/A.yaml:13: field "y": unknown key "colour" (expected name, type, required, help, body, target, cardinality, reverse_name, formula, fields, of, column)`,
@@ -414,7 +414,6 @@ source:
   id: Complaint No
   delimiter: ";"
   separator: "|"
-  pages: false
 fields:
   - name: received
     type: date
@@ -427,7 +426,7 @@ fields:
 		t.Fatal(err)
 	}
 	src := s.Types["Complaint"].Source
-	want := Source{CSV: "data/complaints.csv", ID: "Complaint No", Delimiter: ';', Separator: "|", Pages: false, Line: 4}
+	want := Source{CSV: "data/complaints.csv", ID: "Complaint No", Delimiter: ';', Separator: "|", Line: 4}
 	if *src != want {
 		t.Errorf("source: %+v", src)
 	}
@@ -442,7 +441,7 @@ fields:
 	}
 	write(t, root, "schema/Table.yaml", "type: Table\nid_prefix: TAB\nsource: {csv: t.csv, id: id}\nfields: []\n")
 	s, _ = Load(root)
-	if src := s.Types["Table"].Source; src.Delimiter != ',' || src.Separator != ";" || !src.Pages {
+	if src := s.Types["Table"].Source; src.Delimiter != ',' || src.Separator != ";" {
 		t.Errorf("defaults: %+v", src)
 	}
 }
@@ -457,7 +456,6 @@ func TestSourceErrors(t *testing.T) {
 		{"no id", head + "source: {csv: t.csv}\n", `schema/T.yaml:3: type T: source: id: names the column holding each row's ID`},
 		{"delimiter", head + "source: {csv: t.csv, id: id, delimiter: '\"'}\n", `schema/T.yaml:3: type T: source: delimiter: "\"" must be one character, not a quote or a line break`},
 		{"separator", head + "source: {csv: t.csv, id: id, separator: ','}\n", `schema/T.yaml:3: type T: source: separator: "," must not be blank, hold a line break or the delimiter`},
-		{"pages", head + "source: {csv: t.csv, id: id, pages: no}\n", `schema/T.yaml:3: type T: source: pages: must be true or false`},
 		{"body", head + "source: {csv: t.csv, id: id}\nfields:\n  - {name: notes, type: text, body: true}\n", `schema/T.yaml:5: field "notes": a row read from a CSV file has no Markdown body; leave out body: true`},
 		{"rows", head + "source: {csv: t.csv, id: id}\nfields:\n  - {name: steps, type: list, fields: [{name: n, type: number}]}\n", `schema/T.yaml:5: field "steps": a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)`},
 		{"calculated column", head + "source: {csv: t.csv, id: id}\nfields:\n  - {name: c, type: calculated, formula: \"1\", column: C}\n", `schema/T.yaml:5: field "c": a calculated field is never read from the file, so it has no column`},
@@ -492,10 +490,34 @@ func TestSourceKeyProblems(t *testing.T) {
 		got = append(got, p.Error())
 	}
 	want := []string{
-		`schema/T.yaml:3: type T: source: unknown key "sheet" (expected csv, id, delimiter, separator, pages)`,
+		`schema/T.yaml:3: type T: source: unknown key "sheet" (expected csv, id, delimiter, separator)`,
 		`schema/U.yaml:4: field "a": column applies only to a field of a type with a source`,
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// pages: false on any type, Markdown or CSV-backed (DES-0054).
+func TestPages(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/A.yaml", "type: A\nid_prefix: A\npages: false\nfields: []\n")
+	write(t, root, "schema/B.yaml", "type: B\nid_prefix: B\nfields: []\n")
+	write(t, root, "schema/C.yaml", "type: C\nid_prefix: C\npages: false\nsource: {csv: c.csv, id: id}\nfields: []\n")
+	s, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Types["A"].Pages || !s.Types["B"].Pages || s.Types["C"].Pages {
+		t.Errorf("pages: A %v, B %v, C %v", s.Types["A"].Pages, s.Types["B"].Pages, s.Types["C"].Pages)
+	}
+	write(t, root, "schema/A.yaml", "type: A\nid_prefix: A\npages: no\nfields: []\n")
+	if _, problems, _ := Read(root); len(problems) != 1 || problems[0].Error() != "schema/A.yaml:3: type A: pages: must be true or false" {
+		t.Errorf("problems: %v", problems)
+	}
+	write(t, root, "schema/A.yaml", "type: A\nid_prefix: A\nsource: {csv: a.csv, id: id, pages: false}\nfields: []\n")
+	s, _ = Load(root)
+	if len(s.KeyProblems) != 1 || !strings.Contains(s.KeyProblems[0].Msg, `unknown key "pages"`) {
+		t.Errorf("pages under source: %v", s.KeyProblems)
 	}
 }

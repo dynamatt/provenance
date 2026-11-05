@@ -20,7 +20,7 @@ type csvSource struct{ s *schema.Schema }
 
 func (c csvSource) table(t *schema.Type) *entity.Table {
 	src := t.Source
-	return &entity.Table{Type: t.Name, Path: src.CSV, Pages: src.Pages}
+	return &entity.Table{Type: t.Name, Path: src.CSV}
 }
 
 // Load reads every source's file, in type name order. A file that is

@@ -572,7 +572,7 @@
     {
       "rule": "content/unknown-override",
       "severity": "warning",
-      "message": "_footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used",
+      "message": "_footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl, or _<Type>.tmpl for a type with pages: false), so it is never used",
       "entity": "",
       "path": "templates/_footer.tmpl",
       "line": 0

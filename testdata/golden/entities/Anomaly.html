@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Anomaly (data/anomalies.csv) — NEURO DHF</title>
+<title>Anomaly — NEURO DHF</title>
 <link rel="stylesheet" href="../style.css">
 </head>
 <body>
@@ -14,34 +14,32 @@
 </header>
 <main class="dhf-main">
 
-<article class="entity table-page" id="Anomaly">
-<p class="entity-type">Table</p>
-<h1>Anomaly</h1>
-<table class="fields">
+<article class="anomalies" id="Anomaly">
+<h1>Known anomalies</h1>
+<p class="anomaly-source">The issue tracker's export, <code>data/anomalies.csv</code>.</p>
+<table>
+<thead><tr><th>Key</th><th>Summary</th><th>Severity</th><th>Affects</th><th>Notes</th></tr></thead>
 <tbody>
-<tr><th>File</th><td><code>data/anomalies.csv</code></td></tr>
-<tr><th>Rows</th><td>3</td></tr>
-</tbody>
-</table>
-
-<table class="list table-rows">
-<thead><tr><th>ID</th><th>Title</th><th>Severity</th><th>Affects</th><th>Fixed</th><th>Found</th><th>Notes</th></tr></thead>
-<tbody>
-<tr id="BUG-1042"><td class="id">BUG-1042</td><td>Alarm tone clipped at maximum volume</td><td>minor</td><td><a class="id" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a>, <a class="id" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a></td><td>false</td><td>2026-06-18</td><td><div class="text"><p>The alarm's last 40 ms are cut off at maximum volume. Does not affect the amplitude ceiling of <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</p>
-</div></td></tr>
-<tr id="BUG-1057"><td class="id">BUG-1057</td><td>Amplitude log rounds to whole milliamps</td><td>minor</td><td><a class="id" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a></td><td>true</td><td>2026-07-02</td><td><div class="text"><p>Fixed in firmware 1.4.2.</p>
-</div></td></tr>
-<tr id="BUG-1063"><td class="id">BUG-1063</td><td>Clinician app shows the previous patient&#39;s name after logout</td><td>major</td><td><span class="absent">—</span></td><td>false</td><td>2026-08-21</td><td><div class="text"><p>Display only; the programmed settings are the current patient's.</p>
-</div></td></tr>
+<tr id="BUG-1042" class="open"><td><code>BUG-1042</code></td><td>Alarm tone clipped at maximum volume</td><td>minor</td>
+<td><a class="ref" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a>, <a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a></td><td><p>The alarm's last 40 ms are cut off at maximum volume. Does not affect the amplitude ceiling of <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</p>
+</td></tr>
+<tr id="BUG-1063" class="open"><td><code>BUG-1063</code></td><td>Clinician app shows the previous patient&#39;s name after logout</td><td>major</td>
+<td>—</td><td><p>Display only; the programmed settings are the current patient's.</p>
+</td></tr>
+<tr id="BUG-1057" class="fixed"><td><code>BUG-1057</code> <span class="status status-approved">fixed</span></td><td>Amplitude log rounds to whole milliamps</td><td>minor</td>
+<td><a class="ref" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a></td><td><p>Fixed in firmware 1.4.2.</p>
+</td></tr>
 </tbody>
 </table>
 </article>
+
 
 <section class="dhf-revisions">
 <h2>Revision history</h2>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>a20469a</code></td><td>2026-11-05</td><td>Claude</td><td>pages: false at the type: SeverityLevel and Anomaly pages</td></tr>
 <tr><td><code>adffaf5</code></td><td>2026-11-02</td><td>Claude</td><td>No sidecars, no system:; complaints carry their export date as a column</td></tr>
 <tr><td><code>3d07b7b</code></td><td>2026-11-02</td><td>Claude</td><td>Complaints, anomalies and a standards register read from CSV files</td></tr>
 <tr><td><code>4dab2f7</code></td><td>2026-11-01</td><td>Matt Williams</td><td>Merge pull request #22 from dynamatt/epic/E4-fmt</td></tr>
@@ -60,7 +58,7 @@
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>adffaf5</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>a20469a</code></p>
 </footer>
 </body>
 </html>
