@@ -94,8 +94,8 @@ rm REQ/copy.md
 # E1.3: schema loading and default entity pages. (Requirement has a project
 # template since E1.6, so the built-in page is checked on a Design.)
 "$PROV" export website >/dev/null
-expect 0 '<tr><th>Status</th><td>approved</td></tr>'  cat _site/entities/DES-0001.html
-expect 0 '<tr><th>Order</th><td>1</td></tr>'          cat _site/entities/DES-0001.html
+expect 0 '<tr><th>status</th><td>approved</td></tr>'  cat _site/entities/DES-0001.html
+expect 0 '<tr><th>order</th><td>1</td></tr>'          cat _site/entities/DES-0001.html
 expect 0 'A control loop running on the implant'       cat _site/entities/DES-0001.html
 expect 0 'The system shall automatically adjust'       cat _site/entities/REQ-0001.html
 expect 0 'href="entities/REQ-0001.html"'               cat _site/index.html
@@ -110,7 +110,7 @@ expect 1 ''                               grep -q '^verified_by:' REQ/REQ-0001.m
 # from the derived verified_by facet (whichever template renders the page).
 expect 0 'href="VER-0001\.html"'            cat _site/entities/REQ-0001.html
 expect 0 'verifies <a class="ref" href="REQ-0001\.html"' cat _site/entities/VER-0001.html
-expect 0 '<th>Implemented by</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/USR-0001.html
+expect 0 '<th>implemented_by</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/USR-0001.html
 expect 0 '<td>BES-2201</td>'                cat _site/entities/EVD-0001.html
 expect 0 '<td>PCP-0087</td>'                cat _site/entities/EVD-0001.html
 sed -i.orig 's/^  - REQ-0001$/  - REQ-9999/' DES/DES-0001.md
@@ -157,7 +157,7 @@ expect 0 '<li>IEC 62304</li>'               cat _site/entities/DES-0001.html
 expect 0 'test, analysis'                   cat _site/entities/REQ-0002.html
 expect 0 '<th>Serial number</th>'           cat _site/entities/EVD-0001.html
 expect 0 '<td>BES-2201</td>'                cat _site/entities/EVD-0001.html
-expect 0 '<th>Serial number</th>'           cat _site/entities/VAL-0001.html
+expect 0 '<th>serial_number</th>'           cat _site/entities/VAL-0001.html
 expect 0 '<td>CER-0310</td>'                cat _site/entities/VAL-0001.html
 expect 0 '<th>Cause</th>'                   cat _site/entities/RSK-0001.html
 sed -i.orig 's/of: Equipment/of: Equipmnet/' schema/VerificationEvidence.yaml
@@ -400,7 +400,7 @@ sed -i 's/^type: Risk/type: Rsk/' RSK/RSK-0001.md
 expect 1 '^RSK/RSK-0001\.md:3: error \[schema/unknown-type\] type "Rsk" is not declared in schema/ ' "$PROV" validate
 git checkout -q -- RSK/RSK-0001.md
 sed -i 's/type: ApprovalStatus/type: AprovalStatus/' schema/Requirement.yaml
-expect 1 '^schema/Requirement\.yaml:20: error \[schema/file\] field "status": unknown type "AprovalStatus"' "$PROV" validate
+expect 1 '^schema/Requirement\.yaml:21: error \[schema/file\] field "status": unknown type "AprovalStatus"' "$PROV" validate
 expect 1 '^12 rules not run: the schema has errors$' "$PROV" validate
 git checkout -q -- schema/Requirement.yaml
 expect 2 '^validate: unknown report "xml": not a format \(text, json, junit, sarif\)' "$PROV" validate --output xml
@@ -684,7 +684,8 @@ git checkout -q --detach "$PIN"
 # workflow, from a build that isn't a release); a second init into it
 # writes nothing.
 cd "$WORK"
-expect 0 '^Wrote the medical-device starter for demo \(DEMO\) to demo: [0-9]+ files\.$' "$PROV" init demo
+expect 2 '^init: --code is required' "$PROV" init demo
+expect 0 '^Wrote the medical-device starter for demo \(DEMO\) to demo: [0-9]+ files\.$' "$PROV" init demo --code DEMO
 expect 0 '^## No commits yet on main$' git -C demo status --short --branch --untracked-files=no
 cd demo
 expect 0 '^0 errors, 0 warnings$' "$PROV" validate
@@ -693,7 +694,7 @@ expect 0 '^$' "$PROV" fmt --all --check
 expect 0 '^code: DEMO$' cat .component
 expect 0 '' diff -r -x .git -x .github -x _site -x .component -x README.md "$SCRIPTS_DIR/../starters/medical-device" .
 cd "$WORK"
-expect 2 '^init: demo is inside the Provenance repository at demo$' "$PROV" init demo
+expect 2 '^init: demo is inside the Provenance repository at demo$' "$PROV" init demo --code DEMO
 cd "$EXAMPLE_DIR"
 
 # E6.3: the example's three CSV files load (DES-0053): it validates with

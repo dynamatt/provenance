@@ -89,7 +89,7 @@ func TestCalculatedFieldsRender(t *testing.T) {
 	files, err := exportRepo(t, map[string]string{
 		"schema/Item.yaml": `type: Item
 fields:
-  - {name: title, type: string}
+  - {name: title, type: string, title: true}
   - {name: price, type: number}
   - {name: total, type: calculated, formula: "price * 2"}
   - {name: dear, type: calculated, formula: "total > 10"}
@@ -104,16 +104,16 @@ fields:
 	}
 	page := string(files["entities/I-1.html"])
 	for _, want := range []string{
-		"<tr><th>Total</th><td>8</td></tr>",
-		"<tr><th>Dear</th><td>false</td></tr>",
-		`<tr><th>Broken</th><td><span class="invalid-value">price &#43;</span> <span class="invalid">formula: column 8: unexpected end of formula</span></td></tr>`,
+		"<tr><th>total</th><td>8</td></tr>",
+		"<tr><th>dear</th><td>false</td></tr>",
+		`<tr><th>broken</th><td><span class="invalid-value">price &#43;</span> <span class="invalid">formula: column 8: unexpected end of formula</span></td></tr>`,
 		`Total: <a class="ref" href="I-1.html" title="Cheap">8</a>, dear: <a class="ref" href="I-1.html" title="Cheap">false</a>.`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("I-1 page missing %s\n%s", want, page)
 		}
 	}
-	if !strings.Contains(string(files["entities/I-2.html"]), `<tr><th>Total</th><td><span class="absent">—</span></td></tr>`) {
+	if !strings.Contains(string(files["entities/I-2.html"]), `<tr><th>total</th><td><span class="absent">—</span></td></tr>`) {
 		t.Error("blank calculated value is not shown as absent")
 	}
 	if got := string(files["index.html"]); !strings.Contains(got, "[I-1 8 false ][I-2   ]") {
@@ -151,7 +151,7 @@ func TestUnrenderedLanguagesAreMarked(t *testing.T) {
 func TestMultiTypeQueryRendering(t *testing.T) {
 	files, err := exportRepo(t, map[string]string{
 		"schema/Note.yaml": rankedNoteSchema,
-		"schema/Task.yaml": "type: Task\nfields:\n  - {name: title, type: string}\n  - {name: rank, type: number}\n  - {name: owner, type: string}\n",
+		"schema/Task.yaml": "type: Task\nfields:\n  - {name: title, type: string, title: true}\n  - {name: rank, type: number}\n  - {name: owner, type: string}\n",
 		"N/N-1.md":         note("N-1", "title: Note one\nrank: 2\n", ""),
 		"T/T-1.md":         "---\nid: T-1\ntype: Task\ntitle: Task one\nrank: 1\nowner: Ann\n---\n",
 		"N/N-2.md": note("N-2", "title: Host\n", "```query\nfrom: [Note, Task]\nwhere: {field: rank, operator: exists}\norder_by: rank\nrender: field:owner\n```\n\n"+
@@ -175,12 +175,12 @@ func namedTemplateRepo(t *testing.T, block string, extra map[string]string) (map
 	t.Helper()
 	files := map[string]string{
 		"schema/Note.yaml":          rankedNoteSchema,
-		"schema/Task.yaml":          "type: Task\nfields:\n  - {name: title, type: string}\n  - {name: rank, type: number}\n",
+		"schema/Task.yaml":          "type: Task\nfields:\n  - {name: title, type: string, title: true}\n  - {name: rank, type: number}\n",
 		"N/N-1.md":                  note("N-1", "title: Note one\nrank: 2\n", "# Heading\n\nBody."),
 		"T/T-1.md":                  "---\nid: T-1\ntype: Task\ntitle: Task one\nrank: 1\n---\n",
 		"N/N-9.md":                  note("N-9", "title: Host\n", "## Section\n\n```query\n"+block+"```\n"),
-		"templates/note-line.tmpl":  `<p class="note-line">{{.ID}}: {{.Title}}</p><h1>{{.rank}}</h1>`,
-		"templates/plain-card.tmpl": `<div class="card">{{.Title}}</div>`,
+		"templates/note-line.tmpl":  `<p class="note-line">{{.ID}}: {{title .}}</p><h1>{{.rank}}</h1>`,
+		"templates/plain-card.tmpl": `<div class="card">{{title .}}</div>`,
 	}
 	for k, v := range extra {
 		files[k] = v

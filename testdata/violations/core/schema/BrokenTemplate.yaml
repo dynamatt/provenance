@@ -8,3 +8,4 @@ fields:
     cardinality: one
   - name: title
     type: string
+    title: true

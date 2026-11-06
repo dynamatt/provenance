@@ -5,6 +5,8 @@ import (
 	"html/template"
 	"io"
 	"strings"
+
+	"github.com/dynamatt/provenance/internal/schema"
 )
 
 // Linker renders links to entity pages: the link and href template
@@ -24,6 +26,33 @@ type Linker struct {
 	// for a linker without HasPage, which knows an entity only by its
 	// data.
 	NoPages map[string]bool
+	// Schema tells which field of each type is its title.
+	Schema *schema.Schema
+}
+
+// TitleOf is the title of entity data d: the value of the field its type
+// declares title: true, or "" (DES-0010).
+func TitleOf(s *schema.Schema, d Data) string {
+	if s == nil {
+		return ""
+	}
+	typ, _ := d["Type"].(string)
+	t := s.Types[typ]
+	if t == nil || t.TitleField == nil {
+		return ""
+	}
+	v, _ := d[t.TitleField.Name].(string)
+	return v
+}
+
+// Title is the template function title: an entity's title, "" for nil or
+// an entity whose type has no title field.
+func (l Linker) Title(v any) (string, error) {
+	ref, err := asRef(v, "title")
+	if ref == nil || err != nil {
+		return "", err
+	}
+	return TitleOf(l.Schema, ref), nil
 }
 
 // page is the URL, relative to the entity pages, that shows entity id, or
@@ -58,7 +87,7 @@ func (l Linker) Link(v any, text ...any) (template.HTML, error) {
 	if resolved, _ := ref["Resolved"].(bool); !resolved {
 		return template.HTML(UnresolvedHTML(label, "unresolved")), nil
 	}
-	title, _ := ref["Title"].(string)
+	title := TitleOf(l.Schema, ref)
 	var b strings.Builder
 	l.anchor(&b, "ref", l.page(id, ref), title, label)
 	return template.HTML(b.String()), nil

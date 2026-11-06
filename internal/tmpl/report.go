@@ -15,7 +15,7 @@ import (
 // An entity of a type with pages: false links to its place on the type's
 // page (DES-0054).
 func ReportFuncs(s *schema.Schema) template.FuncMap {
-	l := Linker{Base: "entities/", NoPages: map[string]bool{}}
+	l := Linker{Base: "entities/", NoPages: map[string]bool{}, Schema: s}
 	if s != nil {
 		for _, t := range s.Types {
 			if !t.Pages {
@@ -23,5 +23,5 @@ func ReportFuncs(s *schema.Schema) template.FuncMap {
 			}
 		}
 	}
-	return template.FuncMap{"link": l.Link, "href": l.Href, "short": history.Short}
+	return template.FuncMap{"link": l.Link, "href": l.Href, "title": l.Title, "short": history.Short}
 }

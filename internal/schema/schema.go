@@ -59,7 +59,12 @@ type Field struct {
 	EnumName string // set when Kind is Enum
 	Required bool
 	Body     bool
-	Help     string
+	// Title marks the field whose value is the entity's title (title:
+	// true), at most one per type; FriendlyName is how the built-in pages
+	// label the field, its name as written when "" (DES-0010).
+	Title        bool
+	FriendlyName string
+	Help         string
 	// Target and Cardinality ("one" or "many") apply to links.
 	Target      []string
 	Cardinality string
@@ -77,6 +82,15 @@ type Field struct {
 	// is not the field's name (DES-0053).
 	Column string
 	Line   int
+}
+
+// Label is how the built-in pages show f: its friendly_name, else its name
+// as written (DES-0010).
+func (f *Field) Label() string {
+	if f.FriendlyName != "" {
+		return f.FriendlyName
+	}
+	return f.Name
 }
 
 // ColumnName is the CSV header f reads: its column:, else its name.
@@ -105,8 +119,11 @@ type Type struct {
 	// BodyField is the text field declared body: true, or nil when the body
 	// is freeform.
 	BodyField *Field
-	File      string
-	Line      int // of type:
+	// TitleField is the string field declared title: true, or nil when
+	// the type's entities have no title.
+	TitleField *Field
+	File       string
+	Line       int // of type:
 	// Facets are the incoming link facets other types' reverse_name
 	// declarations give this type, in name order.
 	Facets []*Facet
@@ -205,13 +222,14 @@ var (
 	// nil for every kind.
 	fieldKeys = map[string][]Kind{
 		"name": nil, "type": nil, "required": nil, "help": nil,
-		"body":   {Text},
+		"body":  {Text},
+		"title": {String}, "friendly_name": nil,
 		"target": {Link}, "cardinality": {Link}, "reverse_name": {Link},
 		"formula": {Calculated},
 		"fields":  {List}, "of": {List},
 		"column": nil,
 	}
-	fieldKeyOrder = []string{"name", "type", "required", "help", "body", "target", "cardinality", "reverse_name", "formula", "fields", "of", "column"}
+	fieldKeyOrder = []string{"name", "type", "required", "title", "friendly_name", "help", "body", "target", "cardinality", "reverse_name", "formula", "fields", "of", "column"}
 )
 
 // checkKeys records the keys of a declaration's mapping m that are not in
@@ -400,6 +418,13 @@ func (l *loader) read(root string) error {
 		t := s.Types[rt.name]
 		t.Fields = l.fields(rt.path, rt.fields, "")
 		for _, f := range t.Fields {
+			if f.Title {
+				if t.TitleField != nil {
+					l.keep(&Error{Path: rt.path, Line: f.Line, Msg: fmt.Sprintf("field %q: only one field may set title: true (%q already does)", f.Name, t.TitleField.Name)})
+				} else {
+					t.TitleField = f
+				}
+			}
 			if !f.Body {
 				continue
 			}
@@ -618,6 +643,8 @@ type rawField struct {
 	Type        string   `yaml:"type"`
 	Required    bool     `yaml:"required"`
 	Body        bool     `yaml:"body"`
+	Title       bool     `yaml:"title"`
+	Friendly    string   `yaml:"friendly_name"`
 	Help        string   `yaml:"help"`
 	Target      []string `yaml:"target"`
 	Cardinality string   `yaml:"cardinality"`
@@ -674,7 +701,7 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 	}
 
 	f := &Field{
-		Name: rf.Name, Required: rf.Required, Body: rf.Body, Help: rf.Help,
+		Name: rf.Name, Required: rf.Required, Body: rf.Body, Title: rf.Title, FriendlyName: rf.Friendly, Help: rf.Help,
 		Target: rf.Target, Cardinality: rf.Cardinality, ReverseName: rf.ReverseName,
 		Formula: rf.Formula, Column: rf.Column, Line: n.Line,
 	}
@@ -699,6 +726,9 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 		return nil, &Error{Path: path, Line: of.Line, Msg: label + ": of: applies only to type: list"}
 	}
 
+	if f.Title && (f.Kind != String || within != "") {
+		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": title: true is only allowed on a top-level string field"}
+	}
 	if f.Body && (f.Kind != Text || within != "") {
 		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": body: true is only allowed on a top-level text field"}
 	}

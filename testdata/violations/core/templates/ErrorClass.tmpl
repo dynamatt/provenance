@@ -1,6 +1,6 @@
 {{/* A type template (clean for content/template-name). */}}
 <article class="error-class" id="{{.ID}}">
-<h1><span class="id">{{.ID}}</span> <code>{{.rule}}</code> {{.Title}}</h1>
+<h1><span class="id">{{.ID}}</span> <code>{{.rule}}</code> {{title .}}</h1>
 <p>Severity: {{.severity}}</p>
 <div class="body">{{markdown .description}}</div>
 <ul>

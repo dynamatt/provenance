@@ -3,4 +3,5 @@ id_prefix: FIN
 fields:
   - name: title
     type: string
+    title: true
     required: true

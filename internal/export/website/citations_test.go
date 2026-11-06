@@ -6,11 +6,11 @@ import (
 	"testing"
 )
 
-const docSchema = "type: Doc\nid_prefix: D\nfields:\n  - {name: title, type: string}\n"
+const docSchema = "type: Doc\nid_prefix: D\nfields:\n  - {name: title, type: string, title: true}\n"
 
 // docTemplate lists the page's citations, as a project's Document template
 // would.
-const docTemplate = `<h1>{{.Title}}</h1>
+const docTemplate = `<h1>{{title .}}</h1>
 {{markdown .Body}}
 {{- with .Citations}}
 <ol class="cites">

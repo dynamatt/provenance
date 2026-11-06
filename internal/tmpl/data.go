@@ -13,7 +13,9 @@ import (
 // nil when the entity does not set it — and a misspelt field is an error
 // rather than silently empty output.
 //
-//	.ID .Type .Title .Body .Resolved    engine baseline
+//	.ID .Type .Body .Resolved           engine baseline; an entity's title is
+//	                                    its title: true field's, which the
+//	                                    title function reads (DES-0010)
 //	.LastChangedSHA .Revisions          git stamps (DES-0023)
 //	.File                               the file the entity is written in:
 //	                                    .Path, and .Line, where its ID is
@@ -44,7 +46,7 @@ type Data = map[string]any
 // every entity, empty: the start of every entity's data, and all of an
 // unresolved link target's but its declared fields.
 func Baseline(id string) Data {
-	return Data{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false,
+	return Data{"ID": id, "Type": "", "Body": "", "Resolved": false,
 		"LastChangedSHA": "", "Revisions": []Data{}, "Citations": []Data{}, "File": FileData("", 0)}
 }
 
@@ -75,7 +77,7 @@ func NewModel(s *schema.Schema, entities []*model.Entity) *Model {
 	}
 	for _, e := range entities {
 		m := d.ByID[e.ID]
-		m["Type"], m["Title"], m["Body"], m["Resolved"] = e.Type, e.Title(), e.Body, true
+		m["Type"], m["Body"], m["Resolved"] = e.Type, e.Body, true
 		m["File"] = FileData(e.Path, e.IDLine())
 		for _, v := range e.Fields {
 			m[v.Field.Name] = d.value(v)

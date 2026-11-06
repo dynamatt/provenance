@@ -10,7 +10,7 @@ import (
 // widgets are two Widgets out of canonical form, WID/WID-1.md and
 // DOC/WID-2.md, and their schema.
 var widgets = map[string]string{
-	"schema/Widget.yaml": "type: Widget\nid_prefix: WID\nfields:\n  - name: title\n    type: string\n  - name: uses\n    type: link\n    target: [Widget]\n    cardinality: many\n",
+	"schema/Widget.yaml": "type: Widget\nid_prefix: WID\nfields:\n  - name: title\n    type: string\n    title: true\n  - name: uses\n    type: link\n    target: [Widget]\n    cardinality: many\n",
 	"WID/WID-1.md":       messy("WID-1"),
 	"DOC/WID-2.md":       messy("WID-2"),
 }

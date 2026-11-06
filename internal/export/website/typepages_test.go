@@ -15,7 +15,7 @@ id_prefix: BUG
 pages: false
 source: {csv: data/bugs.csv, id: Key}
 fields:
-  - {name: title, type: string, column: Summary}
+  - {name: title, type: string, title: true, column: Summary}
   - {name: affects, type: link, target: [Note], cardinality: many, reverse_name: bugs}
   - {name: notes, type: text}
 `
@@ -24,13 +24,13 @@ const partSchema = `type: Part
 id_prefix: PRT
 source: {csv: data/parts.csv, id: id}
 fields:
-  - {name: title, type: string}
+  - {name: title, type: string, title: true}
 `
 
 // Term has bodies, so its page has a section per entity; Level has none,
 // so a table.
-const termSchema = "type: Term\nid_prefix: TRM\npages: false\nfields:\n  - {name: title, type: string}\n  - {name: definition, type: text, body: true}\n"
-const levelSchema = "type: Level\nid_prefix: LVL\npages: false\nfields:\n  - {name: title, type: string}\n  - {name: score, type: number}\n"
+const termSchema = "type: Term\nid_prefix: TRM\npages: false\nfields:\n  - {name: title, type: string, title: true}\n  - {name: definition, type: text, body: true}\n"
+const levelSchema = "type: Level\nid_prefix: LVL\npages: false\nfields:\n  - {name: title, type: string, title: true}\n  - {name: score, type: number}\n"
 
 func tableRepo(extra map[string]string) map[string]string {
 	files := map[string]string{
@@ -117,7 +117,7 @@ func TestTypePages(t *testing.T) {
 // entities and, for a CSV-backed type, its file.
 func TestTypePageTemplate(t *testing.T) {
 	files, err := exportRepo(t, tableRepo(map[string]string{
-		"templates/_Term.tmpl": `<dl>{{range .Entities}}<dt id="{{.ID}}">{{.Title}}</dt><dd>{{markdown .Body}}</dd>{{end}}</dl>` + "\n",
+		"templates/_Term.tmpl": `<dl>{{range .Entities}}<dt id="{{.ID}}">{{title .}}</dt><dd>{{markdown .Body}}</dd>{{end}}</dl>` + "\n",
 		"templates/_Bug.tmpl":  `<h1>{{.Type}} from {{.File.Path}}</h1>{{range .Entities}}<p id="{{.ID}}">{{link .}}</p>{{end}}` + "\n",
 	}))
 	if err != nil {

@@ -174,7 +174,7 @@ func (s *site) renderTypePage(typ string) (string, error) {
 		var cols []string
 		if len(entities) > 0 {
 			for _, v := range entityView(entities[0]).Fields {
-				cols = append(cols, v.Field.Name)
+				cols = append(cols, v.Field.Label())
 			}
 			for _, in := range entities[0].Incoming {
 				cols = append(cols, in.Facet.Name)

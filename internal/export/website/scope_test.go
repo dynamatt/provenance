@@ -9,7 +9,7 @@ import (
 
 var scopeRepo = map[string]string{
 	"schema/Note.yaml": rankedNoteSchema,
-	"templates/Note.tmpl": `<article>{{.Title}}{{range .see}} {{link .}} [{{link . "named"}}|{{href .}}]{{end}}
+	"templates/Note.tmpl": `<article>{{title .}}{{range .see}} {{link .}} [{{link . "named"}}|{{href .}}]{{end}}
 {{markdown .Body}}</article>`,
 	"N/N-1.md":           note("N-1", "title: Doc\nsee: [N-4]\n", "Intro [[N-4]], [[N-4|the fourth]], [[N-4#title]].\n\n![[N-2]]\n\n```query\nfrom: Note\nwhere: {field: rank, operator: exists}\nrender: id\n```\n"),
 	"N/N-2.md":           note("N-2", "title: Embedded\n", "Embedded body."),
@@ -70,7 +70,7 @@ func TestBuiltInTemplateOutOfScope(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if index := string(files["index.html"]); !strings.Contains(index, `<tr><th>See</th><td><span class="id out-of-scope">N-4</span></td></tr>`) {
+	if index := string(files["index.html"]); !strings.Contains(index, `<tr><th>see</th><td><span class="id out-of-scope">N-4</span></td></tr>`) {
 		t.Errorf("built-in link field not plain out of scope:\n%s", index)
 	}
 }

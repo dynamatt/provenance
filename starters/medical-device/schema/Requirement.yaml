@@ -4,38 +4,47 @@ id_prefix: REQ
 fields:
   - name: title
     type: string
+    friendly_name: Title
+    title: true
     required: true
     help: "A short name for the requirement. (ISO 13485:2016 §7.3.3)"
   - name: statement
     type: text
+    friendly_name: Statement
     body: true
     required: true
     help: "One verifiable shall-statement. Inputs are complete, unambiguous and able to be verified or validated. (ISO 13485:2016 §7.3.3)"
   - name: rationale
     type: text
+    friendly_name: Rationale
     help: "Why the requirement exists and how its value was set. (ISO 13485:2016 §7.3.3)"
   - name: verification_methods
     type: list
+    friendly_name: Verification methods
     of: VerificationMethod
     help: "How the requirement will be verified: test, inspection, analysis or demonstration. (ISO 13485:2016 §7.3.6)"
   - name: status
     type: ApprovalStatus
+    friendly_name: Status
     required: true
     help: "Where the requirement is in review and approval; inputs are reviewed and approved. (ISO 13485:2016 §7.3.3)"
   - name: implements
     type: link
+    friendly_name: Implements
     target: [UserNeed]
     cardinality: many
     reverse_name: implemented_by
     help: "The user needs this requirement answers. (ISO 13485:2016 §7.3.3)"
   - name: parent_requirement
     type: link
+    friendly_name: Parent requirement
     target: [Requirement]
     cardinality: one
     reverse_name: child_requirements
     help: "The requirement this one refines, such as a subsystem requirement's system requirement. (ISO 13485:2016 §7.3.3)"
   - name: supersedes
     type: link
+    friendly_name: Supersedes
     target: [Requirement]
     cardinality: one
     reverse_name: superseded_by

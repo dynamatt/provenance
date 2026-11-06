@@ -4,19 +4,24 @@ id_prefix: DES
 fields:
   - name: title
     type: string
+    friendly_name: Title
+    title: true
     required: true
     help: "A short name for the design element. (ISO 13485:2016 §7.3.4)"
   - name: description
     type: text
+    friendly_name: Description
     body: true
     required: true
     help: "The design output, in a form suitable for verification against its inputs. (ISO 13485:2016 §7.3.4)"
   - name: status
     type: ApprovalStatus
+    friendly_name: Status
     required: true
     help: "Where the output is in review and approval; outputs are approved before release. (ISO 13485:2016 §7.3.4)"
   - name: implements
     type: link
+    friendly_name: Implements
     target: [Requirement]
     cardinality: many
     reverse_name: implemented_by

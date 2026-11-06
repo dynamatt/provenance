@@ -10,10 +10,10 @@ import (
 // types, and Markdown with fenced blocks in a body, a text field and a list
 // row.
 var partsSchema = map[string]string{
-	"schema/Product.yaml": "type: Product\nfields:\n  - {name: title, type: string}\n",
+	"schema/Product.yaml": "type: Product\nfields:\n  - {name: title, type: string, title: true}\n",
 	"schema/Part.yaml": `type: Part
 fields:
-  - {name: title, type: string}
+  - {name: title, type: string, title: true}
   - {name: parent, type: link, target: [Part, Product], cardinality: one, reverse_name: children}
   - {name: notes, type: text}
   - name: steps

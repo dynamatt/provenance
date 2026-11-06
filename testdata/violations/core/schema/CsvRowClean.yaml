@@ -7,3 +7,4 @@ source:
 fields:
   - name: title
     type: string
+    title: true

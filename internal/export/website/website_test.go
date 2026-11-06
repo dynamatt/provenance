@@ -15,7 +15,7 @@ import (
 
 const noteSchema = `type: Note
 fields:
-  - {name: title, type: string}
+  - {name: title, type: string, title: true}
   - {name: summary, type: text}
   - {name: see, type: link, target: [Note], cardinality: many, reverse_name: seen_by}
 `
@@ -168,7 +168,7 @@ func TestListItemsAndRecordRows(t *testing.T) {
 		"schema/records/Probe.yaml": "record: Probe\nfields:\n  - {name: serial, type: string}\n",
 		"schema/Ev.yaml": `type: Ev
 fields:
-  - {name: title, type: string}
+  - {name: title, type: string, title: true}
   - {name: probes, type: list, of: Probe}
   - {name: standards, type: list, of: string}
   - {name: readings, type: list, of: number}
@@ -182,7 +182,7 @@ fields:
 	}
 	page := string(files["entities/E-1.html"])
 	for _, want := range []string{
-		"<th>Serial</th>",
+		"<th>serial</th>",
 		"<td>P-1</td>",
 		"<ul class=\"items\">\n<li>IEC 60601-1</li>\n<li>ISO 14971</li>\n</ul>",
 		`<li><span class="invalid-value">oops</span> <span class="invalid">not a number</span></li>`,

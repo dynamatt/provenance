@@ -19,14 +19,14 @@
 <h1><span class="id">CPL-2026-0117</span> Stimulation too strong, then stopped</h1>
 <table class="fields">
 <tbody>
-<tr><th>Title</th><td>Stimulation too strong, then stopped</td></tr>
-<tr><th>Received</th><td>2026-03-02</td></tr>
-<tr><th>Product</th><td>NP-100 implant</td></tr>
-<tr><th>Failure mode</th><td>Firmware control loop</td></tr>
-<tr><th>Harm occurred</th><td>true</td></tr>
-<tr><th>Summary</th><td><div class="text"><p>Patient reported painful stimulation for about two seconds, then none. Logs show the control loop raising amplitude to the ceiling, as <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a> requires it to stop.</p>
+<tr><th>title</th><td>Stimulation too strong, then stopped</td></tr>
+<tr><th>received</th><td>2026-03-02</td></tr>
+<tr><th>product</th><td>NP-100 implant</td></tr>
+<tr><th>failure_mode</th><td>Firmware control loop</td></tr>
+<tr><th>harm_occurred</th><td>true</td></tr>
+<tr><th>summary</th><td><div class="text"><p>Patient reported painful stimulation for about two seconds, then none. Logs show the control loop raising amplitude to the ceiling, as <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a> requires it to stop.</p>
 </div></td></tr>
-<tr class="incoming"><th>Cited by risks</th><td><a class="id" href="RSK-0001.html" title="Uncontrolled stimulation amplitude increase">RSK-0001</a></td></tr>
+<tr class="incoming"><th>cited_by_risks</th><td><a class="id" href="RSK-0001.html" title="Uncontrolled stimulation amplitude increase">RSK-0001</a></td></tr>
 </tbody>
 </table>
 <p class="table-row">Row 5 of <code>data/complaints.csv</code>.</p>
@@ -37,6 +37,7 @@
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>34f3d11</code></td><td>2026-11-06</td><td>Claude</td><td>Titles are marked title: true; Risk labels its fields with friendly_name</td></tr>
 <tr><td><code>bbfe348</code></td><td>2026-11-06</td><td>Claude</td><td>Templates read fields by their schema names; anomalies&#39; resolved is back</td></tr>
 <tr><td><code>b3a9646</code></td><td>2026-11-03</td><td>Claude</td><td>Complaints: no export-date column; git dates each dump</td></tr>
 <tr><td><code>adffaf5</code></td><td>2026-11-02</td><td>Claude</td><td>No sidecars, no system:; complaints carry their export date as a column</td></tr>
@@ -57,7 +58,7 @@
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>bbfe348</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>34f3d11</code></p>
 </footer>
 </body>
 </html>

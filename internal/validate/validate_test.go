@@ -40,7 +40,7 @@ func text(t *testing.T, root string) string {
 	return b.String()
 }
 
-const reqType = "type: Requirement\nid_prefix: REQ\nfields:\n  - name: title\n    type: string\n"
+const reqType = "type: Requirement\nid_prefix: REQ\nfields:\n  - name: title\n    type: string\n    title: true\n"
 
 func TestRunEmptyRepository(t *testing.T) {
 	if got := text(t, t.TempDir()); got != "0 errors, 0 warnings\n" {
@@ -123,6 +123,7 @@ id_prefix: REQ
 fields:
   - name: title
     type: string
+    title: true
     required: true
   - name: statement
     type: text
@@ -194,9 +195,9 @@ REQ/REQ-0002.md:14: error [schema/list-row] steps row 2: no sub-field "size" (su
 schema/Note.yaml:1: error [schema/id-format] type Note has no id_prefix, so its IDs cannot be checked
 schema/Note.yaml:1: warning [schema/unused-type] type Note has no entities and no links to or from it
 schema/Requirement.yaml:1: error [schema/id-format] type Requirement has the id_prefix REQ, which Test (schema/Test.yaml) also has
-schema/Requirement.yaml:12: error [schema/unknown-key] field "status": unknown key "default": fields have no defaults; a field that must have a value says required: true
-schema/Requirement.yaml:15: error [schema/unknown-key] field "due": target applies only to a link field
-schema/Requirement.yaml:28: error [schema/formula] field "score": formula: column 1: Requirement has no field "nope" (fields: title, statement, status, due, tags, steps, score, verified_by)
+schema/Requirement.yaml:13: error [schema/unknown-key] field "status": unknown key "default": fields have no defaults; a field that must have a value says required: true
+schema/Requirement.yaml:16: error [schema/unknown-key] field "due": target applies only to a link field
+schema/Requirement.yaml:29: error [schema/formula] field "score": formula: column 1: Requirement has no field "nope" (fields: title, statement, status, due, tags, steps, score, verified_by)
 schema/Test.yaml:1: error [schema/id-format] type Test has the id_prefix REQ, which Requirement (schema/Requirement.yaml) also has
 schema/Test.yaml:4: error [schema/link-target] field "verifies": target "Nothing" is not a declared type (declared: Note, Requirement, Test)
 schema/enums/Spare.yaml:1: warning [schema/unused-enum] enum Spare is not used by any field

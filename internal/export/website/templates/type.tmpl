@@ -23,10 +23,10 @@
 {{end}}
 
 {{/* type-table-head opens the table of entities without bodies: one
-     column per field and incoming facet. */}}
+     column per field and incoming facet, headed by its label. */}}
 {{define "type-table-head"}}
 <table class="list type-entities">
-<thead><tr><th>ID</th>{{range .}}<th>{{humanize .}}</th>{{end}}</tr></thead>
+<thead><tr><th>ID</th>{{range .}}<th>{{.}}</th>{{end}}</tr></thead>
 <tbody>
 {{end}}
 

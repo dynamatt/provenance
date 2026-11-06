@@ -4,42 +4,54 @@ id_prefix: RSK
 fields:
   - name: title
     type: string
+    friendly_name: Title
+    title: true
     required: true
     help: "A short name for the risk. (ISO 14971:2019 §5.4)"
   - name: hazard
     type: text
+    friendly_name: Hazard
     required: true
     help: "The potential source of harm. (ISO 14971:2019 §5.4)"
   - name: hazardous_situation
     type: text
+    friendly_name: Hazardous situation
     help: "The circumstance in which people or property are exposed to the hazard. (ISO 14971:2019 §5.4)"
   - name: harm
     type: text
+    friendly_name: Harm
     help: "The injury or damage that can result. (ISO 14971:2019 §5.4)"
   - name: severity
     type: number
+    friendly_name: Severity
     help: "Severity of the harm, 1 (negligible) to 5 (catastrophic), on the scale of the risk management plan. (ISO 14971:2019 §5.5)"
   - name: probability
     type: number
+    friendly_name: Probability
     help: "Probability of the harm occurring, 1 (improbable) to 5 (frequent), on the scale of the risk management plan. (ISO 14971:2019 §5.5)"
   - name: risk_index
     type: calculated
+    friendly_name: Risk index
     formula: "severity * probability"
     help: "Severity times probability, for comparing risks against the acceptability criteria of the plan. (ISO 14971:2019 §6)"
   - name: mitigated_by
     type: link
+    friendly_name: Mitigated by
     target: [Requirement, Design]
     cardinality: many
     reverse_name: mitigates
     help: "The risk control measures: the requirements and design elements that reduce the risk. (ISO 14971:2019 §7.2)"
   - name: residual_acceptability
     type: RiskAcceptability
+    friendly_name: Residual acceptability
     required: true
     help: "Whether the residual risk, after its controls, is acceptable. (ISO 14971:2019 §7.3)"
   - name: risk_benefit_analysis
     type: text
+    friendly_name: Risk benefit analysis
     help: "Why the benefits outweigh a residual risk that is not acceptable; rules/risk-benefit-required.yaml requires it then. (ISO 14971:2019 §7.4)"
   - name: status
     type: ApprovalStatus
+    friendly_name: Status
     required: true
     help: "Where the risk analysis is in review and approval. (ISO 14971:2019 §4.5)"

@@ -514,6 +514,7 @@ func (ctx *renderCtx) funcs() template.FuncMap {
 		"markdown": ctx.markdown,
 		"link":     l.Link,
 		"href":     l.Href,
+		"title":    l.Title,
 		"short":    history.Short,
 	}
 }
@@ -521,7 +522,7 @@ func (ctx *renderCtx) funcs() template.FuncMap {
 // linker links from the page being rendered to the entity pages in the
 // export's scope.
 func (ctx *renderCtx) linker() tmpl.Linker {
-	return tmpl.Linker{Base: ctx.linkBase, HasPage: ctx.site.hasPage, ShownOn: ctx.site.shownOn}
+	return tmpl.Linker{Base: ctx.linkBase, HasPage: ctx.site.hasPage, ShownOn: ctx.site.shownOn, Schema: ctx.site.graph.Schema}
 }
 
 // markdown converts entity Markdown, resolving wikilinks against the site.
@@ -605,15 +606,9 @@ var fallbackFuncs = template.FuncMap{
 		return string(v.Field.Kind)
 	},
 	"number": formatNumber,
-	// humanize turns a snake_case field name into a label: verified_by ->
-	// "Verified by".
-	"humanize": func(name string) string {
-		s := strings.ReplaceAll(name, "_", " ")
-		if s == "" {
-			return s
-		}
-		return strings.ToUpper(s[:1]) + s[1:]
-	},
+	// label is how a field is labelled: its friendly_name, else its name
+	// as written (DES-0010). A facet is labelled by its reverse_name.
+	"label": func(f *schema.Field) string { return f.Label() },
 }
 
 func formatNumber(f float64) string { return strconv.FormatFloat(f, 'f', -1, 64) }

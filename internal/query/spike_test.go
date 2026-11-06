@@ -21,12 +21,12 @@ var exampleSchema = map[string]string{
 	"schema/enums/ApprovalStatus.yaml": "enum: ApprovalStatus\nvalues: [draft, in_review, approved, deprecated]\n",
 	"schema/UserNeed.yaml": `type: UserNeed
 fields:
-  - {name: title, type: string}
+  - {name: title, type: string, title: true}
   - {name: status, type: ApprovalStatus}
 `,
 	"schema/Requirement.yaml": `type: Requirement
 fields:
-  - {name: title, type: string}
+  - {name: title, type: string, title: true}
   - {name: status, type: ApprovalStatus}
   - {name: implements, type: link, target: [UserNeed], cardinality: many, reverse_name: implemented_by}
   - {name: order, type: number}
@@ -43,12 +43,12 @@ fields:
       - {name: serial, type: string}
       - {name: calibration_due_date, type: date}
 `,
-	"schema/Document.yaml":        "type: Document\nfields:\n  - {name: title, type: string}\n  - {name: summary, type: text}\n",
+	"schema/Document.yaml":        "type: Document\nfields:\n  - {name: title, type: string, title: true}\n  - {name: summary, type: text}\n",
 	"schema/SeverityLevel.yaml":   "type: SeverityLevel\nfields:\n  - {name: score, type: number}\n",
 	"schema/OccurrenceLevel.yaml": "type: OccurrenceLevel\nfields:\n  - {name: score, type: number}\n",
 	"schema/Risk.yaml": `type: Risk
 fields:
-  - {name: title, type: string}
+  - {name: title, type: string, title: true}
   - name: failure_modes
     type: list
     fields:

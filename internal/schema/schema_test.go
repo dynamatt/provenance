@@ -25,6 +25,7 @@ id_prefix: REQ
 fields:
   - name: title
     type: string
+    title: true
     required: true
   - name: statement
     type: text
@@ -397,7 +398,7 @@ fields:
 		`schema/A.yaml:3: type A: unknown key "extends" (expected type, id_prefix, pages, source, fields)`,
 		`schema/A.yaml:7: field "x": unknown key "default": fields have no defaults; a field that must have a value says required: true`,
 		`schema/A.yaml:8: field "x": formula applies only to a calculated field`,
-		`schema/A.yaml:13: field "y": unknown key "colour" (expected name, type, required, help, body, target, cardinality, reverse_name, formula, fields, of, column)`,
+		`schema/A.yaml:13: field "y": unknown key "colour" (expected name, type, required, title, friendly_name, help, body, target, cardinality, reverse_name, formula, fields, of, column)`,
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
@@ -546,6 +547,41 @@ func TestNameForm(t *testing.T) {
 			t.Errorf("%s: %v", c.field, problems)
 		case c.want != "" && (len(problems) != 1 || !strings.Contains(problems[0].Msg, c.want)):
 			t.Errorf("%s: got %v, want %s", c.field, problems, c.want)
+		}
+	}
+}
+
+// title: true marks the one string field that is an entity's title;
+// friendly_name labels a field on the built-in pages (DES-0010).
+func TestTitleAndFriendlyName(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/T.yaml", "type: T\nid_prefix: T\nfields:\n  - {name: label, type: string, title: true}\n  - {name: due_date, type: date, friendly_name: Due date}\n  - {name: note, type: text}\n")
+	s, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tt := s.Types["T"]
+	if tt.TitleField == nil || tt.TitleField.Name != "label" {
+		t.Errorf("title field: %+v", tt.TitleField)
+	}
+	if got := tt.Field("due_date").Label(); got != "Due date" {
+		t.Errorf("friendly name: %q", got)
+	}
+	if got := tt.Field("note").Label(); got != "note" {
+		t.Errorf("label without friendly_name: %q", got)
+	}
+	for _, c := range []struct{ fields, want string }{
+		{"  - {name: a, type: string, title: true}\n  - {name: b, type: string, title: true}\n", `field "b": only one field may set title: true ("a" already does)`},
+		{"  - {name: a, type: text, title: true}\n", `field "a": title: true is only allowed on a top-level string field`},
+		{"  - {name: rows, type: list, fields: [{name: a, type: string, title: true}]}\n", `title: true is only allowed on a top-level string field`},
+	} {
+		write(t, root, "schema/T.yaml", "type: T\nid_prefix: T\nfields:\n"+c.fields)
+		_, problems, err := Read(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(problems) != 1 || !strings.Contains(problems[0].Msg, c.want) {
+			t.Errorf("got %v, want %s", problems, c.want)
 		}
 	}
 }

@@ -219,7 +219,7 @@ func describe(v *model.Value) string {
 }
 
 func TestCSVProblems(t *testing.T) {
-	const tab = "type: Tab\nid_prefix: TAB\nsource: {csv: t.csv, id: id}\nfields:\n  - {name: title, type: string}\n"
+	const tab = "type: Tab\nid_prefix: TAB\nsource: {csv: t.csv, id: id}\nfields:\n  - {name: title, type: string, title: true}\n"
 	cases := []struct {
 		name  string
 		files map[string]string

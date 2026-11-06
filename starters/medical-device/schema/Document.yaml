@@ -5,9 +5,12 @@ id_prefix: DOC
 fields:
   - name: title
     type: string
+    friendly_name: Title
+    title: true
     required: true
     help: "The document's title. (ISO 13485:2016 §4.2.4)"
   - name: status
     type: ApprovalStatus
+    friendly_name: Status
     required: true
     help: "Where the document is in review and approval; documents are approved before issue. (ISO 13485:2016 §4.2.4)"
