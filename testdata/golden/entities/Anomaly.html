@@ -1,0 +1,66 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anomaly — NEURO DHF</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="dhf-header">
+<a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
+<span class="dhf-label">Design History File · NEURO</span>
+</header>
+<main class="dhf-main">
+
+<article class="anomalies" id="Anomaly">
+<h1>Known anomalies</h1>
+<p class="anomaly-source">The issue tracker's export, <code>data/anomalies.csv</code>.</p>
+<table>
+<thead><tr><th>Key</th><th>Summary</th><th>Severity</th><th>Affects</th><th>Notes</th></tr></thead>
+<tbody>
+<tr id="BUG-1042" class="open"><td><code>BUG-1042</code></td><td>Alarm tone clipped at maximum volume</td><td>minor</td>
+<td><a class="ref" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a>, <a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a></td><td><p>The alarm's last 40 ms are cut off at maximum volume. Does not affect the amplitude ceiling of <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>.</p>
+</td></tr>
+<tr id="BUG-1063" class="open"><td><code>BUG-1063</code></td><td>Clinician app shows the previous patient&#39;s name after logout</td><td>major</td>
+<td>—</td><td><p>Display only; the programmed settings are the current patient's.</p>
+</td></tr>
+<tr id="BUG-1057" class="fixed"><td><code>BUG-1057</code> <span class="status status-approved">fixed</span></td><td>Amplitude log rounds to whole milliamps</td><td>minor</td>
+<td><a class="ref" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a></td><td><p>Fixed in firmware 1.4.2.</p>
+</td></tr>
+</tbody>
+</table>
+</article>
+
+
+<section class="dhf-revisions">
+<h2>Revision history</h2>
+<table>
+<thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td><code>34f3d11</code></td><td>2026-11-06</td><td>Claude</td><td>Titles are marked title: true; Risk labels its fields with friendly_name</td></tr>
+<tr><td><code>bbfe348</code></td><td>2026-11-06</td><td>Claude</td><td>Templates read fields by their schema names; anomalies&#39; resolved is back</td></tr>
+<tr><td><code>a20469a</code></td><td>2026-11-05</td><td>Claude</td><td>pages: false at the type: SeverityLevel and Anomaly pages</td></tr>
+<tr><td><code>adffaf5</code></td><td>2026-11-02</td><td>Claude</td><td>No sidecars, no system:; complaints carry their export date as a column</td></tr>
+<tr><td><code>3d07b7b</code></td><td>2026-11-02</td><td>Claude</td><td>Complaints, anomalies and a standards register read from CSV files</td></tr>
+<tr><td><code>4dab2f7</code></td><td>2026-11-01</td><td>Matt Williams</td><td>Merge pull request #22 from dynamatt/epic/E4-fmt</td></tr>
+<tr><td><code>8068898</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #14 from dynamatt/cookbook-glossary</td></tr>
+<tr><td><code>58b2168</code></td><td>2026-10-11</td><td>Matt Williams</td><td>Merge pull request #12 from dynamatt/task/E2.1-validate-design</td></tr>
+<tr><td><code>55388be</code></td><td>2026-10-10</td><td>Matt Williams</td><td>Merge pull request #10 from dynamatt/ddf-references</td></tr>
+<tr><td><code>1b28c4c</code></td><td>2026-10-08</td><td>Matt Williams</td><td>Merge pull request #9 from dynamatt/cite-template</td></tr>
+<tr><td><code>bd98829</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Merge pull request #7 from dynamatt/scope-git-captions</td></tr>
+<tr><td><code>b6dfc5c</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Lists that name their type: a record, an enum and a built-in type</td></tr>
+<tr><td><code>4cf41f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Make templates/ functional: Requirement page, layout, index, stylesheet</td></tr>
+<tr><td><code>7aee1f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link on the VerificationProtocol side instead</td></tr>
+<tr><td><code>32bb0cb</code></td><td>2026-09-26</td><td>Matt Williams</td><td>Initial commit.</td></tr>
+</tbody>
+</table>
+</section>
+</main>
+<footer class="dhf-footer">
+Controlled content, generated from the design repository. Printed copies are uncontrolled.
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>34f3d11</code></p>
+</footer>
+</body>
+</html>

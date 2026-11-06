@@ -1,14 +1,10 @@
 package tmpl
 
 import (
-	"fmt"
 	"maps"
-	"strings"
-	"unicode"
-	"unicode/utf8"
 
+	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/model"
-	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/schema"
 )
 
@@ -17,19 +13,30 @@ import (
 // nil when the entity does not set it — and a misspelt field is an error
 // rather than silently empty output.
 //
-//	.ID .Type .Title .Body .Resolved    engine baseline
+//	.ID .Type .Body .Resolved           engine baseline; an entity's title is
+//	                                    its title: true field's, which the
+//	                                    title function reads (DES-0010)
 //	.LastChangedSHA .Revisions          git stamps (DES-0023)
+//	.File                               the file the entity is written in:
+//	                                    .Path, and .Line, where its ID is
+//	                                    written; a CSV file's row too (DES-0053)
 //	.Citations                          on the entity a page is about, what the
 //	                                    page cites (DES-0046); empty elsewhere
-//	.<PascalCaseField>                  every declared field, calculated ones included
-//	.<PascalCaseFacet>                  every incoming facet, e.g. .ImplementedBy
+//	.<field>                            every declared field, by its name as
+//	                                    the schema writes it (.verified_by),
+//	                                    calculated ones included
+//	.<facet>                            every incoming facet, by its
+//	                                    reverse_name, e.g. .implemented_by
 //
+// The engine's keys are capitalised and a field's name is lower-case
+// snake_case (the schema checks it), so the two can never clash: a type
+// may declare a field named title, resolved or file (DES-0030).
 // Values: text-like fields are strings, numbers float64, booleans bool; a
 // calculated field is its formula's value (a number, boolean or string), nil
 // when blank or when the formula cannot be evaluated; a
 // link with cardinality one is another entity's map (or nil), with
 // cardinality many a list of them; a list field is a list of row maps keyed
-// by PascalCase sub-field, or, when it names an item type with of:, a list of
+// by sub-field name, or, when it names an item type with of:, a list of
 // item values. An unresolved link target is a map with Resolved
 // false and every field its declared target types have set to nil, so a
 // template written for resolved targets still renders.
@@ -39,64 +46,21 @@ type Data = map[string]any
 // every entity, empty: the start of every entity's data, and all of an
 // unresolved link target's but its declared fields.
 func Baseline(id string) Data {
-	return Data{"ID": id, "Type": "", "Title": "", "Body": "", "Resolved": false,
-		"LastChangedSHA": "", "Revisions": []Data{}, "Citations": []Data{}}
+	return Data{"ID": id, "Type": "", "Body": "", "Resolved": false,
+		"LastChangedSHA": "", "Revisions": []Data{}, "Citations": []Data{}, "File": FileData("", 0)}
 }
 
-// citationKeys are added to each entity in a page's .Citations, and
-// CitationLabel to the entity _cite.tmpl renders.
-var citationKeys = []string{"CitationIndex", "TypeCitationIndex", "CitationLabel"}
-
-// templateName converts a snake_case field name to its template accessor:
-// verified_by -> VerifiedBy.
-func TemplateName(field string) string {
-	var b strings.Builder
-	for _, part := range strings.Split(field, "_") {
-		if part == "" {
-			continue
-		}
-		r, size := utf8.DecodeRuneInString(part)
-		b.WriteRune(unicode.ToUpper(r))
-		b.WriteString(part[size:])
-	}
-	return b.String()
+// FileData is the file an entity is written in, as a template sees it
+// (.File, DES-0053): .Path, and .Line, where the entity's ID is written,
+// the same for an entity file and a row of a CSV file.
+func FileData(path string, line int) Data {
+	return Data{"Path": path, "Line": line}
 }
 
-// NameErrors lists every field or facet whose template accessor
-// another of its type's fields or facets already has, or that hides a
-// baseline accessor ("title" is allowed: the field is the title). Export
-// stops at the first.
-func NameErrors(s *schema.Schema) []*query.ContentError {
-	var out []*query.ContentError
-	for _, n := range s.TypeNames() {
-		t := s.Types[n]
-		seen := map[string]string{}
-		for b := range Baseline("") {
-			seen[b] = "the engine baseline"
-		}
-		for _, b := range citationKeys {
-			seen[b] = "the engine's citations"
-		}
-		delete(seen, "Title")
-		check := func(name, what, path string, line int) {
-			key := TemplateName(name)
-			if prev, dup := seen[key]; dup {
-				out = append(out, &query.ContentError{Path: path, Line: line,
-					Msg: fmt.Sprintf("%s %q: its template name .%s is already used by %s", what, name, key, prev)})
-				return
-			}
-			seen[key] = fmt.Sprintf("%s %q", what, name)
-		}
-		for _, f := range t.Fields {
-			check(f.Name, "field", t.File, f.Line)
-		}
-		// A facet is declared by its reverse_name, in the linking type's file.
-		for _, f := range t.Facets {
-			src := f.Sources[0]
-			check(f.Name, "incoming facet", src.Type.File, src.Field.Line)
-		}
-	}
-	return out
+// TableFile is a CSV file as a whole, for its table page and its type on
+// the main page: .File without .Line.
+func TableFile(t *entity.Table) Data {
+	return Data{"Path": t.Path}
 }
 
 // Model holds every entity's template data, built once per export.
@@ -113,9 +77,10 @@ func NewModel(s *schema.Schema, entities []*model.Entity) *Model {
 	}
 	for _, e := range entities {
 		m := d.ByID[e.ID]
-		m["Type"], m["Title"], m["Body"], m["Resolved"] = e.Type, e.Title(), e.Body, true
+		m["Type"], m["Body"], m["Resolved"] = e.Type, e.Body, true
+		m["File"] = FileData(e.Path, e.IDLine())
 		for _, v := range e.Fields {
-			m[TemplateName(v.Field.Name)] = d.value(v)
+			m[v.Field.Name] = d.value(v)
 			if v.Field == e.Schema.BodyField {
 				m["Body"] = v.Str
 			}
@@ -125,7 +90,7 @@ func NewModel(s *schema.Schema, entities []*model.Entity) *Model {
 			for i, from := range in.From {
 				refs[i] = d.ByID[from.ID]
 			}
-			m[TemplateName(in.Facet.Name)] = refs
+			m[in.Facet.Name] = refs
 		}
 	}
 	return d
@@ -167,7 +132,7 @@ func (d *Model) value(v *model.Value) any {
 			for _, row := range v.Rows {
 				r := Data{}
 				for _, cell := range row {
-					r[TemplateName(cell.Field.Name)] = d.value(cell)
+					r[cell.Field.Name] = d.value(cell)
 				}
 				rows = append(rows, r)
 			}
@@ -201,10 +166,10 @@ func (d *Model) ref(id string, target *model.Entity, f *schema.Field) Data {
 			continue
 		}
 		for _, tf := range t.Fields {
-			m[TemplateName(tf.Name)] = nil
+			m[tf.Name] = nil
 		}
 		for _, facet := range t.Facets {
-			m[TemplateName(facet.Name)] = []Data{}
+			m[facet.Name] = []Data{}
 		}
 	}
 	return m

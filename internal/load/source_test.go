@@ -26,7 +26,7 @@ func rowsRepo(t *testing.T, extra map[string]string) *load.Result {
 	load.UseTestSource(t, loadtest.Rows{})
 	root := t.TempDir()
 	files := map[string]string{
-		"schema/Part.yaml": "type: Part\nid_prefix: PRT\nfields:\n  - {name: title, type: string}\n  - {name: weight, type: number}\n  - {name: total, type: calculated, formula: \"weight * 2\"}\n",
+		"schema/Part.yaml": "type: Part\nid_prefix: PRT\nfields:\n  - {name: title, type: string, title: true}\n  - {name: weight, type: number}\n  - {name: total, type: calculated, formula: \"weight * 2\"}\n",
 		"P/a.md":           "---\nid: PRT-0001\ntype: Part\ntitle: Frame\nweight: 1\n---\n",
 		"data/parts.rows":  rows,
 	}

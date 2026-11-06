@@ -33,14 +33,14 @@ func TestSpliceShiftsByPrecedingHeading(t *testing.T) {
 
 const reqSchema = `type: Req
 fields:
-  - {name: title, type: string}
+  - {name: title, type: string, title: true}
   - {name: statement, type: text, body: true}
   - {name: rationale, type: text}
   - {name: parent, type: link, target: [Req], cardinality: one, reverse_name: children}
   - {name: verified_by, type: link, target: [Ver], cardinality: many}
 `
 
-const verSchema = "type: Ver\nfields:\n  - {name: title, type: string}\n  - {name: score, type: number}\n"
+const verSchema = "type: Ver\nfields:\n  - {name: title, type: string, title: true}\n  - {name: score, type: number}\n"
 
 func req(id, front, body string) string {
 	return "---\nid: " + id + "\ntype: Req\n" + front + "---\n" + body
@@ -50,10 +50,10 @@ func TestProjectTypeTemplateAndDataModel(t *testing.T) {
 	files, err := exportRepo(t, map[string]string{
 		"schema/Req.yaml": reqSchema,
 		"schema/Ver.yaml": verSchema,
-		"templates/Req.tmpl": "<h1 class=\"r\">{{.ID}} {{.Title}}</h1>\r\n" +
-			"{{markdown .Statement}}|{{if .Rationale}}R{{else}}no-rationale{{end}}|parent={{link .Parent}}|" +
-			"{{range .VerifiedBy}}[{{link .}} {{.Title}} {{.Score}} resolved={{.Resolved}}]{{end}}|" +
-			"children={{range .Children}}{{.ID}}{{end}}|href={{href .Parent}}|body={{.Body}}",
+		"templates/Req.tmpl": "<h1 class=\"r\">{{.ID}} {{title .}}</h1>\r\n" +
+			"{{markdown .statement}}|{{if .rationale}}R{{else}}no-rationale{{end}}|parent={{link .parent}}|" +
+			"{{range .verified_by}}[{{link .}} {{title .}} {{.score}} resolved={{.Resolved}}]{{end}}|" +
+			"children={{range .children}}{{.ID}}{{end}}|href={{href .parent}}|body={{.Body}}",
 		"templates/README.md":   "ignored",
 		"templates/Nobody.tmpl": "{{ this would not parse",
 		"R/R-1.md":              req("R-1", "title: Top\nverified_by: [V-1, V-404]\n", "The *shall*."),
@@ -124,7 +124,7 @@ func TestSiteOverridesAreIndependent(t *testing.T) {
 	}
 
 	files, err = exportRepo(t, with(map[string]string{
-		"templates/_index.tmpl": `{{range .Types}}{{.Type}}:{{range .Entities}}{{link .}}={{index . "Title"}}{{index . "Nope"}}{{end}}{{end}}`,
+		"templates/_index.tmpl": `{{range .Types}}{{.Type}}:{{range .Entities}}{{link .}}={{title .}}{{index . "Nope"}}{{end}}{{end}}`,
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -146,7 +146,7 @@ func TestTemplateErrorsNameTheFile(t *testing.T) {
 		"misspelt field": {map[string]string{"templates/Req.tmpl": "ok\n{{.Rationle}}"},
 			`templates/Req.tmpl:2:2: executing "templates/Req.tmpl" at <.Rationle>: map has no entry for key "Rationle"`},
 		"misspelt field inside an embed": {map[string]string{
-			"templates/Req.tmpl": "{{if eq .ID \"R-2\"}}{{.Nope}}{{else}}{{markdown .Statement}}{{end}}",
+			"templates/Req.tmpl": "{{if eq .ID \"R-2\"}}{{.Nope}}{{else}}{{markdown .statement}}{{end}}",
 			"R/R-1.md":           req("R-1", "", "![[R-2]]\n"),
 		}, `templates/Req.tmpl:1:21: executing "templates/Req.tmpl" at <.Nope>`},
 	} {
@@ -163,12 +163,21 @@ func TestTemplateErrorsNameTheFile(t *testing.T) {
 	}
 }
 
-func TestTemplateNameClashes(t *testing.T) {
-	_, err := exportRepo(t, map[string]string{
-		"schema/Req.yaml": "type: Req\nfields:\n  - {name: body, type: string}\n",
+// A template reads a field by its name as the schema writes it, and the
+// engine's keys are capitalised, so a field may be named after one
+// (DES-0030): .body is the field, .Body the engine's body.
+func TestFieldsBesideEngineKeys(t *testing.T) {
+	files, err := exportRepo(t, map[string]string{
+		"schema/Req.yaml": "type: Req\nid_prefix: R\nfields:\n  - {name: title, type: string, title: true}\n  - {name: body, type: string}\n" +
+			"  - {name: resolved, type: boolean}\n  - {name: file, type: string}\n  - {name: citation_index, type: number}\n",
+		"R/R-1.md":           "---\nid: R-1\ntype: Req\ntitle: One\nbody: a field\nresolved: false\nfile: f.pdf\ncitation_index: 7\n---\nThe body.\n",
+		"templates/Req.tmpl": "[{{.title}}|{{title .}}] [{{.body}}|{{.Body}}] [{{.resolved}}|{{.Resolved}}] [{{.file}}|{{.File.Path}}] [{{.citation_index}}]\n",
 	})
-	want := `schema/Req.yaml:3: field "body": its template name .Body is already used by the engine baseline`
-	if err == nil || err.Error() != want {
-		t.Errorf("err = %v\nwant %s", err, want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "[One|One] [a field|The body.] [false|true] [f.pdf|R/R-1.md] [7]"
+	if page := string(files["entities/R-1.html"]); !strings.Contains(page, want) {
+		t.Errorf("want %s in:\n%s", want, page)
 	}
 }

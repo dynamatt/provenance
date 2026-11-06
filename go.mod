@@ -11,7 +11,7 @@ require (
 	github.com/spf13/pflag v1.0.9
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/yuin/goldmark v1.8.6
-	go.yaml.in/yaml/v4 v4.0.0-rc.6
+	go.yaml.in/yaml/v4 v4.0.0
 	golang.org/x/net v0.56.0
 )
 

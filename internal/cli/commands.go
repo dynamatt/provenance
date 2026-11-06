@@ -41,15 +41,16 @@ Nothing is written if any of the starter's files is already there, or if path is
 inside a Provenance repository. When path isn't in a git repository, init runs
 git init (branch main) but never commits.
 
---code and --name fill .component; both default to the folder's name.
+--code, required, and --name fill .component; the name defaults to the folder's
+name, as written.
 
 Exit codes: 0 written, 2 nothing written (a file in the way, an unknown
-template, an invalid code) or a tool error.`,
+template, a missing or invalid code) or a tool error.`,
 		Args: maxArgs(1),
 		RunE: runInit,
 	}
 	c.Flags().String("template", "", "starter `name` (default: medical-device)")
-	c.Flags().String("code", "", "component `code`: 1 to 8 upper-case letters and digits (default: from the folder's name)")
+	c.Flags().String("code", "", "component `code`, required: 1 to 8 upper-case letters and digits, such as NEURO")
 	c.Flags().String("name", "", "component `name` (default: the folder's name)")
 	return c
 }

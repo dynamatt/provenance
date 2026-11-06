@@ -8,18 +8,21 @@
 <table class="fields">
 <tbody>
 {{- range .Fields}}
-<tr><th>{{humanize .Field.Name}}</th><td>{{template "value" .}}</td></tr>
+<tr><th>{{label .Field}}</th><td>{{template "value" .}}</td></tr>
 {{- end}}
 {{- range .Incoming}}
-<tr class="incoming"><th>{{humanize .Facet.Name}}</th><td>
+<tr class="incoming"><th>{{.Facet.Name}}</th><td>
 {{- range $i, $e := .From}}{{if $i}}, {{end}}{{ref $e.ID $e}}{{else}}<span class="absent">—</span>{{end -}}
 </td></tr>
 {{- end}}
 </tbody>
 </table>
 {{- end}}
+{{- with .RowFile}}
+<p class="table-row">Row {{.Line}} of <code>{{.Path}}</code>.</p>
+{{- end}}
 {{- with .BodyField}}
-<h2>{{humanize .Field.Name}}</h2>
+<h2>{{label .Field}}</h2>
 <div class="body">
 {{markdown .Str}}</div>
 {{- end}}

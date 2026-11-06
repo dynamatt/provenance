@@ -14,7 +14,7 @@ func ruleRepo(t *testing.T, rules map[string]string) string {
 	write(t, root, "schema/Part.yaml", `type: Part
 id_prefix: PRT
 fields:
-  - {name: title, type: string}
+  - {name: title, type: string, title: true}
   - {name: status, type: string}
   - {name: owner, type: string}
   - {name: parent, type: link, target: [Part], cardinality: one, reverse_name: children}

@@ -23,7 +23,7 @@ func exists(t *testing.T, path string) bool {
 // validates clean.
 func TestInitFresh(t *testing.T) {
 	t.Chdir(t.TempDir())
-	code, out, errOut := run("init", "Therm-o 2")
+	code, out, errOut := run("init", "Therm-o 2", "--code", "THERMO2")
 	if code != 0 || !strings.HasPrefix(out, "Wrote the medical-device starter for Therm-o 2 (THERMO2) to Therm-o 2: ") ||
 		!strings.Contains(out, "Created a git repository there, on branch main, with no commits.") || errOut != "" {
 		t.Fatalf("exit %d, stdout %q, stderr %q", code, out, errOut)
@@ -81,16 +81,16 @@ func TestInitRefuses(t *testing.T) {
 		args []string
 		want string
 	}{
-		{[]string{"init", "taken"}, "init: nothing was written: taken already has README.md\n"},
-		{[]string{"init", "new", "--template", "nope"}, `init: no starter "nope" (starters: medical-device)` + "\n"},
-		{[]string{"init", "!!!"}, `init: component code "" is not 1 to 8 upper-case letters and digits; give one with --code` + "\n"},
+		{[]string{"init", "taken", "--code", "TAKEN"}, "init: nothing was written: taken already has README.md\n"},
+		{[]string{"init", "new", "--code", "NEW", "--template", "nope"}, `init: no starter "nope" (starters: medical-device)` + "\n"},
+		{[]string{"init", "new"}, "init: --code is required: the component code, 1 to 8 upper-case letters and digits, such as --code NEURO\n"},
 		{[]string{"init", "new", "--code", "lower"}, `init: component code "lower" is not 1 to 8 upper-case letters and digits; give one with --code` + "\n"},
 	} {
 		if code, _, errOut := run(c.args...); code != 2 || errOut != c.want {
 			t.Errorf("%v: exit %d, stderr %q", c.args, code, errOut)
 		}
 	}
-	if exists(t, "taken/USR") || exists(t, "new") || exists(t, "!!!") {
+	if exists(t, "taken/USR") || exists(t, "new") {
 		t.Error("a refused init wrote files")
 	}
 	newRepo(t)
@@ -105,7 +105,7 @@ func TestInitWorkflow(t *testing.T) {
 	version.Version = "v1.2.3"
 	t.Cleanup(func() { version.Version = prev })
 	t.Chdir(t.TempDir())
-	if code, out, _ := run("init", "p"); code != 0 || !strings.Contains(out, "set PROVENANCE_SHA256") {
+	if code, out, _ := run("init", "p", "--code", "P"); code != 0 || !strings.Contains(out, "set PROVENANCE_SHA256") {
 		t.Fatalf("exit %d, stdout %q", code, out)
 	}
 	if got := read(t, "p", ".github/workflows/validate.yml"); !strings.Contains(got, "PROVENANCE_VERSION: v1.2.3\n") {

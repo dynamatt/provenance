@@ -94,8 +94,8 @@ rm REQ/copy.md
 # E1.3: schema loading and default entity pages. (Requirement has a project
 # template since E1.6, so the built-in page is checked on a Design.)
 "$PROV" export website >/dev/null
-expect 0 '<tr><th>Status</th><td>approved</td></tr>'  cat _site/entities/DES-0001.html
-expect 0 '<tr><th>Order</th><td>1</td></tr>'          cat _site/entities/DES-0001.html
+expect 0 '<tr><th>status</th><td>approved</td></tr>'  cat _site/entities/DES-0001.html
+expect 0 '<tr><th>order</th><td>1</td></tr>'          cat _site/entities/DES-0001.html
 expect 0 'A control loop running on the implant'       cat _site/entities/DES-0001.html
 expect 0 'The system shall automatically adjust'       cat _site/entities/REQ-0001.html
 expect 0 'href="entities/REQ-0001.html"'               cat _site/index.html
@@ -110,7 +110,7 @@ expect 1 ''                               grep -q '^verified_by:' REQ/REQ-0001.m
 # from the derived verified_by facet (whichever template renders the page).
 expect 0 'href="VER-0001\.html"'            cat _site/entities/REQ-0001.html
 expect 0 'verifies <a class="ref" href="REQ-0001\.html"' cat _site/entities/VER-0001.html
-expect 0 '<th>Implemented by</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/USR-0001.html
+expect 0 '<th>implemented_by</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/USR-0001.html
 expect 0 '<td>BES-2201</td>'                cat _site/entities/EVD-0001.html
 expect 0 '<td>PCP-0087</td>'                cat _site/entities/EVD-0001.html
 sed -i.orig 's/^  - REQ-0001$/  - REQ-9999/' DES/DES-0001.md
@@ -157,7 +157,7 @@ expect 0 '<li>IEC 62304</li>'               cat _site/entities/DES-0001.html
 expect 0 'test, analysis'                   cat _site/entities/REQ-0002.html
 expect 0 '<th>Serial number</th>'           cat _site/entities/EVD-0001.html
 expect 0 '<td>BES-2201</td>'                cat _site/entities/EVD-0001.html
-expect 0 '<th>Serial number</th>'           cat _site/entities/VAL-0001.html
+expect 0 '<th>serial_number</th>'           cat _site/entities/VAL-0001.html
 expect 0 '<td>CER-0310</td>'                cat _site/entities/VAL-0001.html
 expect 0 '<th>Cause</th>'                   cat _site/entities/RSK-0001.html
 sed -i.orig 's/of: Equipment/of: Equipmnet/' schema/VerificationEvidence.yaml
@@ -184,11 +184,11 @@ mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
 # overall_risk_rating their maximum; both follow a changed score.
 "$PROV" export website >/dev/null
 RSK_FLAT="tr -d '\\n' < _site/entities/RSK-0001.html"
-expect 0 'OCC-0001</a></td><td>5</td></tr>.*OCC-0002</a></td><td>15</td></tr>' sh -c "$RSK_FLAT"
+expect 0 'OCC-0001</a></td><td>5</td>.*OCC-0002</a></td><td>15</td>' sh -c "$RSK_FLAT"
 expect 0 '<tr><th>Overall risk rating</th><td>15</td></tr>' sh -c "$RSK_FLAT"
 sed -i.orig 's/^score: 3/score: 4/' OCC/OCC-0002.md
 "$PROV" export website >/dev/null
-expect 0 'OCC-0002</a></td><td>20</td></tr>' sh -c "$RSK_FLAT"
+expect 0 'OCC-0002</a></td><td>20</td>' sh -c "$RSK_FLAT"
 expect 0 '<tr><th>Overall risk rating</th><td>20</td></tr>' sh -c "$RSK_FLAT"
 mv OCC/OCC-0002.md.orig OCC/OCC-0002.md
 
@@ -400,7 +400,7 @@ sed -i 's/^type: Risk/type: Rsk/' RSK/RSK-0001.md
 expect 1 '^RSK/RSK-0001\.md:3: error \[schema/unknown-type\] type "Rsk" is not declared in schema/ ' "$PROV" validate
 git checkout -q -- RSK/RSK-0001.md
 sed -i 's/type: ApprovalStatus/type: AprovalStatus/' schema/Requirement.yaml
-expect 1 '^schema/Requirement\.yaml:20: error \[schema/file\] field "status": unknown type "AprovalStatus"' "$PROV" validate
+expect 1 '^schema/Requirement\.yaml:21: error \[schema/file\] field "status": unknown type "AprovalStatus"' "$PROV" validate
 expect 1 '^12 rules not run: the schema has errors$' "$PROV" validate
 git checkout -q -- schema/Requirement.yaml
 expect 2 '^validate: unknown report "xml": not a format \(text, json, junit, sarif\)' "$PROV" validate --output xml
@@ -684,7 +684,8 @@ git checkout -q --detach "$PIN"
 # workflow, from a build that isn't a release); a second init into it
 # writes nothing.
 cd "$WORK"
-expect 0 '^Wrote the medical-device starter for demo \(DEMO\) to demo: [0-9]+ files\.$' "$PROV" init demo
+expect 2 '^init: --code is required' "$PROV" init demo
+expect 0 '^Wrote the medical-device starter for demo \(DEMO\) to demo: [0-9]+ files\.$' "$PROV" init demo --code DEMO
 expect 0 '^## No commits yet on main$' git -C demo status --short --branch --untracked-files=no
 cd demo
 expect 0 '^0 errors, 0 warnings$' "$PROV" validate
@@ -693,8 +694,57 @@ expect 0 '^$' "$PROV" fmt --all --check
 expect 0 '^code: DEMO$' cat .component
 expect 0 '' diff -r -x .git -x .github -x _site -x .component -x README.md "$SCRIPTS_DIR/../starters/medical-device" .
 cd "$WORK"
-expect 2 '^init: demo is inside the Provenance repository at demo$' "$PROV" init demo
+expect 2 '^init: demo is inside the Provenance repository at demo$' "$PROV" init demo --code DEMO
 cd "$EXAMPLE_DIR"
+
+# E6.3: the example's three CSV files load (DES-0053): it validates with
+# its usual warning; RSK-0001's lead-fracture failure mode counts the four
+# complaints it links to, and REQ-0001 lists the anomalies that name it.
+expect 0 '^0 errors, 1 warning$' "$PROV" validate
+expect 0 '^exported website to _site$' "$PROV" export website
+expect 0 'CPL-2026-0141</a></td><td>4</td></tr>' cat _site/entities/RSK-0001.html
+expect 0 '<a class="ref" href="Anomaly\.html#BUG-1042"' cat _site/entities/REQ-0001.html
+
+# E6.4: a row with a cell too many is an error at its line, and a column
+# no field reads a warning at the header; a required cell left empty fails
+# at its row, as a required field left out of an entity file does.
+printf 'STD-0005,Extra,X,true,,surplus\n' >>data/standards.csv
+expect 1 '^data/standards\.csv:6: error \[content/csv-row\] the row has 6 cells, but the header has 5$' "$PROV" validate
+git checkout -q -- data/standards.csv
+sed -i '1s/$/,Region/; 2,$s/$/,EU/' data/standards.csv
+expect 0 '^data/standards\.csv:1: warning \[content/csv-column\] column "Region" is not read' "$PROV" validate
+git checkout -q -- data/standards.csv
+sed -i 's/^CPL-2026-0115,2026-02-21,/CPL-2026-0115,,/' data/complaints.csv
+expect 1 '^data/complaints\.csv:4: error \[schema/required\] required field received is not set \(CPL-2026-0115\)$' "$PROV" validate
+git checkout -q -- data/complaints.csv
+
+# E6.5: a complaint's page says which file it is a row of. Types with
+# pages: false (DES-0054), CSV-backed or Markdown, have one page for all
+# their entities and none each: anomalies through templates/_Anomaly.tmpl,
+# severity levels through the built-in table; links point at their place
+# there. Other types, complaints and standards included, have no type page.
+expect 0 '^exported website to _site$' "$PROV" export website
+expect 0 'Row 11 of <code>data/complaints\.csv</code>\.</p>' cat _site/entities/CPL-2026-0141.html
+expect 1 '' test -e _site/entities/BUG-1042.html
+expect 1 '' test -e _site/entities/SEV-0003.html
+expect 1 '' test -e _site/entities/Complaint.html
+expect 1 '' test -e _site/entities/Standard.html
+expect 0 '<tr id="BUG-1042" class="open">' cat _site/entities/Anomaly.html
+expect 0 '<tr id="SEV-0003"><td class="id">SEV-0003</td><td>Critical</td><td>5</td>' cat _site/entities/SeverityLevel.html
+expect 0 'href="SeverityLevel\.html#SEV-0003"' cat _site/entities/RSK-0001.html
+expect 0 '<h2><a href="entities/SeverityLevel\.html">SeverityLevel</a></h2>' cat _site/index.html
+
+# E6.6: a new dump changing one row moves the last-changed commit of that
+# row's page and the index only (C7), and of DOC-0003, whose queries read
+# every type: git dates each row.
+PIN=$(git rev-parse HEAD)
+sed -i 's/Charger does not start/Charger will not start/' data/complaints.csv
+expect 0 '^0 errors, 1 warning$' "$PROV" validate
+gitc commit -qam "Complaints dump of 2026-10-31"
+NEW=$(git rev-parse --short=7 HEAD)
+"$PROV" export website --out "$WORK/dump" >/dev/null
+expect 0 '^entities/CPL-2026-0115\.html entities/DOC-0003\.html index\.html $' sh -c "cd '$WORK/dump' && grep -rl 'last changed in <code>$NEW</code>' . | sed 's#^\./##' | sort | tr '\n' ' '"
+git checkout -q --detach "$PIN"
 
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"

@@ -44,11 +44,10 @@ func Format(raw []byte, t *schema.Type) ([]byte, error) {
 
 	var out bytes.Buffer
 	out.WriteString("---\n")
-	d, err := yaml.NewDumper(&out, yaml.WithV3Defaults(), yaml.WithLineWidth(-1))
+	d, err := yaml.NewDumper(&out, yaml.WithV3Defaults(), yaml.WithIndent(2), yaml.WithLineWidth(-1))
 	if err != nil {
 		return nil, err
 	}
-	d.SetIndent(2)
 	if err := d.Dump(&doc); err != nil {
 		return nil, err
 	}

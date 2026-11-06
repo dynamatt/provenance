@@ -25,6 +25,7 @@ id_prefix: REQ
 fields:
   - name: title
     type: string
+    title: true
     required: true
   - name: statement
     type: text
@@ -394,12 +395,193 @@ fields:
 		got = append(got, p.Error())
 	}
 	want := []string{
-		`schema/A.yaml:3: type A: unknown key "extends" (expected type, id_prefix, fields)`,
+		`schema/A.yaml:3: type A: unknown key "extends" (expected type, id_prefix, pages, source, fields)`,
 		`schema/A.yaml:7: field "x": unknown key "default": fields have no defaults; a field that must have a value says required: true`,
 		`schema/A.yaml:8: field "x": formula applies only to a calculated field`,
-		`schema/A.yaml:13: field "y": unknown key "colour" (expected name, type, required, help, body, target, cardinality, reverse_name, formula, fields, of)`,
+		`schema/A.yaml:13: field "y": unknown key "colour" (expected name, type, required, title, friendly_name, help, body, target, cardinality, reverse_name, formula, fields, of, column)`,
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// A type read from a CSV file (DES-0053).
+func TestSource(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/Complaint.yaml", `type: Complaint
+id_prefix: CPL
+source:
+  csv: data/complaints.csv
+  id: Complaint No
+  delimiter: ";"
+  separator: "|"
+fields:
+  - name: received
+    type: date
+    column: Date Received
+  - name: product
+    type: string
+`)
+	s, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := s.Types["Complaint"].Source
+	want := Source{CSV: "data/complaints.csv", ID: "Complaint No", Delimiter: ';', Separator: "|", Line: 4}
+	if *src != want {
+		t.Errorf("source: %+v", src)
+	}
+	if f := s.Types["Complaint"].Field("received"); f.ColumnName() != "Date Received" {
+		t.Errorf("column: %q", f.ColumnName())
+	}
+	if f := s.Types["Complaint"].Field("product"); f.ColumnName() != "product" {
+		t.Errorf("column: %q", f.ColumnName())
+	}
+	if len(s.SourceTypes()) != 1 || len(s.KeyProblems) != 0 {
+		t.Errorf("source types %v, key problems %v", s.SourceTypes(), s.KeyProblems)
+	}
+	write(t, root, "schema/Table.yaml", "type: Table\nid_prefix: TAB\nsource: {csv: t.csv, id: id}\nfields: []\n")
+	s, _ = Load(root)
+	if src := s.Types["Table"].Source; src.Delimiter != ',' || src.Separator != ";" {
+		t.Errorf("defaults: %+v", src)
+	}
+}
+
+func TestSourceErrors(t *testing.T) {
+	head := "type: T\nid_prefix: T\n"
+	cases := []struct{ name, schema, want string }{
+		{"not a mapping", head + "source: t.csv\n", `schema/T.yaml:3: type T: source must be a mapping with csv: and id:`},
+		{"no csv", head + "source: {id: id}\n", `schema/T.yaml:3: type T: source: csv: names the file, a path from the repository root`},
+		{"outside", head + "source: {csv: ../t.csv, id: id}\n", `schema/T.yaml:3: type T: source: csv: "../t.csv" must be a path from the repository root, written plainly (../t.csv)`},
+		{"not plain", head + "source: {csv: ./t.csv, id: id}\n", `schema/T.yaml:3: type T: source: csv: "./t.csv" must be a path from the repository root, written plainly (t.csv)`},
+		{"no id", head + "source: {csv: t.csv}\n", `schema/T.yaml:3: type T: source: id: names the column holding each row's ID`},
+		{"delimiter", head + "source: {csv: t.csv, id: id, delimiter: '\"'}\n", `schema/T.yaml:3: type T: source: delimiter: "\"" must be one character, not a quote or a line break`},
+		{"separator", head + "source: {csv: t.csv, id: id, separator: ','}\n", `schema/T.yaml:3: type T: source: separator: "," must not be blank, hold a line break or the delimiter`},
+		{"body", head + "source: {csv: t.csv, id: id}\nfields:\n  - {name: notes, type: text, body: true}\n", `schema/T.yaml:5: field "notes": a row read from a CSV file has no Markdown body; leave out body: true`},
+		{"rows", head + "source: {csv: t.csv, id: id}\nfields:\n  - {name: steps, type: list, fields: [{name: n, type: number}]}\n", `schema/T.yaml:5: field "steps": a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)`},
+		{"calculated column", head + "source: {csv: t.csv, id: id}\nfields:\n  - {name: c, type: calculated, formula: \"1\", column: C}\n", `schema/T.yaml:5: field "c": a calculated field is never read from the file, so it has no column`},
+		{"column twice", head + "source: {csv: t.csv, id: id}\nfields:\n  - {name: a, type: string}\n  - {name: b, type: string, column: a}\n", `schema/T.yaml:6: field "b": column "a" is already read by field "a"`},
+		{"ID column", head + "source: {csv: t.csv, id: id}\nfields:\n  - {name: id, type: string}\n", `schema/T.yaml:5: field "id": column "id" is the ID column (source id:)`},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			root := t.TempDir()
+			write(t, root, "schema/T.yaml", c.schema)
+			_, problems, err := Read(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(problems) != 1 || problems[0].Error() != c.want {
+				t.Errorf("got %v, want %s", problems, c.want)
+			}
+		})
+	}
+}
+
+func TestSourceKeyProblems(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/T.yaml", "type: T\nid_prefix: T\nsource: {csv: t.csv, id: id, sheet: 1}\nfields:\n  - {name: a, type: string}\n")
+	write(t, root, "schema/U.yaml", "type: U\nid_prefix: U\nfields:\n  - {name: a, type: string, column: A}\n")
+	s, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, p := range s.KeyProblems {
+		got = append(got, p.Error())
+	}
+	want := []string{
+		`schema/T.yaml:3: type T: source: unknown key "sheet" (expected csv, id, delimiter, separator)`,
+		`schema/U.yaml:4: field "a": column applies only to a field of a type with a source`,
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// pages: false on any type, Markdown or CSV-backed (DES-0054).
+func TestPages(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/A.yaml", "type: A\nid_prefix: A\npages: false\nfields: []\n")
+	write(t, root, "schema/B.yaml", "type: B\nid_prefix: B\nfields: []\n")
+	write(t, root, "schema/C.yaml", "type: C\nid_prefix: C\npages: false\nsource: {csv: c.csv, id: id}\nfields: []\n")
+	s, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Types["A"].Pages || !s.Types["B"].Pages || s.Types["C"].Pages {
+		t.Errorf("pages: A %v, B %v, C %v", s.Types["A"].Pages, s.Types["B"].Pages, s.Types["C"].Pages)
+	}
+	write(t, root, "schema/A.yaml", "type: A\nid_prefix: A\npages: no\nfields: []\n")
+	if _, problems, _ := Read(root); len(problems) != 1 || problems[0].Error() != "schema/A.yaml:3: type A: pages: must be true or false" {
+		t.Errorf("problems: %v", problems)
+	}
+	write(t, root, "schema/A.yaml", "type: A\nid_prefix: A\nsource: {csv: a.csv, id: id, pages: false}\nfields: []\n")
+	s, _ = Load(root)
+	if len(s.KeyProblems) != 1 || !strings.Contains(s.KeyProblems[0].Msg, `unknown key "pages"`) {
+		t.Errorf("pages under source: %v", s.KeyProblems)
+	}
+}
+
+// A field's name and a link's reverse_name are lower-case snake_case, as a
+// template reads them (DES-0030).
+func TestNameForm(t *testing.T) {
+	for _, c := range []struct{ field, want string }{
+		{"{name: verifiedBy, type: string}", `field "verifiedBy": a field's name is lower-case snake_case`},
+		{"{name: verified__by, type: string}", `field "verified__by": a field's name is lower-case snake_case`},
+		{"{name: _x, type: string}", `field "_x": a field's name is lower-case snake_case`},
+		{"{name: 2nd, type: string}", `field "2nd": a field's name is lower-case snake_case`},
+		{"{name: Title, type: string}", `field "Title": a field's name is lower-case snake_case`},
+		{"{name: x, type: link, target: [T], cardinality: one, reverse_name: X}", `field "x": reverse_name "X" is not lower-case snake_case`},
+		{"{name: level_2, type: number}", ""},
+		{"{name: resolved, type: boolean}", ""},
+	} {
+		root := t.TempDir()
+		write(t, root, "schema/T.yaml", "type: T\nid_prefix: T\nfields:\n  - "+c.field+"\n")
+		_, problems, err := Read(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		switch {
+		case c.want == "" && len(problems) > 0:
+			t.Errorf("%s: %v", c.field, problems)
+		case c.want != "" && (len(problems) != 1 || !strings.Contains(problems[0].Msg, c.want)):
+			t.Errorf("%s: got %v, want %s", c.field, problems, c.want)
+		}
+	}
+}
+
+// title: true marks the one string field that is an entity's title;
+// friendly_name labels a field on the built-in pages (DES-0010).
+func TestTitleAndFriendlyName(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/T.yaml", "type: T\nid_prefix: T\nfields:\n  - {name: label, type: string, title: true}\n  - {name: due_date, type: date, friendly_name: Due date}\n  - {name: note, type: text}\n")
+	s, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tt := s.Types["T"]
+	if tt.TitleField == nil || tt.TitleField.Name != "label" {
+		t.Errorf("title field: %+v", tt.TitleField)
+	}
+	if got := tt.Field("due_date").Label(); got != "Due date" {
+		t.Errorf("friendly name: %q", got)
+	}
+	if got := tt.Field("note").Label(); got != "note" {
+		t.Errorf("label without friendly_name: %q", got)
+	}
+	for _, c := range []struct{ fields, want string }{
+		{"  - {name: a, type: string, title: true}\n  - {name: b, type: string, title: true}\n", `field "b": only one field may set title: true ("a" already does)`},
+		{"  - {name: a, type: text, title: true}\n", `field "a": title: true is only allowed on a top-level string field`},
+		{"  - {name: rows, type: list, fields: [{name: a, type: string, title: true}]}\n", `title: true is only allowed on a top-level string field`},
+	} {
+		write(t, root, "schema/T.yaml", "type: T\nid_prefix: T\nfields:\n"+c.fields)
+		_, problems, err := Read(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(problems) != 1 || !strings.Contains(problems[0].Msg, c.want) {
+			t.Errorf("got %v, want %s", problems, c.want)
+		}
 	}
 }

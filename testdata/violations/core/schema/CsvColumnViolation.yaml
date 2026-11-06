@@ -1,0 +1,13 @@
+# content/csv-column: a column no field reads, and a field with no column.
+type: CsvColumnViolation
+id_prefix: CCV
+source:
+  csv: cases/content-csv-column/violation.csv
+  id: id
+fields:
+  - name: title
+    type: string
+    title: true
+  - name: weight
+    type: number
+    column: Weight

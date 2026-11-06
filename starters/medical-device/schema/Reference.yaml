@@ -5,27 +5,36 @@ id_prefix: REF
 fields:
   - name: title
     type: string
+    friendly_name: Title
+    title: true
     required: true
     help: "The document's title. (ISO 13485:2016 §4.2.4)"
   - name: author
     type: string
+    friendly_name: Author
     help: "Its authors, or the body that issued it. (ISO 13485:2016 §4.2.4)"
   - name: publisher
     type: string
+    friendly_name: Publisher
     help: "Who published it. (ISO 13485:2016 §4.2.4)"
   - name: year
     type: number
+    friendly_name: Year
     help: "The year of the edition used. (ISO 13485:2016 §4.2.4)"
   - name: identifier
     type: string
+    friendly_name: Identifier
     help: "The standard's number and edition, a DOI or an ISBN. (ISO 13485:2016 §4.2.4)"
   - name: url
     type: string
+    friendly_name: Url
     help: "Where to find it. (ISO 13485:2016 §4.2.4)"
   - name: accessed
     type: date
+    friendly_name: Accessed
     help: "When the URL was last checked. (ISO 13485:2016 §4.2.4)"
   - name: note
     type: text
+    friendly_name: Note
     body: true
     help: "Why the design relies on it. (ISO 13485:2016 §4.2.4)"

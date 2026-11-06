@@ -2,3 +2,4 @@ type: NoPrefix
 fields:
   - name: title
     type: string
+    title: true

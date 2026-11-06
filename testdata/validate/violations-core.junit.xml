@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="provenance validate" tests="44" failures="29" errors="0">
-  <testsuite name="built-in" tests="37" failures="29" errors="0" skipped="0">
+<testsuites name="provenance validate" tests="46" failures="30" errors="0">
+  <testsuite name="built-in" tests="39" failures="30" errors="0" skipped="0">
     <testcase name="content/caption" classname="built-in">
       <failure type="error" message="a caption must come right after the figure, table, equation or embed it captions">cases/content-caption/violation.md:8: error [content/caption] a caption must come right after the figure, table, equation or embed it captions (WID-0030)</failure>
       <failure type="error" message="caption: did not find expected &#39;,&#39; or &#39;]&#39;">cases/content-caption/violation.md:16: error [content/caption] caption: did not find expected &#39;,&#39; or &#39;]&#39; (WID-0030)</failure>
       <failure type="error" message="caption id &#34;twice&#34; is used twice on one page (first at cases/content-caption/violation.md:22)">cases/content-caption/violation.md:30: error [content/caption] caption id &#34;twice&#34; is used twice on one page (first at cases/content-caption/violation.md:22) (WID-0030)</failure>
       <failure type="error" message="[[#nowhere]]: no caption with id &#34;nowhere&#34; on this page">cases/content-caption/violation.md:35: error [content/caption] [[#nowhere]]: no caption with id &#34;nowhere&#34; on this page (WID-0030)</failure>
+    </testcase>
+    <testcase name="content/csv-column" classname="built-in">
+      <system-out>cases/content-csv-column/violation.csv:1: warning [content/csv-column] column &#34;colour&#34; is not read: no field of a CsvColumnViolation names it&#xA;cases/content-csv-column/violation.csv:1: warning [content/csv-column] no column &#34;Weight&#34; for the field weight of a CsvColumnViolation, so it is empty on every row&#xA;</system-out>
+    </testcase>
+    <testcase name="content/csv-row" classname="built-in">
+      <failure type="error" message="the row has 3 cells, but the header has 2">cases/content-csv-row/violation.csv:2: error [content/csv-row] the row has 3 cells, but the header has 2</failure>
+      <failure type="error" message="the row has no ID in column &#34;id&#34;">cases/content-csv-row/violation.csv:3: error [content/csv-row] the row has no ID in column &#34;id&#34;</failure>
     </testcase>
     <testcase name="content/duplicate-id" classname="built-in">
       <failure type="error" message="duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-b.md">cases/content-duplicate-id/violation-a.md:2: error [content/duplicate-id] duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-b.md (WID-0004)</failure>
@@ -22,6 +29,7 @@
       <system-out>cases/content-format/violation.md:2: warning [content/format] not in canonical form; provenance fmt rewrites it (WID-0041)&#xA;</system-out>
     </testcase>
     <testcase name="content/frontmatter" classname="built-in">
+      <failure type="error" message="type CsvRowClean is read from cases/content-csv-row/clean.csv, one entity per row, so this file is not read as an entity">cases/content-frontmatter/violation-csv-type.md:3: error [content/frontmatter] type CsvRowClean is read from cases/content-csv-row/clean.csv, one entity per row, so this file is not read as an entity (CRC-0009)</failure>
       <failure type="error" message="frontmatter has an id but no type, so the file is not read as an entity">cases/content-frontmatter/violation-no-type.md:2: error [content/frontmatter] frontmatter has an id but no type, so the file is not read as an entity</failure>
       <failure type="error" message="invalid frontmatter: did not find expected &#39;,&#39; or &#39;]&#39;">cases/content-frontmatter/violation-yaml.md:4: error [content/frontmatter] invalid frontmatter: did not find expected &#39;,&#39; or &#39;]&#39;</failure>
     </testcase>
@@ -36,14 +44,13 @@
     </testcase>
     <testcase name="content/template" classname="built-in">
       <failure type="error" message="query block: unknown template &#34;no-such-template&#34;: there is no templates/no-such-template.tmpl (named templates: spare, widget-row)">cases/content-template/violation.md:8: error [content/template] query block: unknown template &#34;no-such-template&#34;: there is no templates/no-such-template.tmpl (named templates: spare, widget-row) (WID-0039)</failure>
-      <failure type="error" message="field &#34;citations&#34;: its template name .Citations is already used by the engine baseline">schema/TemplateNameClash.yaml:9: error [content/template] field &#34;citations&#34;: its template name .Citations is already used by the engine baseline</failure>
       <failure type="error" message="bad character U+003C &#39;&lt;&#39;">templates/BrokenTemplate.tmpl:2: error [content/template] bad character U+003C &#39;&lt;&#39;</failure>
     </testcase>
     <testcase name="content/template-name" classname="built-in">
       <system-out>templates/NotAType.tmpl: warning [content/template-name] NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used&#xA;</system-out>
     </testcase>
     <testcase name="content/unknown-override" classname="built-in">
-      <system-out>templates/_footer.tmpl: warning [content/unknown-override] _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used&#xA;</system-out>
+      <system-out>templates/_footer.tmpl: warning [content/unknown-override] _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl, or _&lt;Type&gt;.tmpl for a type with pages: false), so it is never used&#xA;</system-out>
     </testcase>
     <testcase name="content/unrendered-block" classname="built-in">
       <failure type="error" message="mermaid block: this version of Provenance cannot render it, so it would be published as its source">cases/content-unrendered-block/violation.md:6: error [content/unrendered-block] mermaid block: this version of Provenance cannot render it, so it would be published as its source (WID-0037)</failure>
@@ -59,6 +66,8 @@
       <failure type="error" message="[[WID-0023#colour]]: Widget has no field &#34;colour&#34;">cases/links-unknown-field/violation.md:6: error [links/unknown-field] [[WID-0023#colour]]: Widget has no field &#34;colour&#34; (WID-0022)</failure>
     </testcase>
     <testcase name="links/unresolved" classname="built-in">
+      <failure type="error" message="[[WID-9990]]: no entity WID-9990">cases/links-unresolved/violation.csv:2: error [links/unresolved] [[WID-9990]]: no entity WID-9990 (CLV-0001)</failure>
+      <failure type="error" message="uses: no entity WID-9991">cases/links-unresolved/violation.csv:2: error [links/unresolved] uses: no entity WID-9991 (CLV-0001)</failure>
       <failure type="error" message="uses: no entity WID-9999">cases/links-unresolved/violation.md:7: error [links/unresolved] uses: no entity WID-9999 (WID-0020)</failure>
       <failure type="error" message="[[WID-9998]]: no entity WID-9998">cases/links-unresolved/violation.md:9: error [links/unresolved] [[WID-9998]]: no entity WID-9998 (WID-0020)</failure>
     </testcase>
@@ -85,6 +94,7 @@
       <failure type="error" message="steps row 1: double is calculated (n * 2); it cannot be written in the file">cases/schema-calculated-set/violation.md:9: error [schema/calculated-set] steps row 1: double is calculated (n * 2); it cannot be written in the file (WID-0010)</failure>
     </testcase>
     <testcase name="schema/enum-value" classname="built-in">
+      <failure type="error" message="tags item 2: &#34;retired&#34; is not one of Status: draft, approved">cases/schema-enum-value/violation.csv:2: error [schema/enum-value] tags item 2: &#34;retired&#34; is not one of Status: draft, approved (CEV-0001)</failure>
       <failure type="error" message="status: &#34;aproved&#34; is not one of Status: draft, approved">cases/schema-enum-value/violation.md:5: error [schema/enum-value] status: &#34;aproved&#34; is not one of Status: draft, approved (WID-0014)</failure>
       <failure type="error" message="tags item 2: &#34;final&#34; is not one of Status: draft, approved">cases/schema-enum-value/violation.md:8: error [schema/enum-value] tags item 2: &#34;final&#34; is not one of Status: draft, approved (WID-0014)</failure>
     </testcase>
@@ -94,18 +104,22 @@
     </testcase>
     <testcase name="schema/id-format" classname="built-in">
       <failure type="error" message="ID two words cannot be used as a page name (letters, digits, &#39;.&#39;, &#39;_&#39; and &#39;-&#39; only)">cases/schema-id-format/violation-page-name.md:2: error [schema/id-format] ID two words cannot be used as a page name (letters, digits, &#39;.&#39;, &#39;_&#39; and &#39;-&#39; only) (two words)</failure>
+      <failure type="error" message="ID COMPLAINT-0141 does not start with IDD-, the prefix of a CsvIdViolation ID">cases/schema-id-format/violation-row.csv:2: error [schema/id-format] ID COMPLAINT-0141 does not start with IDD-, the prefix of a CsvIdViolation ID (COMPLAINT-0141)</failure>
       <failure type="error" message="ID WID-7 is not WID-NNNN, the form of a Widget ID">cases/schema-id-format/violation.md:2: error [schema/id-format] ID WID-7 is not WID-NNNN, the form of a Widget ID (WID-7)</failure>
       <failure type="error" message="type DuplicatePrefixA has the id_prefix DUP, which DuplicatePrefixB (schema/DuplicatePrefixB.yaml) also has">schema/DuplicatePrefixA.yaml:1: error [schema/id-format] type DuplicatePrefixA has the id_prefix DUP, which DuplicatePrefixB (schema/DuplicatePrefixB.yaml) also has</failure>
       <failure type="error" message="type DuplicatePrefixB has the id_prefix DUP, which DuplicatePrefixA (schema/DuplicatePrefixA.yaml) also has">schema/DuplicatePrefixB.yaml:1: error [schema/id-format] type DuplicatePrefixB has the id_prefix DUP, which DuplicatePrefixA (schema/DuplicatePrefixA.yaml) also has</failure>
       <failure type="error" message="type NoPrefix has no id_prefix, so its IDs cannot be checked">schema/NoPrefix.yaml:1: error [schema/id-format] type NoPrefix has no id_prefix, so its IDs cannot be checked</failure>
     </testcase>
     <testcase name="schema/invalid-value" classname="built-in">
+      <failure type="error" message="done: not true or false, got yes">cases/schema-invalid-value/violation.csv:2: error [schema/invalid-value] done: not true or false, got yes (CVV-0001)</failure>
+      <failure type="error" message="due: not a date (YYYY-MM-DD), got 14/08/2026">cases/schema-invalid-value/violation.csv:2: error [schema/invalid-value] due: not a date (YYYY-MM-DD), got 14/08/2026 (CVV-0001)</failure>
+      <failure type="error" message="weight: not a number, got 1,000">cases/schema-invalid-value/violation.csv:2: error [schema/invalid-value] weight: not a number, got 1,000 (CVV-0001)</failure>
       <failure type="error" message="due: not a date (YYYY-MM-DD), got 2026-13-04">cases/schema-invalid-value/violation.md:5: error [schema/invalid-value] due: not a date (YYYY-MM-DD), got 2026-13-04 (WID-0016)</failure>
       <failure type="error" message="weight: not a number, got heavy">cases/schema-invalid-value/violation.md:6: error [schema/invalid-value] weight: not a number, got heavy (WID-0016)</failure>
       <failure type="error" message="steps row 1: n: not a number, got one">cases/schema-invalid-value/violation.md:8: error [schema/invalid-value] steps row 1: n: not a number, got one (WID-0016)</failure>
     </testcase>
     <testcase name="schema/link-target" classname="built-in">
-      <failure type="error" message="field &#34;widget&#34;: target &#34;Nothing&#34; is not a declared type (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)">schema/LinkTargetViolation.yaml:9: error [schema/link-target] field &#34;widget&#34;: target &#34;Nothing&#34; is not a declared type (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)</failure>
+      <failure type="error" message="field &#34;widget&#34;: target &#34;Nothing&#34; is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)">schema/LinkTargetViolation.yaml:9: error [schema/link-target] field &#34;widget&#34;: target &#34;Nothing&#34; is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)</failure>
     </testcase>
     <testcase name="schema/list-row" classname="built-in">
       <failure type="error" message="steps row 1: no sub-field &#34;size&#34; (sub-fields: n)">cases/schema-list-row/violation.md:7: error [schema/list-row] steps row 1: no sub-field &#34;size&#34; (sub-fields: n) (WID-0018)</failure>
@@ -124,7 +138,7 @@
       <failure type="error" message="enum Colour: unknown key &#34;shade&#34; (expected enum, values)">schema/enums/Colour.yaml:4: error [schema/unknown-key] enum Colour: unknown key &#34;shade&#34; (expected enum, values)</failure>
     </testcase>
     <testcase name="schema/unknown-type" classname="built-in">
-      <failure type="error" message="type &#34;Gadget&#34; is not declared in schema/ (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)">cases/schema-unknown-type/violation.md:3: error [schema/unknown-type] type &#34;Gadget&#34; is not declared in schema/ (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget) (GAD-0001)</failure>
+      <failure type="error" message="type &#34;Gadget&#34; is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)">cases/schema-unknown-type/violation.md:3: error [schema/unknown-type] type &#34;Gadget&#34; is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget) (GAD-0001)</failure>
     </testcase>
     <testcase name="schema/unused-enum" classname="built-in">
       <system-out>schema/enums/UnusedEnum.yaml:2: warning [schema/unused-enum] enum UnusedEnum is not used by any field&#xA;</system-out>
