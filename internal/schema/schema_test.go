@@ -521,3 +521,31 @@ func TestPages(t *testing.T) {
 		t.Errorf("pages under source: %v", s.KeyProblems)
 	}
 }
+
+// A field's name and a link's reverse_name are lower-case snake_case, as a
+// template reads them (DES-0030).
+func TestNameForm(t *testing.T) {
+	for _, c := range []struct{ field, want string }{
+		{"{name: verifiedBy, type: string}", `field "verifiedBy": a field's name is lower-case snake_case`},
+		{"{name: verified__by, type: string}", `field "verified__by": a field's name is lower-case snake_case`},
+		{"{name: _x, type: string}", `field "_x": a field's name is lower-case snake_case`},
+		{"{name: 2nd, type: string}", `field "2nd": a field's name is lower-case snake_case`},
+		{"{name: Title, type: string}", `field "Title": a field's name is lower-case snake_case`},
+		{"{name: x, type: link, target: [T], cardinality: one, reverse_name: X}", `field "x": reverse_name "X" is not lower-case snake_case`},
+		{"{name: level_2, type: number}", ""},
+		{"{name: resolved, type: boolean}", ""},
+	} {
+		root := t.TempDir()
+		write(t, root, "schema/T.yaml", "type: T\nid_prefix: T\nfields:\n  - "+c.field+"\n")
+		_, problems, err := Read(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		switch {
+		case c.want == "" && len(problems) > 0:
+			t.Errorf("%s: %v", c.field, problems)
+		case c.want != "" && (len(problems) != 1 || !strings.Contains(problems[0].Msg, c.want)):
+			t.Errorf("%s: got %v, want %s", c.field, problems, c.want)
+		}
+	}
+}

@@ -11,6 +11,8 @@ examples:
     expect: violation
   - file: broken-schema/schema/CsvListOfRows.yaml
     expect: violation
+  - file: broken-schema/schema/FieldName.yaml
+    expect: violation
   - file: broken-schema/schema/Fine.yaml
     expect: clean
 ---

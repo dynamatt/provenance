@@ -7,8 +7,8 @@ This folder shows each way one can fail.
 
 ```bash
 make build
-bin/provenance validate --path testdata/violations/core           # 64 errors, 9 warnings
-bin/provenance validate --path testdata/violations/broken-schema  # 3 errors
+bin/provenance validate --path testdata/violations/core           # 63 errors, 9 warnings
+bin/provenance validate --path testdata/violations/broken-schema  # 4 errors
 ```
 
 The expected reports are `testdata/validate/violations-core.txt` and

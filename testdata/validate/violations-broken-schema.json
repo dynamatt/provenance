@@ -20,6 +20,14 @@
     {
       "rule": "schema/file",
       "severity": "error",
+      "message": "field \"verifiedBy\": a field's name is lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by",
+      "entity": "",
+      "path": "schema/FieldName.yaml",
+      "line": 6
+    },
+    {
+      "rule": "schema/file",
+      "severity": "error",
       "message": "field \"status\": unknown type \"AprovalStatus\" (expected string, text, number, date, boolean, link, list, calculated)",
       "entity": "",
       "path": "schema/UnknownType.yaml",
@@ -27,7 +35,7 @@
     }
   ],
   "summary": {
-    "errors": 3,
+    "errors": 4,
     "warnings": 0,
     "rules_skipped": 0
   }

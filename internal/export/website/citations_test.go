@@ -109,16 +109,6 @@ func TestLayoutReceivesCitations(t *testing.T) {
 	}
 }
 
-func TestCitationNamesAreReserved(t *testing.T) {
-	repo := maps.Clone(citationRepo)
-	repo["schema/Doc.yaml"] = docSchema + "  - {name: citation_index, type: number}\n"
-	_, err := exportRepo(t, repo)
-	want := `schema/Doc.yaml:5: field "citation_index": its template name .CitationIndex is already used by the engine's citations`
-	if err == nil || err.Error() != want {
-		t.Fatalf("got  %v\nwant %s", err, want)
-	}
-}
-
 // citeTemplate shows everything _cite.tmpl receives. Its final line break
 // is not part of the citation.
 const citeTemplate = "<cite>{{.ID}}/{{.CitationIndex}}/{{.TypeCitationIndex}}/{{.CitationLabel}}/{{.Resolved}}</cite>\n"
@@ -171,16 +161,6 @@ func TestCiteTemplateError(t *testing.T) {
 	_, err := exportRepo(t, repo)
 	if err == nil || !strings.HasPrefix(err.Error(), `templates/_cite.tmpl:1:3: executing "templates/_cite.tmpl" at <.Nope>: map has no entry for key "Nope"`) {
 		t.Fatalf("got %v", err)
-	}
-}
-
-func TestCitationLabelIsReserved(t *testing.T) {
-	repo := maps.Clone(citationRepo)
-	repo["schema/Doc.yaml"] = docSchema + "  - {name: citation_label, type: string}\n"
-	_, err := exportRepo(t, repo)
-	want := `schema/Doc.yaml:5: field "citation_label": its template name .CitationLabel is already used by the engine's citations`
-	if err == nil || err.Error() != want {
-		t.Fatalf("got  %v\nwant %s", err, want)
 	}
 }
 

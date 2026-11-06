@@ -95,7 +95,7 @@ fields:
   - {name: dear, type: calculated, formula: "total > 10"}
   - {name: broken, type: calculated, formula: "price +"}
 `,
-		"templates/_index.tmpl": `{{range .Types}}{{range .Entities}}[{{.ID}} {{.Total}} {{.Dear}} {{.Broken}}]{{end}}{{end}}`,
+		"templates/_index.tmpl": `{{range .Types}}{{range .Entities}}[{{.ID}} {{.total}} {{.dear}} {{.broken}}]{{end}}{{end}}`,
 		"I/I-1.md":              "---\nid: I-1\ntype: Item\ntitle: Cheap\nprice: 4\n---\nTotal: [[I-1#total]], dear: [[I-1#dear]].\n",
 		"I/I-2.md":              "---\nid: I-2\ntype: Item\ntitle: Unpriced\n---\n",
 	})
@@ -179,7 +179,7 @@ func namedTemplateRepo(t *testing.T, block string, extra map[string]string) (map
 		"N/N-1.md":                  note("N-1", "title: Note one\nrank: 2\n", "# Heading\n\nBody."),
 		"T/T-1.md":                  "---\nid: T-1\ntype: Task\ntitle: Task one\nrank: 1\n---\n",
 		"N/N-9.md":                  note("N-9", "title: Host\n", "## Section\n\n```query\n"+block+"```\n"),
-		"templates/note-line.tmpl":  `<p class="note-line">{{.ID}}: {{.Title}}</p><h1>{{.Rank}}</h1>`,
+		"templates/note-line.tmpl":  `<p class="note-line">{{.ID}}: {{.Title}}</p><h1>{{.rank}}</h1>`,
 		"templates/plain-card.tmpl": `<div class="card">{{.Title}}</div>`,
 	}
 	for k, v := range extra {

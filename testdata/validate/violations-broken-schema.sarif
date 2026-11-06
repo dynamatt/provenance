@@ -418,6 +418,27 @@
           "ruleIndex": 26,
           "level": "error",
           "message": {
+            "text": "field \"verifiedBy\": a field's name is lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/FieldName.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/file",
+          "ruleIndex": 26,
+          "level": "error",
+          "message": {
             "text": "field \"status\": unknown type \"AprovalStatus\" (expected string, text, number, date, boolean, link, list, calculated)"
           },
           "locations": [

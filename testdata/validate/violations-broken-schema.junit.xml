@@ -30,6 +30,7 @@
     <testcase name="schema/file" classname="built-in">
       <failure type="error" message="did not find expected &#39;,&#39; or &#39;]&#39;">schema/Broken.yaml:2: error [schema/file] did not find expected &#39;,&#39; or &#39;]&#39;</failure>
       <failure type="error" message="field &#34;steps&#34;: a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)">schema/CsvListOfRows.yaml:8: error [schema/file] field &#34;steps&#34;: a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)</failure>
+      <failure type="error" message="field &#34;verifiedBy&#34;: a field&#39;s name is lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by">schema/FieldName.yaml:6: error [schema/file] field &#34;verifiedBy&#34;: a field&#39;s name is lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by</failure>
       <failure type="error" message="field &#34;status&#34;: unknown type &#34;AprovalStatus&#34; (expected string, text, number, date, boolean, link, list, calculated)">schema/UnknownType.yaml:6: error [schema/file] field &#34;status&#34;: unknown type &#34;AprovalStatus&#34; (expected string, text, number, date, boolean, link, list, calculated)</failure>
     </testcase>
     <testcase name="schema/formula" classname="built-in"></testcase>

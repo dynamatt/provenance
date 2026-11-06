@@ -174,7 +174,7 @@ fields:
   - {name: readings, type: list, of: number}
   - {name: none, type: list, of: string}
 `,
-		"templates/_index.tmpl": `{{range .Types}}{{range .Entities}}{{range .Standards}}[{{.}}]{{end}}{{range .Readings}}({{.}}){{end}}{{range .Probes}}({{.Serial}}){{end}}{{len .None}}{{end}}{{end}}`,
+		"templates/_index.tmpl": `{{range .Types}}{{range .Entities}}{{range .standards}}[{{.}}]{{end}}{{range .readings}}({{.}}){{end}}{{range .probes}}({{.serial}}){{end}}{{len .none}}{{end}}{{end}}`,
 		"E/E-1.md":              "---\nid: E-1\ntype: Ev\ntitle: Run\nprobes: [{serial: P-1}]\nstandards: [IEC 60601-1, ISO 14971]\nreadings: [2, oops]\nnone: []\n---\nSee [[E-1#standards]].\n",
 	})
 	if err != nil {

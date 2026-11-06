@@ -412,7 +412,7 @@
     {
       "rule": "schema/unknown-type",
       "severity": "error",
-      "message": "type \"Gadget\" is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
+      "message": "type \"Gadget\" is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
       "entity": "GAD-0001",
       "path": "cases/schema-unknown-type/violation.md",
       "line": 3
@@ -492,7 +492,7 @@
     {
       "rule": "schema/link-target",
       "severity": "error",
-      "message": "field \"widget\": target \"Nothing\" is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
+      "message": "field \"widget\": target \"Nothing\" is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
       "entity": "",
       "path": "schema/LinkTargetViolation.yaml",
       "line": 9
@@ -504,14 +504,6 @@
       "entity": "",
       "path": "schema/NoPrefix.yaml",
       "line": 1
-    },
-    {
-      "rule": "content/template",
-      "severity": "error",
-      "message": "field \"citations\": its template name .Citations is already used by the engine baseline",
-      "entity": "",
-      "path": "schema/TemplateNameClash.yaml",
-      "line": 9
     },
     {
       "rule": "schema/unknown-key",
@@ -587,7 +579,7 @@
     }
   ],
   "summary": {
-    "errors": 64,
+    "errors": 63,
     "warnings": 9,
     "rules_skipped": 0
   }

@@ -65,11 +65,6 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 			}
 		}
 	}
-	for _, err := range tmpl.NameErrors(in.Schema) {
-		if err := check.report(Problem{Check: "content/template", Path: err.Path, Line: err.Line, Msg: err.Msg, Err: err}); err != nil {
-			return nil, err
-		}
-	}
 	ts, err := loadTemplates(in.Repo.Root, in.Schema, check)
 	if err != nil {
 		return nil, err

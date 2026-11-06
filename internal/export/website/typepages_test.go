@@ -147,7 +147,7 @@ func TestTypePageTemplateUnused(t *testing.T) {
 func TestFileTemplateData(t *testing.T) {
 	files, err := exportRepo(t, tableRepo(map[string]string{
 		"data/bugs.csv":       "Key,Summary,affects,notes\nBUG-7,Crash,N-1,\n",
-		"templates/Note.tmpl": `{{template "file" .File}}{{range .Bugs}} {{link .}} {{href .}} {{template "file" .File}}{{end}}` + `{{define "file"}}[{{.Path}}:{{.Line}}]{{end}}` + "\n",
+		"templates/Note.tmpl": `{{template "file" .File}}{{range .bugs}} {{link .}} {{href .}} {{template "file" .File}}{{end}}` + `{{define "file"}}[{{.Path}}:{{.Line}}]{{end}}` + "\n",
 	}))
 	if err != nil {
 		t.Fatal(err)

@@ -1,4 +1,5 @@
 schema/Broken.yaml:2: error [schema/file] did not find expected ',' or ']'
 schema/CsvListOfRows.yaml:8: error [schema/file] field "steps": a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)
+schema/FieldName.yaml:6: error [schema/file] field "verifiedBy": a field's name is lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by
 schema/UnknownType.yaml:6: error [schema/file] field "status": unknown type "AprovalStatus" (expected string, text, number, date, boolean, link, list, calculated)
-3 errors, 0 warnings
+4 errors, 0 warnings

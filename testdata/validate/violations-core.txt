@@ -49,7 +49,7 @@ cases/schema-required/violation.md:6: error [schema/required] steps row 2: requi
 cases/schema-unknown-field/violation.md:5: error [schema/unknown-field] notes is the Markdown body below the frontmatter, not a frontmatter field (WID-0008)
 cases/schema-unknown-field/violation.md:6: error [schema/unknown-field] Widget has no field "colour" (fields: title, status, due, weight, tags, steps, parent, uses) (WID-0008)
 cases/schema-unknown-field/violation.md:7: error [schema/unknown-field] used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it (WID-0008)
-cases/schema-unknown-type/violation.md:3: error [schema/unknown-type] type "Gadget" is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget) (GAD-0001)
+cases/schema-unknown-type/violation.md:3: error [schema/unknown-type] type "Gadget" is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget) (GAD-0001)
 rules/Rules_Name_Violation.yaml: error [rules/name] a rule file is named for its ID, in lower-case kebab-case, with .yaml: Rules_Name_Violation.yaml is not
 rules/rules-file-violation.yaml:1: error [rules/file] invalid YAML: did not find expected node content
 rules/rules-message-violation.yaml:1: error [rules/message] no message: the text each violation is reported with
@@ -59,9 +59,8 @@ rules/rules-unknown-key-violation.yaml:1: error [rules/unknown-key] unknown key 
 schema/DuplicatePrefixA.yaml:1: error [schema/id-format] type DuplicatePrefixA has the id_prefix DUP, which DuplicatePrefixB (schema/DuplicatePrefixB.yaml) also has
 schema/DuplicatePrefixB.yaml:1: error [schema/id-format] type DuplicatePrefixB has the id_prefix DUP, which DuplicatePrefixA (schema/DuplicatePrefixA.yaml) also has
 schema/FormulaViolation.yaml:11: error [schema/formula] field "score": formula: column 1: FormulaViolation has no field "nope" (fields: example_of, weight, score)
-schema/LinkTargetViolation.yaml:9: error [schema/link-target] field "widget": target "Nothing" is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)
+schema/LinkTargetViolation.yaml:9: error [schema/link-target] field "widget": target "Nothing" is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)
 schema/NoPrefix.yaml:1: error [schema/id-format] type NoPrefix has no id_prefix, so its IDs cannot be checked
-schema/TemplateNameClash.yaml:9: error [content/template] field "citations": its template name .Citations is already used by the engine baseline
 schema/UnknownKeyViolation.yaml:11: error [schema/unknown-key] field "status": unknown key "default": fields have no defaults; a field that must have a value says required: true
 schema/UnusedTypeViolation.yaml:2: warning [schema/unused-type] type UnusedTypeViolation has no entities and no links to or from it
 schema/enums/Colour.yaml:4: error [schema/unknown-key] enum Colour: unknown key "shade" (expected enum, values)
@@ -71,4 +70,4 @@ templates/BrokenTemplate.tmpl:2: error [content/template] bad character U+003C '
 templates/NotAType.tmpl: warning [content/template-name] NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used
 templates/_footer.tmpl: warning [content/unknown-override] _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl, or _<Type>.tmpl for a type with pages: false), so it is never used
 templates/spare.tmpl: warning [content/unused-template] named template spare is not chosen by any query block
-64 errors, 9 warnings
+63 errors, 9 warnings

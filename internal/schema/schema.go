@@ -17,6 +17,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -265,6 +266,12 @@ func (e *Error) Error() string {
 	}
 	return e.Path + ": " + e.Msg
 }
+
+// nameForm is the form of a field's name and a link's reverse_name:
+// lower-case snake_case. A template reads a field by its name (.verified_by),
+// which can then never clash with the engine's capitalised keys (.ID,
+// .Title), and is a valid template identifier (DES-0030).
+var nameForm = regexp.MustCompile(`^[a-z][a-z0-9]*(_[a-z0-9]+)*$`)
 
 // Dir is the schema folder at the repository root.
 const Dir = "schema"
@@ -651,6 +658,12 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 	}
 	if rf.Name == "" {
 		return nil, &Error{Path: path, Line: n.Line, Msg: "field without a name"}
+	}
+	if !nameForm.MatchString(rf.Name) {
+		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s: a field's name is lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by", label)}
+	}
+	if rf.ReverseName != "" && !nameForm.MatchString(rf.ReverseName) {
+		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s: reverse_name %q is not lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by", label, rf.ReverseName)}
 	}
 	if prev, dup := seen[rf.Name]; dup {
 		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s is declared twice (first at line %d)", label, prev)}
