@@ -34,6 +34,38 @@
       "line": 35
     },
     {
+      "rule": "content/csv-column",
+      "severity": "warning",
+      "message": "column \"colour\" is not read: no field of a CsvColumnViolation names it",
+      "entity": "",
+      "path": "cases/content-csv-column/violation.csv",
+      "line": 1
+    },
+    {
+      "rule": "content/csv-column",
+      "severity": "warning",
+      "message": "no column \"Weight\" for the field weight of a CsvColumnViolation, so it is empty on every row",
+      "entity": "",
+      "path": "cases/content-csv-column/violation.csv",
+      "line": 1
+    },
+    {
+      "rule": "content/csv-row",
+      "severity": "error",
+      "message": "the row has 3 cells, but the header has 2",
+      "entity": "",
+      "path": "cases/content-csv-row/violation.csv",
+      "line": 2
+    },
+    {
+      "rule": "content/csv-row",
+      "severity": "error",
+      "message": "the row has no ID in column \"id\"",
+      "entity": "",
+      "path": "cases/content-csv-row/violation.csv",
+      "line": 3
+    },
+    {
       "rule": "content/duplicate-id",
       "severity": "error",
       "message": "duplicate entity ID WID-0004, also in cases/content-duplicate-id/violation-b.md",
@@ -80,6 +112,14 @@
       "entity": "WID-0041",
       "path": "cases/content-format/violation.md",
       "line": 2
+    },
+    {
+      "rule": "content/frontmatter",
+      "severity": "error",
+      "message": "type CsvRowClean is read from cases/content-csv-row/clean.csv, one entity per row, so this file is not read as an entity",
+      "entity": "CRC-0009",
+      "path": "cases/content-frontmatter/violation-csv-type.md",
+      "line": 3
     },
     {
       "rule": "content/frontmatter",
@@ -180,6 +220,22 @@
     {
       "rule": "links/unresolved",
       "severity": "error",
+      "message": "[[WID-9990]]: no entity WID-9990",
+      "entity": "CLV-0001",
+      "path": "cases/links-unresolved/violation.csv",
+      "line": 2
+    },
+    {
+      "rule": "links/unresolved",
+      "severity": "error",
+      "message": "uses: no entity WID-9991",
+      "entity": "CLV-0001",
+      "path": "cases/links-unresolved/violation.csv",
+      "line": 2
+    },
+    {
+      "rule": "links/unresolved",
+      "severity": "error",
       "message": "uses: no entity WID-9999",
       "entity": "WID-0020",
       "path": "cases/links-unresolved/violation.md",
@@ -212,6 +268,14 @@
     {
       "rule": "schema/enum-value",
       "severity": "error",
+      "message": "tags item 2: \"retired\" is not one of Status: draft, approved",
+      "entity": "CEV-0001",
+      "path": "cases/schema-enum-value/violation.csv",
+      "line": 2
+    },
+    {
+      "rule": "schema/enum-value",
+      "severity": "error",
       "message": "status: \"aproved\" is not one of Status: draft, approved",
       "entity": "WID-0014",
       "path": "cases/schema-enum-value/violation.md",
@@ -236,9 +300,41 @@
     {
       "rule": "schema/id-format",
       "severity": "error",
+      "message": "ID COMPLAINT-0141 does not start with IDD-, the prefix of a CsvIdViolation ID",
+      "entity": "COMPLAINT-0141",
+      "path": "cases/schema-id-format/violation-row.csv",
+      "line": 2
+    },
+    {
+      "rule": "schema/id-format",
+      "severity": "error",
       "message": "ID WID-7 is not WID-NNNN, the form of a Widget ID",
       "entity": "WID-7",
       "path": "cases/schema-id-format/violation.md",
+      "line": 2
+    },
+    {
+      "rule": "schema/invalid-value",
+      "severity": "error",
+      "message": "done: not true or false, got yes",
+      "entity": "CVV-0001",
+      "path": "cases/schema-invalid-value/violation.csv",
+      "line": 2
+    },
+    {
+      "rule": "schema/invalid-value",
+      "severity": "error",
+      "message": "due: not a date (YYYY-MM-DD), got 14/08/2026",
+      "entity": "CVV-0001",
+      "path": "cases/schema-invalid-value/violation.csv",
+      "line": 2
+    },
+    {
+      "rule": "schema/invalid-value",
+      "severity": "error",
+      "message": "weight: not a number, got 1,000",
+      "entity": "CVV-0001",
+      "path": "cases/schema-invalid-value/violation.csv",
       "line": 2
     },
     {
@@ -316,7 +412,7 @@
     {
       "rule": "schema/unknown-type",
       "severity": "error",
-      "message": "type \"Gadget\" is not declared in schema/ (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
+      "message": "type \"Gadget\" is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
       "entity": "GAD-0001",
       "path": "cases/schema-unknown-type/violation.md",
       "line": 3
@@ -396,7 +492,7 @@
     {
       "rule": "schema/link-target",
       "severity": "error",
-      "message": "field \"widget\": target \"Nothing\" is not a declared type (declared: BrokenTemplate, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, TemplateNameClash, TemplateNameClean, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
+      "message": "field \"widget\": target \"Nothing\" is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)",
       "entity": "",
       "path": "schema/LinkTargetViolation.yaml",
       "line": 9
@@ -408,14 +504,6 @@
       "entity": "",
       "path": "schema/NoPrefix.yaml",
       "line": 1
-    },
-    {
-      "rule": "content/template",
-      "severity": "error",
-      "message": "field \"citations\": its template name .Citations is already used by the engine baseline",
-      "entity": "",
-      "path": "schema/TemplateNameClash.yaml",
-      "line": 9
     },
     {
       "rule": "schema/unknown-key",
@@ -476,7 +564,7 @@
     {
       "rule": "content/unknown-override",
       "severity": "warning",
-      "message": "_footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used",
+      "message": "_footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl, or _<Type>.tmpl for a type with pages: false), so it is never used",
       "entity": "",
       "path": "templates/_footer.tmpl",
       "line": 0
@@ -491,8 +579,8 @@
     }
   ],
   "summary": {
-    "errors": 54,
-    "warnings": 7,
+    "errors": 63,
+    "warnings": 9,
     "rules_skipped": 0
   }
 }

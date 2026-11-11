@@ -46,7 +46,7 @@ func TestEntitiesSharingAFile(t *testing.T) {
 		return h.String()
 	}
 	first := commit(map[string]string{
-		"schema/Part.yaml": "type: Part\nid_prefix: PRT\nfields:\n  - {name: title, type: string}\n",
+		"schema/Part.yaml": "type: Part\nid_prefix: PRT\nfields:\n  - {name: title, type: string, title: true}\n",
 		"data/parts.rows":  "id | type | title\nPRT-0001 | Part | Bolt\nPRT-0002 | Part | Nut\n",
 	})
 	second := commit(map[string]string{"data/parts.rows": "id | type | title\nPRT-0001 | Part | Bolt\nPRT-0002 | Part | Wing nut\n"})

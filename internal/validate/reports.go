@@ -165,7 +165,7 @@ func readReport(root, name string) (string, error) {
 
 func (r *Report) render(w io.Writer, name, text string, st Stamps) error {
 	path := ReportsDir + "/" + name + ".tmpl"
-	funcs := tmpl.ReportFuncs()
+	funcs := tmpl.ReportFuncs(r.schema)
 	var t interface {
 		Execute(io.Writer, any) error
 	}

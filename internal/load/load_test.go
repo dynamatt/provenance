@@ -24,7 +24,7 @@ func write(t *testing.T, root string, files map[string]string) {
 	}
 }
 
-const partSchema = "type: Part\nid_prefix: PRT\nfields:\n  - {name: title, type: string}\n  - {name: weight, type: number}\n  - {name: total, type: calculated, formula: \"weight * 2\"}\n"
+const partSchema = "type: Part\nid_prefix: PRT\nfields:\n  - {name: title, type: string, title: true}\n  - {name: weight, type: number}\n  - {name: total, type: calculated, formula: \"weight * 2\"}\n"
 
 func part(id, extra string) string {
 	return "---\nid: " + id + "\ntype: Part\ntitle: T\n" + extra + "---\n"

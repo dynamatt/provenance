@@ -31,9 +31,12 @@ type Repo struct {
 }
 
 // ErrNotFound is returned when no .component exists in the start directory or
-// any of its parents.
-var ErrNotFound = errors.New("not inside a provenance repository: no " + ComponentFile +
-	" file in the current directory or any parent")
+// any of its parents. .component is hidden, so the message says so: a
+// repository moved without its hidden files is the likely cause.
+var ErrNotFound = errors.New("not in a Provenance repository: no " + ComponentFile +
+	" file here or in any folder above. It is a hidden file at the repository's root: " +
+	"when moving a repository, move its hidden files (" + ComponentFile + ", .git) too; " +
+	"to start one, run provenance init")
 
 // Find returns the nearest directory at or above start that contains
 // .component.
@@ -89,10 +92,10 @@ func loadComponent(root string) (Component, error) {
 		return c, fmt.Errorf("%s: %w", ComponentFile, err)
 	}
 	if c.Code == "" {
-		return c, fmt.Errorf("%s: missing code", ComponentFile)
+		return c, fmt.Errorf("%s: no code: give the component's code, such as code: NEURO", ComponentFile)
 	}
 	if c.Name == "" {
-		return c, fmt.Errorf("%s: missing name", ComponentFile)
+		return c, fmt.Errorf("%s: no name: give the component's name, such as name: Neurostimulator", ComponentFile)
 	}
 	return c, nil
 }

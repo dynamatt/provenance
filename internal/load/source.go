@@ -36,12 +36,14 @@ type Loaded struct {
 	// Files are the files it read that hold entities, or would but for a
 	// problem: the content files a change to which marks an export dirty.
 	Files []string
+	// Tables are the CSV files it read, in the order read.
+	Tables []*entity.Table
 }
 
 // sources are the sources of a repository with schema s, Markdown first.
 // testSources are added by tests (UseTestSource).
 func sources(s *schema.Schema) []Source {
-	return append([]Source{markdown{}}, testSources...)
+	return append([]Source{markdown{}, csvSource{s}}, testSources...)
 }
 
 var testSources []Source

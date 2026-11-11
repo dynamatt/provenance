@@ -9,6 +9,8 @@ examples:
     expect: violation
   - file: core/cases/content-frontmatter/violation-no-type.md
     expect: violation
+  - file: core/cases/content-frontmatter/violation-csv-type.md
+    expect: violation
   - file: core/cases/content-frontmatter/clean.md
     expect: clean
 ---

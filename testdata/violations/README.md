@@ -7,8 +7,8 @@ This folder shows each way one can fail.
 
 ```bash
 make build
-bin/provenance validate --path testdata/violations/core           # 54 errors, 7 warnings
-bin/provenance validate --path testdata/violations/broken-schema  # 2 errors
+bin/provenance validate --path testdata/violations/core           # 63 errors, 9 warnings
+bin/provenance validate --path testdata/violations/broken-schema  # 4 errors
 ```
 
 The expected reports are `testdata/validate/violations-core.txt` and
@@ -22,6 +22,9 @@ The expected reports are `testdata/validate/violations-core.txt` and
     - `class.md` is an `ErrorClass` entity: the rule, its severity and its
       examples, each a file marked `violation` or `clean`.
     - `violation*.md` and `clean.md` are the entity examples.
+  - A CSV example (`violation.csv`, `clean.csv`) is a type's source
+    file, its type declared in `schema/` and named for its case
+    (`schema/CsvRowViolation.yaml`).
   - The examples that can't be entities are in `schema/`, `templates/`
     and `rules/`,
     named for their case (`schema/FormulaViolation.yaml`,

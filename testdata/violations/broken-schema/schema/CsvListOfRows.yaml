@@ -1,0 +1,12 @@
+# schema/file: a list of rows has no form in a CSV cell.
+type: CsvListOfRows
+id_prefix: CLR
+source:
+  csv: rows.csv
+  id: id
+fields:
+  - name: steps
+    type: list
+    fields:
+      - name: n
+        type: number

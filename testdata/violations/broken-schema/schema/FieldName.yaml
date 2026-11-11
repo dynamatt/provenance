@@ -1,0 +1,7 @@
+# schema/file: a field's name is lower-case snake_case, as a template
+# reads it (.verified_by).
+type: FieldName
+id_prefix: FNM
+fields:
+  - name: verifiedBy
+    type: string

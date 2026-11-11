@@ -31,7 +31,7 @@ func TestSourceRules(t *testing.T) {
 func TestSourceConformance(t *testing.T) {
 	load.UseTestSource(t, loadtest.Rows{})
 	root := ruleRepo(t, nil)
-	write(t, root, "schema/Bin.yaml", "type: Bin\nid_prefix: BIN\nfields:\n  - {name: title, type: string, required: true}\n  - {name: status, type: string}\n  - {name: weight, type: number}\n  - {name: uses, type: link, target: [Bin], cardinality: many}\n")
+	write(t, root, "schema/Bin.yaml", "type: Bin\nid_prefix: BIN\nfields:\n  - {name: title, type: string, title: true, required: true}\n  - {name: status, type: string}\n  - {name: weight, type: number}\n  - {name: uses, type: link, target: [Bin], cardinality: many}\n")
 	write(t, root, "data/parts.rows", "id | type | title | weight | uses | colour\nBIN-0101 | Bin | Bolt | 3 | | \nBIN-0102 | Bin | | heavy | BIN-0101; BIN-0999 | red\n")
 	got := text(t, root)
 	for _, want := range []string{
@@ -55,7 +55,7 @@ func TestSourceConformance(t *testing.T) {
 func TestSourceExportProblem(t *testing.T) {
 	load.UseTestSource(t, loadtest.Rows{})
 	root := ruleRepo(t, nil)
-	write(t, root, "schema/Bin.yaml", "type: Bin\nid_prefix: BIN\nfields:\n  - {name: title, type: string}\n  - {name: notes, type: text}\n")
+	write(t, root, "schema/Bin.yaml", "type: Bin\nid_prefix: BIN\nfields:\n  - {name: title, type: string, title: true}\n  - {name: notes, type: text}\n")
 	write(t, root, "data/bins.rows", "id | type | title | notes\nBIN-0101 | Bin | Left | Holds bolts.\nBIN-0102 | Bin | Right | See [[BIN-0999]].\nBIN-0103 | Bin | Top | Empty.\n")
 	got := text(t, root)
 	if want := "data/bins.rows:3: error [links/unresolved] [[BIN-0999]]: no entity BIN-0999 (BIN-0102)\n"; !strings.Contains(got, want) {

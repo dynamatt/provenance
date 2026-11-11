@@ -19,6 +19,24 @@
               }
             },
             {
+              "id": "content/csv-column",
+              "shortDescription": {
+                "text": "A CSV column no field reads, or a field with no column"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "content/csv-row",
+              "shortDescription": {
+                "text": "A CSV file or row that cannot be read"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
               "id": "content/duplicate-id",
               "shortDescription": {
                 "text": "Two files with one ID"
@@ -355,7 +373,7 @@
       "results": [
         {
           "ruleId": "schema/file",
-          "ruleIndex": 24,
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "did not find expected ',' or ']'"
@@ -376,7 +394,49 @@
         },
         {
           "ruleId": "schema/file",
-          "ruleIndex": 24,
+          "ruleIndex": 26,
+          "level": "error",
+          "message": {
+            "text": "field \"steps\": a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/CsvListOfRows.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/file",
+          "ruleIndex": 26,
+          "level": "error",
+          "message": {
+            "text": "field \"verifiedBy\": a field's name is lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/FieldName.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/file",
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "field \"status\": unknown type \"AprovalStatus\" (expected string, text, number, date, boolean, link, list, calculated)"

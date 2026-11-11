@@ -1,0 +1,39 @@
+{{/* type is the built-in page of a type with pages: false (DES-0054):
+     every entity of the type, which has no page of its own, shown here
+     at an anchor of its ID. templates/_<Type>.tmpl replaces it. */}}
+{{define "type"}}
+<article class="type-page" id="{{.Type}}">
+<p class="entity-type">Type</p>
+<h1>{{.Type}}</h1>
+{{- with .File}}
+<p class="table-source">Read from <code>{{.Path}}</code>.</p>
+{{- end}}
+{{- if .Count}}
+{{.Entities}}
+{{- else}}
+<p class="placeholder">No entities.</p>
+{{- end}}
+</article>
+{{end}}
+
+{{/* type-section is one entity with a body, rendered as its type template
+     renders it; the entity's own rendering carries its anchor. */}}
+{{define "type-section"}}
+<section class="type-entity">{{.}}</section>
+{{end}}
+
+{{/* type-table-head opens the table of entities without bodies: one
+     column per field and incoming facet, headed by its label. */}}
+{{define "type-table-head"}}
+<table class="list type-entities">
+<thead><tr><th>ID</th>{{range .}}<th>{{.}}</th>{{end}}</tr></thead>
+<tbody>
+{{end}}
+
+{{/* type-table-row is one entity of that table, at an anchor of its ID. */}}
+{{define "type-table-row" -}}
+<tr id="{{.ID}}"><td class="id">{{.ID}}</td>
+{{- range .Fields}}<td>{{template "value" .}}</td>{{end}}
+{{- range .Incoming}}<td>{{range $i, $e := .From}}{{if $i}}, {{end}}{{ref $e.ID $e}}{{else}}<span class="absent">—</span>{{end}}</td>{{end -}}
+</tr>
+{{end}}

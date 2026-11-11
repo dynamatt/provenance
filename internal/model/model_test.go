@@ -14,7 +14,7 @@ import (
 
 const typeYAML = `type: Thing
 fields:
-  - {name: title, type: string}
+  - {name: title, type: string, title: true}
   - {name: label, type: string}
   - {name: statement, type: text, body: true}
   - {name: note, type: text}
@@ -165,12 +165,19 @@ func TestNullIsAbsent(t *testing.T) {
 	}
 }
 
-func TestTitleFallsBackToFirstStringField(t *testing.T) {
-	if got := load(t, "label: Critical\n", "").Title(); got != "Critical" {
-		t.Errorf("Title() = %q", got)
-	}
+// An entity's title is its title: true field's value, and nothing else:
+// not a field named title, not the first string field (DES-0010).
+func TestTitleIsTheTitleField(t *testing.T) {
 	if got := load(t, "title: Main\nlabel: Other\n", "").Title(); got != "Main" {
 		t.Errorf("Title() = %q", got)
+	}
+	if got := load(t, "label: Critical\n", "").Title(); got != "" {
+		t.Errorf("Title() without its title field = %q", got)
+	}
+	e := load(t, "title: Main\n", "")
+	e.Schema.TitleField = nil
+	if got := e.Title(); got != "" {
+		t.Errorf("Title() of a type without title: true = %q", got)
 	}
 }
 

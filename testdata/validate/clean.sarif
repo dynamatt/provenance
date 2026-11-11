@@ -19,6 +19,24 @@
               }
             },
             {
+              "id": "content/csv-column",
+              "shortDescription": {
+                "text": "A CSV column no field reads, or a field with no column"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "content/csv-row",
+              "shortDescription": {
+                "text": "A CSV file or row that cannot be read"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
               "id": "content/duplicate-id",
               "shortDescription": {
                 "text": "Two files with one ID"
@@ -463,7 +481,7 @@
       "results": [
         {
           "ruleId": "requirement-verified",
-          "ruleIndex": 45,
+          "ruleIndex": 47,
           "level": "warning",
           "message": {
             "text": "requirement missing verification"

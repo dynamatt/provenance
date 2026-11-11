@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="provenance validate" tests="49" failures="0" errors="0">
-  <testsuite name="built-in" tests="37" failures="0" errors="0" skipped="0">
+<testsuites name="provenance validate" tests="51" failures="0" errors="0">
+  <testsuite name="built-in" tests="39" failures="0" errors="0" skipped="0">
     <testcase name="content/caption" classname="built-in"></testcase>
+    <testcase name="content/csv-column" classname="built-in"></testcase>
+    <testcase name="content/csv-row" classname="built-in"></testcase>
     <testcase name="content/duplicate-id" classname="built-in"></testcase>
     <testcase name="content/embed" classname="built-in"></testcase>
     <testcase name="content/embed-cycle" classname="built-in"></testcase>

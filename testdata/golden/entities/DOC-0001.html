@@ -60,6 +60,11 @@ feedback, without requiring clinician intervention.</p>
 <ul>
 <li><a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>: Bench verification of closed-loop amplitude adjustment</li>
 </ul>
+<h4>Known anomalies</h4>
+<ul>
+<li><a class="ref" href="Anomaly.html#BUG-1042" title="Alarm tone clipped at maximum volume">BUG-1042</a>: Alarm tone clipped at maximum volume (minor)</li>
+<li><a class="ref" href="Anomaly.html#BUG-1057" title="Amplitude log rounds to whole milliamps">BUG-1057</a>: Amplitude log rounds to whole milliamps (minor, fixed)</li>
+</ul>
 </article>
 </section>
 <section class="embed" data-entity="REQ-0002">
@@ -131,6 +136,10 @@ single-fault conditions of [<a class="ref" href="REF-0002.html" title="Medical e
 <p class="none">No user need linked.</p>
 <h4>Verified by</h4>
 <p class="none">Not yet verified.</p>
+<h4>Known anomalies</h4>
+<ul>
+<li><a class="ref" href="Anomaly.html#BUG-1042" title="Alarm tone clipped at maximum volume">BUG-1042</a>: Alarm tone clipped at maximum volume (minor)</li>
+</ul>
 </article>
 </section>
 <h2>Traceability Note</h2>
@@ -179,6 +188,8 @@ works. The system must stay safe in any single fault condition.</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
+<tr><td><code>1082cd4</code></td><td>2026-11-05</td><td>Matt Williams</td><td>Merge pull request #25 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>4dab2f7</code></td><td>2026-11-01</td><td>Matt Williams</td><td>Merge pull request #22 from dynamatt/epic/E4-fmt</td></tr>
 <tr><td><code>8068898</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #14 from dynamatt/cookbook-glossary</td></tr>
 <tr><td><code>58b2168</code></td><td>2026-10-11</td><td>Matt Williams</td><td>Merge pull request #12 from dynamatt/task/E2.1-validate-design</td></tr>
@@ -198,7 +209,7 @@ works. The system must stay safe in any single fault condition.</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>4dab2f7</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>2a0d54a</code></p>
 </footer>
 </body>
 </html>

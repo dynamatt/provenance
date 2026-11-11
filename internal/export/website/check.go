@@ -214,11 +214,15 @@ func (c *checker) templateFiles(root string, s *schema.Schema) error {
 		p := Problem{Warning: true, Path: templatesDir + "/" + name}
 		switch {
 		case strings.HasPrefix(name, "_"):
-			if slices.Contains(siteOverrides, name) {
+			if slices.Contains(siteOverrides, name) || typePageType(s, name) != nil {
 				continue
 			}
 			p.Check = "content/unknown-override"
-			p.Msg = fmt.Sprintf("%s is not a site override (%s), so it is never used", name, strings.Join(siteOverrides, ", "))
+			if t := s.Types[strings.TrimPrefix(base, "_")]; t != nil {
+				p.Msg = fmt.Sprintf("%s would render the page of type %s, which has none: its entities have pages of their own (set pages: false on %s to show them together)", name, t.Name, t.Name)
+				break
+			}
+			p.Msg = fmt.Sprintf("%s is not a site override (%s, or _<Type>.tmpl for a type with pages: false), so it is never used", name, strings.Join(siteOverrides, ", "))
 		case s.Types[base] != nil:
 			continue
 		case query.IsTemplateName(base):

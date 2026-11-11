@@ -48,7 +48,7 @@ func renderReport(t *testing.T, r *Report, name string) string {
 // its own, the summary, the component and the stamps; an .html name
 // escapes as HTML, any other is text.
 const listReport = `{{.Component.Name}} {{.Summary.Errors}}/{{.Summary.Warnings}}/{{.Summary.RulesSkipped}}
-{{range .Violations}}{{.Severity}} {{.Rule}} {{.Path}}:{{.Line}} {{link .Entity}} {{.Entity.Title}} {{href .Entity}} {{.Message}}
+{{range .Violations}}{{.Severity}} {{.Rule}} {{.Path}}:{{.Line}} {{link .Entity}} {{title .Entity}} {{href .Entity}} {{.Message}}
 {{end}}{{range .Rules}}{{if not .Builtin}}{{.ID}} {{.Severity}} {{len .Violations}} {{.Path}} {{.Message}} [{{.Skipped}}]
 {{end}}{{end}}{{len .Rules}} {{.GitSHA}} {{.ContentHash}} {{.Dirty}}
 `
@@ -116,7 +116,7 @@ func TestReportEntities(t *testing.T) {
 func TestReportTemplateErrors(t *testing.T) {
 	root := reportRepo(t, map[string]string{
 		"parse.tmpl":      "line one\n{{.Summary.Errors}\n",
-		"field.html.tmpl": "<p>ok</p>\n{{range .Violations}}{{.Entity.Title}}{{end}}{{.Summary.Nope}}\n",
+		"field.html.tmpl": "<p>ok</p>\n{{range .Violations}}{{title .Entity}}{{end}}{{.Summary.Nope}}\n",
 		"fine.tmpl":       "{{.Summary.Errors}}\n",
 		"json.tmpl":       "{{.Summary.Errors}}\n",
 	})

@@ -6,6 +6,7 @@ id_prefix: ERR
 fields:
   - name: title
     type: string
+    title: true
     required: true
   - name: rule
     type: string

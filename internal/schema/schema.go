@@ -17,6 +17,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -58,11 +59,20 @@ type Field struct {
 	EnumName string // set when Kind is Enum
 	Required bool
 	Body     bool
-	Help     string
+	// Title marks the field whose value is the entity's title (title:
+	// true), at most one per type; FriendlyName is how the built-in pages
+	// label the field, its name as written when "" (DES-0010).
+	Title        bool
+	FriendlyName string
+	Help         string
 	// Target and Cardinality ("one" or "many") apply to links.
 	Target      []string
 	Cardinality string
 	ReverseName string
+	// ReverseFriendlyName is how the built-in pages label the reverse_name
+	// facet on the link's targets, the reverse_name as written when ""
+	// (DES-0010).
+	ReverseFriendlyName string
 	// A list holds either rows or items. Rows have the sub-fields Fields:
 	// declared inline under fields:, or a record's fields when the list names
 	// one with of: (Record is then its name). Items have the single type
@@ -72,7 +82,27 @@ type Field struct {
 	Record  string
 	Elem    *Field
 	Formula string
-	Line    int
+	// Column is the CSV header a field of a CSV-backed type reads, when it
+	// is not the field's name (DES-0053).
+	Column string
+	Line   int
+}
+
+// Label is how the built-in pages show f: its friendly_name, else its name
+// as written (DES-0010).
+func (f *Field) Label() string {
+	if f.FriendlyName != "" {
+		return f.FriendlyName
+	}
+	return f.Name
+}
+
+// ColumnName is the CSV header f reads: its column:, else its name.
+func (f *Field) ColumnName() string {
+	if f.Column != "" {
+		return f.Column
+	}
+	return f.Name
 }
 
 // CodeBlocks is the list every entity derives from its Markdown, one row
@@ -93,11 +123,44 @@ type Type struct {
 	// BodyField is the text field declared body: true, or nil when the body
 	// is freeform.
 	BodyField *Field
-	File      string
-	Line      int // of type:
+	// TitleField is the string field declared title: true, or nil when
+	// the type's entities have no title.
+	TitleField *Field
+	File       string
+	Line       int // of type:
 	// Facets are the incoming link facets other types' reverse_name
 	// declarations give this type, in name order.
 	Facets []*Facet
+	// Source is the CSV file the type's entities are read from, one per
+	// row (DES-0053); nil for a type whose entities are Markdown files.
+	Source *Source
+	// Pages is false when the type's entities get no page of their own:
+	// they are shown, all together, on the type's page (DES-0054).
+	Pages bool
+}
+
+// Source is a CSV file a type's entities are read from (DES-0053).
+type Source struct {
+	// CSV is the file, slash-separated and relative to the repository root.
+	CSV string
+	// ID is the header of the column holding each row's ID.
+	ID string
+	// Delimiter separates a row's cells; Separator the IDs or items in one
+	// cell.
+	Delimiter rune
+	Separator string
+	Line      int // of source:
+}
+
+// SourceTypes are the CSV-backed types, in name order.
+func (s *Schema) SourceTypes() []*Type {
+	var out []*Type
+	for _, n := range s.TypeNames() {
+		if t := s.Types[n]; t.Source != nil {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 // Facet is an incoming link facet: every link field, on any type, whose
@@ -105,6 +168,19 @@ type Type struct {
 type Facet struct {
 	Name    string
 	Sources []FacetSource
+}
+
+// Label is how the built-in pages show the facet: the
+// reverse_friendly_name its links give, else its name as written
+// (DES-0010). Links that share a reverse_name and give it a label give
+// the same one (a load error otherwise).
+func (f *Facet) Label() string {
+	for _, s := range f.Sources {
+		if s.Field.ReverseFriendlyName != "" {
+			return s.Field.ReverseFriendlyName
+		}
+	}
+	return f.Name
 }
 
 // FacetSource is one link field feeding a facet. List marks a link declared
@@ -155,19 +231,22 @@ type Schema struct {
 }
 
 var (
-	typeKeys   = []string{"type", "id_prefix", "fields"}
+	typeKeys   = []string{"type", "id_prefix", "pages", "source", "fields"}
+	sourceKeys = []string{"csv", "id", "delimiter", "separator"}
 	recordKeys = []string{"record", "fields"}
 	enumKeys   = []string{"enum", "values"}
 	// fieldKeys maps each field key to the kinds of field it applies to,
 	// nil for every kind.
 	fieldKeys = map[string][]Kind{
 		"name": nil, "type": nil, "required": nil, "help": nil,
-		"body":   {Text},
-		"target": {Link}, "cardinality": {Link}, "reverse_name": {Link},
+		"body":  {Text},
+		"title": {String}, "friendly_name": nil,
+		"target": {Link}, "cardinality": {Link}, "reverse_name": {Link}, "reverse_friendly_name": {Link},
 		"formula": {Calculated},
 		"fields":  {List}, "of": {List},
+		"column": nil,
 	}
-	fieldKeyOrder = []string{"name", "type", "required", "help", "body", "target", "cardinality", "reverse_name", "formula", "fields", "of"}
+	fieldKeyOrder = []string{"name", "type", "required", "title", "friendly_name", "help", "body", "target", "cardinality", "reverse_name", "reverse_friendly_name", "formula", "fields", "of", "column"}
 )
 
 // checkKeys records the keys of a declaration's mapping m that are not in
@@ -222,6 +301,12 @@ func (e *Error) Error() string {
 	}
 	return e.Path + ": " + e.Msg
 }
+
+// nameForm is the form of a field's name and a link's reverse_name:
+// lower-case snake_case. A template reads a field by its name (.verified_by),
+// which can then never clash with the engine's capitalised keys (.ID,
+// .Title), and is a valid template identifier (DES-0030).
+var nameForm = regexp.MustCompile(`^[a-z][a-z0-9]*(_[a-z0-9]+)*$`)
 
 // Dir is the schema folder at the repository root.
 const Dir = "schema"
@@ -325,8 +410,21 @@ func (l *loader) read(root string) error {
 			}
 			continue
 		}
-		s.Types[rt.name] = &Type{Name: rt.name, IDPrefix: rt.idPrefix, File: rel, Line: rt.nameLine}
+		t := &Type{Name: rt.name, IDPrefix: rt.idPrefix, File: rel, Line: rt.nameLine, Pages: true}
+		s.Types[rt.name] = t
+		if p := yamlnode.Lookup(rt.mapping, "pages"); p != nil {
+			if p.Kind != yaml.ScalarNode || p.Tag != "!!bool" {
+				l.keep(&Error{Path: rel, Line: p.Line, Msg: fmt.Sprintf("type %s: pages: must be true or false", rt.name)})
+			} else {
+				t.Pages = p.Value == "true" || p.Value == "True" || p.Value == "TRUE"
+			}
+		}
 		s.checkKeys(rel, rt.mapping, "type "+rt.name, typeKeys)
+		if n := yamlnode.Lookup(rt.mapping, "source"); n != nil {
+			if t.Source, err = s.source(rel, rt.name, n); err != nil {
+				l.keep(err)
+			}
+		}
 		raws = append(raws, rt)
 	}
 	// Resolve every record, used or not, so a broken one is reported.
@@ -337,6 +435,13 @@ func (l *loader) read(root string) error {
 		t := s.Types[rt.name]
 		t.Fields = l.fields(rt.path, rt.fields, "")
 		for _, f := range t.Fields {
+			if f.Title {
+				if t.TitleField != nil {
+					l.keep(&Error{Path: rt.path, Line: f.Line, Msg: fmt.Sprintf("field %q: only one field may set title: true (%q already does)", f.Name, t.TitleField.Name)})
+				} else {
+					t.TitleField = f
+				}
+			}
 			if !f.Body {
 				continue
 			}
@@ -346,6 +451,7 @@ func (l *loader) read(root string) error {
 			}
 			t.BodyField = f
 		}
+		l.columns(t, rt.fields)
 	}
 	s.facets(l)
 	return nil
@@ -432,7 +538,11 @@ func (s *Schema) facets(ld *loader) {
 						l.Field.Name, l.Field.ReverseName, clash.Name, target.Name, target.File, clash.Line)})
 					continue
 				}
-				target.addFacet(l.Field.ReverseName, l)
+				if other := target.addFacet(l.Field.ReverseName, l); other != nil {
+					ld.keep(&Error{Path: path, Line: l.Field.Line, Msg: fmt.Sprintf(
+						"field %q: reverse_friendly_name %q differs from %q, given by the field %s of %s for the same reverse_name %s; give one label, or leave it out on all but one",
+						l.Field.Name, l.Field.ReverseFriendlyName, other.Field.ReverseFriendlyName, other.Field.Name, other.Type.Name, l.Field.ReverseName)})
+				}
 			}
 		}
 	}
@@ -441,14 +551,24 @@ func (s *Schema) facets(ld *loader) {
 	}
 }
 
-func (t *Type) addFacet(name string, src FacetSource) {
+// addFacet adds src to the facet name, and returns a source already there
+// whose reverse_friendly_name differs from src's, both given.
+func (t *Type) addFacet(name string, src FacetSource) *FacetSource {
 	for _, f := range t.Facets {
 		if f.Name == name {
+			var clash *FacetSource
+			for i, s := range f.Sources {
+				a, b := s.Field.ReverseFriendlyName, src.Field.ReverseFriendlyName
+				if a != "" && b != "" && a != b && clash == nil {
+					clash = &f.Sources[i]
+				}
+			}
 			f.Sources = append(f.Sources, src)
-			return
+			return clash
 		}
 	}
 	t.Facets = append(t.Facets, &Facet{Name: name, Sources: []FacetSource{src}})
+	return nil
 }
 
 // yamlFiles lists *.yaml directly in root/dir, slash-separated and relative to
@@ -550,15 +670,19 @@ func readDecl(root, rel, key string) (*rawDecl, error) {
 }
 
 type rawField struct {
-	Name        string   `yaml:"name"`
-	Type        string   `yaml:"type"`
-	Required    bool     `yaml:"required"`
-	Body        bool     `yaml:"body"`
-	Help        string   `yaml:"help"`
-	Target      []string `yaml:"target"`
-	Cardinality string   `yaml:"cardinality"`
-	ReverseName string   `yaml:"reverse_name"`
-	Formula     string   `yaml:"formula"`
+	Name            string   `yaml:"name"`
+	Type            string   `yaml:"type"`
+	Required        bool     `yaml:"required"`
+	Body            bool     `yaml:"body"`
+	Title           bool     `yaml:"title"`
+	Friendly        string   `yaml:"friendly_name"`
+	Help            string   `yaml:"help"`
+	Target          []string `yaml:"target"`
+	Cardinality     string   `yaml:"cardinality"`
+	ReverseName     string   `yaml:"reverse_name"`
+	ReverseFriendly string   `yaml:"reverse_friendly_name"`
+	Formula         string   `yaml:"formula"`
+	Column          string   `yaml:"column"`
 }
 
 // fields converts field declarations. within names what encloses sub-fields
@@ -594,6 +718,15 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 	if rf.Name == "" {
 		return nil, &Error{Path: path, Line: n.Line, Msg: "field without a name"}
 	}
+	if !nameForm.MatchString(rf.Name) {
+		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s: a field's name is lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by", label)}
+	}
+	if rf.ReverseName != "" && !nameForm.MatchString(rf.ReverseName) {
+		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s: reverse_name %q is not lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by", label, rf.ReverseName)}
+	}
+	if rf.ReverseFriendly != "" && rf.ReverseName == "" && rf.Type == string(Link) {
+		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s: reverse_friendly_name labels the reverse_name, and there is none; give reverse_name too", label)}
+	}
 	if prev, dup := seen[rf.Name]; dup {
 		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s is declared twice (first at line %d)", label, prev)}
 	}
@@ -603,9 +736,9 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 	}
 
 	f := &Field{
-		Name: rf.Name, Required: rf.Required, Body: rf.Body, Help: rf.Help,
-		Target: rf.Target, Cardinality: rf.Cardinality, ReverseName: rf.ReverseName,
-		Formula: rf.Formula, Line: n.Line,
+		Name: rf.Name, Required: rf.Required, Body: rf.Body, Title: rf.Title, FriendlyName: rf.Friendly, Help: rf.Help,
+		Target: rf.Target, Cardinality: rf.Cardinality, ReverseName: rf.ReverseName, ReverseFriendlyName: rf.ReverseFriendly,
+		Formula: rf.Formula, Column: rf.Column, Line: n.Line,
 	}
 	typeLine := n.Line
 	if tn := yamlnode.Lookup(n, "type"); tn != nil {
@@ -628,6 +761,9 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 		return nil, &Error{Path: path, Line: of.Line, Msg: label + ": of: applies only to type: list"}
 	}
 
+	if f.Title && (f.Kind != String || within != "") {
+		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": title: true is only allowed on a top-level string field"}
+	}
 	if f.Body && (f.Kind != Text || within != "") {
 		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": body: true is only allowed on a top-level text field"}
 	}
@@ -720,4 +856,108 @@ func (s *Schema) expectedItems() string {
 		}
 	}
 	return msg
+}
+
+// source reads a type's source: mapping (DES-0053).
+func (s *Schema) source(path, typeName string, n *yaml.Node) (*Source, error) {
+	label := fmt.Sprintf("type %s: source", typeName)
+	if n.Kind != yaml.MappingNode {
+		return nil, &Error{Path: path, Line: n.Line, Msg: label + " must be a mapping with csv: and id:"}
+	}
+	s.checkKeys(path, n, label, sourceKeys)
+	src := &Source{Delimiter: ',', Separator: ";", Line: n.Line}
+	str := func(key string) (string, int, error) {
+		v := yamlnode.Lookup(n, key)
+		if v == nil {
+			return "", 0, nil
+		}
+		if v.Kind != yaml.ScalarNode || v.Tag == "!!null" {
+			return "", v.Line, &Error{Path: path, Line: v.Line, Msg: fmt.Sprintf("%s: %s must be a string", label, key)}
+		}
+		return v.Value, v.Line, nil
+	}
+	csv, line, err := str("csv")
+	if err != nil {
+		return nil, err
+	}
+	clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(csv)))
+	switch {
+	case csv == "":
+		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": csv: names the file, a path from the repository root"}
+	case filepath.IsAbs(csv) || strings.HasPrefix(csv, "/") || clean == ".." || strings.HasPrefix(clean, "../") || clean != csv:
+		return nil, &Error{Path: path, Line: line, Msg: fmt.Sprintf("%s: csv: %q must be a path from the repository root, written plainly (%s)", label, csv, clean)}
+	}
+	src.CSV = csv
+	if src.ID, _, err = str("id"); err != nil {
+		return nil, err
+	}
+	if src.ID == "" {
+		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": id: names the column holding each row's ID"}
+	}
+	d, line, err := str("delimiter")
+	if err != nil {
+		return nil, err
+	}
+	if d != "" {
+		r := []rune(d)
+		if len(r) != 1 || r[0] == '"' || r[0] == '\r' || r[0] == '\n' || r[0] == 0xFFFD {
+			return nil, &Error{Path: path, Line: line, Msg: fmt.Sprintf("%s: delimiter: %q must be one character, not a quote or a line break", label, d)}
+		}
+		src.Delimiter = r[0]
+	}
+	sep, line, err := str("separator")
+	if err != nil {
+		return nil, err
+	}
+	if sep != "" {
+		if strings.TrimSpace(sep) != sep || strings.ContainsAny(sep, "\r\n") || strings.ContainsRune(sep, src.Delimiter) {
+			return nil, &Error{Path: path, Line: line, Msg: fmt.Sprintf("%s: separator: %q must not be blank, hold a line break or the delimiter", label, sep)}
+		}
+		src.Separator = sep
+	}
+	return src, nil
+}
+
+// columns checks the fields of t against its source: every field has a
+// form in a cell, and no two read the same column. column: on a type
+// without a source applies to nothing.
+func (l *loader) columns(t *Type, nodes []*yaml.Node) {
+	if t.Source == nil {
+		for _, f := range t.Fields {
+			if f.Column != "" {
+				l.KeyProblems = append(l.KeyProblems, &Error{Path: t.File, Line: f.Line,
+					Msg: fmt.Sprintf("field %q: column applies only to a field of a type with a source", f.Name)})
+			}
+		}
+		return
+	}
+	fail := func(f *Field, msg string) {
+		l.keep(&Error{Path: t.File, Line: f.Line, Msg: fmt.Sprintf("field %q: %s", f.Name, msg)})
+	}
+	read := map[string]*Field{}
+	for _, f := range t.Fields {
+		switch {
+		case f.Body:
+			fail(f, "a row read from a CSV file has no Markdown body; leave out body: true")
+			continue
+		case f.Kind == List && f.Elem == nil:
+			fail(f, "a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)")
+			continue
+		case f.Kind == Calculated:
+			if f.Column != "" {
+				fail(f, "a calculated field is never read from the file, so it has no column")
+			}
+			continue
+		}
+		col := f.ColumnName()
+		if col == t.Source.ID {
+			fail(f, fmt.Sprintf("column %q is the ID column (source id:)", col))
+			continue
+		}
+		if prev := read[col]; prev != nil {
+			fail(f, fmt.Sprintf("column %q is already read by field %q", col, prev.Name))
+			continue
+		}
+		read[col] = f
+	}
 }

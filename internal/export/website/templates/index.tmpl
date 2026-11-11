@@ -1,11 +1,14 @@
 <h1>{{.Component.Name}} ({{.Component.Code}})</h1>
 {{range .Types}}
-<h2>{{.Type}}</h2>
+<h2>{{if .Page}}<a href="{{.Page}}">{{.Type}}</a>{{else}}{{.Type}}{{end}}</h2>
+{{- with .File}}
+<p class="table-source">Read from <code>{{.Path}}</code>.</p>
+{{- end}}
 <table class="entity-list">
 <thead><tr><th>ID</th><th>Title</th></tr></thead>
 <tbody>
 {{- range .Entities}}
-<tr><td class="id">{{link .}}</td><td>{{.Title}}</td></tr>
+<tr><td class="id">{{link .}}</td><td>{{title .}}</td></tr>
 {{- end}}
 </tbody>
 </table>

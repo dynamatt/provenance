@@ -94,7 +94,7 @@ func TestExportErrorsExitTwo(t *testing.T) {
 func TestExportOutsideRepositoryExitsTwo(t *testing.T) {
 	t.Chdir(t.TempDir())
 	code, _, errOut := run("export", "website")
-	if code != 2 || !strings.Contains(errOut, "not inside a provenance repository") {
+	if code != 2 || !strings.Contains(errOut, "not in a Provenance repository") {
 		t.Errorf("exit %d, stderr %q", code, errOut)
 	}
 }

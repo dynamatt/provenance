@@ -4,6 +4,7 @@ id_prefix: WID
 fields:
   - name: title
     type: string
+    title: true
     required: true
   - name: status
     type: Status

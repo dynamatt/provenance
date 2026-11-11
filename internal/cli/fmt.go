@@ -56,7 +56,7 @@ func runFmt(c *cobra.Command, args []string) error {
 		}
 		switch {
 		case h == nil && !history.InRepository(rp.Root):
-			return exitcode.Usage(fmt.Errorf("%s: not a git repository, so no file has changed since HEAD; use --all", name))
+			return exitcode.Usage(fmt.Errorf("%s: not in a git repository (no .git folder here or in any folder above), so there is no HEAD to compare with; use --all to check every entity file", name))
 		case h != nil:
 			// In a repository with no commits yet, every file is new.
 			changed := map[string]bool{}

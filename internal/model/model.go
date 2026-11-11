@@ -56,16 +56,16 @@ func (e *Entity) Field(name string) *Value {
 	return nil
 }
 
-// Title is the entity's display title: the "title" field, else the first
-// string field, else "".
+// Title is the entity's title: the value of the field its type declares
+// title: true, or "" when there is none or it is not set (DES-0010). No
+// field is a title by its name.
 func (e *Entity) Title() string {
-	if v := e.Field("title"); v != nil && v.Present && !v.Invalid {
-		return v.Str
+	f := e.Schema.TitleField
+	if f == nil {
+		return ""
 	}
-	for _, v := range e.Fields {
-		if v.Field.Kind == schema.String && v.Present && !v.Invalid {
-			return v.Str
-		}
+	if v := e.Field(f.Name); v != nil && v.Present && !v.Invalid {
+		return v.Str
 	}
 	return ""
 }

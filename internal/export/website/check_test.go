@@ -62,7 +62,7 @@ N/N-2.md:6 content/embed ![[N-1]] is inside running text, so it is shown as a re
 N/N-2.md:8 content/embed-cycle embed cycle N-1 → N-2 → N-1
 templates/Note.tmpl:1 content/template executing "templates/Note.tmpl" at <.Nope>: map has no entry for key "Nope"
 templates/Widget.tmpl:0 content/template-name (warning) Widget.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used
-templates/_footer.tmpl:0 content/unknown-override (warning) _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl), so it is never used
+templates/_footer.tmpl:0 content/unknown-override (warning) _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl, or _<Type>.tmpl for a type with pages: false), so it is never used
 templates/spare-part.tmpl:0 content/unused-template (warning) named template spare-part is not chosen by any query block
 templates/spare-part.tmpl:1 content/template unexpected "}" in operand`
 	if got != want {

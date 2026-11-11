@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/export"
 	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/markdown"
@@ -64,11 +65,6 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 			}
 		}
 	}
-	for _, err := range tmpl.NameErrors(in.Schema) {
-		if err := check.report(Problem{Check: "content/template", Path: err.Path, Line: err.Line, Msg: err.Msg, Err: err}); err != nil {
-			return nil, err
-		}
-	}
 	ts, err := loadTemplates(in.Repo.Root, in.Schema, check)
 	if err != nil {
 		return nil, err
@@ -89,6 +85,7 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 	for _, ent := range in.Entities {
 		s.byID[ent.ID] = ent
 	}
+	s.setupTypePages(in.Tables, in.Entities, in.Scope.Has)
 	// Every entity's data carries its git stamps, embedded or not: a
 	// template naming .LastChangedSHA must render wherever it is used.
 	for _, ent := range in.Entities {
@@ -131,11 +128,32 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 		}
 	}
 	for _, ent := range inScope {
+		if !s.hasPage(ent.ID) {
+			continue // shown on its type's page
+		}
 		content, data, err := s.renderPage(ent, "")
 		if err := s.failed(err); err != nil {
 			return nil, err
 		}
 		if err := s.failed(s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), s.finalize(content), data)); err != nil {
+			return nil, err
+		}
+	}
+	for _, typ := range s.typePages() {
+		var stamps entityData
+		if s.git != nil {
+			in, err := s.typePageInputs(typ)
+			if err != nil {
+				return nil, err
+			}
+			last, revs := s.git.Page(in)
+			stamps = entityData{"LastChangedSHA": last, "Revisions": revisionData(revs)}
+		}
+		content, err := s.renderTypePage(typ)
+		if err := s.failed(err); err != nil {
+			return nil, err
+		}
+		if err := s.failed(s.page("entities/"+typ+".html", "../", typ, s.finalize(content), stamps)); err != nil {
 			return nil, err
 		}
 	}
@@ -262,6 +280,7 @@ type site struct {
 	cited    map[string]entityData
 	// check is where rendering reports the problems it finds.
 	check *checker
+	typeSite
 }
 
 // citations are the IDs a page cites, in order of first citation.
@@ -382,6 +401,12 @@ type indexData struct {
 type typeGroup struct {
 	Type     string
 	Entities []entityData
+	// File is the CSV file the type's entities are read from, as a row's
+	// .File without .Line; nil for a type of entity files.
+	File entityData
+	// Page is the type's page, relative to the main page, for a type
+	// with pages: false (DES-0054); "" for any other.
+	Page string
 }
 
 func (s *site) renderIndex(entities []*model.Entity) (string, error) {
@@ -391,7 +416,14 @@ func (s *site) renderIndex(entities []*model.Entity) (string, error) {
 	}
 	d := indexData{Component: s.component}
 	for _, t := range slices.Sorted(maps.Keys(byType)) {
-		d.Types = append(d.Types, typeGroup{Type: t, Entities: byType[t]})
+		g := typeGroup{Type: t, Entities: byType[t]}
+		if table := s.typeSite.tables[t]; table != nil {
+			g.File = tmpl.TableFile(table)
+		}
+		if href := s.typePageHref(t); href != "" {
+			g.Page = "entities/" + href
+		}
+		d.Types = append(d.Types, g)
 	}
 
 	ctx := &renderCtx{site: s, linkBase: "entities/"}
@@ -464,7 +496,11 @@ func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named, linkB
 		if err != nil {
 			return "", err
 		}
-		if err := t.ExecuteTemplate(&b, "entity", entityView(e)); err != nil {
+		view := entityView(e)
+		if _, ok := e.Record.(*entity.Row); ok {
+			view.RowFile = s.data.ByID[e.ID]["File"]
+		}
+		if err := t.ExecuteTemplate(&b, "entity", view); err != nil {
 			return "", templateError(err)
 		}
 	}
@@ -478,6 +514,7 @@ func (ctx *renderCtx) funcs() template.FuncMap {
 		"markdown": ctx.markdown,
 		"link":     l.Link,
 		"href":     l.Href,
+		"title":    l.Title,
 		"short":    history.Short,
 	}
 }
@@ -485,7 +522,7 @@ func (ctx *renderCtx) funcs() template.FuncMap {
 // linker links from the page being rendered to the entity pages in the
 // export's scope.
 func (ctx *renderCtx) linker() tmpl.Linker {
-	return tmpl.Linker{Base: ctx.linkBase, HasPage: ctx.site.scope.Has}
+	return tmpl.Linker{Base: ctx.linkBase, HasPage: ctx.site.hasPage, ShownOn: ctx.site.shownOn, Schema: ctx.site.graph.Schema}
 }
 
 // markdown converts entity Markdown, resolving wikilinks against the site.
@@ -543,6 +580,8 @@ type entityPage struct {
 	// Fields excludes the body field, which is rendered below the table.
 	Fields    []*model.Value
 	BodyField *model.Value
+	// RowFile is a CSV row's .File, nil for an entity file (DES-0053).
+	RowFile any
 }
 
 func entityView(e *model.Entity) entityPage {
@@ -567,15 +606,9 @@ var fallbackFuncs = template.FuncMap{
 		return string(v.Field.Kind)
 	},
 	"number": formatNumber,
-	// humanize turns a snake_case field name into a label: verified_by ->
-	// "Verified by".
-	"humanize": func(name string) string {
-		s := strings.ReplaceAll(name, "_", " ")
-		if s == "" {
-			return s
-		}
-		return strings.ToUpper(s[:1]) + s[1:]
-	},
+	// label is how a field is labelled: its friendly_name, else its name
+	// as written (DES-0010). A facet is labelled by its reverse_name.
+	"label": func(f *schema.Field) string { return f.Label() },
 }
 
 func formatNumber(f float64) string { return strconv.FormatFloat(f, 'f', -1, 64) }

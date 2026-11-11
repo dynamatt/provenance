@@ -36,7 +36,7 @@
 {{- end -}}
 {{- else if .Rows -}}
 <table class="list">
-<thead><tr>{{range .Field.Fields}}<th>{{humanize .Name}}</th>{{end}}</tr></thead>
+<thead><tr>{{range .Field.Fields}}<th>{{label .}}</th>{{end}}</tr></thead>
 <tbody>
 {{- range .Rows}}
 <tr>{{range .}}<td>{{template "value" .}}</td>{{end}}</tr>

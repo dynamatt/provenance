@@ -42,7 +42,7 @@ func runInit(c *cobra.Command, args []string) error {
 				root = filepath.ToSlash(rel)
 			}
 		}
-		return refuse("%s is inside the Provenance repository at %s", shown, root)
+		return refuse("%s is inside the Provenance repository whose root is %s (it holds a %s file, which is hidden: ls -a shows it); run init outside it", shown, root, repo.ComponentFile)
 	} else if !errors.Is(err, repo.ErrNotFound) {
 		return fmt.Errorf("%s: %w", name, err)
 	}
@@ -53,7 +53,7 @@ func runInit(c *cobra.Command, args []string) error {
 	}
 	code, _ := c.Flags().GetString("code")
 	if code == "" {
-		code = codeOf(filepath.Base(target))
+		return refuse("--code is required: the component code, 1 to 8 upper-case letters and digits, such as --code NEURO")
 	}
 	if !validCode.MatchString(code) {
 		return refuse("component code %q is not 1 to 8 upper-case letters and digits; give one with --code", code)
@@ -113,14 +113,3 @@ func runInit(c *cobra.Command, args []string) error {
 // validCode is a component code init writes: short, so IDs prefixed
 // with it stay readable across repositories.
 var validCode = regexp.MustCompile(`^[A-Z0-9]{1,8}$`)
-
-// codeOf is a folder name's letters and digits, upper-case, at most 8.
-func codeOf(folder string) string {
-	var b strings.Builder
-	for _, r := range strings.ToUpper(folder) {
-		if (r >= 'A' && r <= 'Z' || r >= '0' && r <= '9') && b.Len() < 8 {
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
-}

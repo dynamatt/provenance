@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/model"
 	"github.com/dynamatt/provenance/internal/problem"
@@ -33,6 +34,9 @@ type Input struct {
 	// Git is the repository's git context; nil outside a git repository,
 	// when outputs carry no commit or content hash.
 	Git *Git
+	// Tables are the CSV files entities were read from (DES-0053), in type
+	// name order.
+	Tables []*entity.Table
 }
 
 // Git is what an export stamps into its output (DES-0021, DES-0023).
