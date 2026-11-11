@@ -65,7 +65,7 @@
 - [x] E6.4 CSV checks
 - [x] E6.5 Row pages
 - [x] E6.6 Row history
-- [ ] E6.7 Epic close-out (built; the release follows the merge)
+- [x] E6.7 Epic close-out
 
 ## Shape of the plan
 
@@ -1428,12 +1428,12 @@ downloaded binary's `init` into an empty folder validates clean.
 
 ## Epic 6 — CSV-backed entity types
 
-> **Status: built 2026-11-02.** C1–C12 agreed 2026-11-01 (Matt merged
-> the plan) and written into DES-0053 (E6.1); E6.1–E6.7 built together in
-> one PR per repository, at Matt's request. What building settled is
-> under *Settled while building* below. The release, `v0.5.0-alpha`,
-> follows the merge, and with it the example's and the DDF's Validate
-> pins. Drafted 2026-10-11 and revised 2026-10-28 against Epic 3.
+> **Status: closed 2026-11-11**, released as `v0.5.0-alpha`. C1–C12
+> agreed 2026-11-01 (Matt merged the plan) and written into DES-0053
+> (E6.1); E6.1–E6.7 built together in one PR per repository, at Matt's
+> request. What building settled is under *Settled while building*
+> below. The example's and the DDF's Validate workflows are pinned to
+> the release. Drafted 2026-10-11 and revised 2026-10-28 against Epic 3.
 > *Revised 2026-11-01 at Matt's request:* a cell takes the same field types and value forms as
 > an entity file, with no CSV-only types or type options (C5); rows can
 > link out through `link` columns (C4), so `text` cells render as any
@@ -1717,7 +1717,7 @@ order after Epic 2, with the reason it comes where it does:
 1. **Architecture groundwork** — Epic 3, detailed above (closed 2026-10-28).
 2. **`fmt`** — Epic 4, detailed above (closed 2026-11-01).
 3. **`init`** — Epic 5, detailed above (closed 2026-11-01).
-4. **CSV-backed entity types** — Epic 6, detailed above.
+4. **CSV-backed entity types** — Epic 6, detailed above (closed 2026-11-11).
 5. **Section and item references** — a heading or list item is tagged,
    and a reference to the tag shows the number it has where it is
    rendered (see below). Its first task replaces per-page placeholder
