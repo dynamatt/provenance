@@ -177,7 +177,7 @@ func (s *site) renderTypePage(typ string) (string, error) {
 				cols = append(cols, v.Field.Label())
 			}
 			for _, in := range entities[0].Incoming {
-				cols = append(cols, in.Facet.Name)
+				cols = append(cols, in.Facet.Label())
 			}
 		}
 		if err := tp.ExecuteTemplate(&body, "type-table-head", cols); err != nil {

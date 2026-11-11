@@ -398,7 +398,7 @@ fields:
 		`schema/A.yaml:3: type A: unknown key "extends" (expected type, id_prefix, pages, source, fields)`,
 		`schema/A.yaml:7: field "x": unknown key "default": fields have no defaults; a field that must have a value says required: true`,
 		`schema/A.yaml:8: field "x": formula applies only to a calculated field`,
-		`schema/A.yaml:13: field "y": unknown key "colour" (expected name, type, required, title, friendly_name, help, body, target, cardinality, reverse_name, formula, fields, of, column)`,
+		`schema/A.yaml:13: field "y": unknown key "colour" (expected name, type, required, title, friendly_name, help, body, target, cardinality, reverse_name, reverse_friendly_name, formula, fields, of, column)`,
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
@@ -583,5 +583,50 @@ func TestTitleAndFriendlyName(t *testing.T) {
 		if len(problems) != 1 || !strings.Contains(problems[0].Msg, c.want) {
 			t.Errorf("got %v, want %s", problems, c.want)
 		}
+	}
+}
+
+func TestReverseFriendlyName(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "schema/R.yaml", "type: R\nid_prefix: R\nfields: []\n")
+	write(t, root, "schema/V.yaml", "type: V\nid_prefix: V\nfields:\n"+
+		"  - {name: verifies, type: link, target: [R], cardinality: many, reverse_name: verified_by, reverse_friendly_name: Verified by}\n"+
+		"  - {name: also, type: link, target: [R], cardinality: one, reverse_name: verified_by}\n"+
+		"  - {name: cites, type: link, target: [R], cardinality: one, reverse_name: cited_by}\n")
+	s, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, f := range s.Types["R"].Facets {
+		got[f.Name] = f.Label()
+	}
+	// A label given by one of the links sharing a reverse_name labels the
+	// facet; without one, the facet shows its name as written.
+	if got["verified_by"] != "Verified by" || got["cited_by"] != "cited_by" {
+		t.Errorf("facet labels %v", got)
+	}
+	for _, c := range []struct{ fields, want string }{
+		{"  - {name: a, type: link, target: [R], cardinality: one, reverse_friendly_name: A}\n", `field "a": reverse_friendly_name labels the reverse_name, and there is none`},
+		{"  - {name: a, type: link, target: [R], cardinality: one, reverse_name: by, reverse_friendly_name: A}\n  - {name: b, type: link, target: [R], cardinality: one, reverse_name: by, reverse_friendly_name: B}\n",
+			`field "b": reverse_friendly_name "B" differs from "A", given by the field a of V for the same reverse_name by`},
+	} {
+		write(t, root, "schema/V.yaml", "type: V\nid_prefix: V\nfields:\n"+c.fields)
+		_, problems, err := Read(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(problems) != 1 || !strings.Contains(problems[0].Msg, c.want) {
+			t.Errorf("got %v, want %s", problems, c.want)
+		}
+	}
+
+	write(t, root, "schema/V.yaml", "type: V\nid_prefix: V\nfields:\n  - {name: a, type: string, reverse_friendly_name: A}\n")
+	s2, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s2.KeyProblems) != 1 || !strings.Contains(s2.KeyProblems[0].Msg, `field "a": reverse_friendly_name applies only to a link field`) {
+		t.Errorf("key problems %v", s2.KeyProblems)
 	}
 }

@@ -69,6 +69,10 @@ type Field struct {
 	Target      []string
 	Cardinality string
 	ReverseName string
+	// ReverseFriendlyName is how the built-in pages label the reverse_name
+	// facet on the link's targets, the reverse_name as written when ""
+	// (DES-0010).
+	ReverseFriendlyName string
 	// A list holds either rows or items. Rows have the sub-fields Fields:
 	// declared inline under fields:, or a record's fields when the list names
 	// one with of: (Record is then its name). Items have the single type
@@ -166,6 +170,19 @@ type Facet struct {
 	Sources []FacetSource
 }
 
+// Label is how the built-in pages show the facet: the
+// reverse_friendly_name its links give, else its name as written
+// (DES-0010). Links that share a reverse_name and give it a label give
+// the same one (a load error otherwise).
+func (f *Facet) Label() string {
+	for _, s := range f.Sources {
+		if s.Field.ReverseFriendlyName != "" {
+			return s.Field.ReverseFriendlyName
+		}
+	}
+	return f.Name
+}
+
 // FacetSource is one link field feeding a facet. List marks a link declared
 // inside a list's rows (inline or in a record); the facet then comes from the
 // entity holding the row.
@@ -224,12 +241,12 @@ var (
 		"name": nil, "type": nil, "required": nil, "help": nil,
 		"body":  {Text},
 		"title": {String}, "friendly_name": nil,
-		"target": {Link}, "cardinality": {Link}, "reverse_name": {Link},
+		"target": {Link}, "cardinality": {Link}, "reverse_name": {Link}, "reverse_friendly_name": {Link},
 		"formula": {Calculated},
 		"fields":  {List}, "of": {List},
 		"column": nil,
 	}
-	fieldKeyOrder = []string{"name", "type", "required", "title", "friendly_name", "help", "body", "target", "cardinality", "reverse_name", "formula", "fields", "of", "column"}
+	fieldKeyOrder = []string{"name", "type", "required", "title", "friendly_name", "help", "body", "target", "cardinality", "reverse_name", "reverse_friendly_name", "formula", "fields", "of", "column"}
 )
 
 // checkKeys records the keys of a declaration's mapping m that are not in
@@ -521,7 +538,11 @@ func (s *Schema) facets(ld *loader) {
 						l.Field.Name, l.Field.ReverseName, clash.Name, target.Name, target.File, clash.Line)})
 					continue
 				}
-				target.addFacet(l.Field.ReverseName, l)
+				if other := target.addFacet(l.Field.ReverseName, l); other != nil {
+					ld.keep(&Error{Path: path, Line: l.Field.Line, Msg: fmt.Sprintf(
+						"field %q: reverse_friendly_name %q differs from %q, given by the field %s of %s for the same reverse_name %s; give one label, or leave it out on all but one",
+						l.Field.Name, l.Field.ReverseFriendlyName, other.Field.ReverseFriendlyName, other.Field.Name, other.Type.Name, l.Field.ReverseName)})
+				}
 			}
 		}
 	}
@@ -530,14 +551,24 @@ func (s *Schema) facets(ld *loader) {
 	}
 }
 
-func (t *Type) addFacet(name string, src FacetSource) {
+// addFacet adds src to the facet name, and returns a source already there
+// whose reverse_friendly_name differs from src's, both given.
+func (t *Type) addFacet(name string, src FacetSource) *FacetSource {
 	for _, f := range t.Facets {
 		if f.Name == name {
+			var clash *FacetSource
+			for i, s := range f.Sources {
+				a, b := s.Field.ReverseFriendlyName, src.Field.ReverseFriendlyName
+				if a != "" && b != "" && a != b && clash == nil {
+					clash = &f.Sources[i]
+				}
+			}
 			f.Sources = append(f.Sources, src)
-			return
+			return clash
 		}
 	}
 	t.Facets = append(t.Facets, &Facet{Name: name, Sources: []FacetSource{src}})
+	return nil
 }
 
 // yamlFiles lists *.yaml directly in root/dir, slash-separated and relative to
@@ -639,18 +670,19 @@ func readDecl(root, rel, key string) (*rawDecl, error) {
 }
 
 type rawField struct {
-	Name        string   `yaml:"name"`
-	Type        string   `yaml:"type"`
-	Required    bool     `yaml:"required"`
-	Body        bool     `yaml:"body"`
-	Title       bool     `yaml:"title"`
-	Friendly    string   `yaml:"friendly_name"`
-	Help        string   `yaml:"help"`
-	Target      []string `yaml:"target"`
-	Cardinality string   `yaml:"cardinality"`
-	ReverseName string   `yaml:"reverse_name"`
-	Formula     string   `yaml:"formula"`
-	Column      string   `yaml:"column"`
+	Name            string   `yaml:"name"`
+	Type            string   `yaml:"type"`
+	Required        bool     `yaml:"required"`
+	Body            bool     `yaml:"body"`
+	Title           bool     `yaml:"title"`
+	Friendly        string   `yaml:"friendly_name"`
+	Help            string   `yaml:"help"`
+	Target          []string `yaml:"target"`
+	Cardinality     string   `yaml:"cardinality"`
+	ReverseName     string   `yaml:"reverse_name"`
+	ReverseFriendly string   `yaml:"reverse_friendly_name"`
+	Formula         string   `yaml:"formula"`
+	Column          string   `yaml:"column"`
 }
 
 // fields converts field declarations. within names what encloses sub-fields
@@ -692,6 +724,9 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 	if rf.ReverseName != "" && !nameForm.MatchString(rf.ReverseName) {
 		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s: reverse_name %q is not lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by", label, rf.ReverseName)}
 	}
+	if rf.ReverseFriendly != "" && rf.ReverseName == "" && rf.Type == string(Link) {
+		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s: reverse_friendly_name labels the reverse_name, and there is none; give reverse_name too", label)}
+	}
 	if prev, dup := seen[rf.Name]; dup {
 		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s is declared twice (first at line %d)", label, prev)}
 	}
@@ -702,7 +737,7 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 
 	f := &Field{
 		Name: rf.Name, Required: rf.Required, Body: rf.Body, Title: rf.Title, FriendlyName: rf.Friendly, Help: rf.Help,
-		Target: rf.Target, Cardinality: rf.Cardinality, ReverseName: rf.ReverseName,
+		Target: rf.Target, Cardinality: rf.Cardinality, ReverseName: rf.ReverseName, ReverseFriendlyName: rf.ReverseFriendly,
 		Formula: rf.Formula, Column: rf.Column, Line: n.Line,
 	}
 	typeLine := n.Line

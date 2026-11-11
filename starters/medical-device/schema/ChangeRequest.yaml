@@ -25,4 +25,5 @@ fields:
     target: [UserNeed, Requirement, Design, Risk, VerificationProtocol]
     cardinality: many
     reverse_name: changed_by
+    reverse_friendly_name: Changed by
     help: "Everything the change touches. (ISO 13485:2016 §7.3.9)"

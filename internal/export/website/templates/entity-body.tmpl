@@ -11,7 +11,7 @@
 <tr><th>{{label .Field}}</th><td>{{template "value" .}}</td></tr>
 {{- end}}
 {{- range .Incoming}}
-<tr class="incoming"><th>{{.Facet.Name}}</th><td>
+<tr class="incoming"><th>{{.Facet.Label}}</th><td>
 {{- range $i, $e := .From}}{{if $i}}, {{end}}{{ref $e.ID $e}}{{else}}<span class="absent">—</span>{{end -}}
 </td></tr>
 {{- end}}

@@ -25,4 +25,5 @@ fields:
     target: [Requirement]
     cardinality: many
     reverse_name: implemented_by
+    reverse_friendly_name: Implemented by
     help: "The design inputs this output meets. (ISO 13485:2016 §7.3.4)"

@@ -40,4 +40,5 @@ fields:
     target: [Requirement]
     cardinality: many
     reverse_name: verified_by
+    reverse_friendly_name: Verified by
     help: "The design inputs this protocol verifies. (ISO 13485:2016 §7.3.6)"

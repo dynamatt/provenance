@@ -14,6 +14,7 @@ fields:
     target: [UserNeed]
     cardinality: many
     reverse_name: validated_by
+    reverse_friendly_name: Validated by
     help: "The user needs this validation confirms are met. (ISO 13485:2016 §7.3.7)"
   - name: execution_date
     type: date

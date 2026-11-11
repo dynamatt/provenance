@@ -34,6 +34,7 @@ fields:
     target: [UserNeed]
     cardinality: many
     reverse_name: implemented_by
+    reverse_friendly_name: Implemented by
     help: "The user needs this requirement answers. (ISO 13485:2016 §7.3.3)"
   - name: parent_requirement
     type: link
@@ -41,6 +42,7 @@ fields:
     target: [Requirement]
     cardinality: one
     reverse_name: child_requirements
+    reverse_friendly_name: Child requirements
     help: "The requirement this one refines, such as a subsystem requirement's system requirement. (ISO 13485:2016 §7.3.3)"
   - name: supersedes
     type: link
@@ -48,4 +50,5 @@ fields:
     target: [Requirement]
     cardinality: one
     reverse_name: superseded_by
+    reverse_friendly_name: Superseded by
     help: "The approved requirement this one replaces, which is then deprecated rather than edited. (ISO 13485:2016 §7.3.9)"

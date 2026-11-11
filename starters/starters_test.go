@@ -97,6 +97,33 @@ func TestEveryFieldCitesItsClause(t *testing.T) {
 	}
 }
 
+// Every field of every starter type, and every name it gives a link's
+// other end, has a label for the built-in pages (DES-0010), so its pages
+// read as prose rather than as field names.
+func TestEveryNameHasALabel(t *testing.T) {
+	for _, name := range Names() {
+		s, err := schema.Load(write(t, name, values).Root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var check func(where string, fields []*schema.Field)
+		check = func(where string, fields []*schema.Field) {
+			for _, f := range fields {
+				if f.FriendlyName == "" {
+					t.Errorf("%s: %s.%s has no friendly_name", name, where, f.Name)
+				}
+				if f.ReverseName != "" && f.ReverseFriendlyName == "" {
+					t.Errorf("%s: %s.%s's reverse_name %s has no reverse_friendly_name", name, where, f.Name, f.ReverseName)
+				}
+				check(where+"."+f.Name, f.Fields)
+			}
+		}
+		for _, n := range s.TypeNames() {
+			check(n, s.Types[n].Fields)
+		}
+	}
+}
+
 // The medical-device starter declares REQ-0004's types.
 func TestMedicalDeviceTypes(t *testing.T) {
 	s, err := schema.Load(write(t, "medical-device", values).Root)

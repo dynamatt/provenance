@@ -40,6 +40,7 @@ fields:
     target: [Requirement, Design]
     cardinality: many
     reverse_name: mitigates
+    reverse_friendly_name: Mitigates
     help: "The risk control measures: the requirements and design elements that reduce the risk. (ISO 14971:2019 §7.2)"
   - name: residual_acceptability
     type: RiskAcceptability

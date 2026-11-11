@@ -111,6 +111,9 @@ expect 1 ''                               grep -q '^verified_by:' REQ/REQ-0001.m
 expect 0 'href="VER-0001\.html"'            cat _site/entities/REQ-0001.html
 expect 0 'verifies <a class="ref" href="REQ-0001\.html"' cat _site/entities/VER-0001.html
 expect 0 '<th>implemented_by</th><td><a class="id" href="REQ-0001\.html"' cat _site/entities/USR-0001.html
+# A reverse_name is labelled by its link's reverse_friendly_name (DES-0010),
+# and shown as written without one, as implemented_by above.
+expect 0 '<th>Mitigates</th><td><a class="id" href="RSK-0001\.html"' cat _site/entities/DES-0001.html
 expect 0 '<td>BES-2201</td>'                cat _site/entities/EVD-0001.html
 expect 0 '<td>PCP-0087</td>'                cat _site/entities/EVD-0001.html
 sed -i.orig 's/^  - REQ-0001$/  - REQ-9999/' DES/DES-0001.md
@@ -690,6 +693,7 @@ expect 0 '^## No commits yet on main$' git -C demo status --short --branch --unt
 cd demo
 expect 0 '^0 errors, 0 warnings$' "$PROV" validate
 expect 0 '^exported website to _site$' "$PROV" export website
+expect 0 '<th>Verified by</th><td><a class="id" href="VER-0001\.html"' cat _site/entities/REQ-0001.html
 expect 0 '^$' "$PROV" fmt --all --check
 expect 0 '^code: DEMO$' cat .component
 expect 0 '' diff -r -x .git -x .github -x _site -x .component -x README.md "$SCRIPTS_DIR/../starters/medical-device" .
