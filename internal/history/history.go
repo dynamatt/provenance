@@ -47,12 +47,12 @@ type Repo struct {
 
 // ErrNotRepository is returned by Open for a folder outside any git
 // repository.
-var ErrNotRepository = errors.New("not in a git repository")
+var ErrNotRepository = errors.New("not in a git repository: no .git folder here or in any folder above")
 
 // ErrNoCommits is returned by Open for a repository with no commits yet,
 // such as one provenance init has just created: there is no HEAD to
 // describe.
-var ErrNoCommits = errors.New("the git repository has no commits yet")
+var ErrNoCommits = errors.New("the git repository has no commits yet: commit the files first")
 
 // InRepository reports whether dir is inside a git working tree, with or
 // without commits.

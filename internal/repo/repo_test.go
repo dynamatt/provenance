@@ -59,8 +59,8 @@ func TestDirectoryNamedComponentIsIgnored(t *testing.T) {
 
 func TestInvalidComponent(t *testing.T) {
 	cases := map[string]string{
-		"code: NEURO\n":      ".component: missing name",
-		"name: NeuroPulse\n": ".component: missing code",
+		"code: NEURO\n":      ".component: no name: give the component's name, such as name: Neurostimulator",
+		"name: NeuroPulse\n": ".component: no code: give the component's code, such as code: NEURO",
 		"code: [unclosed\n":  ".component:1: did not find expected ',' or ']'",
 		"- just\n- a list\n": ".component:1: cannot construct !!seq into repo.Component",
 	}

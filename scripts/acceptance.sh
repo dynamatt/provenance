@@ -404,7 +404,7 @@ expect 1 '^schema/Requirement\.yaml:21: error \[schema/file\] field "status": un
 expect 1 '^12 rules not run: the schema has errors$' "$PROV" validate
 git checkout -q -- schema/Requirement.yaml
 expect 2 '^validate: unknown report "xml": not a format \(text, json, junit, sarif\)' "$PROV" validate --output xml
-expect 2 '^validate: not inside a provenance repository' "$PROV" validate --path "$WORK"
+expect 2 '^validate: not in a Provenance repository' "$PROV" validate --path "$WORK"
 cd "$WORK"
 expect 0 '^0 errors, 1 warning$'          "$PROV" validate --path "$EXAMPLE_DIR/REQ"
 cd "$EXAMPLE_DIR"
@@ -694,7 +694,7 @@ expect 0 '^$' "$PROV" fmt --all --check
 expect 0 '^code: DEMO$' cat .component
 expect 0 '' diff -r -x .git -x .github -x _site -x .component -x README.md "$SCRIPTS_DIR/../starters/medical-device" .
 cd "$WORK"
-expect 2 '^init: demo is inside the Provenance repository at demo$' "$PROV" init demo --code DEMO
+expect 2 '^init: demo is inside the Provenance repository whose root is demo ' "$PROV" init demo --code DEMO
 cd "$EXAMPLE_DIR"
 
 # E6.3: the example's three CSV files load (DES-0053): it validates with

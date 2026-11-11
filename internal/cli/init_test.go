@@ -94,7 +94,7 @@ func TestInitRefuses(t *testing.T) {
 		t.Error("a refused init wrote files")
 	}
 	newRepo(t)
-	if code, _, errOut := run("init", "sub"); code != 2 || errOut != "init: sub is inside the Provenance repository at .\n" {
+	if code, _, errOut := run("init", "sub"); code != 2 || errOut != "init: sub is inside the Provenance repository whose root is . (it holds a .component file, which is hidden: ls -a shows it); run init outside it\n" {
 		t.Errorf("inside a repository: exit %d, stderr %q", code, errOut)
 	}
 }

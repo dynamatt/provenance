@@ -42,7 +42,7 @@ func runInit(c *cobra.Command, args []string) error {
 				root = filepath.ToSlash(rel)
 			}
 		}
-		return refuse("%s is inside the Provenance repository at %s", shown, root)
+		return refuse("%s is inside the Provenance repository whose root is %s (it holds a %s file, which is hidden: ls -a shows it); run init outside it", shown, root, repo.ComponentFile)
 	} else if !errors.Is(err, repo.ErrNotFound) {
 		return fmt.Errorf("%s: %w", name, err)
 	}
