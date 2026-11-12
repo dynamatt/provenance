@@ -66,6 +66,13 @@
 - [x] E6.5 Row pages
 - [x] E6.6 Row history
 - [x] E6.7 Epic close-out
+- [ ] E7.1 Design
+- [ ] E7.2 Tags and references in the example
+- [ ] E7.3 Page pipeline
+- [ ] E7.4 Parsing
+- [ ] E7.5 Numbering and resolution
+- [ ] E7.6 Checks
+- [ ] E7.7 Epic close-out
 
 ## Shape of the plan
 
@@ -1709,47 +1716,12 @@ linked from *Core concepts* and *Writing a schema*; the epic merged into
 **Check it yourself:** the release's `SHA256SUMS` verifies; the
 downloaded binary validates the example with its complaints.
 
-## Later epics (outline)
+## Epic 7 — Section and item references
 
-Detailed task breakdowns are written when the preceding epic closes. Proposed
-order after Epic 2, with the reason it comes where it does:
-
-1. **Architecture groundwork** — Epic 3, detailed above (closed 2026-10-28).
-2. **`fmt`** — Epic 4, detailed above (closed 2026-11-01).
-3. **`init`** — Epic 5, detailed above (closed 2026-11-01).
-4. **CSV-backed entity types** — Epic 6, detailed above (closed 2026-11-11).
-5. **Section and item references** — a heading or list item is tagged,
-   and a reference to the tag shows the number it has where it is
-   rendered (see below). Its first task replaces per-page placeholder
-   resolution with a page pipeline. Before `diff` and `rename`, which must
-   both understand tagged references.
-6. **Query fields** — a field whose value is a query; the template gets
-   its results (see below). Its first task evaluates calculated fields and
-   query fields as one Datalog program. Before `report`, which can then
-   count over a plan's scope, and before `rename`, which must rewrite IDs
-   inside them.
-7. **`report`** — coverage metrics over the shared query engine.
-8. **`diff`** — rendered/semantic diff between refs.
-9. **History in rules** — rules ask what changed when, such as evidence
-   older than what it verifies (see below). Before `sign` and
-   `release tag`, whose rules (REQ-0115, REQ-0051) are built on it.
-10. **`rename`** — ID rewrite across links, wikilinks, tagged references,
-   query filters and query fields.
-11. **`verify artifact`** — against the E1.14 manifest; includes deciding how
-   the manifest itself is signed.
-12. **`sign` / `sign verify`** — ledger format, then certificate provider, then
-   OIDC device flow; signatures become queryable facts, and the Signature
-   Presence rules removed in E2.1 return as queries.
-13. **`component add/update/remove`** — submodules and composed-graph
-   validation.
-14. **`release tag`** — gate plus bill-of-materials; released content becomes
-   queryable, and Content Frozen After Release returns as a query.
-15. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
-   fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
-   thin client over everything above.
-16. **`plugin`**.
-
-### Section and item references (proposed 2026-10-18, for Matt's review)
+> **Status: agreed 2026-11-12.** Proposed 2026-10-18; X1–X7 agreed with
+> Matt 2026-11-11/12, X5 revised (a mode picks what a reference shows,
+> the kind and number by default) and X3 kept to the stylesheet for
+> whether numbers are shown.
 
 **Goal:** a document can point at a section or a list item of itself or
 of another entity, and the reference shows the number that section or
@@ -1782,53 +1754,142 @@ tag's number on this page when the tagged entity is embedded here,
 otherwise to its number on the tagged entity's own page, with the
 entity's ID ("Section 2.1 of REQ-0001").
 
-**Decisions (for Matt, before the epic is detailed):**
+**Decisions (agreed with Matt 2026-11-12):**
 
 | # | Decision | Proposal | Why |
 | --- | --- | --- | --- |
 | X1 | How a tag is written | **`{#tag}` at the end of a heading's line or a list item's first paragraph,** the attribute syntax goldmark and Pandoc already use for headings. Tags are lower-case, `[a-z0-9-]`, and unique within the entity, sharing one namespace with caption IDs. | Plain text that reads well unrendered and survives other Markdown tools; one namespace means `[[#x]]` never has to say which kind it means. |
 | X2 | How a reference is written | **`[[#tag]]` within the same entity, `[[ID#tag]]` to another,** with `\|text` to replace the shown text and keep the link. Two existing meanings collide with this, and both are settled the same way: (a) `[[ID#field]]` already shows a field's value (DES-0034), so **a tag may not be the name of a field or facet of its entity's type** (a validate error, X7), and `[[ID#name]]` is a field when the type has one by that name, otherwise a tag; (b) `[[#id]]` today means a caption anywhere on the page being rendered, embedded entities included, so **`[[#x]]` becomes the writing entity's own tag or caption, wherever it is rendered**, and another entity's caption is `[[ID#x]]`, shown as its number on this page when that entity is embedded here. Every `[[#…]]` in `provenance-example` already refers to its own entity's caption, so none changes. | Extends the wikilink and caption syntax already in use (DES-0034) rather than adding a third. A reference that means the same thing on the entity's own page and inside any document embedding it is what lets one entity be embedded in several documents. |
-| X3 | Which headings are numbered | **Every heading of a page is numbered by the renderer** (`1`, `1.2`, `1.2.3`), after embeds are shifted, and the number is in the HTML in `<span class="section-number">`. The stylesheet decides whether it is shown; a reference shows it regardless. A page's title heading (the H1) is not numbered. | The number a reference shows must be the one the reader can find. Numbering in Go, not CSS, is what lets a reference know it. |
+| X3 | Which headings are numbered | **Every heading of a page is numbered by the renderer** (`1`, `1.2`, `1.2.3`), after embeds are shifted, and the number is in the HTML in `<span class="section-number">`. The stylesheet decides whether it is shown, per type if it likes (`article.requirement .section-number { display: none }`); a reference shows it regardless. A page's title heading (the H1) is not numbered. *Matt, 2026-11-12: CSS only for now;* a template opting headings into numbering (`{{numbered (markdown .Body)}}`), with a reference to an unnumbered heading limited to `:title`, was considered and left for later. | The number a reference shows must be the one the reader can find. Numbering in Go, not CSS, is what lets a reference know it. |
 | X4 | List items | **An ordered list's items are numbered in Go too** (the number written in the Markdown, as CommonMark keeps it, then counting up); nested items read `2(b)`, then `2(b)(iii)`. A tag on an unordered list's item is an error: it has no number to show. | A protocol's numbered steps are the case that needs this. |
 | X5 | What the reference shows | *Revised 2026-11-11 with Matt.* **A mode after the tag picks what is shown:** `[[#tag]]` (or `:full`, the default) the kind and number, "Section 3.2", "item 4", "Figure 1"; `[[#tag:number]]` the number alone, "3.2", "2(b)", "1", for writers who word it themselves ("see clause [[#x:number]]"); `[[#tag:title]]` the heading's text, a list item's first paragraph or a caption's text; `[[#tag:long]]` both, "Section 3.2 Setup", "Figure 1 Wiring diagram", as a caption writes its number before its text. To another page, each is followed by "of ID". `\|text` still replaces whatever the mode shows and keeps the link. Kinds are fixed, as caption kinds are (DES-0034), and styled by `section-ref`, `item-ref` and the caption's `xref`. | `full` as the default keeps every caption reference rendering as it does today. A colon can't be part of a tag (`[a-z0-9-]`, X1), so the mode can't be mistaken for one. |
 | X6 | Rows of list fields | **Not in the first version.** A step in a `steps:` list field is numbered by its template, so the renderer can't see it. A later version can give templates an `anchor` function that registers a row's number and tag. | Keeps the first version to Markdown, which the renderer already walks. |
 | X7 | validate | **Errors:** a tag used twice in one entity, a tag on something other than a heading or an ordered list item, a malformed tag, a tag named like a field or facet of its entity's type (X2), `[[#tag]]` or `[[ID#tag]]` whose tag doesn't exist in that entity, and a mode other than `full`, `number`, `title` or `long` (X5) (DES-0048's existing check for `[[#id]]`, widened). | References break silently when a heading is deleted; the merge gate is where that is caught. |
 
-**Rough shape:**
+**Order:** the design (E7.1), the example's tags and references as the
+fixture (E7.2, rule 4), the page pipeline with captions moved onto it
+unchanged (E7.3), then parsing (E7.4), numbering and resolution (E7.5),
+the checks (E7.6), and the docs and release (E7.7).
 
-1. **Design:** update DES-0034 (captions and references become one
-   numbering pass) and DES-0035 (heading numbering after the shift); a
-   requirement for section and item references; X1–X7 as decided.
-2. **Example repo:** DOC-0004 and VER-0001 tag sections and steps (VER-0001's
-   procedure written as an ordered list), and DOC-0005 refers to them,
-   including one tag that renders differently embedded and on its own
-   page.
-3. **Page pipeline.** Today each page is finished on its own, by string
-   passes over its HTML: embeds are spliced and their headings shifted
-   (`headings.go`), then caption placeholders, delimited by private-use
-   characters, are resolved by regular expression (`captions.go`). A
-   reference to another page's section needs that page's numbering, so
-   the exporter becomes two-phase: render every page, including the own
-   page of each entity a reference can fall back to, whether exported or
-   not; then finish them all. Finishing a page parses its HTML once
-   (`golang.org/x/net/html`, already used) and runs ordered passes over
-   the tree: splice and shift embeds, number headings, ordered lists and
-   captions, then resolve references from the anchor tables of every
-   page. Placeholders become elements with `data-` attributes naming the
-   owning entity, not private-use characters. The shape is Pandoc's
-   (parse, filters, write); the tool is not used, since the renderer
-   must be in the binary (REQ-0062).
-   Captions move onto it first, with byte-identical output; the golden
-   test is the check. Numbering the tree rather than the Markdown also
-   numbers an `<ol>` a template writes, which may bring X6 into the
-   first version.
-4. **Parsing:** `{#tag}` on headings and list items in `internal/markdown`;
-   `[[ID#tag]]` in wikilinks, with X2's field-or-tag lookup, and X5's
-   `:mode`.
-5. **Numbering and resolution:** headings and ordered items join the
-   pipeline's numbering pass, and references resolve after it.
-6. **validate:** X7.
-7. **Close-out:** docs (the Markdown reference page), release.
+### E7.1 Design
+
+**Deliverables:** in the DDF, a requirement for section and item
+references; DES-0034 amended (captions, headings and ordered items
+numbered in one pass; references and their modes, X2, X5) and DES-0035
+(headings numbered after the embed shift, X3); X1–X7 as decided.
+
+**Check it yourself:** read the amended DES-0034 and DES-0035 in the
+DDF's export.
+
+### E7.2 Tags and references in the example
+
+**Deliverables:** in `provenance-example`, its own PR: DOC-0004 and
+VER-0001 tag sections and steps (VER-0001's procedure written as an
+ordered list, with a nested item); DOC-0005 refers to them in each mode
+(`full`, `number`, `title`, `long`), including one tag that renders
+differently embedded and on its own page; the stylesheet hides one
+type's section numbers (X3). Until E7.4 the example's tags render as
+text and its references as broken wikilinks, so it merges into the
+example's `epic/E7-references`.
+
+**Check it yourself:** read DOC-0005's references in its Markdown.
+
+### E7.3 Page pipeline
+
+**Deliverables:** Today each page is finished on its own, by string
+passes over its HTML: embeds are spliced and their headings shifted
+(`headings.go`), then caption placeholders, delimited by private-use
+characters, are resolved by regular expression (`captions.go`). A
+reference to another page's section needs that page's numbering, so
+the exporter becomes two-phase: render every page, including the own
+page of each entity a reference can fall back to, whether exported or
+not; then finish them all. Finishing a page parses its HTML once
+(`golang.org/x/net/html`, already used) and runs ordered passes over
+the tree: splice and shift embeds, number headings, ordered lists and
+captions, then resolve references from the anchor tables of every
+page. Placeholders become elements with `data-` attributes naming the
+owning entity, not private-use characters. The shape is Pandoc's
+(parse, filters, write); the tool is not used, since the renderer
+must be in the binary (REQ-0062).
+Captions move onto it first, with byte-identical output; the golden
+test is the check. Numbering the tree rather than the Markdown also
+numbers an `<ol>` a template writes, which may bring X6 into the
+first version.
+
+**Check it yourself:** `make test` → the golden site unchanged.
+
+### E7.4 Parsing
+
+**Deliverables:** `{#tag}` on headings and list items in
+`internal/markdown`; `[[#tag]]` and `[[ID#tag]]` in wikilinks with X2's
+field-or-tag lookup and X5's `:mode`.
+
+**Check it yourself:** export the example → VER-0001's headings and
+steps carry their tags as `id`s.
+
+### E7.5 Numbering and resolution
+
+**Deliverables:** headings and ordered items join the pipeline's
+numbering pass (X3, X4); references resolve after it, on the page
+being rendered, else on the tagged entity's own page with "of ID"
+(X2, X5). The golden site gains the example's references.
+
+**Check it yourself:** export the example and open DOC-0005 → each
+reference shows the number its target has there.
+
+### E7.6 Checks
+
+**Deliverables:** X7's errors in `validate`, each with its case in
+`testdata/violations`.
+
+**Check it yourself:** in the example, delete a tagged heading →
+`validate` reports the reference to it, exit 1.
+
+### E7.7 Epic close-out
+
+**Deliverables:** the Markdown reference page on the website (tags,
+references and their modes); the epic merged into `main` in each
+repository; release `v0.6.0-alpha`; the example's and the DDF's Validate
+workflows pinned to it.
+
+**Check it yourself:** the release's `SHA256SUMS` verifies; the
+downloaded binary exports the example with its references.
+
+## Later epics (outline)
+
+Detailed task breakdowns are written when the preceding epic closes. Proposed
+order after Epic 2, with the reason it comes where it does:
+
+1. **Architecture groundwork** — Epic 3, detailed above (closed 2026-10-28).
+2. **`fmt`** — Epic 4, detailed above (closed 2026-11-01).
+3. **`init`** — Epic 5, detailed above (closed 2026-11-01).
+4. **CSV-backed entity types** — Epic 6, detailed above (closed 2026-11-11).
+5. **Section and item references** — Epic 7, detailed above.
+6. **Query fields** — a field whose value is a query; the template gets
+   its results (see below). Its first task evaluates calculated fields and
+   query fields as one Datalog program. Before `report`, which can then
+   count over a plan's scope, and before `rename`, which must rewrite IDs
+   inside them.
+7. **`report`** — coverage metrics over the shared query engine.
+8. **`diff`** — rendered/semantic diff between refs.
+9. **History in rules** — rules ask what changed when, such as evidence
+   older than what it verifies (see below). Before `sign` and
+   `release tag`, whose rules (REQ-0115, REQ-0051) are built on it.
+10. **`rename`** — ID rewrite across links, wikilinks, tagged references,
+   query filters and query fields.
+11. **`verify artifact`** — against the E1.14 manifest; includes deciding how
+   the manifest itself is signed.
+12. **`sign` / `sign verify`** — ledger format, then certificate provider, then
+   OIDC device flow; signatures become queryable facts, and the Signature
+   Presence rules removed in E2.1 return as queries.
+13. **`component add/update/remove`** — submodules and composed-graph
+   validation.
+14. **`release tag`** — gate plus bill-of-materials; released content becomes
+   queryable, and Content Frozen After Release returns as a query.
+15. **`serve` + HTTP API + editor** — starting with the TipTap round-trip
+   fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
+   thin client over everything above.
+16. **`plugin`**.
 
 ### Query fields (proposed 2026-10-18, for Matt's review)
 
