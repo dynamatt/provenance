@@ -6,7 +6,7 @@
 <title>{{.Title}}</title>
 <link rel="stylesheet" href="{{.Root}}style.css">
 </head>
-<body>
+<body data-page="{{.Page}}"{{with .Type}} data-type="{{.}}"{{end}}{{with .Entity}} data-entity="{{.}}"{{end}}>
 <header class="site-header">
 <a class="site-name" href="{{.Root}}index.html">{{.Component.Name}}</a>
 <span class="site-code">{{.Component.Code}}</span>

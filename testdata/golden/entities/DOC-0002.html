@@ -7,7 +7,7 @@
 <title>DOC-0002 Risk Management Summary — NeuroPulse Stimulator — NEURO DHF</title>
 <link rel="stylesheet" href="../style.css">
 </head>
-<body>
+<body data-page="entity" data-type="Document" data-entity="DOC-0002">
 <header class="dhf-header">
 <a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
 <span class="dhf-label">Design History File · NEURO</span>
@@ -29,14 +29,14 @@ requirements as checklist lines, risks as summaries. DOC-0001 shows the
 same requirements in full.</p>
 <h2><span class="section-number">1</span> Risks and requirements</h2>
 <div class="query">
-<section class="embed" data-entity="REQ-0001">
+<section class="embed" data-entity="REQ-0001" data-type="Requirement">
 <div class="checklist-item" id="REQ-0001">
 <span class="checkbox">☑</span>
 <span class="req-id">REQ-0001</span> Closed-loop amplitude adjustment
 <span class="status status-approved">approved</span> · verified by <a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>
 </div>
 </section>
-<section class="embed" data-entity="RSK-0001">
+<section class="embed" data-entity="RSK-0001" data-type="Risk">
 <article class="risk-summary" id="RSK-0001">
 <h3><span class="section-number">1.1</span> <span class="req-id">RSK-0001</span> Uncontrolled stimulation amplitude increase</h3>
 <p class="risk-meta">Overall risk rating <strong>15</strong> · residual risk unacceptable · in_review</p>
@@ -45,14 +45,14 @@ same requirements in full.</p>
 <p class="controls">Controlled by <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>, <a class="ref" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a></p>
 </article>
 </section>
-<section class="embed" data-entity="REQ-0002">
+<section class="embed" data-entity="REQ-0002" data-type="Requirement">
 <div class="checklist-item" id="REQ-0002">
 <span class="checkbox">☑</span>
 <span class="req-id">REQ-0002</span> Single-fault amplitude ceiling
 <span class="status status-approved">approved</span> · verified by <a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a>
 </div>
 </section>
-<section class="embed" data-entity="REQ-0003">
+<section class="embed" data-entity="REQ-0003" data-type="Requirement">
 <div class="checklist-item" id="REQ-0003">
 <span class="checkbox">☐</span>
 <span class="req-id">REQ-0003</span> Amplitude ceiling — subsystem allocation
@@ -84,6 +84,7 @@ numbered and this summary has no reference list of its own:</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>2437bb0</code></td><td>2026-11-12</td><td>Claude</td><td>Pages and embeds name their type: the layout writes data-type on &lt;body&gt;; requirements&#39; section numbers hidden by data-type</td></tr>
 <tr><td><code>29d8fde</code></td><td>2026-11-11</td><td>Matt Williams</td><td>Merge pull request #27 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>1082cd4</code></td><td>2026-11-05</td><td>Matt Williams</td><td>Merge pull request #25 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
@@ -108,7 +109,7 @@ numbered and this summary has no reference list of its own:</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>29d8fde</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>2437bb0</code></p>
 </footer>
 </body>
 </html>

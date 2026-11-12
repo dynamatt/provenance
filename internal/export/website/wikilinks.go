@@ -160,8 +160,8 @@ func (r *resolver) embed(w util.BufWriter, target *model.Entity, named string, l
 	// rendered and the heading this embed follows is known; leave a
 	// placeholder for splice.
 	r.ctx.fragments = append(r.ctx.fragments, html)
-	fmt.Fprintf(w, "<section class=\"embed\" data-entity=\"%s\">%s</section>\n",
-		template.HTMLEscapeString(target.ID), embedPlaceholder(len(r.ctx.fragments)-1))
+	fmt.Fprintf(w, "<section class=\"embed\" data-entity=\"%s\" data-type=\"%s\">%s</section>\n",
+		template.HTMLEscapeString(target.ID), template.HTMLEscapeString(target.Type), embedPlaceholder(len(r.ctx.fragments)-1))
 	return nil
 }
 

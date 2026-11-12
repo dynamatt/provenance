@@ -137,9 +137,12 @@ table.steps .step-result figure.captioned { margin: 8px 0 0; }
 /* Section numbers (provenance-ddf DES-0035): Provenance numbers every
    heading below a page's title, and references show the number. Shown in
    documents and procedures; a requirement's headings are labels, not
-   sections, so its numbers are hidden. Ordered items number 2, 2(b),
+   sections, so its numbers are hidden: on its own page (the layout writes
+   data-type on <body>) and wherever it is embedded (Provenance writes
+   data-type on the embed's <section>). Ordered items number 2, 2(b),
    2(b)(iii), as references to them show. */
 .section-number { color: var(--muted); margin-right: 0.3em; }
-article.requirement .section-number { display: none; }
+body[data-type="Requirement"] main .section-number,
+.embed[data-type="Requirement"] .section-number { display: none; }
 ol ol { list-style-type: lower-alpha; }
 ol ol ol { list-style-type: lower-roman; }

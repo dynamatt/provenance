@@ -7,7 +7,7 @@
 <title>DOC-0005 Verification Report — Amplitude Control — NEURO DHF</title>
 <link rel="stylesheet" href="../style.css">
 </head>
-<body>
+<body data-page="entity" data-type="Document" data-entity="DOC-0005">
 <header class="dhf-header">
 <a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
 <span class="dhf-label">Design History File · NEURO</span>
@@ -47,7 +47,7 @@ it, in <a class="ref xref" href="#caption-builds-tested">Table 1</a>:</p>
 <figure class="captioned captioned-table" id="caption-builds-tested">
 <figcaption><span class="caption-number">Table 1</span> Devices under test, by the build actually tested.</figcaption>
 <div class="query">
-<section class="embed" data-entity="BLD-0001">
+<section class="embed" data-entity="BLD-0001" data-type="BuildStandard">
 <table class="joined-rows" id="BLD-0001">
 <colgroup><col style="width: 30%"><col style="width: 14%"><col style="width: 18%"><col style="width: 20%"><col style="width: 18%"></colgroup>
 <thead><tr><th>Device</th><th>Part number</th><th>Build</th><th>Version tested</th><th>Tested in</th></tr></thead>
@@ -60,7 +60,7 @@ it, in <a class="ref xref" href="#caption-builds-tested">Table 1</a>:</p>
 </tr></tbody>
 </table>
 </section>
-<section class="embed" data-entity="BLD-0002">
+<section class="embed" data-entity="BLD-0002" data-type="BuildStandard">
 <table class="joined-rows" id="BLD-0002">
 <colgroup><col style="width: 30%"><col style="width: 14%"><col style="width: 18%"><col style="width: 20%"><col style="width: 18%"></colgroup>
 <thead><tr><th>Device</th><th>Part number</th><th>Build</th><th>Version tested</th><th>Tested in</th></tr></thead>
@@ -83,7 +83,7 @@ linked to the equipment <a class="ref" href="DOC-0004.html" title="Verification 
 <figure class="captioned captioned-table" id="caption-equipment-used">
 <figcaption><span class="caption-number">Table 2</span> Test equipment used, by unit.</figcaption>
 <div class="query">
-<section class="embed" data-entity="EQP-0001"><table class="joined-rows" id="EQP-0001">
+<section class="embed" data-entity="EQP-0001" data-type="TestEquipment"><table class="joined-rows" id="EQP-0001">
 <colgroup><col style="width: 34%"><col style="width: 20%"><col style="width: 46%"></colgroup>
 <thead><tr><th>Equipment</th><th>Model</th><th>Units used</th></tr></thead>
 <tbody><tr>
@@ -95,7 +95,7 @@ linked to the equipment <a class="ref" href="DOC-0004.html" title="Verification 
 </tr></tbody>
 </table>
 </section>
-<section class="embed" data-entity="EQP-0002"><table class="joined-rows" id="EQP-0002">
+<section class="embed" data-entity="EQP-0002" data-type="TestEquipment"><table class="joined-rows" id="EQP-0002">
 <colgroup><col style="width: 34%"><col style="width: 20%"><col style="width: 46%"></colgroup>
 <thead><tr><th>Equipment</th><th>Model</th><th>Units used</th></tr></thead>
 <tbody><tr>
@@ -107,7 +107,7 @@ linked to the equipment <a class="ref" href="DOC-0004.html" title="Verification 
 </tr></tbody>
 </table>
 </section>
-<section class="embed" data-entity="EQP-0003"><table class="joined-rows" id="EQP-0003">
+<section class="embed" data-entity="EQP-0003" data-type="TestEquipment"><table class="joined-rows" id="EQP-0003">
 <colgroup><col style="width: 34%"><col style="width: 20%"><col style="width: 46%"></colgroup>
 <thead><tr><th>Equipment</th><th>Model</th><th>Units used</th></tr></thead>
 <tbody><tr>
@@ -127,7 +127,7 @@ beside the result recorded for it. Each was run after the preparation of
 <a class="ref section-ref" href="VER-0001.html#preparation">Section 1 Preparation of VER-0001</a>, whose <a class="ref item-ref" href="VER-0001.html#zero-probe">item 2(b) of VER-0001</a> is the one
 most often missed:</p>
 <div class="query">
-<section class="embed" data-entity="EVD-0001">
+<section class="embed" data-entity="EVD-0001" data-type="VerificationEvidence">
 <article class="evidence" id="EVD-0001">
 <h3><span class="section-number">5.1</span> <span class="id">EVD-0001</span> Execution record — closed-loop amplitude adjustment bench test</h3>
 <p class="evidence-meta">
@@ -237,7 +237,7 @@ a 30-minute run. No anomalies observed. The set-up is shown in
 </div>
 </article>
 </section>
-<section class="embed" data-entity="EVD-0002">
+<section class="embed" data-entity="EVD-0002" data-type="VerificationEvidence">
 <article class="evidence" id="EVD-0002">
 <h3><span class="section-number">5.2</span> <span class="id">EVD-0002</span> Execution record — single-fault amplitude ceiling bench test</h3>
 <p class="evidence-meta">
@@ -361,6 +361,7 @@ residual risk belongs to the risk file, not to this report.</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>2437bb0</code></td><td>2026-11-12</td><td>Claude</td><td>Pages and embeds name their type: the layout writes data-type on &lt;body&gt;; requirements&#39; section numbers hidden by data-type</td></tr>
 <tr><td><code>20d69fa</code></td><td>2026-11-12</td><td>Claude</td><td>Section and item references: tagged sections and steps, referred to in each mode</td></tr>
 <tr><td><code>29d8fde</code></td><td>2026-11-11</td><td>Matt Williams</td><td>Merge pull request #27 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
@@ -385,7 +386,7 @@ residual risk belongs to the risk file, not to this report.</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>20d69fa</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>2437bb0</code></p>
 </footer>
 </body>
 </html>

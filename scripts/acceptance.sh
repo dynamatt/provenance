@@ -125,7 +125,7 @@ mv DES/DES-0001.md.orig DES/DES-0001.md
 "$PROV" export website >/dev/null
 expect 0 'Editing <a class="ref" href="REQ-0001\.html"[^>]*>REQ-0001</a> anywhere' cat _site/entities/DOC-0001.html
 expect 0 'ceiling is <a class="ref" href="REQ-0002\.html"[^>]*>Single-fault amplitude ceiling</a>' cat _site/entities/DOC-0001.html
-expect 0 '<section class="embed" data-entity="REQ-0003">' cat _site/entities/DOC-0001.html
+expect 0 '<section class="embed" data-entity="REQ-0003" data-type="Requirement">' cat _site/entities/DOC-0001.html
 expect 0 'The pulse-generator ASIC shall enforce' cat _site/entities/DOC-0001.html
 expect 0 '<h2><span class="section-number">[0-9.]+</span> Scope</h2>' cat _site/entities/DOC-0001.html
 cp DOC/DOC-0001.md "$WORK/DOC-0001.md"
@@ -172,7 +172,7 @@ mv schema/VerificationEvidence.yaml.orig schema/VerificationEvidence.yaml
 # shows on the next export; a bad block fails at its file and line.
 "$PROV" export website >/dev/null
 DOC_FLAT="tr -d '\\n' < _site/entities/DOC-0001.html"
-expect 0 '<h2><span class="section-number">[0-9.]+</span> Requirements</h2><p>[^<]*</p><div class="query"><section class="embed" data-entity="REQ-0001">.*</section><section class="embed" data-entity="REQ-0002">' sh -c "$DOC_FLAT"
+expect 0 '<h2><span class="section-number">[0-9.]+</span> Requirements</h2><p>[^<]*</p><div class="query"><section class="embed" data-entity="REQ-0001" data-type="Requirement">.*</section><section class="embed" data-entity="REQ-0002" data-type="Requirement">' sh -c "$DOC_FLAT"
 expect 0 '^1$' sh -c "grep -o 'data-entity=\"REQ-0003\"' _site/entities/DOC-0001.html | wc -l"  # only the ![[REQ-0003]] embed
 sed -i.orig 's/^status: approved/status: draft/' REQ/REQ-0002.md
 "$PROV" export website >/dev/null
@@ -199,11 +199,11 @@ mv OCC/OCC-0002.md.orig OCC/OCC-0002.md
 # one block, ordered together by order (ties by ID); a field only Risk has
 # is empty on requirements; a field neither has fails at its line.
 "$PROV" export website >/dev/null
-DOC2_ORDER="grep -o 'data-entity=\"[A-Z]*-[0-9]*\"' _site/entities/DOC-0002.html | tr -d '\\n'"
-expect 0 '^data-entity="REQ-0001"data-entity="RSK-0001"data-entity="REQ-0002"data-entity="REQ-0003"$' sh -c "$DOC2_ORDER"
+DOC2_ORDER="grep -o 'embed\" data-entity=\"[A-Z]*-[0-9]*\"' _site/entities/DOC-0002.html | tr -d '\\n'"
+expect 0 '^embed" data-entity="REQ-0001"embed" data-entity="RSK-0001"embed" data-entity="REQ-0002"embed" data-entity="REQ-0003"$' sh -c "$DOC2_ORDER"
 sed -i.orig 's/^order_by: order/where: {field: hazard, operator: exists}\norder_by: order/' DOC/DOC-0002.md
 "$PROV" export website >/dev/null
-expect 0 '^data-entity="RSK-0001"$' sh -c "$DOC2_ORDER"
+expect 0 '^embed" data-entity="RSK-0001"$' sh -c "$DOC2_ORDER"
 sed -i 's/field: hazard,/field: hazrd,/' DOC/DOC-0002.md
 expect 2 '^export: DOC/DOC-0002\.md:[0-9]+: query block: neither Risk nor Requirement has a field "hazrd"$' "$PROV" export website
 mv DOC/DOC-0002.md.orig DOC/DOC-0002.md
@@ -214,8 +214,8 @@ mv DOC/DOC-0002.md.orig DOC/DOC-0002.md
 # the block's line; without templates: every result uses its default.
 "$PROV" export website >/dev/null
 DOC2_FLAT="tr -d '\\n' < _site/entities/DOC-0002.html"
-expect 0 '<section class="embed" data-entity="REQ-0001"><div class="checklist-item" id="REQ-0001">' sh -c "$DOC2_FLAT"
-expect 0 '<section class="embed" data-entity="RSK-0001"><article class="risk-summary" id="RSK-0001">' sh -c "$DOC2_FLAT"
+expect 0 '<section class="embed" data-entity="REQ-0001" data-type="Requirement"><div class="checklist-item" id="REQ-0001">' sh -c "$DOC2_FLAT"
+expect 0 '<section class="embed" data-entity="RSK-0001" data-type="Risk"><article class="risk-summary" id="RSK-0001">' sh -c "$DOC2_FLAT"
 expect 0 '<h3 class="requirement-title"><span class="section-number">[0-9.]+</span> <span class="req-id">REQ-0001</span>' cat _site/entities/DOC-0001.html
 mv templates/risk-summary.tmpl "$WORK/risk-summary.tmpl"
 expect 2 '^export: DOC/DOC-0002\.md:[0-9]+: query block: unknown template "risk-summary": there is no templates/risk-summary\.tmpl' "$PROV" export website
@@ -766,6 +766,12 @@ expect 0 '<a class="ref section-ref" href="DOC-0004\.html#procedures">Section 5 
 expect 0 '<a class="ref section-ref" href="DOC-0004\.html#acceptance-criteria">6 of DOC-0004</a>' cat _site/entities/DOC-0005.html
 expect 0 '<a class="ref section-ref" href="DOC-0004\.html#records">Records of DOC-0004</a>' cat _site/entities/DOC-0005.html
 expect 0 '<a class="ref section-ref" href="VER-0001\.html#preparation">Section 1 Preparation of VER-0001</a>' cat _site/entities/DOC-0005.html
+# Pages and embeds name their type (DES-0031), so the stylesheet can hide
+# a requirement's section numbers and no other type's.
+expect 0 '<body data-page="entity" data-type="Requirement" data-entity="REQ-0001">' cat _site/entities/REQ-0001.html
+expect 0 '<section class="embed" data-entity="REQ-0001" data-type="Requirement">' cat _site/entities/DOC-0001.html
+expect 0 '<section class="embed" data-entity="VER-0001" data-type="VerificationProtocol">' cat _site/entities/DOC-0004.html
+expect 0 '^\.embed\[data-type="Requirement"\] \.section-number \{ display: none; \}$' cat _site/style.css
 cp VER/VER-0001.md "$WORK/VER-0001.md"
 sed -i 's/^## Preparation {#preparation}$/## Preparation/' VER/VER-0001.md
 expect 1 'VER/VER-0001\.md:[0-9]+: error \[links/reference\] \[\[#preparation\]\]: VER-0001 has no field, tag or caption "preparation"' "$PROV" validate

@@ -7,7 +7,7 @@
 <title>DOC-0001 System Requirements Specification — NeuroPulse Stimulator — NEURO DHF</title>
 <link rel="stylesheet" href="../style.css">
 </head>
-<body>
+<body data-page="entity" data-type="Document" data-entity="DOC-0001">
 <header class="dhf-header">
 <a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
 <span class="dhf-label">Design History File · NEURO</span>
@@ -42,7 +42,7 @@ approach evaluated clinically in [<a class="ref" href="REF-0003.html" title="Lon
 <h2><span class="section-number">2</span> Requirements</h2>
 <p>All approved requirements, in author-assigned order:</p>
 <div class="query">
-<section class="embed" data-entity="REQ-0001">
+<section class="embed" data-entity="REQ-0001" data-type="Requirement">
 <article class="requirement" id="REQ-0001">
 <h3 class="requirement-title"><span class="section-number">2.1</span> <span class="req-id">REQ-0001</span> Closed-loop amplitude adjustment</h3>
 <p class="requirement-meta">
@@ -67,7 +67,7 @@ feedback, without requiring clinician intervention.</p>
 </ul>
 </article>
 </section>
-<section class="embed" data-entity="REQ-0002">
+<section class="embed" data-entity="REQ-0002" data-type="Requirement">
 <article class="requirement" id="REQ-0002">
 <h3 class="requirement-title"><span class="section-number">2.2</span> <span class="req-id">REQ-0002</span> Single-fault amplitude ceiling</h3>
 <p class="requirement-meta">
@@ -121,7 +121,7 @@ limits at each level.</p>
 </table>
 </figure>
 <p>The subsystem requirement in full:</p>
-<section class="embed" data-entity="REQ-0003">
+<section class="embed" data-entity="REQ-0003" data-type="Requirement">
 <article class="requirement" id="REQ-0003">
 <h3 class="requirement-title"><span class="section-number">3.1</span> <span class="req-id">REQ-0003</span> Amplitude ceiling — subsystem allocation</h3>
 <p class="requirement-meta">
@@ -188,6 +188,7 @@ works. The system must stay safe in any single fault condition.</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>2437bb0</code></td><td>2026-11-12</td><td>Claude</td><td>Pages and embeds name their type: the layout writes data-type on &lt;body&gt;; requirements&#39; section numbers hidden by data-type</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>1082cd4</code></td><td>2026-11-05</td><td>Matt Williams</td><td>Merge pull request #25 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>4dab2f7</code></td><td>2026-11-01</td><td>Matt Williams</td><td>Merge pull request #22 from dynamatt/epic/E4-fmt</td></tr>
@@ -209,7 +210,7 @@ works. The system must stay safe in any single fault condition.</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>2a0d54a</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>2437bb0</code></p>
 </footer>
 </body>
 </html>

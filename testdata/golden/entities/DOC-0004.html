@@ -7,7 +7,7 @@
 <title>DOC-0004 Verification Protocol — Amplitude Control — NEURO DHF</title>
 <link rel="stylesheet" href="../style.css">
 </head>
-<body>
+<body data-page="entity" data-type="Document" data-entity="DOC-0004">
 <header class="dhf-header">
 <a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
 <span class="dhf-label">Design History File · NEURO</span>
@@ -34,14 +34,14 @@ step is objective evidence that the requirements it verifies are met.</p>
 <p>The requirements this protocol verifies, each through the procedure that
 declares it verifies it:</p>
 <div class="query">
-<section class="embed" data-entity="REQ-0001">
+<section class="embed" data-entity="REQ-0001" data-type="Requirement">
 <div class="checklist-item" id="REQ-0001">
 <span class="checkbox">☑</span>
 <span class="req-id">REQ-0001</span> Closed-loop amplitude adjustment
 <span class="status status-approved">approved</span> · verified by <a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>
 </div>
 </section>
-<section class="embed" data-entity="REQ-0002">
+<section class="embed" data-entity="REQ-0002" data-type="Requirement">
 <div class="checklist-item" id="REQ-0002">
 <span class="checkbox">☑</span>
 <span class="req-id">REQ-0002</span> Single-fault amplitude ceiling
@@ -64,7 +64,7 @@ once with the procedures that test it, in <a class="ref xref" href="#caption-dev
 <figure class="captioned captioned-table" id="caption-devices-under-test">
 <figcaption><span class="caption-number">Table 1</span> Devices under test.</figcaption>
 <div class="query">
-<section class="embed" data-entity="CMP-0001">
+<section class="embed" data-entity="CMP-0001" data-type="Component">
 <table class="joined-rows" id="CMP-0001">
 <colgroup><col style="width: 14%"><col style="width: 44%"><col style="width: 18%"><col style="width: 24%"></colgroup>
 <thead><tr><th>ID</th><th>Device</th><th>Part number</th><th>Tested by</th></tr></thead>
@@ -86,17 +86,17 @@ report.</p>
 equipment the approved procedures need, each listed once with the
 procedures that need it:</p>
 <div class="query">
-<section class="embed" data-entity="EQP-0001">
+<section class="embed" data-entity="EQP-0001" data-type="TestEquipment">
 <div class="summary-line" id="EQP-0001">
 <span class="req-id">EQP-0001</span> <strong>Bench ECAP simulator</strong>, Neurolab ES-4 · needed by <a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>
 </div>
 </section>
-<section class="embed" data-entity="EQP-0002">
+<section class="embed" data-entity="EQP-0002" data-type="TestEquipment">
 <div class="summary-line" id="EQP-0002">
 <span class="req-id">EQP-0002</span> <strong>Precision current probe</strong>, Tekbench CP-30 · needed by <a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>
 </div>
 </section>
-<section class="embed" data-entity="EQP-0003">
+<section class="embed" data-entity="EQP-0003" data-type="TestEquipment">
 <div class="summary-line" id="EQP-0003">
 <span class="req-id">EQP-0003</span> <strong>Fault-injection lead simulator</strong>, Neurolab FL-2 · needed by <a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a>
 </div>
@@ -109,7 +109,7 @@ different units.</p>
 <h2 id="procedures"><span class="section-number">5</span> Procedures</h2>
 <p>The approved procedures, in author-assigned order:</p>
 <div class="query">
-<section class="embed" data-entity="VER-0001">
+<section class="embed" data-entity="VER-0001" data-type="VerificationProtocol">
 <article class="protocol" id="VER-0001">
 <h3><span class="section-number">5.1</span> <span class="id">VER-0001</span> Bench verification of closed-loop amplitude adjustment</h3>
 <p class="protocol-meta">
@@ -199,7 +199,7 @@ transient, and delivered amplitude stays within the configured range.</p>
 </ul>
 </article>
 </section>
-<section class="embed" data-entity="VER-0002">
+<section class="embed" data-entity="VER-0002" data-type="VerificationProtocol">
 <article class="protocol" id="VER-0002">
 <h3><span class="section-number">5.2</span> <span class="id">VER-0002</span> Bench verification of single-fault amplitude ceiling</h3>
 <p class="protocol-meta">
@@ -293,6 +293,7 @@ procedure is revised through a change request, as <a class="ref" href="ECO-0001.
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>2437bb0</code></td><td>2026-11-12</td><td>Claude</td><td>Pages and embeds name their type: the layout writes data-type on &lt;body&gt;; requirements&#39; section numbers hidden by data-type</td></tr>
 <tr><td><code>20d69fa</code></td><td>2026-11-12</td><td>Claude</td><td>Section and item references: tagged sections and steps, referred to in each mode</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>1082cd4</code></td><td>2026-11-05</td><td>Matt Williams</td><td>Merge pull request #25 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
@@ -316,7 +317,7 @@ procedure is revised through a change request, as <a class="ref" href="ECO-0001.
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>20d69fa</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>2437bb0</code></p>
 </footer>
 </body>
 </html>

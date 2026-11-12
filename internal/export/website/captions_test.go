@@ -38,7 +38,7 @@ func TestCaptionBlocks(t *testing.T) {
 		// A table: caption above.
 		"<figure class=\"captioned captioned-table\" id=\"caption-limits\">\n<figcaption><span class=\"caption-number\">Table 1</span> Limits.</figcaption>\n<table>",
 		// A figure captioning an embed.
-		"<figure class=\"captioned captioned-figure\">\n<section class=\"embed\" data-entity=\"N-2\">",
+		"<figure class=\"captioned captioned-figure\">\n<section class=\"embed\" data-entity=\"N-2\" data-type=\"Note\">",
 		`<figcaption><span class="caption-number">Figure 2</span></figcaption>`,
 	} {
 		if !strings.Contains(page, want) {
