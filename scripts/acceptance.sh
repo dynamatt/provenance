@@ -127,7 +127,7 @@ expect 0 'Editing <a class="ref" href="REQ-0001\.html"[^>]*>REQ-0001</a> anywher
 expect 0 'ceiling is <a class="ref" href="REQ-0002\.html"[^>]*>Single-fault amplitude ceiling</a>' cat _site/entities/DOC-0001.html
 expect 0 '<section class="embed" data-entity="REQ-0003">' cat _site/entities/DOC-0001.html
 expect 0 'The pulse-generator ASIC shall enforce' cat _site/entities/DOC-0001.html
-expect 0 '<h2>Scope</h2>'                   cat _site/entities/DOC-0001.html
+expect 0 '<h2><span class="section-number">[0-9.]+</span> Scope</h2>' cat _site/entities/DOC-0001.html
 cp DOC/DOC-0001.md "$WORK/DOC-0001.md"
 printf '\n![[DOC-0001]]\n' >> DOC/DOC-0001.md
 expect 2 '^export: DOC/DOC-0001\.md: embed cycle DOC-0001 → DOC-0001$' "$PROV" export website
@@ -136,10 +136,10 @@ cp "$WORK/DOC-0001.md" DOC/DOC-0001.md
 # E1.6: project templates and site-level overrides.
 "$PROV" export website >/dev/null
 expect 0 '<article class="requirement" id="REQ-0001">' cat _site/entities/REQ-0001.html
-expect 0 '<h2>Implements</h2>'              cat _site/entities/REQ-0001.html
+expect 0 '<h2><span class="section-number">[0-9.]+</span> Implements</h2>' cat _site/entities/REQ-0001.html
 expect 0 '<h1 class="requirement-title">'   cat _site/entities/REQ-0003.html
 expect 0 '<table class="fields">'           cat _site/entities/DES-0001.html
-expect 0 '<h3 class="requirement-title"><span class="req-id">REQ-0003</span>' cat _site/entities/DOC-0001.html
+expect 0 '<h3 class="requirement-title"><span class="section-number">[0-9.]+</span> <span class="req-id">REQ-0003</span>' cat _site/entities/DOC-0001.html
 expect 0 '<header class="dhf-header">'      cat _site/entities/DES-0001.html
 expect 0 'class="dhf-intro"'                cat _site/index.html
 expect 0 ''                                 sh -c "tr -d '\r' < templates/style.css | cmp - _site/style.css"
@@ -172,7 +172,7 @@ mv schema/VerificationEvidence.yaml.orig schema/VerificationEvidence.yaml
 # shows on the next export; a bad block fails at its file and line.
 "$PROV" export website >/dev/null
 DOC_FLAT="tr -d '\\n' < _site/entities/DOC-0001.html"
-expect 0 '<h2>Requirements</h2><p>[^<]*</p><div class="query"><section class="embed" data-entity="REQ-0001">.*</section><section class="embed" data-entity="REQ-0002">' sh -c "$DOC_FLAT"
+expect 0 '<h2><span class="section-number">[0-9.]+</span> Requirements</h2><p>[^<]*</p><div class="query"><section class="embed" data-entity="REQ-0001">.*</section><section class="embed" data-entity="REQ-0002">' sh -c "$DOC_FLAT"
 expect 0 '^1$' sh -c "grep -o 'data-entity=\"REQ-0003\"' _site/entities/DOC-0001.html | wc -l"  # only the ![[REQ-0003]] embed
 sed -i.orig 's/^status: approved/status: draft/' REQ/REQ-0002.md
 "$PROV" export website >/dev/null
@@ -216,14 +216,14 @@ mv DOC/DOC-0002.md.orig DOC/DOC-0002.md
 DOC2_FLAT="tr -d '\\n' < _site/entities/DOC-0002.html"
 expect 0 '<section class="embed" data-entity="REQ-0001"><div class="checklist-item" id="REQ-0001">' sh -c "$DOC2_FLAT"
 expect 0 '<section class="embed" data-entity="RSK-0001"><article class="risk-summary" id="RSK-0001">' sh -c "$DOC2_FLAT"
-expect 0 '<h3 class="requirement-title"><span class="req-id">REQ-0001</span>' cat _site/entities/DOC-0001.html
+expect 0 '<h3 class="requirement-title"><span class="section-number">[0-9.]+</span> <span class="req-id">REQ-0001</span>' cat _site/entities/DOC-0001.html
 mv templates/risk-summary.tmpl "$WORK/risk-summary.tmpl"
 expect 2 '^export: DOC/DOC-0002\.md:[0-9]+: query block: unknown template "risk-summary": there is no templates/risk-summary\.tmpl' "$PROV" export website
 mv "$WORK/risk-summary.tmpl" templates/risk-summary.tmpl
 sed -i.orig '/^templates:/d; /^  Requirement: requirement-checklist/d; /^  Risk: risk-summary/d' DOC/DOC-0002.md
 "$PROV" export website >/dev/null
 expect 1 '' grep -q 'checklist-item' _site/entities/DOC-0002.html
-expect 0 '<h3 class="requirement-title"><span class="req-id">REQ-0001</span>' cat _site/entities/DOC-0002.html
+expect 0 '<h3 class="requirement-title"><span class="section-number">[0-9.]+</span> <span class="req-id">REQ-0001</span>' cat _site/entities/DOC-0002.html
 mv DOC/DOC-0002.md.orig DOC/DOC-0002.md
 
 # E1.10: --scope. A Document scope renders that Document as the main page
@@ -319,7 +319,7 @@ mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
 "$PROV" export website >/dev/null
 refs() { grep -o 'href="REF-000[0-9]\.html" title="[^"]*">REF-000[0-9]</a>)</li>' _site/entities/DOC-0001.html | grep -o 'REF-000[0-9]<' | tr -d '<' | tr '\n' ' '; }
 expect 0 '^REF-0003 REF-0002 REF-0001 $' refs
-expect 0 '<h3>Internal</h3>' cat _site/entities/DOC-0001.html
+expect 0 '<h3><span class="section-number">[0-9.]+</span> Internal</h3>' cat _site/entities/DOC-0001.html
 expect 1 '' grep -q 'class="references"' _site/entities/REQ-0003.html
 sed -i.orig 's/^repository updates what/repository (or [[REF-0002]]) updates what/' DOC/DOC-0001.md
 "$PROV" export website >/dev/null
@@ -474,7 +474,7 @@ sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VE
 sed -i 's/^build_date: 2026-08-06/build_date: 2026-08-20/' BLD/BLD-0002.md
 "$PROV" export website >/dev/null
 DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
-expect 0 '>Equipment calibration</h2>.*href="EVD-0001\.html".*>Evidence before its build</h2>.*href="EVD-0002\.html".*>Verification coverage</h2>' sh -c "$DOC3_FLAT"
+expect 0 '[> ]Equipment calibration</h2>.*href="EVD-0001\.html".*[> ]Evidence before its build</h2>.*href="EVD-0002\.html".*[> ]Verification coverage</h2>' sh -c "$DOC3_FLAT"
 expect 0 '^9$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
 git checkout -q -- VER BLD
 sed -i 's/^  field: equipment_used/  field: {list: equipment_used, subfield: calibration_due_date}/' DOC/DOC-0003.md
@@ -488,12 +488,12 @@ git checkout -q -- DOC/DOC-0003.md
 # titles (another requirement, found by from, with an equal ^title).
 "$PROV" export website >/dev/null
 DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
-expect 0 '>Verification coverage</h2><p>[^<]*<code>[^<]*</code>[^<]*</p><ul class="query"><li><a class="ref" href="REQ-0003\.html"' sh -c "$DOC3_FLAT"
+expect 0 '[> ]Verification coverage</h2><p>[^<]*<code>[^<]*</code>[^<]*</p><ul class="query"><li><a class="ref" href="REQ-0003\.html"' sh -c "$DOC3_FLAT"
 sed -i '/^verifies:$/,+1d' VER/VER-0002.md
 sed -i 's/^title: Amplitude ceiling — subsystem allocation/title: Single-fault amplitude ceiling/' REQ/REQ-0003.md
 "$PROV" export website >/dev/null
-expect 0 '>Verification coverage</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html".*href="VER-0002\.html".*>Risk-benefit analysis</h2>' sh -c "$DOC3_FLAT"
-expect 0 '>Duplicate titles</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html"' sh -c "$DOC3_FLAT"
+expect 0 '[> ]Verification coverage</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html".*href="VER-0002\.html".*[> ]Risk-benefit analysis</h2>' sh -c "$DOC3_FLAT"
+expect 0 '[> ]Duplicate titles</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html"' sh -c "$DOC3_FLAT"
 git checkout -q -- VER REQ
 sed -i 's/^  from: Requirement/  from: Requirment/' DOC/DOC-0003.md
 expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: from: unknown type "Requirment" ' "$PROV" validate
@@ -509,7 +509,7 @@ sed -i 's/^order: 2/order: 2\nparent_requirement: REQ-0003/' REQ/REQ-0002.md
 printf '\n```python\nprint("amplitude")\n```\n' >> DES/DES-0001.md
 "$PROV" export website >/dev/null
 DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
-expect 0 '>Decomposition cycles</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html".*>Block languages</h2>.*href="DES-0001\.html"' sh -c "$DOC3_FLAT"
+expect 0 '[> ]Decomposition cycles</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html".*[> ]Block languages</h2>.*href="DES-0001\.html"' sh -c "$DOC3_FLAT"
 expect 0 '^9$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
 git checkout -q -- REQ DES
 sed -i 's/^  transitive: true/  transitive: yes/' DOC/DOC-0003.md
@@ -749,6 +749,29 @@ NEW=$(git rev-parse --short=7 HEAD)
 "$PROV" export website --out "$WORK/dump" >/dev/null
 expect 0 '^entities/CPL-2026-0115\.html entities/DOC-0003\.html index\.html $' sh -c "cd '$WORK/dump' && grep -rl 'last changed in <code>$NEW</code>' . | sed 's#^\./##' | sort | tr '\n' ' '"
 git checkout -q --detach "$PIN"
+
+# E7: section and item references (DES-0034). Tagged headings and ordered
+# items get their tag as id and are numbered below the page's title; a
+# reference shows the number its target has where it is rendered: VER-0001's
+# own references show Section 1 on its page and Section 5.1.1 inside
+# DOC-0004, which embeds it; DOC-0005, which doesn't, shows "of VER-0001",
+# in each mode. Deleting a tagged heading reports the references to it.
+"$PROV" export website >/dev/null
+expect 0 '<h2 id="preparation"><span class="section-number">1</span> Preparation</h2>' cat _site/entities/VER-0001.html
+expect 0 '<li id="zero-probe">Zero the current probe' cat _site/entities/VER-0001.html
+expect 0 'once <a class="ref section-ref" href="#preparation">Section 1</a> is complete' cat _site/entities/VER-0001.html
+expect 0 'once <a class="ref section-ref" href="#VER-0001-preparation">Section 5\.1\.1</a> is complete' cat _site/entities/DOC-0004.html
+expect 0 '<a class="ref item-ref" href="#VER-0001-zero-probe">item 2\(b\)</a>' cat _site/entities/DOC-0004.html
+expect 0 '<a class="ref section-ref" href="DOC-0004\.html#procedures">Section 5 of DOC-0004</a>' cat _site/entities/DOC-0005.html
+expect 0 '<a class="ref section-ref" href="DOC-0004\.html#acceptance-criteria">6 of DOC-0004</a>' cat _site/entities/DOC-0005.html
+expect 0 '<a class="ref section-ref" href="DOC-0004\.html#records">Records of DOC-0004</a>' cat _site/entities/DOC-0005.html
+expect 0 '<a class="ref section-ref" href="VER-0001\.html#preparation">Section 1 Preparation of VER-0001</a>' cat _site/entities/DOC-0005.html
+cp VER/VER-0001.md "$WORK/VER-0001.md"
+sed -i 's/^## Preparation {#preparation}$/## Preparation/' VER/VER-0001.md
+expect 1 'VER/VER-0001\.md:[0-9]+: error \[links/reference\] \[\[#preparation\]\]: VER-0001 has no field, tag or caption "preparation"' "$PROV" validate
+expect 1 'DOC/DOC-0005\.md:[0-9]+: error \[links/reference\] \[\[VER-0001#preparation:long\]\]' "$PROV" validate
+cp "$WORK/VER-0001.md" VER/VER-0001.md
+expect 0 '^0 errors, 1 warning$' "$PROV" validate
 
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"

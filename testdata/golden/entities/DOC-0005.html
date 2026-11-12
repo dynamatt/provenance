@@ -25,11 +25,14 @@ query block (provenance-ddf DES-0032), and the builds and equipment are
 gathered from them the same way. The sections that check for failures,
 missing executions and deviations are queries too, so an empty section is
 a clean result rather than an author's assurance.</p>
-<h2>Purpose</h2>
+<h2><span class="section-number">1</span> Purpose</h2>
 <p>To record the execution of the procedures in <a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a>, on which build
 of the device and with which equipment, and to conclude whether the
-amplitude control requirements are verified.</p>
-<h2>Scope</h2>
+amplitude control requirements are verified. The procedures are those of
+<a class="ref section-ref" href="DOC-0004.html#procedures">Section 5 of DOC-0004</a>, judged against the criteria of clause
+<a class="ref section-ref" href="DOC-0004.html#acceptance-criteria">6 of DOC-0004</a>, with each execution recorded as
+set out under <a class="ref section-ref" href="DOC-0004.html#records">Records of DOC-0004</a>.</p>
+<h2><span class="section-number">2</span> Scope</h2>
 <p>This report covers every recorded execution of the approved procedures in
 <a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a>. The procedures executed:</p>
 <ul class="query">
@@ -37,7 +40,7 @@ amplitude control requirements are verified.</p>
 <li><a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a></li>
 </ul>
 <p>Requirements outside <a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a>'s scope are outside this report's too.</p>
-<h2>Device Under Test</h2>
+<h2><span class="section-number">3</span> Device Under Test</h2>
 <p>The builds the procedures were executed on: the device under test and the
 version of it actually tested, each listed once with the executions run on
 it, in <a class="ref xref" href="#caption-builds-tested">Table 1</a>:</p>
@@ -72,7 +75,7 @@ it, in <a class="ref xref" href="#caption-builds-tested">Table 1</a>:</p>
 </section>
 </div>
 </figure>
-<h2>Test equipment</h2>
+<h2><span class="section-number">4</span> Test equipment</h2>
 <p>The equipment the executions used, each listed once with every unit of it
 used — serial number, calibration due date and the execution — in
 <a class="ref xref" href="#caption-equipment-used">Table 2</a>. Each unit is an equipment record on the execution,
@@ -118,13 +121,15 @@ linked to the equipment <a class="ref" href="DOC-0004.html" title="Verification 
 </section>
 </div>
 </figure>
-<h2>Results</h2>
+<h2><span class="section-number">5</span> Results</h2>
 <p>Every execution, in the order it was run, with each step of its protocol
-beside the result recorded for it:</p>
+beside the result recorded for it. Each was run after the preparation of
+<a class="ref section-ref" href="VER-0001.html#preparation">Section 1 Preparation of VER-0001</a>, whose <a class="ref item-ref" href="VER-0001.html#zero-probe">item 2(b) of VER-0001</a> is the one
+most often missed:</p>
 <div class="query">
 <section class="embed" data-entity="EVD-0001">
 <article class="evidence" id="EVD-0001">
-<h3><span class="id">EVD-0001</span> Execution record — closed-loop amplitude adjustment bench test</h3>
+<h3><span class="section-number">5.1</span> <span class="id">EVD-0001</span> Execution record — closed-loop amplitude adjustment bench test</h3>
 <p class="evidence-meta">
 <span class="pass-fail pass-fail-pass">pass</span> · executed 2026-08-04 · tests <a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a> at commit <code>145edd3</code>
 </p>
@@ -133,7 +138,7 @@ beside the result recorded for it:</p>
 <tr><th>Build tested</th><td><a class="ref" href="BLD-0001.html" title="Pulse generator, engineering build B">BLD-0001</a>: Pulse generator, engineering build B, <strong>HW rev B, FW 1.3.0</strong> — a build of <a class="ref" href="CMP-0001.html" title="NeuroPulse implantable pulse generator">CMP-0001</a></td></tr>
 </tbody>
 </table>
-<h4>Steps</h4>
+<h4><span class="section-number">5.1.1</span> Steps</h4>
 <table class="steps steps-results">
 <thead><tr><th class="step-number">Step</th><th>Description</th><th>Acceptance criteria</th><th>Result</th><th>Pass/Fail</th></tr></thead>
 <tbody>
@@ -212,7 +217,7 @@ transient, and delivered amplitude stays within the configured range.</p>
 </tr>
 </tbody>
 </table>
-<h4>Equipment used</h4>
+<h4><span class="section-number">5.1.2</span> Equipment used</h4>
 <table class="list">
 <thead><tr><th>Equipment</th><th>Serial number</th><th>Calibration due date</th></tr></thead>
 <tbody>
@@ -220,7 +225,7 @@ transient, and delivered amplitude stays within the configured range.</p>
 <tr><td><a class="ref" href="EQP-0002.html" title="Precision current probe">EQP-0002</a>: Precision current probe</td><td>PCP-0087</td><td>2026-09-30</td></tr>
 </tbody>
 </table>
-<h4>Notes</h4>
+<h4><span class="section-number">5.1.3</span> Notes</h4>
 <div class="body">
 <p>All three response profiles held within the configured target band across
 a 30-minute run. No anomalies observed. The set-up is shown in
@@ -234,7 +239,7 @@ a 30-minute run. No anomalies observed. The set-up is shown in
 </section>
 <section class="embed" data-entity="EVD-0002">
 <article class="evidence" id="EVD-0002">
-<h3><span class="id">EVD-0002</span> Execution record — single-fault amplitude ceiling bench test</h3>
+<h3><span class="section-number">5.2</span> <span class="id">EVD-0002</span> Execution record — single-fault amplitude ceiling bench test</h3>
 <p class="evidence-meta">
 <span class="pass-fail pass-fail-pass">pass</span> · executed 2026-08-11 · tests <a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a> at commit <code>145edd3</code>
 </p>
@@ -243,7 +248,7 @@ a 30-minute run. No anomalies observed. The set-up is shown in
 <tr><th>Build tested</th><td><a class="ref" href="BLD-0002.html" title="Pulse generator, engineering build B2">BLD-0002</a>: Pulse generator, engineering build B2, <strong>HW rev B, FW 1.3.1</strong> — a build of <a class="ref" href="CMP-0001.html" title="NeuroPulse implantable pulse generator">CMP-0001</a></td></tr>
 </tbody>
 </table>
-<h4>Steps</h4>
+<h4><span class="section-number">5.2.1</span> Steps</h4>
 <table class="steps steps-results">
 <thead><tr><th class="step-number">Step</th><th>Description</th><th>Acceptance criteria</th><th>Result</th><th>Pass/Fail</th></tr></thead>
 <tbody>
@@ -292,14 +297,14 @@ the ceiling until the lead is reconnected.</p>
 </tr>
 </tbody>
 </table>
-<h4>Equipment used</h4>
+<h4><span class="section-number">5.2.2</span> Equipment used</h4>
 <table class="list">
 <thead><tr><th>Equipment</th><th>Serial number</th><th>Calibration due date</th></tr></thead>
 <tbody>
 <tr><td><a class="ref" href="EQP-0003.html" title="Fault-injection lead simulator">EQP-0003</a>: Fault-injection lead simulator</td><td>FLS-0042</td><td>2026-10-15</td></tr>
 </tbody>
 </table>
-<h4>Notes</h4>
+<h4><span class="section-number">5.2.3</span> Notes</h4>
 <div class="body">
 <p>Executed against the protocol as revised by <a class="ref" href="ECO-0001.html" title="Add fault-injection step to single-fault ceiling protocol">ECO-0001</a>, including the
 lead-disconnection fault-injection step. Delivered amplitude did not exceed
@@ -313,10 +318,10 @@ execution's, rules/evidence-after-build.yaml would flag it.</p>
 <p class="query-empty">No VerificationEvidence matches this query.</p>
 <p>Executions with a step that did not pass, whatever their overall result:</p>
 <p class="query-empty">No VerificationEvidence matches this query.</p>
-<h2>Completeness</h2>
+<h2><span class="section-number">6</span> Completeness</h2>
 <p>Approved procedures with no recorded execution:</p>
 <p class="query-empty">No VerificationProtocol matches this query.</p>
-<h2>Deviations</h2>
+<h2 id="deviations"><span class="section-number">7</span> Deviations</h2>
 <p>Executions recorded before the build they name was built
 (<code>rules/evidence-after-build.yaml</code>):</p>
 <p class="query-empty">No VerificationEvidence matches this query.</p>
@@ -327,8 +332,8 @@ query, which is still to be designed (provenance-ddf DES-0016).</p>
 <p>Executions using equipment whose calibration was due before the test was
 run (<code>rules/equipment-calibration-current.yaml</code>):</p>
 <p class="query-empty">No VerificationEvidence matches this query.</p>
-<h2>Conclusion</h2>
-<p>While the sections above are empty, every procedure in <a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a> has
+<h2 id="conclusion"><span class="section-number">8</span> Conclusion</h2>
+<p>While <a class="ref section-ref" href="#deviations">Section 7</a> and the sections before it are empty, every procedure in <a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a> has
 passed, on builds that existed when it ran and with calibrated equipment,
 and
 <a class="ref" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a> and <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a> are verified by test. <a class="ref" href="EVD-0002.html" title="Execution record — single-fault amplitude ceiling bench test">EVD-0002</a> is the
@@ -339,12 +344,12 @@ residual risk belongs to the risk file, not to this report.</p>
 <p><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a> is not verified by this report; see <a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a>'s scope.</p>
 </div>
 <section class="references">
-<h2>References</h2>
-<h3>Internal</h3>
+<h2><span class="section-number">9</span> References</h2>
+<h3><span class="section-number">9.1</span> Internal</h3>
 <ul>
 <li><a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a>: Verification Protocol — Amplitude Control</li>
 </ul>
-<h3>External</h3>
+<h3><span class="section-number">9.2</span> External</h3>
 <ol class="external-references">
 <li id="ref-1"><cite>Medical electrical equipment — Part 1: General requirements for basic safety and essential performance</cite>. IEC/TC 62 (International Electrotechnical Commission, 2020). IEC 60601-1:2005&#43;AMD1:2012&#43;AMD2:2020. (<a class="ref" href="REF-0002.html" title="Medical electrical equipment — Part 1: General requirements for basic safety and essential performance">REF-0002</a>)</li>
 </ol>
@@ -356,7 +361,8 @@ residual risk belongs to the risk file, not to this report.</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
-<tr><td><code>60b1d04</code></td><td>2026-11-11</td><td>Claude</td><td>Risk labels its links&#39; other ends with reverse_friendly_name</td></tr>
+<tr><td><code>20d69fa</code></td><td>2026-11-12</td><td>Claude</td><td>Section and item references: tagged sections and steps, referred to in each mode</td></tr>
+<tr><td><code>29d8fde</code></td><td>2026-11-11</td><td>Matt Williams</td><td>Merge pull request #27 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>1082cd4</code></td><td>2026-11-05</td><td>Matt Williams</td><td>Merge pull request #25 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>4dab2f7</code></td><td>2026-11-01</td><td>Matt Williams</td><td>Merge pull request #22 from dynamatt/epic/E4-fmt</td></tr>
@@ -379,7 +385,7 @@ residual risk belongs to the risk file, not to this report.</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>60b1d04</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>20d69fa</code></p>
 </footer>
 </body>
 </html>

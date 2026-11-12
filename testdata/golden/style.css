@@ -133,3 +133,13 @@ table.steps .step-result figure.captioned { margin: 8px 0 0; }
 .definitions dd { margin: 4px 0 0 1.2em; }
 .definitions dd p { margin: 0 0 4px; }
 .definition-source { color: var(--muted); font: 0.85rem system-ui, sans-serif; }
+
+/* Section numbers (provenance-ddf DES-0035): Provenance numbers every
+   heading below a page's title, and references show the number. Shown in
+   documents and procedures; a requirement's headings are labels, not
+   sections, so its numbers are hidden. Ordered items number 2, 2(b),
+   2(b)(iii), as references to them show. */
+.section-number { color: var(--muted); margin-right: 0.3em; }
+article.requirement .section-number { display: none; }
+ol ol { list-style-type: lower-alpha; }
+ol ol ol { list-style-type: lower-roman; }

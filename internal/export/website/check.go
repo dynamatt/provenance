@@ -50,9 +50,8 @@ type checker struct {
 	seen     map[Problem]bool
 	// chosen are the named templates query blocks choose.
 	chosen map[string]bool
-	// captions with an id, and [[#id]] references, on the page being
-	// rendered.
-	captions, xrefs []placed
+	// captions with an id on the page being rendered.
+	captions []placed
 }
 
 type placed struct {
@@ -129,8 +128,13 @@ func (ctx *renderCtx) markdownProblem(err, exportErr error) error {
 		return ctx.site.check.record(exportErr)
 	}
 	rule := "content/caption"
-	if me.Image {
+	switch {
+	case me.Image:
 		rule = "content/image"
+	case me.Tag:
+		// A misplaced or malformed tag is left as written; the export goes on.
+		ctx.site.check.add(Problem{Check: "content/tag", Path: ctx.path(), Line: ctx.fileLine(me.Line), Entity: ctx.entityID(), Msg: me.Msg})
+		return nil
 	}
 	return ctx.site.check.report(Problem{Check: rule, Path: ctx.path(), Line: ctx.fileLine(me.Line), Entity: ctx.entityID(), Msg: me.Msg, Err: exportErr})
 }
@@ -166,10 +170,10 @@ func (ctx *renderCtx) fileLine(line int) int {
 }
 
 // pageStart forgets the previous page's captions.
-func (c *checker) pageStart() { c.captions, c.xrefs = nil, nil }
+func (c *checker) pageStart() { c.captions = nil }
 
-// pageEnd checks a page's captions: an id used twice, and a [[#id]] with
-// no caption of that id on the page.
+// pageEnd checks a page's captions: an id used twice, whose anchors would
+// clash.
 func (c *checker) pageEnd() {
 	first := map[string]placed{}
 	for _, p := range c.captions {
@@ -181,12 +185,6 @@ func (c *checker) pageEnd() {
 			continue
 		}
 		first[p.id] = p
-	}
-	for _, x := range c.xrefs {
-		if _, ok := first[x.id]; !ok {
-			c.add(Problem{Check: "content/caption", Path: x.path, Line: x.line, Entity: x.entity,
-				Msg: fmt.Sprintf("[[#%s]]: no caption with id %q on this page", x.id, x.id)})
-		}
 	}
 	c.pageStart()
 }

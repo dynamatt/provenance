@@ -79,6 +79,9 @@ func (r *refRecorder) CaptionEnd(util.BufWriter, markdown.Caption) error   { ret
 func (r *refRecorder) Reference(_ util.BufWriter, l markdown.Link) error {
 	if l.Local == "" {
 		r.Cited = append(r.Cited, l.ID)
+		if l.Field != "" {
+			r.Shown = append(r.Shown, l.ID)
+		}
 	}
 	return nil
 }

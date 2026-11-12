@@ -34,22 +34,27 @@ type resolver struct{ ctx *renderCtx }
 
 var _ markdown.Resolver = (*resolver)(nil)
 
-// Reference renders an inline wikilink: [[#id]], a caption on this page,
-// or a citation (DES-0046), which the page collects and a project
-// _cite.tmpl, if any, renders.
+// Reference renders an inline wikilink: [[#tag]], a tag or caption of the
+// entity being rendered, [[ID#name]], a field of ID or else one of its tags
+// or captions (DES-0034), which are resolved once every page has rendered
+// (references.go), or a citation (DES-0046), which the page collects and a
+// project _cite.tmpl, if any, renders.
 func (r *resolver) Reference(w util.BufWriter, l markdown.Link) error {
 	r.checkLink(l)
 	if l.Local != "" {
-		// A caption on this page; resolved once the page is numbered.
-		text := "#" + l.Local
-		if l.Label != "" {
-			text = l.Label
-		}
-		_, _ = w.WriteString(xrefToken(l.Local, l.Label, tmpl.UnresolvedHTML(text, "no caption #"+l.Local)))
+		r.reference(w, markdown.Link{Field: l.Local, Mode: l.Mode, Label: l.Label, Line: l.Line}, "")
 		return nil
 	}
 	if c := r.ctx.site.cites; c != nil {
 		c.add(l.ID)
+	}
+	if l.Field != "" {
+		if target := r.ctx.site.byID[l.ID]; target != nil {
+			if _, isField := fieldText(target, l.Field); !isField {
+				r.reference(w, l, l.ID)
+				return nil
+			}
+		}
 	}
 	if l.Field == "" {
 		if done, err := r.cite(w, l); done || err != nil {
@@ -173,35 +178,39 @@ func (r *resolver) MisplacedEmbed(w util.BufWriter, l markdown.Link) error {
 }
 
 // checkLink records a wikilink the export shows as unresolved: to no
-// entity, or [[ID#field]] to a field the entity lacks. A [[#id]] is
-// checked once its page is rendered, against the page's captions.
+// entity, or a field reference given a mode, which only a reference to a
+// tag or caption takes. A reference to a tag or caption is checked once
+// every page is numbered (references.go).
 func (r *resolver) checkLink(l markdown.Link) {
-	c := r.ctx.site.check
-	at := Problem{Path: r.ctx.path(), Line: r.ctx.fileLine(l.Line), Entity: r.ctx.entityID()}
 	if l.Local != "" {
-		c.xrefs = append(c.xrefs, placed{id: l.Local, path: at.Path, entity: at.Entity, line: at.Line})
 		return
 	}
+	c := r.ctx.site.check
+	at := Problem{Path: r.ctx.path(), Line: r.ctx.fileLine(l.Line), Entity: r.ctx.entityID()}
 	target := r.ctx.site.byID[l.ID]
 	switch {
 	case target == nil:
 		at.Check, at.Msg = "links/unresolved", fmt.Sprintf("%s: no entity %s", wikilink(l), l.ID)
-	case l.Field != "":
-		if _, ok := fieldText(target, l.Field); ok {
+	case l.Field != "" && l.Mode != "":
+		if _, ok := fieldText(target, l.Field); !ok {
 			return
 		}
-		at.Check, at.Msg = "links/unknown-field", fmt.Sprintf("%s: %s has no field %q", wikilink(l), target.Schema.Name, l.Field)
+		at.Check, at.Msg = "links/reference", fmt.Sprintf("%s: %q is a field of %s, which takes no mode: a mode is for a tag or caption", wikilink(l), l.Field, target.Schema.Name)
 	default:
 		return
 	}
 	c.add(at)
 }
 
-// wikilink writes l back as its source: [[ID]], ![[ID]], [[ID#field]].
+// wikilink writes l back as its source: [[ID]], ![[ID]], [[ID#field]],
+// [[ID#tag:mode]].
 func wikilink(l markdown.Link) string {
 	s := l.ID
 	if l.Field != "" {
 		s += "#" + l.Field
+	}
+	if l.Mode != "" {
+		s += ":" + l.Mode
 	}
 	if l.Embed {
 		return "![[" + s + "]]"

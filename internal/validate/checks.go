@@ -13,7 +13,7 @@ type Check struct {
 // Checks are every built-in check, by ID. TestChecksMatchTheCatalogue keeps
 // them in step with the checks the code reports and with the catalogue.
 var Checks = []Check{
-	{"content/caption", Error, "A caption that cannot be placed or referred to"},
+	{"content/caption", Error, "A caption that cannot be placed"},
 	{"content/csv-column", Warning, "A CSV column no field reads, or a field with no column"},
 	{"content/csv-row", Error, "A CSV file or row that cannot be read"},
 	{"content/duplicate-id", Error, "Two files with one ID"},
@@ -23,13 +23,14 @@ var Checks = []Check{
 	{"content/frontmatter", Error, "Frontmatter that cannot be read"},
 	{"content/image", Error, "An image the website cannot publish"},
 	{"content/query", Error, "A query block that cannot run"},
+	{"content/tag", Error, "A tag that cannot be referred to"},
 	{"content/template", Error, "A template that cannot render"},
 	{"content/template-name", Warning, "A template named for nothing"},
 	{"content/unknown-override", Warning, "An underscore template that overrides nothing"},
 	{"content/unrendered-block", Error, "A block this version publishes only as source"},
 	{"content/unused-template", Warning, "A named template no query chooses"},
+	{"links/reference", Error, "A reference to a field, tag or caption the target does not have"},
 	{"links/target-type", Error, "A link to an entity of the wrong type"},
-	{"links/unknown-field", Error, "A field reference to a field the target does not have"},
 	{"links/unresolved", Error, "A link to no entity"},
 	{"rules/file", Error, "A rule file that is not a YAML mapping"},
 	{"rules/message", Error, "A rule without a message"},

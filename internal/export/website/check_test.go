@@ -54,10 +54,10 @@ N/N-1.md:14 content/query query block: unknown operator "=" (valid operators: eq
 N/N-1.md:17 content/unrendered-block mermaid block: this version of Provenance cannot render it, so it would be published as its source
 N/N-1.md:22 content/caption a caption must come right after the figure, table, equation or embed it captions
 N/N-1.md:6 content/embed ![[N-2]] is inside running text, so it is shown as a reference: an embed must stand on its own line
-N/N-1.md:6 links/unknown-field [[N-2#nope]]: Note has no field "nope"
+N/N-1.md:6 links/reference [[N-2#nope]]: N-2 has no field, tag or caption "nope"
 N/N-1.md:6 links/unresolved [[N-404]]: no entity N-404
 N/N-1.md:8 content/embed-cycle embed cycle N-2 → N-1 → N-2
-N/N-2.md:10 content/caption [[#nowhere]]: no caption with id "nowhere" on this page
+N/N-2.md:10 links/reference [[#nowhere]]: N-2 has no field, tag or caption "nowhere"
 N/N-2.md:6 content/embed ![[N-1]] is inside running text, so it is shown as a reference: an embed must stand on its own line
 N/N-2.md:8 content/embed-cycle embed cycle N-1 → N-2 → N-1
 templates/Note.tmpl:1 content/template executing "templates/Note.tmpl" at <.Nope>: map has no entry for key "Nope"

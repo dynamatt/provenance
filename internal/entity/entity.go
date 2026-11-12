@@ -107,6 +107,9 @@ type Refs struct {
 	// Cited are the entities referred to by ID ([[ID]]), a misplaced
 	// embed included.
 	Cited []string
+	// Shown are the entities whose field, tag or caption is shown by
+	// [[ID#name]] (DES-0034): what the reference shows changes with them.
+	Shown []string
 	// Queries are the query blocks.
 	Queries []Block
 	// Assets are the image files shown, as repository paths.

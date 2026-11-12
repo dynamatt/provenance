@@ -24,7 +24,7 @@
 of the entities they resolve. Editing <a class="ref" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a> anywhere in the
 repository updates what this document renders next time it's generated,
 with nothing to keep in sync by hand.</p>
-<h2>Scope</h2>
+<h2><span class="section-number">1</span> Scope</h2>
 <p>This specification covers the <a class="ref" href="DEF-0002.html" title="Closed-loop stimulation">closed-loop stimulation</a> control requirements
 for the NeuroPulse system, decomposed from the user needs in <a class="ref" href="USR-0001.html" title="Reduced need for in-clinic titration visits">USR-0001</a>
 and <a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>. The control loop they constrain is shown in
@@ -39,12 +39,12 @@ approach evaluated clinically in [<a class="ref" href="REF-0003.html" title="Lon
 <p><img src="../assets/ecap-response.png" alt="Evoked compound action potential"></p>
 <figcaption><span class="caption-number">Figure 2</span> A typical evoked compound action potential, after the stimulus artefact. The control loop holds the <em>N1</em> trough's depth in its target band.</figcaption>
 </figure>
-<h2>Requirements</h2>
+<h2><span class="section-number">2</span> Requirements</h2>
 <p>All approved requirements, in author-assigned order:</p>
 <div class="query">
 <section class="embed" data-entity="REQ-0001">
 <article class="requirement" id="REQ-0001">
-<h3 class="requirement-title"><span class="req-id">REQ-0001</span> Closed-loop amplitude adjustment</h3>
+<h3 class="requirement-title"><span class="section-number">2.1</span> <span class="req-id">REQ-0001</span> Closed-loop amplitude adjustment</h3>
 <p class="requirement-meta">
 <span class="status status-approved">approved</span> · verified by test
 </p>
@@ -52,15 +52,15 @@ approach evaluated clinically in [<a class="ref" href="REF-0003.html" title="Lon
 pre-configured safe range, using the measured evoked neural response as
 feedback, without requiring clinician intervention.</p>
 </div>
-<h4>Implements</h4>
+<h4><span class="section-number">2.1.1</span> Implements</h4>
 <ul>
 <li><a class="ref" href="USR-0001.html" title="Reduced need for in-clinic titration visits">USR-0001</a>: Reduced need for in-clinic titration visits</li>
 </ul>
-<h4>Verified by</h4>
+<h4><span class="section-number">2.1.2</span> Verified by</h4>
 <ul>
 <li><a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>: Bench verification of closed-loop amplitude adjustment</li>
 </ul>
-<h4>Known anomalies</h4>
+<h4><span class="section-number">2.1.3</span> Known anomalies</h4>
 <ul>
 <li><a class="ref" href="Anomaly.html#BUG-1042" title="Alarm tone clipped at maximum volume">BUG-1042</a>: Alarm tone clipped at maximum volume (minor)</li>
 <li><a class="ref" href="Anomaly.html#BUG-1057" title="Amplitude log rounds to whole milliamps">BUG-1057</a>: Amplitude log rounds to whole milliamps (minor, fixed)</li>
@@ -69,7 +69,7 @@ feedback, without requiring clinician intervention.</p>
 </section>
 <section class="embed" data-entity="REQ-0002">
 <article class="requirement" id="REQ-0002">
-<h3 class="requirement-title"><span class="req-id">REQ-0002</span> Single-fault amplitude ceiling</h3>
+<h3 class="requirement-title"><span class="section-number">2.2</span> <span class="req-id">REQ-0002</span> Single-fault amplitude ceiling</h3>
 <p class="requirement-meta">
 <span class="status status-approved">approved</span> · verified by test, analysis
 </p>
@@ -77,22 +77,22 @@ feedback, without requiring clinician intervention.</p>
 any single-fault condition, including loss of the sense-electrode feedback
 signal used by the closed-loop control algorithm (<a class="ref" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a>).</p>
 </div>
-<h4>Implements</h4>
+<h4><span class="section-number">2.2.1</span> Implements</h4>
 <ul>
 <li><a class="ref" href="USR-0002.html" title="No unexpected increases in stimulation intensity">USR-0002</a>: No unexpected increases in stimulation intensity</li>
 </ul>
-<h4>Verified by</h4>
+<h4><span class="section-number">2.2.2</span> Verified by</h4>
 <ul>
 <li><a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a>: Bench verification of single-fault amplitude ceiling</li>
 </ul>
-<h4>Refined by</h4>
+<h4><span class="section-number">2.2.3</span> Refined by</h4>
 <ul>
 <li><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a>: Amplitude ceiling — subsystem allocation</li>
 </ul>
 </article>
 </section>
 </div>
-<h2>Amplitude Ceiling — Subsystem Detail</h2>
+<h2><span class="section-number">3</span> Amplitude Ceiling — Subsystem Detail</h2>
 <p>The system-level ceiling is <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">Single-fault amplitude ceiling</a>, allocated to the subsystem
 level as an independent hardware safeguard. <a class="ref xref" href="#caption-amplitude-limits">Table 1</a> lists the
 limits at each level.</p>
@@ -123,7 +123,7 @@ limits at each level.</p>
 <p>The subsystem requirement in full:</p>
 <section class="embed" data-entity="REQ-0003">
 <article class="requirement" id="REQ-0003">
-<h3 class="requirement-title"><span class="req-id">REQ-0003</span> Amplitude ceiling — subsystem allocation</h3>
+<h3 class="requirement-title"><span class="section-number">3.1</span> <span class="req-id">REQ-0003</span> Amplitude ceiling — subsystem allocation</h3>
 <p class="requirement-meta">
 <span class="status status-draft">draft</span> · refines <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a> · verified by inspection, test
 </p>
@@ -132,17 +132,17 @@ independent of firmware, as the subsystem-level implementation of the
 system-level ceiling in <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>, so the ceiling holds under the
 single-fault conditions of [<a class="ref" href="REF-0002.html" title="Medical electrical equipment — Part 1: General requirements for basic safety and essential performance">2</a>].</p>
 </div>
-<h4>Implements</h4>
+<h4><span class="section-number">3.1.1</span> Implements</h4>
 <p class="none">No user need linked.</p>
-<h4>Verified by</h4>
+<h4><span class="section-number">3.1.2</span> Verified by</h4>
 <p class="none">Not yet verified.</p>
-<h4>Known anomalies</h4>
+<h4><span class="section-number">3.1.3</span> Known anomalies</h4>
 <ul>
 <li><a class="ref" href="Anomaly.html#BUG-1042" title="Alarm tone clipped at maximum volume">BUG-1042</a>: Alarm tone clipped at maximum volume (minor)</li>
 </ul>
 </article>
 </section>
-<h2>Traceability Note</h2>
+<h2><span class="section-number">4</span> Traceability Note</h2>
 <p>Full traceability to design elements, risk controls, and verification
 evidence is generated separately as coverage reports (provenance-ddf
 REQ-0094) rather than duplicated in this document's own query blocks. Risk
@@ -150,7 +150,7 @@ controls follow the process of [<a class="ref" href="REF-0001.html" title="Medic
 <a class="ref" href="DOC-0002.html" title="Risk Management Summary — NeuroPulse Stimulator">DOC-0002</a>.</p>
 </div>
 <section class="definitions">
-<h2>Definitions</h2>
+<h2><span class="section-number">5</span> Definitions</h2>
 <dl>
 <dt id="def-DEF-0002">Closed-loop stimulation</dt>
 <dd><p>Stimulation whose amplitude is adjusted pulse by pulse from a measured
@@ -169,12 +169,12 @@ works. The system must stay safe in any single fault condition.</p>
 </dl>
 </section>
 <section class="references">
-<h2>References</h2>
-<h3>Internal</h3>
+<h2><span class="section-number">6</span> References</h2>
+<h3><span class="section-number">6.1</span> Internal</h3>
 <ul>
 <li><a class="ref" href="DOC-0002.html" title="Risk Management Summary — NeuroPulse Stimulator">DOC-0002</a>: Risk Management Summary — NeuroPulse Stimulator</li>
 </ul>
-<h3>External</h3>
+<h3><span class="section-number">6.2</span> External</h3>
 <ol class="external-references">
 <li id="ref-1"><cite>Long-term safety and efficacy of closed-loop spinal cord stimulation to treat chronic back and leg pain (Evoke): a double-blind, randomised, controlled trial</cite>. Mekhail N, Levy RM, Deer TR, et al. (The Lancet Neurology, 2020). doi:10.1016/S1474-4422(19)30414-4. <a href="https://doi.org/10.1016/S1474-4422%2819%2930414-4">https://doi.org/10.1016/S1474-4422(19)30414-4</a> Accessed 2026-10-05. (<a class="ref" href="REF-0003.html" title="Long-term safety and efficacy of closed-loop spinal cord stimulation to treat chronic back and leg pain (Evoke): a double-blind, randomised, controlled trial">REF-0003</a>)</li>
 <li id="ref-2"><cite>Medical electrical equipment — Part 1: General requirements for basic safety and essential performance</cite>. IEC/TC 62 (International Electrotechnical Commission, 2020). IEC 60601-1:2005&#43;AMD1:2012&#43;AMD2:2020. (<a class="ref" href="REF-0002.html" title="Medical electrical equipment — Part 1: General requirements for basic safety and essential performance">REF-0002</a>)</li>

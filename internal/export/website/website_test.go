@@ -94,7 +94,7 @@ func TestWikilinkReferences(t *testing.T) {
 		`>First &lt;one&gt;</a>`, // #field uses the live value, escaped
 		`>N-2</a>`,               // #facet lists the incoming IDs
 		`>N-1#summary</a> <span class="unresolved">empty</span>`,
-		`>N-1#nope</a> <span class="unresolved">no field &#34;nope&#34;</span>`,
+		`<span class="id unresolved-id">N-1#nope</span> <span class="unresolved">no tag or caption #nope</span>`,
 		`<span class="id unresolved-id">N-404</span> <span class="unresolved">unresolved</span>`,
 		`<div class="text"><p>Points at <a class="ref" href="N-1.html"`, // Markdown in text fields
 	} {
