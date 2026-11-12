@@ -66,13 +66,13 @@
 - [x] E6.5 Row pages
 - [x] E6.6 Row history
 - [x] E6.7 Epic close-out
-- [ ] E7.1 Design
-- [ ] E7.2 Tags and references in the example
-- [ ] E7.3 Page pipeline
-- [ ] E7.4 Parsing
-- [ ] E7.5 Numbering and resolution
-- [ ] E7.6 Checks
-- [ ] E7.7 Epic close-out
+- [x] E7.1 Design
+- [x] E7.2 Tags and references in the example
+- [x] E7.3 Page pipeline
+- [x] E7.4 Parsing
+- [x] E7.5 Numbering and resolution
+- [x] E7.6 Checks
+- [ ] E7.7 Epic close-out (built; the release follows the merge)
 
 ## Shape of the plan
 
@@ -1718,10 +1718,13 @@ downloaded binary validates the example with its complaints.
 
 ## Epic 7 — Section and item references
 
-> **Status: agreed 2026-11-12.** Proposed 2026-10-18; X1–X7 agreed with
+> **Status: built 2026-11-12.** Proposed 2026-10-18; X1–X7 agreed with
 > Matt 2026-11-11/12, X5 revised (a mode picks what a reference shows,
 > the kind and number by default) and X3 kept to the stylesheet for
-> whether numbers are shown.
+> whether numbers are shown. E7.1–E7.7 built together in one PR per
+> repository, at Matt's request; what building settled is under
+> *Settled while building* below. The release, `v0.6.0-alpha`, follows
+> the merge, and with it the example's and the DDF's Validate pins.
 
 **Goal:** a document can point at a section or a list item of itself or
 of another entity, and the reference shows the number that section or
@@ -1765,6 +1768,20 @@ entity's ID ("Section 2.1 of REQ-0001").
 | X5 | What the reference shows | *Revised 2026-11-11 with Matt.* **A mode after the tag picks what is shown:** `[[#tag]]` (or `:full`, the default) the kind and number, "Section 3.2", "item 4", "Figure 1"; `[[#tag:number]]` the number alone, "3.2", "2(b)", "1", for writers who word it themselves ("see clause [[#x:number]]"); `[[#tag:title]]` the heading's text, a list item's first paragraph or a caption's text; `[[#tag:long]]` both, "Section 3.2 Setup", "Figure 1 Wiring diagram", as a caption writes its number before its text. To another page, each is followed by "of ID". `\|text` still replaces whatever the mode shows and keeps the link. Kinds are fixed, as caption kinds are (DES-0034), and styled by `section-ref`, `item-ref` and the caption's `xref`. | `full` as the default keeps every caption reference rendering as it does today. A colon can't be part of a tag (`[a-z0-9-]`, X1), so the mode can't be mistaken for one. |
 | X6 | Rows of list fields | **Not in the first version.** A step in a `steps:` list field is numbered by its template, so the renderer can't see it. A later version can give templates an `anchor` function that registers a row's number and tag. | Keeps the first version to Markdown, which the renderer already walks. |
 | X7 | validate | **Errors:** a tag used twice in one entity, a tag on something other than a heading or an ordered list item, a malformed tag, a tag named like a field or facet of its entity's type (X2), `[[#tag]]` or `[[ID#tag]]` whose tag doesn't exist in that entity, and a mode other than `full`, `number`, `title` or `long` (X5) (DES-0048's existing check for `[[#id]]`, widened). | References break silently when a heading is deleted; the merge gate is where that is caught. |
+
+**Settled while building** (written into DES-0034, DES-0035 and DES-0048):
+
+| What | Settled |
+| --- | --- |
+| Page pipeline | Passes over the page's HTML tokens, as the heading shift already was, not a parsed tree: every byte not numbered passes through as rendered, so the golden site changed only where headings gained numbers. References are a private `<provenance-ref>` element; caption numbers keep their private-use placeholder, which now carries the caption's entity and text. |
+| Which pages number headings | Pages about an entity (its own page, an entity scope's main page). The main page listing the export and a type's page list entities, not sections, so their headings aren't numbered. |
+| Element ids | A tag's id is the tag on its entity's own page and `<ID>-<tag>` where the entity is embedded, so two embedded entities can't clash. |
+| Check IDs | `content/tag` for a tag misplaced, malformed, used twice or named like a field; `links/reference` for a reference that resolves nowhere, an unknown mode, or a mode on a field. `links/unknown-field` is folded into `links/reference` (an `[[ID#name]]` is a field or a tag, so a miss is one problem), as is `content/caption`'s `[[#id]]` with no caption. Neither tag problem stops an export: the tag is left as written. |
+| Page inputs | An entity whose field, tag or caption a page shows through `[[ID#name]]` is an input of the page (DES-0023); `[[ID#field]]` wasn't before. |
+| Unnumbered targets | A tag on a page's title heading (`#` in an entity's own page) has no number; every mode shows its title. |
+| Type markers (*Matt, 2026-11-12*) | Hiding one type's section numbers needs to know an embed's type, and embeds had only `data-entity`. Every embed now has `data-type`; the layout receives `.Page`, `.Type` and `.Entity`, and the built-in one writes them on `<body>` as `data-page`, `data-type` and `data-entity`; the built-in entity `<article>` has `data-type` (DES-0031). The website's *Styling the export* page lists every class and attribute the export writes, with recipes. |
+| Stylesheet | The built-in stylesheet shows section numbers and styles nested ordered lists `lower-alpha`, then `lower-roman`, as their items are numbered. |
+| Example | VER-0001 gains a tagged *Preparation* section with an ordered list instead of its `steps:` field being rewritten (X6: list rows aren't taggable yet, and evidence rows pair with steps by position). |
 
 **Order:** the design (E7.1), the example's tags and references as the
 fixture (E7.2, rule 4), the page pipeline with captions moved onto it
@@ -1864,7 +1881,7 @@ order after Epic 2, with the reason it comes where it does:
 2. **`fmt`** — Epic 4, detailed above (closed 2026-11-01).
 3. **`init`** — Epic 5, detailed above (closed 2026-11-01).
 4. **CSV-backed entity types** — Epic 6, detailed above (closed 2026-11-11).
-5. **Section and item references** — Epic 7, detailed above.
+5. **Section and item references** — Epic 7, detailed above (built 2026-11-12).
 6. **Query fields** — a field whose value is a query; the template gets
    its results (see below). Its first task evaluates calculated fields and
    query fields as one Datalog program. Before `report`, which can then

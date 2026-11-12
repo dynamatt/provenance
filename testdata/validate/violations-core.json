@@ -26,14 +26,6 @@
       "line": 30
     },
     {
-      "rule": "content/caption",
-      "severity": "error",
-      "message": "[[#nowhere]]: no caption with id \"nowhere\" on this page",
-      "entity": "WID-0030",
-      "path": "cases/content-caption/violation.md",
-      "line": 35
-    },
-    {
       "rule": "content/csv-column",
       "severity": "warning",
       "message": "column \"colour\" is not read: no field of a CsvColumnViolation names it",
@@ -178,6 +170,46 @@
       "line": 10
     },
     {
+      "rule": "content/tag",
+      "severity": "error",
+      "message": "#setup is used twice in WID-0043 (first at cases/content-tag/violation.md:6): tags and caption ids must be unique within an entity",
+      "entity": "WID-0043",
+      "path": "cases/content-tag/violation.md",
+      "line": 8
+    },
+    {
+      "rule": "content/tag",
+      "severity": "error",
+      "message": "tag {#Bad_Tag}: use lower-case letters, digits and '-'",
+      "entity": "WID-0043",
+      "path": "cases/content-tag/violation.md",
+      "line": 10
+    },
+    {
+      "rule": "content/tag",
+      "severity": "error",
+      "message": "tag {#status} is named like a field of Widget, so [[WID-0043#status]] would show the field",
+      "entity": "WID-0043",
+      "path": "cases/content-tag/violation.md",
+      "line": 12
+    },
+    {
+      "rule": "content/tag",
+      "severity": "error",
+      "message": "{#unordered}: a tag on an unordered list item: it has no number to show",
+      "entity": "WID-0043",
+      "path": "cases/content-tag/violation.md",
+      "line": 14
+    },
+    {
+      "rule": "content/tag",
+      "severity": "error",
+      "message": "{#paragraph}: a tag goes at the end of a heading or of an ordered list item's first paragraph",
+      "entity": "WID-0043",
+      "path": "cases/content-tag/violation.md",
+      "line": 16
+    },
+    {
       "rule": "content/template",
       "severity": "error",
       "message": "query block: unknown template \"no-such-template\": there is no templates/no-such-template.tmpl (named templates: spare, widget-row)",
@@ -202,20 +234,44 @@
       "line": 10
     },
     {
+      "rule": "links/reference",
+      "severity": "error",
+      "message": "[[WID-0023#colour]]: WID-0023 has no field, tag or caption \"colour\"",
+      "entity": "WID-0022",
+      "path": "cases/links-reference/violation.md",
+      "line": 6
+    },
+    {
+      "rule": "links/reference",
+      "severity": "error",
+      "message": "[[#nowhere]]: WID-0022 has no field, tag or caption \"nowhere\"",
+      "entity": "WID-0022",
+      "path": "cases/links-reference/violation.md",
+      "line": 10
+    },
+    {
+      "rule": "links/reference",
+      "severity": "error",
+      "message": "[[#scope:short]]: unknown mode \"short\" (full, number, title or long)",
+      "entity": "WID-0022",
+      "path": "cases/links-reference/violation.md",
+      "line": 10
+    },
+    {
+      "rule": "links/reference",
+      "severity": "error",
+      "message": "[[WID-0023#title:number]]: \"title\" is a field of Widget, which takes no mode: a mode is for a tag or caption",
+      "entity": "WID-0022",
+      "path": "cases/links-reference/violation.md",
+      "line": 10
+    },
+    {
       "rule": "links/target-type",
       "severity": "error",
       "message": "parent: ERR-0019 is of type ErrorClass, but parent links only to Widget",
       "entity": "WID-0024",
       "path": "cases/links-target-type/violation.md",
       "line": 5
-    },
-    {
-      "rule": "links/unknown-field",
-      "severity": "error",
-      "message": "[[WID-0023#colour]]: Widget has no field \"colour\"",
-      "entity": "WID-0022",
-      "path": "cases/links-unknown-field/violation.md",
-      "line": 6
     },
     {
       "rule": "links/unresolved",
@@ -579,7 +635,7 @@
     }
   ],
   "summary": {
-    "errors": 63,
+    "errors": 70,
     "warnings": 9,
     "rules_skipped": 0
   }

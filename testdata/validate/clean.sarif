@@ -12,7 +12,7 @@
             {
               "id": "content/caption",
               "shortDescription": {
-                "text": "A caption that cannot be placed or referred to"
+                "text": "A caption that cannot be placed"
               },
               "defaultConfiguration": {
                 "level": "error"
@@ -100,6 +100,15 @@
               }
             },
             {
+              "id": "content/tag",
+              "shortDescription": {
+                "text": "A tag that cannot be referred to"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
               "id": "content/template",
               "shortDescription": {
                 "text": "A template that cannot render"
@@ -145,18 +154,18 @@
               }
             },
             {
-              "id": "links/target-type",
+              "id": "links/reference",
               "shortDescription": {
-                "text": "A link to an entity of the wrong type"
+                "text": "A reference to a field, tag or caption the target does not have"
               },
               "defaultConfiguration": {
                 "level": "error"
               }
             },
             {
-              "id": "links/unknown-field",
+              "id": "links/target-type",
               "shortDescription": {
-                "text": "A field reference to a field the target does not have"
+                "text": "A link to an entity of the wrong type"
               },
               "defaultConfiguration": {
                 "level": "error"
@@ -481,7 +490,7 @@
       "results": [
         {
           "ruleId": "requirement-verified",
-          "ruleIndex": 47,
+          "ruleIndex": 48,
           "level": "warning",
           "message": {
             "text": "requirement missing verification"

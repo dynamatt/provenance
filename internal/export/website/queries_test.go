@@ -39,9 +39,9 @@ func TestQueryBlockRendering(t *testing.T) {
 	page := pages["entities/H-1.html"]
 	for _, want := range []string{
 		// Full: embedded in rank order, headings shifted under the section.
-		"<h2>Full</h2>\n<div class=\"query\">\n<section class=\"embed\" data-entity=\"N-2\">",
-		"</section>\n<section class=\"embed\" data-entity=\"N-1\">",
-		"<h3>One</h3>",
+		"<h2><span class=\"section-number\">1</span> Full</h2>\n<div class=\"query\">\n<section class=\"embed\" data-entity=\"N-2\" data-type=\"Note\">",
+		"</section>\n<section class=\"embed\" data-entity=\"N-1\" data-type=\"Note\">",
+		"<h3><span class=\"section-number\">1.3</span> One</h3>",
 		// IDs: every note but the host, by ID.
 		"<ul class=\"query\">\n<li><a class=\"ref\" href=\"N-1.html\" title=\"Third\">N-1</a></li>\n<li><a class=\"ref\" href=\"N-2.html\"",
 		// A field's value, linked.
@@ -201,9 +201,9 @@ func TestNamedTemplates(t *testing.T) {
 	page := pages["entities/N-9.html"]
 	for _, want := range []string{
 		// Task has no choice: its default (built-in) template.
-		"<section class=\"embed\" data-entity=\"T-1\">\n<article class=\"entity\" id=\"T-1\">",
+		"<section class=\"embed\" data-entity=\"T-1\" data-type=\"Task\">\n<article class=\"entity\" id=\"T-1\" data-type=\"Task\">",
 		// Note uses the named template, headings shifted under the section.
-		`<section class="embed" data-entity="N-1"><p class="note-line">N-1: Note one</p><h3>2</h3></section>`,
+		`<section class="embed" data-entity="N-1" data-type="Note"><p class="note-line">N-1: Note one</p><h3><span class="section-number">1.2</span> 2</h3></section>`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("N-9 page missing %q\n%s", want, page)

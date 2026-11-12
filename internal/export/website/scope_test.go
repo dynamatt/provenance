@@ -34,7 +34,7 @@ func TestEntityScope(t *testing.T) {
 	index := string(files["index.html"])
 	for _, want := range []string{
 		"<title>N-1 Doc", // the scoped entity is the main page
-		`<section class="embed" data-entity="N-2">`,
+		`<section class="embed" data-entity="N-2" data-type="Note">`,
 		`<li><a class="ref" href="entities/N-3.html" title="Ranked">N-3</a></li>`, // links from the main page reach entities/
 		// Outside the scope: the same text, unlinked.
 		`Intro <span class="ref out-of-scope">N-4</span>, <span class="ref out-of-scope">the fourth</span>, <span class="ref out-of-scope">Elsewhere</span>.`,

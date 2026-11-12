@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="provenance validate" tests="39" failures="1" errors="0">
-  <testsuite name="built-in" tests="39" failures="1" errors="0" skipped="0">
+<testsuites name="provenance validate" tests="40" failures="1" errors="0">
+  <testsuite name="built-in" tests="40" failures="1" errors="0" skipped="0">
     <testcase name="content/caption" classname="built-in"></testcase>
     <testcase name="content/csv-column" classname="built-in"></testcase>
     <testcase name="content/csv-row" classname="built-in"></testcase>
@@ -11,13 +11,14 @@
     <testcase name="content/frontmatter" classname="built-in"></testcase>
     <testcase name="content/image" classname="built-in"></testcase>
     <testcase name="content/query" classname="built-in"></testcase>
+    <testcase name="content/tag" classname="built-in"></testcase>
     <testcase name="content/template" classname="built-in"></testcase>
     <testcase name="content/template-name" classname="built-in"></testcase>
     <testcase name="content/unknown-override" classname="built-in"></testcase>
     <testcase name="content/unrendered-block" classname="built-in"></testcase>
     <testcase name="content/unused-template" classname="built-in"></testcase>
+    <testcase name="links/reference" classname="built-in"></testcase>
     <testcase name="links/target-type" classname="built-in"></testcase>
-    <testcase name="links/unknown-field" classname="built-in"></testcase>
     <testcase name="links/unresolved" classname="built-in"></testcase>
     <testcase name="rules/file" classname="built-in"></testcase>
     <testcase name="rules/message" classname="built-in"></testcase>

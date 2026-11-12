@@ -7,7 +7,7 @@
 <title>DOC-0004 Verification Protocol — Amplitude Control — NEURO DHF</title>
 <link rel="stylesheet" href="../style.css">
 </head>
-<body>
+<body data-page="entity" data-type="Document" data-entity="DOC-0004">
 <header class="dhf-header">
 <a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
 <span class="dhf-label">Design History File · NEURO</span>
@@ -24,24 +24,24 @@ procedures in it are Verification Protocol entities (<code>VER-</code>), and its
 devices, equipment and requirements are gathered from them by live query
 blocks (provenance-ddf DES-0032), so revising a procedure revises this
 document with it. Results are reported in <a class="ref" href="DOC-0005.html" title="Verification Report — Amplitude Control">DOC-0005</a>.</p>
-<h2>Purpose</h2>
+<h2 id="purpose"><span class="section-number">1</span> Purpose</h2>
 <p>To show, by bench test, that the NeuroPulse system adjusts stimulation
 amplitude on the evoked response as its requirements state, and that it
 never exceeds the 8 mA ceiling under a single fault. The procedures here
 are written to be executed as they stand: an execution that passes every
 step is objective evidence that the requirements it verifies are met.</p>
-<h2>Scope</h2>
+<h2 id="scope"><span class="section-number">2</span> Scope</h2>
 <p>The requirements this protocol verifies, each through the procedure that
 declares it verifies it:</p>
 <div class="query">
-<section class="embed" data-entity="REQ-0001">
+<section class="embed" data-entity="REQ-0001" data-type="Requirement">
 <div class="checklist-item" id="REQ-0001">
 <span class="checkbox">☑</span>
 <span class="req-id">REQ-0001</span> Closed-loop amplitude adjustment
 <span class="status status-approved">approved</span> · verified by <a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>
 </div>
 </section>
-<section class="embed" data-entity="REQ-0002">
+<section class="embed" data-entity="REQ-0002" data-type="Requirement">
 <div class="checklist-item" id="REQ-0002">
 <span class="checkbox">☑</span>
 <span class="req-id">REQ-0002</span> Single-fault amplitude ceiling
@@ -58,13 +58,13 @@ listed by ID:</p>
 through <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>, whose single-fault procedure exercises the ASIC's
 current limit; its own inspection of the ASIC design is left to a later
 revision of this protocol.</p>
-<h2>Device Under Test</h2>
+<h2 id="device-under-test"><span class="section-number">3</span> Device Under Test</h2>
 <p>Every device an approved procedure in this protocol is run on, each listed
 once with the procedures that test it, in <a class="ref xref" href="#caption-devices-under-test">Table 1</a>:</p>
 <figure class="captioned captioned-table" id="caption-devices-under-test">
 <figcaption><span class="caption-number">Table 1</span> Devices under test.</figcaption>
 <div class="query">
-<section class="embed" data-entity="CMP-0001">
+<section class="embed" data-entity="CMP-0001" data-type="Component">
 <table class="joined-rows" id="CMP-0001">
 <colgroup><col style="width: 14%"><col style="width: 44%"><col style="width: 18%"><col style="width: 24%"></colgroup>
 <thead><tr><th>ID</th><th>Device</th><th>Part number</th><th>Tested by</th></tr></thead>
@@ -81,37 +81,37 @@ once with the procedures that test it, in <a class="ref xref" href="#caption-dev
 <p>A procedure names the part it tests, not a particular build: the build
 each execution was run on is recorded with its result and listed in the
 report.</p>
-<h2>Test equipment</h2>
+<h2 id="test-equipment"><span class="section-number">4</span> Test equipment</h2>
 <p>All procedures run on the bench, with the implant in a saline tank. The
 equipment the approved procedures need, each listed once with the
 procedures that need it:</p>
 <div class="query">
-<section class="embed" data-entity="EQP-0001">
+<section class="embed" data-entity="EQP-0001" data-type="TestEquipment">
 <div class="summary-line" id="EQP-0001">
 <span class="req-id">EQP-0001</span> <strong>Bench ECAP simulator</strong>, Neurolab ES-4 · needed by <a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>
 </div>
 </section>
-<section class="embed" data-entity="EQP-0002">
+<section class="embed" data-entity="EQP-0002" data-type="TestEquipment">
 <div class="summary-line" id="EQP-0002">
 <span class="req-id">EQP-0002</span> <strong>Precision current probe</strong>, Tekbench CP-30 · needed by <a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>
 </div>
 </section>
-<section class="embed" data-entity="EQP-0003">
+<section class="embed" data-entity="EQP-0003" data-type="TestEquipment">
 <div class="summary-line" id="EQP-0003">
 <span class="req-id">EQP-0003</span> <strong>Fault-injection lead simulator</strong>, Neurolab FL-2 · needed by <a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a>
 </div>
 </section>
 </div>
 <p>Each unit used must be within its calibration interval on the day of
-execution. The units used, by serial number, are recorded with each
+execution, and is recorded as <a class="ref section-ref" href="#records">Section 7</a> describes. The units used, by serial number, are recorded with each
 execution, not here, since the same procedure may be run again on
 different units.</p>
-<h2>Procedures</h2>
+<h2 id="procedures"><span class="section-number">5</span> Procedures</h2>
 <p>The approved procedures, in author-assigned order:</p>
 <div class="query">
-<section class="embed" data-entity="VER-0001">
+<section class="embed" data-entity="VER-0001" data-type="VerificationProtocol">
 <article class="protocol" id="VER-0001">
-<h3><span class="id">VER-0001</span> Bench verification of closed-loop amplitude adjustment</h3>
+<h3><span class="section-number">5.1</span> <span class="id">VER-0001</span> Bench verification of closed-loop amplitude adjustment</h3>
 <p class="protocol-meta">
 <span class="status status-approved">approved</span> · verifies <a class="ref" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a>
 </p>
@@ -120,6 +120,20 @@ different units.</p>
 under test (<a class="ref" href="DES-0001.html" title="Closed-loop amplitude control algorithm">DES-0001</a>) adjusts delivered amplitude to hold the response
 within the configured target band across three representative response
 profiles.</p>
+<h4 id="VER-0001-preparation"><span class="section-number">5.1.1</span> Preparation</h4>
+<p>Before the first step, with the implant out of the tank:</p>
+<ol>
+<li id="VER-0001-fill-tank">Fill the saline tank to its mark with 0.9 % saline at 37 °C.</li>
+<li>Warm up the bench equipment for 30 minutes.
+<ol>
+<li>Power on the ECAP simulator.</li>
+<li id="VER-0001-zero-probe">Zero the current probe with the lead disconnected.</li>
+</ol>
+</li>
+<li id="VER-0001-load-profiles">Load the three response profiles into the simulator.</li>
+</ol>
+<p>Begin the steps only once <a class="ref section-ref" href="#VER-0001-preparation">Section 5.1.1</a> is complete; a probe zeroed in
+<a class="ref item-ref" href="#VER-0001-zero-probe">item 2(b)</a> must not be re-clipped between profiles.</p>
 </div>
 <table class="fields">
 <tbody>
@@ -127,7 +141,7 @@ profiles.</p>
 <tr><th>Equipment needed</th><td><a class="ref" href="EQP-0001.html" title="Bench ECAP simulator">EQP-0001</a>: Bench ECAP simulator<br><a class="ref" href="EQP-0002.html" title="Precision current probe">EQP-0002</a>: Precision current probe</td></tr>
 </tbody>
 </table>
-<h4>Steps</h4>
+<h4><span class="section-number">5.1.2</span> Steps</h4>
 <table class="steps">
 <thead><tr><th class="step-number">Step</th><th>Description</th><th>Acceptance criteria</th></tr></thead>
 <tbody>
@@ -179,15 +193,15 @@ transient, and delivered amplitude stays within the configured range.</p>
 </tr>
 </tbody>
 </table>
-<h4>Executions</h4>
+<h4><span class="section-number">5.1.3</span> Executions</h4>
 <ul>
 <li><a class="ref" href="EVD-0001.html" title="Execution record — closed-loop amplitude adjustment bench test">EVD-0001</a>: Execution record — closed-loop amplitude adjustment bench test — 2026-08-04, against commit <code>145edd3</code>, <span class="pass-fail pass-fail-pass">pass</span></li>
 </ul>
 </article>
 </section>
-<section class="embed" data-entity="VER-0002">
+<section class="embed" data-entity="VER-0002" data-type="VerificationProtocol">
 <article class="protocol" id="VER-0002">
-<h3><span class="id">VER-0002</span> Bench verification of single-fault amplitude ceiling</h3>
+<h3><span class="section-number">5.2</span> <span class="id">VER-0002</span> Bench verification of single-fault amplitude ceiling</h3>
 <p class="protocol-meta">
 <span class="status status-approved">approved</span> · verifies <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>
 </p>
@@ -204,7 +218,7 @@ the procedure covered only a firmware-commanded overrange attempt.</p>
 <tr><th>Equipment needed</th><td><a class="ref" href="EQP-0003.html" title="Fault-injection lead simulator">EQP-0003</a>: Fault-injection lead simulator</td></tr>
 </tbody>
 </table>
-<h4>Steps</h4>
+<h4><span class="section-number">5.2.1</span> Steps</h4>
 <table class="steps">
 <thead><tr><th class="step-number">Step</th><th>Description</th><th>Acceptance criteria</th></tr></thead>
 <tbody>
@@ -237,20 +251,20 @@ trials.</p>
 </tr>
 </tbody>
 </table>
-<h4>Executions</h4>
+<h4><span class="section-number">5.2.2</span> Executions</h4>
 <ul>
 <li><a class="ref" href="EVD-0002.html" title="Execution record — single-fault amplitude ceiling bench test">EVD-0002</a>: Execution record — single-fault amplitude ceiling bench test — 2026-08-11, against commit <code>145edd3</code>, <span class="pass-fail pass-fail-pass">pass</span></li>
 </ul>
 </article>
 </section>
 </div>
-<h2>Acceptance criteria</h2>
+<h2 id="acceptance-criteria"><span class="section-number">6</span> Acceptance criteria</h2>
 <p>Each step above carries its own acceptance criteria, and a procedure passes
 only when every one of its steps does. A step that does not is a failure of
 the procedure: the execution is recorded as <code>fail</code>, not repeated until it
 passes. The single-fault condition <a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a> injects is that of
 [<a class="ref" href="REF-0002.html" title="Medical electrical equipment — Part 1: General requirements for basic safety and essential performance">1</a>].</p>
-<h2>Records</h2>
+<h2 id="records"><span class="section-number">7</span> Records</h2>
 <p>Each execution is recorded as Verification Evidence (<code>EVD-</code>), naming the
 procedure it tests, the commit of this repository holding the procedure as
 it was run, the build of the device under test it was run on, its date,
@@ -262,12 +276,12 @@ procedure is revised through a change request, as <a class="ref" href="ECO-0001.
 <a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a>.</p>
 </div>
 <section class="references">
-<h2>References</h2>
-<h3>Internal</h3>
+<h2><span class="section-number">8</span> References</h2>
+<h3><span class="section-number">8.1</span> Internal</h3>
 <ul>
 <li><a class="ref" href="DOC-0005.html" title="Verification Report — Amplitude Control">DOC-0005</a>: Verification Report — Amplitude Control</li>
 </ul>
-<h3>External</h3>
+<h3><span class="section-number">8.2</span> External</h3>
 <ol class="external-references">
 <li id="ref-1"><cite>Medical electrical equipment — Part 1: General requirements for basic safety and essential performance</cite>. IEC/TC 62 (International Electrotechnical Commission, 2020). IEC 60601-1:2005&#43;AMD1:2012&#43;AMD2:2020. (<a class="ref" href="REF-0002.html" title="Medical electrical equipment — Part 1: General requirements for basic safety and essential performance">REF-0002</a>)</li>
 </ol>
@@ -279,6 +293,8 @@ procedure is revised through a change request, as <a class="ref" href="ECO-0001.
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>2437bb0</code></td><td>2026-11-12</td><td>Claude</td><td>Pages and embeds name their type: the layout writes data-type on &lt;body&gt;; requirements&#39; section numbers hidden by data-type</td></tr>
+<tr><td><code>20d69fa</code></td><td>2026-11-12</td><td>Claude</td><td>Section and item references: tagged sections and steps, referred to in each mode</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>1082cd4</code></td><td>2026-11-05</td><td>Matt Williams</td><td>Merge pull request #25 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>4dab2f7</code></td><td>2026-11-01</td><td>Matt Williams</td><td>Merge pull request #22 from dynamatt/epic/E4-fmt</td></tr>
@@ -301,7 +317,7 @@ procedure is revised through a change request, as <a class="ref" href="ECO-0001.
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>2a0d54a</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>2437bb0</code></p>
 </footer>
 </body>
 </html>

@@ -12,7 +12,7 @@
             {
               "id": "content/caption",
               "shortDescription": {
-                "text": "A caption that cannot be placed or referred to"
+                "text": "A caption that cannot be placed"
               },
               "defaultConfiguration": {
                 "level": "error"
@@ -100,6 +100,15 @@
               }
             },
             {
+              "id": "content/tag",
+              "shortDescription": {
+                "text": "A tag that cannot be referred to"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
               "id": "content/template",
               "shortDescription": {
                 "text": "A template that cannot render"
@@ -145,18 +154,18 @@
               }
             },
             {
-              "id": "links/target-type",
+              "id": "links/reference",
               "shortDescription": {
-                "text": "A link to an entity of the wrong type"
+                "text": "A reference to a field, tag or caption the target does not have"
               },
               "defaultConfiguration": {
                 "level": "error"
               }
             },
             {
-              "id": "links/unknown-field",
+              "id": "links/target-type",
               "shortDescription": {
-                "text": "A field reference to a field the target does not have"
+                "text": "A link to an entity of the wrong type"
               },
               "defaultConfiguration": {
                 "level": "error"
@@ -373,7 +382,7 @@
       "results": [
         {
           "ruleId": "schema/file",
-          "ruleIndex": 26,
+          "ruleIndex": 27,
           "level": "error",
           "message": {
             "text": "did not find expected ',' or ']'"
@@ -394,7 +403,7 @@
         },
         {
           "ruleId": "schema/file",
-          "ruleIndex": 26,
+          "ruleIndex": 27,
           "level": "error",
           "message": {
             "text": "field \"steps\": a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)"
@@ -415,7 +424,7 @@
         },
         {
           "ruleId": "schema/file",
-          "ruleIndex": 26,
+          "ruleIndex": 27,
           "level": "error",
           "message": {
             "text": "field \"verifiedBy\": a field's name is lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by"
@@ -436,7 +445,7 @@
         },
         {
           "ruleId": "schema/file",
-          "ruleIndex": 26,
+          "ruleIndex": 27,
           "level": "error",
           "message": {
             "text": "field \"status\": unknown type \"AprovalStatus\" (expected string, text, number, date, boolean, link, list, calculated)"

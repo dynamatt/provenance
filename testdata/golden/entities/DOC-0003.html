@@ -7,7 +7,7 @@
 <title>DOC-0003 Design Review Checklist — NeuroPulse Stimulator — NEURO DHF</title>
 <link rel="stylesheet" href="../style.css">
 </head>
-<body>
+<body data-page="entity" data-type="Document" data-entity="DOC-0003">
 <header class="dhf-header">
 <a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
 <span class="dhf-label">Design History File · NEURO</span>
@@ -25,18 +25,18 @@ DES-0032) asking for what would fail the check, so an empty section is a
 passed check. The same queries are the project's rules in <code>rules/</code>, which
 <code>provenance validate</code> runs at the merge gate (DES-0016): what a rule
 reports is exactly what its section here lists.</p>
-<h2>Equipment calibration</h2>
+<h2><span class="section-number">1</span> Equipment calibration</h2>
 <p>Verification evidence recorded with equipment whose calibration was due
 before the test was run (<code>rules/equipment-calibration-current.yaml</code>):</p>
 <p class="query-empty">No VerificationEvidence matches this query.</p>
 <p>The same for validation evidence
 (<code>rules/validation-equipment-calibration-current.yaml</code>):</p>
 <p class="query-empty">No ValidationEvidence matches this query.</p>
-<h2>Evidence before its build</h2>
+<h2><span class="section-number">2</span> Evidence before its build</h2>
 <p>Verification evidence executed before the build it names was built
 (<code>rules/evidence-after-build.yaml</code>):</p>
 <p class="query-empty">No VerificationEvidence matches this query.</p>
-<h2>Verification coverage</h2>
+<h2><span class="section-number">3</span> Verification coverage</h2>
 <p>Requirements that no verification protocol verifies yet
 (<code>rules/requirement-verified.yaml</code>, a warning):</p>
 <ul class="query">
@@ -45,32 +45,32 @@ before the test was run (<code>rules/equipment-calibration-current.yaml</code>):
 <p>Verification protocols that verify no requirement
 (<code>rules/protocol-verifies-requirement.yaml</code>):</p>
 <p class="query-empty">No VerificationProtocol matches this query.</p>
-<h2>Risk-benefit analysis</h2>
+<h2><span class="section-number">4</span> Risk-benefit analysis</h2>
 <p>Risks whose residual risk is unacceptable but which have no risk-benefit
 analysis (<code>rules/risk-benefit-required.yaml</code>):</p>
 <p class="query-empty">No Risk matches this query.</p>
-<h2>Change types</h2>
+<h2><span class="section-number">5</span> Change types</h2>
 <p>Change requests whose change type is outside the approved categories
 (<code>rules/eco-change-type-valid.yaml</code>):</p>
 <p class="query-empty">No ChangeRequest matches this query.</p>
-<h2>Deprecated user needs</h2>
+<h2><span class="section-number">6</span> Deprecated user needs</h2>
 <p>Requirements implementing a user need that has been deprecated
 (<code>rules/no-implements-deprecated-need.yaml</code>):</p>
 <p class="query-empty">No Requirement matches this query.</p>
-<h2>Superseded requirements</h2>
+<h2><span class="section-number">7</span> Superseded requirements</h2>
 <p>Requirements that a newer requirement supersedes but that are not yet
 deprecated (<code>rules/superseded-entities-deprecated.yaml</code>):</p>
 <p class="query-empty">No Requirement matches this query.</p>
-<h2>Duplicate titles</h2>
+<h2><span class="section-number">8</span> Duplicate titles</h2>
 <p>Requirements sharing a title with another, likely a duplicate or a
 copy-paste error (<code>rules/requirement-title-unique.yaml</code>, a warning):</p>
 <p class="query-empty">No Requirement matches this query.</p>
-<h2>Decomposition cycles</h2>
+<h2><span class="section-number">9</span> Decomposition cycles</h2>
 <p>Requirements that are their own ancestor through <code>parent_requirement</code>,
 followed to any depth (<code>rules/no-requirement-decomposition-cycles.yaml</code>).
 Every requirement on the cycle is listed:</p>
 <p class="query-empty">No Requirement matches this query.</p>
-<h2>Block languages</h2>
+<h2><span class="section-number">10</span> Block languages</h2>
 <p>Entities with a fenced block in a language this project doesn't use
 (<code>rules/block-languages.yaml</code>). <code>none</code> is a fence with no language:</p>
 <p class="query-empty">No Anomaly or BuildStandard or ChangeRequest or Complaint or Component or Definition or Design or Document or OccurrenceLevel or Reference or Requirement or Risk or SeverityLevel or Standard or TestEquipment or UserNeed or ValidationEvidence or VerificationEvidence or VerificationProtocol matches this query.</p>
@@ -82,6 +82,8 @@ Every requirement on the cycle is listed:</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>2437bb0</code></td><td>2026-11-12</td><td>Claude</td><td>Pages and embeds name their type: the layout writes data-type on &lt;body&gt;; requirements&#39; section numbers hidden by data-type</td></tr>
+<tr><td><code>20d69fa</code></td><td>2026-11-12</td><td>Claude</td><td>Section and item references: tagged sections and steps, referred to in each mode</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>1082cd4</code></td><td>2026-11-05</td><td>Matt Williams</td><td>Merge pull request #25 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>4dab2f7</code></td><td>2026-11-01</td><td>Matt Williams</td><td>Merge pull request #22 from dynamatt/epic/E4-fmt</td></tr>
@@ -106,7 +108,7 @@ Every requirement on the cycle is listed:</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>2a0d54a</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>2437bb0</code></p>
 </footer>
 </body>
 </html>

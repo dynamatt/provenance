@@ -94,7 +94,7 @@ func TestWikilinkReferences(t *testing.T) {
 		`>First &lt;one&gt;</a>`, // #field uses the live value, escaped
 		`>N-2</a>`,               // #facet lists the incoming IDs
 		`>N-1#summary</a> <span class="unresolved">empty</span>`,
-		`>N-1#nope</a> <span class="unresolved">no field &#34;nope&#34;</span>`,
+		`<span class="id unresolved-id">N-1#nope</span> <span class="unresolved">no tag or caption #nope</span>`,
 		`<span class="id unresolved-id">N-404</span> <span class="unresolved">unresolved</span>`,
 		`<div class="text"><p>Points at <a class="ref" href="N-1.html"`, // Markdown in text fields
 	} {
@@ -115,8 +115,8 @@ func TestEmbeds(t *testing.T) {
 	}
 	page := string(files["entities/N-2.html"])
 	for _, want := range []string{
-		`<section class="embed" data-entity="N-1">`,
-		`<article class="entity" id="N-1">`,
+		`<section class="embed" data-entity="N-1" data-type="Note">`,
+		`<article class="entity" id="N-1" data-type="Note">`,
 		`Inner body with <a class="ref" href="N-2.html"`,
 		`>N-1</a> <span class="unresolved">embed must be on its own line</span> here.`,
 		`<p class="embed-missing"><span class="id unresolved-id">N-404</span>`,
@@ -207,5 +207,32 @@ func TestIDsMustBeUsableAsPageNames(t *testing.T) {
 	want := `N/N-1.md: ID "N 1" cannot be used as a page name (letters, digits, '.', '_' and '-' only)`
 	if err == nil || err.Error() != want {
 		t.Fatalf("got  %v\nwant %s", err, want)
+	}
+}
+
+// Pages and embeds say what they show (DES-0031), so a stylesheet can
+// style one type wherever it appears.
+func TestPagesAndEmbedsCarryTheirType(t *testing.T) {
+	files, err := exportRepo(t, map[string]string{
+		"schema/Note.yaml": noteSchema,
+		"N/N-1.md":         note("N-1", "title: Host\n", "![[N-2]]\n"),
+		"N/N-2.md":         note("N-2", "title: Inner\n", "Inner."),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for page, wants := range map[string][]string{
+		"entities/N-1.html": {
+			`<body data-page="entity" data-type="Note" data-entity="N-1">`,
+			`<article class="entity" id="N-1" data-type="Note">`,
+			`<section class="embed" data-entity="N-2" data-type="Note">`,
+		},
+		"index.html": {`<body data-page="index">`},
+	} {
+		for _, want := range wants {
+			if !strings.Contains(string(files[page]), want) {
+				t.Errorf("%s missing %s", page, want)
+			}
+		}
 	}
 }

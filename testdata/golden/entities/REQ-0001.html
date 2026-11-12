@@ -7,7 +7,7 @@
 <title>REQ-0001 Closed-loop amplitude adjustment — NEURO DHF</title>
 <link rel="stylesheet" href="../style.css">
 </head>
-<body>
+<body data-page="entity" data-type="Requirement" data-entity="REQ-0001">
 <header class="dhf-header">
 <a class="dhf-home" href="../index.html">NeuroPulse Implantable Stimulator System</a>
 <span class="dhf-label">Design History File · NEURO</span>
@@ -23,15 +23,15 @@
 pre-configured safe range, using the measured evoked neural response as
 feedback, without requiring clinician intervention.</p>
 </div>
-<h2>Implements</h2>
+<h2><span class="section-number">1</span> Implements</h2>
 <ul>
 <li><a class="ref" href="USR-0001.html" title="Reduced need for in-clinic titration visits">USR-0001</a>: Reduced need for in-clinic titration visits</li>
 </ul>
-<h2>Verified by</h2>
+<h2><span class="section-number">2</span> Verified by</h2>
 <ul>
 <li><a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>: Bench verification of closed-loop amplitude adjustment</li>
 </ul>
-<h2>Known anomalies</h2>
+<h2><span class="section-number">3</span> Known anomalies</h2>
 <ul>
 <li><a class="ref" href="Anomaly.html#BUG-1042" title="Alarm tone clipped at maximum volume">BUG-1042</a>: Alarm tone clipped at maximum volume (minor)</li>
 <li><a class="ref" href="Anomaly.html#BUG-1057" title="Amplitude log rounds to whole milliamps">BUG-1057</a>: Amplitude log rounds to whole milliamps (minor, fixed)</li>
@@ -43,6 +43,7 @@ feedback, without requiring clinician intervention.</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>2437bb0</code></td><td>2026-11-12</td><td>Claude</td><td>Pages and embeds name their type: the layout writes data-type on &lt;body&gt;; requirements&#39; section numbers hidden by data-type</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>1082cd4</code></td><td>2026-11-05</td><td>Matt Williams</td><td>Merge pull request #25 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>4dab2f7</code></td><td>2026-11-01</td><td>Matt Williams</td><td>Merge pull request #22 from dynamatt/epic/E4-fmt</td></tr>
@@ -59,7 +60,7 @@ feedback, without requiring clinician intervention.</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>2a0d54a</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>2437bb0</code></p>
 </footer>
 </body>
 </html>

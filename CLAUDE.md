@@ -25,11 +25,11 @@ identity, so builds must be reproducible.
 | `internal/query/` | Condition grammar, query blocks, calculated fields and the dependency walk, over the Datalog engine in `query/datalog/`. |
 | `internal/tmpl/` | What project templates share, for the site and validation reports: reading, parsing with missing keys as errors, errors at their file and line, the template data of an entity, and the link functions. |
 | `internal/problem/` | A problem with the repository's content, one shape whether loading or an exporter's check finds it: its check, place, entity, and the error that stops an export. |
-| `internal/markdown/` | Markdown to HTML with wikilinks, embeds, captions and fenced blocks; the caller resolves them. |
+| `internal/markdown/` | Markdown to HTML with wikilinks, embeds, captions, `{#tag}` tags and fenced blocks; the caller resolves them. |
 | `internal/assets/` | Resolves and reads the image files Markdown refers to. |
 | `internal/yamlnode/` | Reading YAML nodes with file line numbers, and YAML errors at their line. |
 | `internal/history/` | Git via go-git: content hash, dirty state, first-parent log of the entities and files each commit changed, revisions. |
-| `internal/export/` | The `Exporter` interface (`Export`, and `Check` for validate), the registry, `--scope`, git stamps and the output folder; `export/website/` is the website exporter and its built-in templates, and type pages, for types with `pages: false` (`typepages.go`). |
+| `internal/export/` | The `Exporter` interface (`Export`, and `Check` for validate), the registry, `--scope`, git stamps and the output folder; `export/website/` is the website exporter and its built-in templates, type pages, for types with `pages: false` (`typepages.go`), and the numbering of headings, list items and captions and the references to them, once every page has rendered (`references.go`, DES-0034). |
 | `internal/version/` | Version and commit, injected by `make build` through `-ldflags`. |
 | `starters/` | The starter projects `provenance init` writes (DES-0052), one folder each, embedded in the binary; its tests check each validates clean, exports, is canonical and cites a clause on every field. |
 | `tools/gendocs/` | Generates the website's CLI reference from the command tree. |
