@@ -1888,7 +1888,10 @@ downloaded binary exports the example with its references.
 > reusable documents, such as a Verification Summary Report type whose
 > query field selects the requirements it covers, and this is the time
 > to bring in schema inheritance. Q1–Q7 are revised for that purpose and
-> I1–I7 added; nothing is built until they are agreed.
+> I1–I7 added. Agreed with Matt 2026-11-15: I3 (a subtype shares its
+> parent's ID series unless it declares its own), I5 (Go blocks) and one
+> epic, inheritance first. The rest await review; nothing is built until
+> they are agreed.
 
 **Goal:** a document type is written once and used for every document
 of its kind. A *Verification Summary Report* type extends Document,
