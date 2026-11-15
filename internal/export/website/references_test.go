@@ -124,3 +124,20 @@ func TestItemLabels(t *testing.T) {
 		}
 	}
 }
+
+// Markdown counts an ordered list's items itself, so a list written lazily,
+// every item 1., numbers as one written out (X4).
+func TestLazilyNumberedItems(t *testing.T) {
+	files, err := exportRepo(t, map[string]string{
+		"schema/Note.yaml": noteSchema,
+		"N/N-1.md": note("N-1", "title: Steps\n", "1. One\n1. Two\n   1. Two a\n   1. Two b {#two-b}\n1. Three {#three}\n\n"+
+			"See [[#two-b]] and [[#three:number]].\n"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(files["entities/N-1.html"])
+	if want := `See <a class="ref item-ref" href="#two-b">item 2(b)</a> and <a class="ref item-ref" href="#three">3</a>.`; !strings.Contains(got, want) {
+		t.Errorf("missing %s\n%s", want, got)
+	}
+}
