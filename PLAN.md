@@ -73,6 +73,15 @@
 - [x] E7.5 Numbering and resolution
 - [x] E7.6 Checks
 - [x] E7.7 Epic close-out
+- [ ] E8.1 Design
+- [ ] E8.2 Reports and evidence in the example
+- [ ] E8.3 Inheritance in the schema and model
+- [ ] E8.4 Templates
+- [ ] E8.5 One program for derived values
+- [ ] E8.6 Query fields
+- [ ] E8.7 Export
+- [ ] E8.8 Checks
+- [ ] E8.9 Epic close-out
 
 ## Shape of the plan
 
@@ -1872,6 +1881,206 @@ workflows pinned to it.
 **Check it yourself:** the release's `SHA256SUMS` verifies; the
 downloaded binary exports the example with its references.
 
+## Epic 8 — Query fields and type inheritance
+
+> **Status: proposed 2026-11-15, for Matt's review.** Query fields were
+> outlined 2026-10-18 (Q1–Q7); Matt, 2026-11-15: their purpose is
+> reusable documents, such as a Verification Summary Report type whose
+> query field selects the requirements it covers, and this is the time
+> to bring in schema inheritance. Q1–Q7 are revised for that purpose and
+> I1–I7 added; nothing is built until they are agreed.
+
+**Goal:** a document type is written once and used for every document
+of its kind. A *Verification Summary Report* type extends Document,
+adds a query field naming the requirements it covers, and its template
+draws the traceability matrix from them: requirement, the protocols
+that verify it, their executions and results, and a coverage summary.
+Each report is then a file holding its prose and its scope, nothing
+else; a second report for another subsystem is a new file with a
+different query, not a copy of query blocks.
+
+```yaml
+# schema/VerificationSummaryReport.yaml
+type: VerificationSummaryReport
+extends: Document             # title, status, the Document template's look
+fields:
+  - name: scope
+    type: query
+    of: [Requirement]         # the types the query may select
+    reverse_name: reported_in # a requirement lists the reports covering it
+    required: true
+  - name: requirement_count
+    type: calculated
+    formula: COUNT(scope)
+```
+
+```yaml
+# DOC/DOC-0006.md frontmatter
+id: DOC-0006
+type: VerificationSummaryReport
+title: Verification Summary Report — Amplitude Control
+status: draft
+scope:
+  from: Requirement
+  where:
+    field: status
+    operator: equals
+    value: approved
+  order_by: order
+```
+
+```gotemplate
+{{/* templates/VerificationSummaryReport.tmpl: fills a block of Document.tmpl */}}
+{{define "after-body"}}
+<table class="trace-matrix">
+{{range .scope}}<tr><td>{{link .}}</td>
+  <td>{{range .verified_by}}{{link .}} {{end}}</td>
+  <td>{{range collect .verified_by "tested_by"}}{{link .}} {{.result}} {{end}}</td></tr>
+{{end}}</table>
+<p>{{len (collect .scope "verified_by")}} protocols cover {{.requirement_count}} requirements.</p>
+{{end}}
+```
+
+**Why inheritance now:** without it a report type repeats Document's
+fields and template, and nothing that takes a Document (a link's
+`target: [Document]`, `from: Document`, a rule on documents, the
+Document template's list of cited documents) takes a report. The
+example already repeats itself the same way: VerificationEvidence and
+ValidationEvidence share five fields and two copies of the calibration
+rule.
+
+### Decisions: inheritance (for Matt)
+
+| # | Decision | Proposal | Why |
+| --- | --- | --- | --- |
+| I1 | How it's written | **`extends: <Type>` on a type; one parent, chains allowed, no cycles.** The type has its parent's fields, in the parent's order, then its own. Redeclaring a parent's field is an error. | Single inheritance covers documents and evidence; several parents would need rules for clashing fields. |
+| I2 | `abstract: true` | **A type may be abstract: it has no entities and no `id_prefix`,** only fields, facets and rules for its subtypes. The example's `Evidence` (title, execution date, result, notes, equipment used) is abstract. | A parent such as Evidence is never written on its own; requiring an `id_prefix` and a folder for it would be noise. |
+| I3 | IDs | **A subtype numbers in its parent's series unless it declares its own `id_prefix`.** DOC-0006 can be a report and DOC-0001 a plain Document, the norm for controlled documents; Evidence's subtypes keep EVD and VAL. A series is shared only along one chain, so an ID still names its base type, and the file's `type:` names the exact one (DES-0007 amended: "each type has its own prefix" becomes "each chain"). | Document control numbers documents in one series whatever their kind; forcing a new prefix would renumber DOC-0005 to make it a report. |
+| I4 | Where a parent is named | **A parent stands for itself and every subtype everywhere a type is named:** a link's `target:`, `from:` in query blocks, rules and query fields, a query field's `of:`, a facet a `reverse_name` gives. `field: type` still compares the exact type; a new operator `is_a` matches a type and its subtypes (`{field: type, operator: is_a, value: Evidence}`), and templates get `isa` (`{{if isa . "Document"}}`), which the Document template's list of cited documents needs. In the Datalog program a subtype relation, not a rewrite of every query. | Substitutability is the point: a rule written once for Evidence checks both kinds, and a report is cited as a Document. |
+| I5 | Templates | **A type without a template uses its nearest ancestor's.** A subtype's template may instead consist only of `{{define}}`s, filling `{{block}}`s its parent's template declares (Go's own block mechanism): the built-in and the example's Document templates declare `before-body` and `after-body`. | The report keeps the Document look, revision history and citation lists without copying them; nothing new to learn beyond Go templates. |
+| I6 | What isn't inherited | **Type-level keys aren't:** `source:` (each CSV type names its own file), `pages:`, and `abstract:`. Calculated fields, facets and rules are, since they are fields or are about fields. | An inherited `source:` would read one file as two types; nothing is a value the schema doesn't write (DES-0010). |
+| I7 | Built-in pages | **An entity's page and the type pages name its exact type;** the built-in field table lists inherited fields first, as the schema orders them. | The reader sees what the file says it is. |
+
+### Decisions: query fields (outlined 2026-10-18, revised for reports)
+
+| # | Decision | Proposal | Why |
+| --- | --- | --- | --- |
+| Q1 | What the value is | **A query block's YAML** (`from`, `where`, `order_by`) under the field's name, validated by the same grammar, with `of:` in the schema limiting `from:` (subtypes included, I4). `render` and `template` aren't allowed: showing results is the template's job. | One grammar for blocks, rules and fields. |
+| Q2 | What templates and conditions see | **The results, as a many-link to the selected entities,** in query order: `.scope` is a list of entities, as a link field's is (templates read fields by schema name). Conditions and rules treat it as a link (`field: scope, where: …`), and calculated fields count over it. The query as written is `{{queryof . "scope"}}`, for a report to state its own scope. | The template and the grammar already know what a many-link is. |
+| Q3 | Reverse facets and loops | **`reverse_name` as on a link field** (`reported_in` on Requirement). Query fields compile into the same Datalog program as calculated fields (E8.5), so loops are ordered by stratification, not banned by hand: a loop through positive conditions has one answer and is allowed; one through `missing`, `not_in` or an aggregation has none and is a schema error placed at the fields in the loop. | One mechanism; a requirement finds its reports through the facet. |
+| Q4 | Gathering across results | **One template function, `collect LIST "field" …`:** follows each named field from every entity in the list, flattens, keeps each entity once, orders by ID. | A matrix's protocol and evidence columns, and a report's equipment list, need de-duplication templates can't do today. |
+| Q5 | `^` inside the query | **`^field` reads the entity holding the query field,** as in a sub-query: a report type with a `component` link scopes itself by `value_of: ^component`, so one query fits every report of that type. | Makes the query itself reusable, not only the template. |
+| Q6 | Page inputs and history | **The page's inputs and "changed since" include every entity the query read,** through E1.11's dependency walk. | A report must show as changed when its scope grows though its file didn't. |
+| Q7 | Signing | **A signature covers the query and the IDs it returned at that commit;** `sign verify` reports a document whose results have changed. Settled in the `sign` epic; the ledger format leaves room. | Approving a report approves its scope. |
+
+**Settled while building:** recorded here as building settles them, as
+in Epic 7.
+
+**Order:** the design (E8.1); the example's report and evidence types as
+the fixture (E8.2, rule 4); inheritance in the schema, then templates
+(E8.3, E8.4), since the report type extends Document; one program for
+derived values with today's results (E8.5); query fields on it (E8.6);
+export (E8.7); the checks (E8.8); docs and release (E8.9).
+
+### E8.1 Design
+
+**Deliverables:** in the DDF, a requirement for reusable document types
+and one for type inheritance; DES-0010 amended (`extends`, `abstract`,
+`type: query`, `of:`), DES-0007 (I3), DES-0032 (query fields in the
+grammar, `is_a`), DES-0030 (`collect`, `queryof`), DES-0031 (template
+fallback and blocks, I5), DES-0048 (the new errors); I1–I7 and Q1–Q7 as
+decided.
+
+**Check it yourself:** read the amended DES-0010 in the DDF's export.
+
+### E8.2 Reports and evidence in the example
+
+**Deliverables:** in `provenance-example`, its own PR: an abstract
+`Evidence` type that VerificationEvidence and ValidationEvidence extend,
+and the two calibration rules merged into one `from: Evidence`;
+`VerificationSummaryReport extends Document` with its template filling
+`after-body`; two reports in the DOC series with different scopes, one
+by `^` (Q5); Requirement's template lists `reported_in`. Until E8.6 the
+example doesn't validate, so it merges into the example's
+`epic/E8-query-fields`.
+
+**Check it yourself:** read DOC-0006's frontmatter and the report
+template.
+
+### E8.3 Inheritance in the schema and model
+
+**Deliverables:** `extends` and `abstract` loaded and checked; inherited
+fields, facets and calculated fields; prefixes shared along a chain
+(I3); a parent standing for its subtypes in targets, `from:` and rules,
+and `is_a` (I4).
+
+**Check it yourself:** in the example, `prov validate` → the merged
+calibration rule reports for both kinds of evidence; a link to DOC-0006
+from a `target: [Document]` field is accepted.
+
+### E8.4 Templates
+
+**Deliverables:** template lookup up the chain; a subtype's
+`{{define}}`-only template layered on its parent's (I5); the built-in
+entity template declares `before-body` and `after-body`; type pages and
+the field table per I7.
+
+**Check it yourself:** export the example → DOC-0006 has the Document
+heading, status and reference list.
+
+### E8.5 One program for derived values
+
+**Deliverables:** `query.NewGraph` evaluates calculated fields as one
+Datalog program whose results are written back as facts, and query
+blocks run after it; query fields sit between the two in both
+directions (Q3), so the graph's derived values become one program,
+calculated fields first, with the same results.
+
+**Check it yourself:** `make test` → the golden site unchanged.
+
+### E8.6 Query fields
+
+**Deliverables:** `type: query` and `of:`; the query parsed and checked
+at load, compiled into the program as derived `link` facts; results as
+a many-link with its facet (Q2, Q3); `^` (Q5); loops with no answer
+reported (Q3).
+
+**Check it yourself:** `prov validate` passes on the example; a rule
+`{field: reported_in, operator: missing}` on Requirement lists the
+requirements no report covers.
+
+### E8.7 Export
+
+**Deliverables:** `.scope` in templates, `collect` and `queryof`
+(Q2, Q4); page inputs include what the query read (Q6). The golden site
+gains both reports.
+
+**Check it yourself:** export the example and open DOC-0006 → the
+matrix lists its requirements with their protocols, executions and
+results; edit a requirement in its scope → DOC-0006 shows as changed.
+
+### E8.8 Checks
+
+**Deliverables:** in `validate`, each with its case in
+`testdata/violations`: an unknown or cyclic `extends`, an `abstract`
+type with entities or an `id_prefix`, a redeclared inherited field, a
+prefix shared outside one chain; a malformed query in a query field, a
+`from:` outside `of:`, `render` or `template` given, and a loop with no
+answer.
+
+**Check it yourself:** in the example, set DOC-0006's `from:` to
+`Risk` → `validate` reports it at the line, exit 1.
+
+### E8.9 Epic close-out
+
+**Deliverables:** the schema reference (inheritance, query fields) and
+template functions on the website, with a reusable-report recipe; the
+epic merged into `main` in each repository; release `v0.7.0-alpha`; the
+example's and the DDF's Validate workflows pinned to it.
+
+**Check it yourself:** the release's `SHA256SUMS` verifies; the
+downloaded binary exports the example with both reports.
+
 ## Later epics (outline)
 
 Detailed task breakdowns are written when the preceding epic closes. Proposed
@@ -1882,11 +2091,10 @@ order after Epic 2, with the reason it comes where it does:
 3. **`init`** — Epic 5, detailed above (closed 2026-11-01).
 4. **CSV-backed entity types** — Epic 6, detailed above (closed 2026-11-11).
 5. **Section and item references** — Epic 7, detailed above (closed 2026-11-15).
-6. **Query fields** — a field whose value is a query; the template gets
-   its results (see below). Its first task evaluates calculated fields and
-   query fields as one Datalog program. Before `report`, which can then
-   count over a plan's scope, and before `rename`, which must rewrite IDs
-   inside them.
+6. **Query fields and type inheritance** — Epic 8, detailed above
+   (proposed 2026-11-15). Before `report`, which can then count over a
+   report's scope, and before `rename`, which must rewrite IDs inside
+   query fields.
 7. **`report`** — coverage metrics over the shared query engine.
 8. **`diff`** — rendered/semantic diff between refs.
 9. **History in rules** — rules ask what changed when, such as evidence
@@ -1907,89 +2115,6 @@ order after Epic 2, with the reason it comes where it does:
    fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
    thin client over everything above.
 16. **`plugin`**.
-
-### Query fields (proposed 2026-10-18, for Matt's review)
-
-**Goal:** a field's value can be a query, written in the entity's
-frontmatter, and its template gets the entities it selects. A Design
-Verification Plan then says which design items it covers, and its
-template gathers the devices under test and the equipment from the
-protocols that verify them, without a query block per table. Query
-blocks (DES-0032) stay for the body: each result is rendered on its own,
-so they can't aggregate. A query field gives the template every result
-at once.
-
-```yaml
-# schema/VerificationPlan.yaml
-type: VerificationPlan
-id_prefix: DVP
-fields:
-  - name: title
-    type: string
-    required: true
-  - name: scope
-    type: query
-    of: [Requirement]        # the types the query may select
-    required: true
-```
-
-```yaml
-# DVP/DVP-0001.md frontmatter
-scope:
-  from: Requirement
-  where:
-    field: status
-    operator: equals
-    value: approved
-  order_by: order
-```
-
-```gotemplate
-{{/* templates/VerificationPlan.tmpl */}}
-<h2>Device Under Test</h2>
-{{range collect .Scope "VerifiedBy" "DeviceUnderTest"}}…{{end}}
-<h2>Test equipment</h2>
-{{range collect .Scope "VerifiedBy" "EquipmentNeeded"}}…{{end}}
-```
-
-**Decisions (for Matt, before the epic is detailed):**
-
-| # | Decision | Proposal | Why |
-| --- | --- | --- | --- |
-| Q1 | What the value is | **A query block's YAML** (`from`, `where`, `order_by`) under the field's name, validated by the same grammar, with `of:` in the schema limiting `from:`. `render` and `template` aren't allowed: how results are shown is the template's job. | One grammar for blocks, rules and fields (the general mechanism, not a special case). |
-| Q2 | What the template and conditions see | **The results, as a many-link to the selected entities,** in query order: `.Scope` is a list of entities, as a link field's is. Conditions and rules treat it as a link (`field: scope, where: …`), and calculated fields can `COUNT(scope)`. The query's text is available as `.Scope.Query` for showing what the plan selected and why. | The template and the grammar already know what a many-link is; nothing new to learn. |
-| Q3 | Reverse facets, and loops | **A query field may declare `reverse_name` like a link field, and loops are found by the Datalog engine's stratification, not ruled out by hand.** Query fields compile into the same program as calculated fields (task 3), so a query field reading a calculated field, a calculated field counting a query field, and a query field selecting by a facet another query field feeds are all ordered by the engine. A loop through positive conditions only has one answer (the least fixpoint) and is allowed; a loop through `missing`, `not_in` or an aggregation has none, and is a schema error placed at the query fields in the loop. | One general mechanism instead of a restriction that the next feature would have to lift. A Requirement can find the plans that cover it through the facet rather than a query block over VerificationPlan. |
-| Q4 | Gathering across results | **One new template function, `collect`:** `collect LIST "Field" "Field" …` follows each named field from every entity in the list, flattens the result, keeps each entity once, and orders by ID. | Templates can't de-duplicate today, which is why DOC-0004 needs entity types such as TestEquipment and a query block per table. A path of fields keeps it general: it works on any link, facet or query field. |
-| Q5 | `^` inside the query | **`^field` reads the entity holding the query field,** as in a sub-query, so a plan can select by its own values (`value_of: ^component`). | The same meaning `^` has everywhere else. |
-| Q6 | Page inputs and history | A query field's results change when other entities change, so **the page inputs and the "changed since" check include every entity the query read,** through the dependency walk query blocks already use (E1.11). | The page must be marked changed when its scope grows, though the plan's file didn't change. |
-| Q7 | Signing | **A signature covers the query and the IDs it returned at that commit,** both stored in the ledger entry. `sign verify` reports a plan whose current results differ from the signed ones. | Approving a plan approves its scope; a scope that grows after approval mustn't look approved. Settled properly in the `sign` epic, but the ledger format must leave room. |
-
-**Rough shape:**
-
-1. **Design:** a field type in DES-0010, the grammar's use of it in
-   DES-0032, `collect` in the template functions (DES-0030), Q1–Q7 as
-   decided.
-2. **Example repo:** a VerificationPlan type and DVP-0001 whose template
-   gathers devices and equipment with `collect`; DOC-0004's per-table
-   query blocks and the joined-rows CSS go, unless kept to exercise
-   query blocks.
-3. **One program for derived values.** Today `query.NewGraph` builds the
-   facts, evaluates calculated fields as one Datalog program and writes
-   their values back as facts, and each query block is evaluated
-   separately afterwards. Query fields sit between the two in both
-   directions (Q3), so the graph's derived values become one program:
-   calculated fields first, with the same results (the golden test is
-   the check), then query fields compiled into it as derived `link`
-   facts. Needs E2.5's correlated sub-queries for `^` (Q5).
-4. **Schema and model:** `type: query` and `of:`; the query parsed and
-   checked at load; results resolved as a many-link.
-5. **Grammar:** query fields in conditions, rules and calculated fields;
-   `^` (Q5); loops reported by stratification (Q3).
-6. **export:** `.Scope` in templates, `collect`, page inputs (Q6).
-7. **validate:** a malformed query, a `from:` outside `of:`, `render` or
-   `template` given, and a loop with no answer (Q3).
-8. **Close-out:** docs (the schema reference and the template functions),
-   release.
 
 ### History in rules (proposed 2026-10-25, for Matt's review)
 
