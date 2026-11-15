@@ -72,7 +72,7 @@
 - [x] E7.4 Parsing
 - [x] E7.5 Numbering and resolution
 - [x] E7.6 Checks
-- [ ] E7.7 Epic close-out (built; the release follows the merge)
+- [x] E7.7 Epic close-out
 
 ## Shape of the plan
 
@@ -1718,13 +1718,13 @@ downloaded binary validates the example with its complaints.
 
 ## Epic 7 — Section and item references
 
-> **Status: built 2026-11-12.** Proposed 2026-10-18; X1–X7 agreed with
+> **Status: closed 2026-11-15**, released as `v0.6.0-alpha`. Proposed 2026-10-18; X1–X7 agreed with
 > Matt 2026-11-11/12, X5 revised (a mode picks what a reference shows,
 > the kind and number by default) and X3 kept to the stylesheet for
 > whether numbers are shown. E7.1–E7.7 built together in one PR per
 > repository, at Matt's request; what building settled is under
-> *Settled while building* below. The release, `v0.6.0-alpha`, follows
-> the merge, and with it the example's and the DDF's Validate pins.
+> *Settled while building* below. The example's and the DDF's Validate
+> workflows are pinned to the release.
 
 **Goal:** a document can point at a section or a list item of itself or
 of another entity, and the reference shows the number that section or
@@ -1881,7 +1881,7 @@ order after Epic 2, with the reason it comes where it does:
 2. **`fmt`** — Epic 4, detailed above (closed 2026-11-01).
 3. **`init`** — Epic 5, detailed above (closed 2026-11-01).
 4. **CSV-backed entity types** — Epic 6, detailed above (closed 2026-11-11).
-5. **Section and item references** — Epic 7, detailed above (built 2026-11-12).
+5. **Section and item references** — Epic 7, detailed above (closed 2026-11-15).
 6. **Query fields** — a field whose value is a query; the template gets
    its results (see below). Its first task evaluates calculated fields and
    query fields as one Datalog program. Before `report`, which can then
