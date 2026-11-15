@@ -1,7 +1,6 @@
 cases/content-caption/violation.md:8: error [content/caption] a caption must come right after the figure, table, equation or embed it captions (WID-0030)
 cases/content-caption/violation.md:16: error [content/caption] caption: did not find expected ',' or ']' (WID-0030)
 cases/content-caption/violation.md:30: error [content/caption] caption id "twice" is used twice on one page (first at cases/content-caption/violation.md:22) (WID-0030)
-cases/content-caption/violation.md:35: error [content/caption] [[#nowhere]]: no caption with id "nowhere" on this page (WID-0030)
 cases/content-csv-column/violation.csv:1: warning [content/csv-column] column "colour" is not read: no field of a CsvColumnViolation names it
 cases/content-csv-column/violation.csv:1: warning [content/csv-column] no column "Weight" for the field weight of a CsvColumnViolation, so it is empty on every row
 cases/content-csv-row/violation.csv:2: error [content/csv-row] the row has 3 cells, but the header has 2
@@ -20,11 +19,19 @@ cases/content-image/violation.md:8: error [content/image] image https://example.
 cases/content-image/violation.md:10: error [content/image] image ../../../outside.png is outside the repository (WID-0028)
 cases/content-image/violation.md:12: error [content/image] image assets/figure.bmp: the website export does not support this format (supported: .gif, .jpeg, .jpg, .png, .svg, .webp) (WID-0028)
 cases/content-query/violation.md:10: error [content/query] query block: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in) (WID-0026)
+cases/content-tag/violation.md:8: error [content/tag] #setup is used twice in WID-0043 (first at cases/content-tag/violation.md:6): tags and caption ids must be unique within an entity (WID-0043)
+cases/content-tag/violation.md:10: error [content/tag] tag {#Bad_Tag}: use lower-case letters, digits and '-' (WID-0043)
+cases/content-tag/violation.md:12: error [content/tag] tag {#status} is named like a field of Widget, so [[WID-0043#status]] would show the field (WID-0043)
+cases/content-tag/violation.md:14: error [content/tag] {#unordered}: a tag on an unordered list item: it has no number to show (WID-0043)
+cases/content-tag/violation.md:16: error [content/tag] {#paragraph}: a tag goes at the end of a heading or of an ordered list item's first paragraph (WID-0043)
 cases/content-template/violation.md:8: error [content/template] query block: unknown template "no-such-template": there is no templates/no-such-template.tmpl (named templates: spare, widget-row) (WID-0039)
 cases/content-unrendered-block/violation.md:6: error [content/unrendered-block] mermaid block: this version of Provenance cannot render it, so it would be published as its source (WID-0037)
 cases/content-unrendered-block/violation.md:10: error [content/unrendered-block] drawio block: this version of Provenance cannot render it, so it would be published as its source (WID-0037)
+cases/links-reference/violation.md:6: error [links/reference] [[WID-0023#colour]]: WID-0023 has no field, tag or caption "colour" (WID-0022)
+cases/links-reference/violation.md:10: error [links/reference] [[#nowhere]]: WID-0022 has no field, tag or caption "nowhere" (WID-0022)
+cases/links-reference/violation.md:10: error [links/reference] [[#scope:short]]: unknown mode "short" (full, number, title or long) (WID-0022)
+cases/links-reference/violation.md:10: error [links/reference] [[WID-0023#title:number]]: "title" is a field of Widget, which takes no mode: a mode is for a tag or caption (WID-0022)
 cases/links-target-type/violation.md:5: error [links/target-type] parent: ERR-0019 is of type ErrorClass, but parent links only to Widget (WID-0024)
-cases/links-unknown-field/violation.md:6: error [links/unknown-field] [[WID-0023#colour]]: Widget has no field "colour" (WID-0022)
 cases/links-unresolved/violation.csv:2: error [links/unresolved] [[WID-9990]]: no entity WID-9990 (CLV-0001)
 cases/links-unresolved/violation.csv:2: error [links/unresolved] uses: no entity WID-9991 (CLV-0001)
 cases/links-unresolved/violation.md:7: error [links/unresolved] uses: no entity WID-9999 (WID-0020)
@@ -70,4 +77,4 @@ templates/BrokenTemplate.tmpl:2: error [content/template] bad character U+003C '
 templates/NotAType.tmpl: warning [content/template-name] NotAType.tmpl names no declared type and is not a named template (lower-case kebab-case), so it is never used
 templates/_footer.tmpl: warning [content/unknown-override] _footer.tmpl is not a site override (_layout.tmpl, _index.tmpl, _cite.tmpl, or _<Type>.tmpl for a type with pages: false), so it is never used
 templates/spare.tmpl: warning [content/unused-template] named template spare is not chosen by any query block
-63 errors, 9 warnings
+70 errors, 9 warnings

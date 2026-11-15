@@ -11,6 +11,7 @@ package markdown
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -26,14 +27,18 @@ import (
 
 // Link is one parsed wikilink.
 type Link struct {
-	// ID is the entity, or "" for a reference to a caption in the same
-	// document ([[#id]]), whose id is then Local.
+	// ID is the entity, or "" for a reference to a tag or caption of the
+	// entity whose Markdown it is in ([[#tag]]), whose name is then Local.
 	ID    string
 	Local string
 	// Label is the text after '|', or "".
 	Label string
-	// Field is the field name after '#', or "".
+	// Field is the name after '#', or "": a field of the entity, or else
+	// one of its tags or captions (DES-0034).
 	Field string
+	// Mode is what a reference to a tag or caption shows, written after
+	// ':' ([[#tag:number]]), or "" for the default.
+	Mode string
 	// Embed is true for ![[ID]].
 	Embed bool
 	// Line is the line of Markdown source it is on, from 1.
@@ -112,6 +117,12 @@ type Options struct {
 	// Image, if set, maps every image's destination (![alt](dest)) to the
 	// one written out, or rejects it.
 	Image func(dest string) (string, error)
+	// Owner, if set, is written as data-owner beside each tag's data-tag:
+	// the entity whose Markdown this is.
+	Owner string
+	// Tag, if set, is called with each tag taken onto a heading or list
+	// item, in document order.
+	Tag func(Tag)
 }
 
 // Error is a problem in the Markdown at a line of src (0 when unknown).
@@ -119,8 +130,10 @@ type Error struct {
 	Line int
 	Msg  string
 	// Image is true for an image the Options' Image function rejected;
-	// otherwise the problem is a caption's.
+	// Tag for a tag misplaced or malformed; otherwise the problem is a
+	// caption's.
 	Image bool
+	Tag   bool
 }
 
 func (e *Error) Error() string {
@@ -132,7 +145,7 @@ func (e *Error) Error() string {
 
 // Convert renders src to HTML, resolving wikilinks and captions through r
 // and fenced blocks and images as opts says. It fails with the first
-// problem.
+// problem, but for a misplaced or malformed tag, which is left as written.
 func Convert(src string, r Resolver, opts Options) (string, error) {
 	html, errs := render(src, r, opts, false)
 	if len(errs) > 0 {
@@ -161,6 +174,7 @@ func render(src string, r Resolver, opts Options, all bool) (string, []error) {
 				util.Prioritized(&fenceTransformer{fences: opts.Fences}, 101),
 				util.Prioritized(&captionTransformer{errs: &errs}, 102),
 				util.Prioritized(&imageTransformer{rewrite: opts.Image, errs: &errs}, 103),
+				util.Prioritized(&tagTransformer{owner: opts.Owner, found: opts.Tag, errs: &errs}, 104),
 			),
 		),
 		goldmark.WithRendererOptions(
@@ -170,8 +184,14 @@ func render(src string, r Resolver, opts Options, all bool) (string, []error) {
 	)
 	source := []byte(src)
 	doc := md.Parser().Parse(text.NewReader(source))
-	if len(errs) > 0 && !all {
-		return "", errs
+	if !all {
+		errs = slices.DeleteFunc(errs, func(err error) bool {
+			me, ok := err.(*Error)
+			return ok && me.Tag
+		})
+		if len(errs) > 0 {
+			return "", errs
+		}
 	}
 	var b bytes.Buffer
 	if err := md.Renderer().Render(&b, source, doc); err != nil {
@@ -238,9 +258,11 @@ func (p *wikilinkParser) Parse(_ ast.Node, block text.Reader, _ parser.Context) 
 		l.Label = strings.TrimSpace(label)
 	}
 	id, field, _ := strings.Cut(target, "#")
-	l.ID, l.Field = strings.TrimSpace(id), strings.TrimSpace(field)
+	field, mode, _ := strings.Cut(field, ":")
+	l.ID, l.Field, l.Mode = strings.TrimSpace(id), strings.TrimSpace(field), strings.TrimSpace(mode)
 	if l.ID == "" {
-		// [[#id]]: a caption in this document. It cannot be embedded.
+		// [[#tag]]: a tag or caption of the entity writing it. It cannot
+		// be embedded.
 		if l.Field == "" || embed {
 			return nil
 		}

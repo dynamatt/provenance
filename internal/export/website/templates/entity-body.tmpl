@@ -1,7 +1,7 @@
 {{/* entity is the built-in fallback rendering of one entity (an entityPage):
      used for its own page and when it is embedded with ![[ID]]. */}}
 {{define "entity"}}
-<article class="entity" id="{{.ID}}">
+<article class="entity" id="{{.ID}}" data-type="{{.Type}}">
 <p class="entity-type">{{.Type}}</p>
 <h1><span class="id">{{.ID}}</span> {{.Title}}</h1>
 {{- if or .Fields .Incoming}}

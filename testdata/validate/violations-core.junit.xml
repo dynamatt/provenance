@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="provenance validate" tests="46" failures="30" errors="0">
-  <testsuite name="built-in" tests="39" failures="30" errors="0" skipped="0">
+<testsuites name="provenance validate" tests="47" failures="31" errors="0">
+  <testsuite name="built-in" tests="40" failures="31" errors="0" skipped="0">
     <testcase name="content/caption" classname="built-in">
       <failure type="error" message="a caption must come right after the figure, table, equation or embed it captions">cases/content-caption/violation.md:8: error [content/caption] a caption must come right after the figure, table, equation or embed it captions (WID-0030)</failure>
       <failure type="error" message="caption: did not find expected &#39;,&#39; or &#39;]&#39;">cases/content-caption/violation.md:16: error [content/caption] caption: did not find expected &#39;,&#39; or &#39;]&#39; (WID-0030)</failure>
       <failure type="error" message="caption id &#34;twice&#34; is used twice on one page (first at cases/content-caption/violation.md:22)">cases/content-caption/violation.md:30: error [content/caption] caption id &#34;twice&#34; is used twice on one page (first at cases/content-caption/violation.md:22) (WID-0030)</failure>
-      <failure type="error" message="[[#nowhere]]: no caption with id &#34;nowhere&#34; on this page">cases/content-caption/violation.md:35: error [content/caption] [[#nowhere]]: no caption with id &#34;nowhere&#34; on this page (WID-0030)</failure>
     </testcase>
     <testcase name="content/csv-column" classname="built-in">
       <system-out>cases/content-csv-column/violation.csv:1: warning [content/csv-column] column &#34;colour&#34; is not read: no field of a CsvColumnViolation names it&#xA;cases/content-csv-column/violation.csv:1: warning [content/csv-column] no column &#34;Weight&#34; for the field weight of a CsvColumnViolation, so it is empty on every row&#xA;</system-out>
@@ -42,6 +41,13 @@
     <testcase name="content/query" classname="built-in">
       <failure type="error" message="query block: unknown operator &#34;=&#34; (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in)">cases/content-query/violation.md:10: error [content/query] query block: unknown operator &#34;=&#34; (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in) (WID-0026)</failure>
     </testcase>
+    <testcase name="content/tag" classname="built-in">
+      <failure type="error" message="#setup is used twice in WID-0043 (first at cases/content-tag/violation.md:6): tags and caption ids must be unique within an entity">cases/content-tag/violation.md:8: error [content/tag] #setup is used twice in WID-0043 (first at cases/content-tag/violation.md:6): tags and caption ids must be unique within an entity (WID-0043)</failure>
+      <failure type="error" message="tag {#Bad_Tag}: use lower-case letters, digits and &#39;-&#39;">cases/content-tag/violation.md:10: error [content/tag] tag {#Bad_Tag}: use lower-case letters, digits and &#39;-&#39; (WID-0043)</failure>
+      <failure type="error" message="tag {#status} is named like a field of Widget, so [[WID-0043#status]] would show the field">cases/content-tag/violation.md:12: error [content/tag] tag {#status} is named like a field of Widget, so [[WID-0043#status]] would show the field (WID-0043)</failure>
+      <failure type="error" message="{#unordered}: a tag on an unordered list item: it has no number to show">cases/content-tag/violation.md:14: error [content/tag] {#unordered}: a tag on an unordered list item: it has no number to show (WID-0043)</failure>
+      <failure type="error" message="{#paragraph}: a tag goes at the end of a heading or of an ordered list item&#39;s first paragraph">cases/content-tag/violation.md:16: error [content/tag] {#paragraph}: a tag goes at the end of a heading or of an ordered list item&#39;s first paragraph (WID-0043)</failure>
+    </testcase>
     <testcase name="content/template" classname="built-in">
       <failure type="error" message="query block: unknown template &#34;no-such-template&#34;: there is no templates/no-such-template.tmpl (named templates: spare, widget-row)">cases/content-template/violation.md:8: error [content/template] query block: unknown template &#34;no-such-template&#34;: there is no templates/no-such-template.tmpl (named templates: spare, widget-row) (WID-0039)</failure>
       <failure type="error" message="bad character U+003C &#39;&lt;&#39;">templates/BrokenTemplate.tmpl:2: error [content/template] bad character U+003C &#39;&lt;&#39;</failure>
@@ -59,11 +65,14 @@
     <testcase name="content/unused-template" classname="built-in">
       <system-out>templates/spare.tmpl: warning [content/unused-template] named template spare is not chosen by any query block&#xA;</system-out>
     </testcase>
+    <testcase name="links/reference" classname="built-in">
+      <failure type="error" message="[[WID-0023#colour]]: WID-0023 has no field, tag or caption &#34;colour&#34;">cases/links-reference/violation.md:6: error [links/reference] [[WID-0023#colour]]: WID-0023 has no field, tag or caption &#34;colour&#34; (WID-0022)</failure>
+      <failure type="error" message="[[#nowhere]]: WID-0022 has no field, tag or caption &#34;nowhere&#34;">cases/links-reference/violation.md:10: error [links/reference] [[#nowhere]]: WID-0022 has no field, tag or caption &#34;nowhere&#34; (WID-0022)</failure>
+      <failure type="error" message="[[#scope:short]]: unknown mode &#34;short&#34; (full, number, title or long)">cases/links-reference/violation.md:10: error [links/reference] [[#scope:short]]: unknown mode &#34;short&#34; (full, number, title or long) (WID-0022)</failure>
+      <failure type="error" message="[[WID-0023#title:number]]: &#34;title&#34; is a field of Widget, which takes no mode: a mode is for a tag or caption">cases/links-reference/violation.md:10: error [links/reference] [[WID-0023#title:number]]: &#34;title&#34; is a field of Widget, which takes no mode: a mode is for a tag or caption (WID-0022)</failure>
+    </testcase>
     <testcase name="links/target-type" classname="built-in">
       <failure type="error" message="parent: ERR-0019 is of type ErrorClass, but parent links only to Widget">cases/links-target-type/violation.md:5: error [links/target-type] parent: ERR-0019 is of type ErrorClass, but parent links only to Widget (WID-0024)</failure>
-    </testcase>
-    <testcase name="links/unknown-field" classname="built-in">
-      <failure type="error" message="[[WID-0023#colour]]: Widget has no field &#34;colour&#34;">cases/links-unknown-field/violation.md:6: error [links/unknown-field] [[WID-0023#colour]]: Widget has no field &#34;colour&#34; (WID-0022)</failure>
     </testcase>
     <testcase name="links/unresolved" classname="built-in">
       <failure type="error" message="[[WID-9990]]: no entity WID-9990">cases/links-unresolved/violation.csv:2: error [links/unresolved] [[WID-9990]]: no entity WID-9990 (CLV-0001)</failure>

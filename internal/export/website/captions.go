@@ -20,12 +20,12 @@ import (
 // one sequence per kind.
 //
 // A number is only known once the whole page is rendered, so rendering
-// leaves placeholders that finalize resolves (a two-pass render): the
-// number in each caption, and every [[#id]] reference, which becomes a link
-// to the caption showing "Figure 1" (or its label), even when it comes
-// before the caption. Placeholders are delimited by Unicode private-use
+// leaves a placeholder for it that the page's finishing resolves
+// (references.go). The placeholder is delimited by Unicode private-use
 // characters (U+E000 to U+E003, invisible in an editor), which neither
-// Markdown, html/template nor the heading shift changes.
+// Markdown, html/template nor the heading shift changes, and carries the
+// caption's id, the entity whose caption it is and its text as plain text,
+// for references to show.
 
 // captionKind is how one kind of caption is numbered and placed.
 type captionKind struct {
@@ -49,21 +49,13 @@ const (
 )
 
 // numberToken stands for the number of caption serial in sequence label;
-// id is the caption's id, or "".
-func numberToken(label string, serial int, id string) string {
-	return tokOpen + "num" + tokSep + label + tokSep + strconv.Itoa(serial) + tokSep + id + tokClose
+// id is the caption's id, or "", owner the entity whose Markdown it is in,
+// and title its text as plain text.
+func numberToken(label string, serial int, id, owner, title string) string {
+	return tokOpen + "num" + tokSep + label + tokSep + strconv.Itoa(serial) + tokSep + id + tokSep + owner + tokBody + title + tokClose
 }
 
-// xrefToken stands for a [[#id]] reference; ordinary is what it renders as
-// when the page has no such caption.
-func xrefToken(id, label, ordinary string) string {
-	return tokOpen + "xref" + tokSep + id + tokSep + label + tokBody + ordinary + tokClose
-}
-
-var (
-	numberTok = regexp.MustCompile(tokOpen + "num" + tokSep + "([^" + tokSep + "]*)" + tokSep + "([0-9]+)" + tokSep + "([^" + tokClose + "]*)" + tokClose)
-	xrefTok   = regexp.MustCompile(tokOpen + "xref" + tokSep + "([^" + tokSep + "]*)" + tokSep + "([^" + tokBody + "]*)" + tokBody + "([^" + tokClose + "]*)" + tokClose)
-)
+var numberTok = regexp.MustCompile(tokOpen + "num" + tokSep + "([^" + tokSep + "]*)" + tokSep + "([0-9]+)" + tokSep + "([^" + tokSep + "]*)" + tokSep + "([^" + tokBody + "]*)" + tokBody + "([^" + tokClose + "]*)" + tokClose)
 
 func anchorID(id string) string { return "caption-" + id }
 
@@ -113,16 +105,12 @@ func (r *resolver) CaptionEnd(w util.BufWriter, c markdown.Caption) error {
 // inline Markdown.
 func (r *resolver) figcaption(w util.BufWriter, c markdown.Caption, k captionKind) error {
 	r.ctx.site.serial++
-	fmt.Fprintf(w, `<figcaption><span class="caption-number">%s</span>`, numberToken(k.Label, r.ctx.site.serial, c.ID))
-	if c.ID != "" {
-		check := r.ctx.site.check
-		check.captions = append(check.captions, placed{id: c.ID, path: r.ctx.path(), entity: r.ctx.entityID(), line: r.ctx.fileLine(c.Line)})
-	}
+	text := ""
 	if c.Text != "" {
 		// Problems in the caption's text are placed at the caption.
 		prev := r.ctx.lineAt
 		r.ctx.lineAt = r.ctx.fileLine(c.Line)
-		text, errs := markdown.ConvertAll(c.Text, r, r.options())
+		html, errs := markdown.ConvertAll(c.Text, r, r.options())
 		var stop error
 		for _, err := range errs {
 			if stop = r.ctx.markdownProblem(err, err); stop != nil {
@@ -133,48 +121,22 @@ func (r *resolver) figcaption(w util.BufWriter, c markdown.Caption, k captionKin
 		if stop != nil {
 			return stop
 		}
-		text = strings.TrimSpace(text)
+		text = strings.TrimSpace(html)
 		if inner, ok := strings.CutPrefix(text, "<p>"); ok && strings.Count(text, "<p>") == 1 {
 			text = strings.TrimSuffix(inner, "</p>")
 		}
+	}
+	owner := r.ctx.entityID()
+	fmt.Fprintf(w, `<figcaption><span class="caption-number">%s</span>`, numberToken(k.Label, r.ctx.site.serial, c.ID, owner, plainText(text)))
+	if c.ID != "" {
+		check := r.ctx.site.check
+		at := placed{id: c.ID, path: r.ctx.path(), entity: owner, line: r.ctx.fileLine(c.Line)}
+		check.captions = append(check.captions, at)
+		r.ctx.site.tagged(r.ctx.entity(), at, false)
+	}
+	if text != "" {
 		_, _ = w.WriteString(" " + text)
 	}
 	_, _ = w.WriteString("</figcaption>\n")
 	return nil
-}
-
-// finalize numbers one page's captions in document order and resolves its
-// placeholders.
-func (s *site) finalize(content string) string {
-	bySerial := map[string]string{}
-	byID := map[string]string{}
-	next := map[string]int{}
-	for _, m := range numberTok.FindAllStringSubmatch(content, -1) {
-		label, serial, id := m[1], m[2], m[3]
-		if _, done := bySerial[serial]; done {
-			continue
-		}
-		next[label]++
-		n := fmt.Sprintf("%s %d", label, next[label])
-		bySerial[serial] = n
-		if id != "" && byID[id] == "" {
-			byID[id] = n
-		}
-	}
-	content = numberTok.ReplaceAllStringFunc(content, func(tok string) string {
-		return template.HTMLEscapeString(bySerial[numberTok.FindStringSubmatch(tok)[2]])
-	})
-	return xrefTok.ReplaceAllStringFunc(content, func(tok string) string {
-		m := xrefTok.FindStringSubmatch(tok)
-		id, label, ordinary := m[1], m[2], m[3]
-		n := byID[id]
-		if n == "" {
-			return ordinary
-		}
-		text := n
-		if label != "" {
-			text = label
-		}
-		return fmt.Sprintf(`<a class="ref xref" href="#%s">%s</a>`, template.HTMLEscapeString(anchorID(id)), template.HTMLEscapeString(text))
-	})
 }

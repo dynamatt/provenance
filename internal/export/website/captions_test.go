@@ -29,7 +29,7 @@ func TestCaptionBlocks(t *testing.T) {
 	for _, want := range []string{
 		// References resolve to numbers, even before the caption.
 		`See <a class="ref xref" href="#caption-loop">Figure 1</a>, <a class="ref xref" href="#caption-loop">the loop</a> and <a class="ref xref" href="#caption-limits">Table 1</a>;`,
-		`<span class="id unresolved-id">#nothing</span> <span class="unresolved">no caption #nothing</span> is not here.`,
+		`<span class="id unresolved-id">#nothing</span> <span class="unresolved">no tag or caption #nothing</span> is not here.`,
 		`After: <a class="ref xref" href="#caption-loop">Figure 1</a> and <a class="ref xref" href="#caption-ohm">Equation 1</a>.`,
 		// An equation (raw HTML here): its own sequence, caption below.
 		"<figure class=\"captioned captioned-equation\" id=\"caption-ohm\">\n<p class=\"math\">E = IR</p>\n<figcaption><span class=\"caption-number\">Equation 1</span></figcaption>\n</figure>",
@@ -38,7 +38,7 @@ func TestCaptionBlocks(t *testing.T) {
 		// A table: caption above.
 		"<figure class=\"captioned captioned-table\" id=\"caption-limits\">\n<figcaption><span class=\"caption-number\">Table 1</span> Limits.</figcaption>\n<table>",
 		// A figure captioning an embed.
-		"<figure class=\"captioned captioned-figure\">\n<section class=\"embed\" data-entity=\"N-2\">",
+		"<figure class=\"captioned captioned-figure\">\n<section class=\"embed\" data-entity=\"N-2\" data-type=\"Note\">",
 		`<figcaption><span class="caption-number">Figure 2</span></figcaption>`,
 	} {
 		if !strings.Contains(page, want) {

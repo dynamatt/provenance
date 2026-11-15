@@ -31,5 +31,3 @@ kind: figure
 id: twice
 text: Second.
 ```
-
-As [[#nowhere]] shows.

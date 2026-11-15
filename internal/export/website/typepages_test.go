@@ -92,7 +92,7 @@ func TestTypePages(t *testing.T) {
 		// template would, one heading level down, at its own anchor.
 		"entities/Term.html": {
 			`<section class="type-entity">`,
-			`<article class="entity" id="TRM-0001">`,
+			`<article class="entity" id="TRM-0001" data-type="Term">`,
 			`<h2><span class="id">TRM-0001</span> Lead</h2>`,
 			`<h2>Kinds</h2>`,
 		},

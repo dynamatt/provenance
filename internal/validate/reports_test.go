@@ -81,7 +81,7 @@ func TestReportRules(t *testing.T) {
 	root := reportRepo(t, map[string]string{"rules.tmpl": `{{range .Rules}}{{.ID}}|{{.Builtin}}|{{.Message}}|{{.Query}}
 {{end}}`})
 	got := strings.Split(renderReport(t, runReport(t, root), "rules"), "\n")
-	if got[0] != "content/caption|true|A caption that cannot be placed or referred to|" {
+	if got[0] != "content/caption|true|A caption that cannot be placed|" {
 		t.Errorf("first = %q", got[0])
 	}
 	if i := len(Checks); got[i] != "draft|false|status is <draft>|severity: error" || got[i+1] != "message: status is <draft>" {

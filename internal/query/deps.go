@@ -23,7 +23,8 @@ type Deps struct {
 	// Full are those of IDs rendered in full (through a template), sorted.
 	Full []string
 	// Read are the other entities whose values the page shows through
-	// calculated fields (FormulaInputs), sorted. They are inputs of the
+	// calculated fields (FormulaInputs) or [[ID#name]] references, whose
+	// field, tag or caption it shows, sorted. They are inputs of the
 	// page, not part of a scope.
 	Read []string
 	// Types are the types the query blocks select or read across links,
@@ -43,7 +44,7 @@ type Deps struct {
 
 // Dependencies walks root's content.
 func (g *Graph) Dependencies(root *model.Entity) (*Deps, error) {
-	w := &walker{g: g, ids: map[string]bool{}, types: map[string]bool{}, templates: map[string]bool{}, assets: map[string]bool{}, cited: map[string]bool{}}
+	w := &walker{g: g, ids: map[string]bool{}, types: map[string]bool{}, templates: map[string]bool{}, assets: map[string]bool{}, cited: map[string]bool{}, shown: map[string]bool{}}
 	w.add(root, true)
 	for len(w.queue) > 0 {
 		e := w.queue[0]
@@ -61,6 +62,11 @@ func (g *Graph) Dependencies(root *model.Entity) (*Deps, error) {
 			for _, id := range refs.Cited {
 				w.cited[id] = true
 			}
+			for _, id := range refs.Shown {
+				if g.Entity(id) != nil {
+					w.shown[id] = true
+				}
+			}
 			for _, rel := range refs.Assets {
 				w.assets[rel] = true
 			}
@@ -73,6 +79,11 @@ func (g *Graph) Dependencies(root *model.Entity) (*Deps, error) {
 	}
 	d := &Deps{IDs: sortedKeys(w.ids), Full: sortedKeys(w.full), Types: sortedKeys(w.types), Templates: sortedKeys(w.templates), Assets: sortedKeys(w.assets), Cited: sortedKeys(w.cited)}
 	read := map[string]bool{}
+	for id := range w.shown {
+		if !w.ids[id] {
+			read[id] = true
+		}
+	}
 	for _, id := range d.IDs {
 		for _, r := range g.FormulaInputs(g.Entity(id)) {
 			if !w.ids[r] {
@@ -96,6 +107,7 @@ type walker struct {
 	templates map[string]bool
 	assets    map[string]bool
 	cited     map[string]bool
+	shown     map[string]bool
 	// queue holds entities rendered in full whose content is not yet read.
 	queue []*model.Entity
 	full  map[string]bool

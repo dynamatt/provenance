@@ -81,6 +81,8 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 		byID:      make(map[string]*model.Entity, len(in.Entities)),
 		files:     export.Files{"style.css": ts.style},
 		check:     check,
+		tags:      map[string]map[string]written{},
+		own:       map[string]pageAnchors{},
 	}
 	for _, ent := range in.Entities {
 		s.byID[ent.ID] = ent
@@ -106,6 +108,9 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 			inScope = append(inScope, ent)
 		}
 	}
+	// Every page is rendered, then numbered, before any is finished: a
+	// reference can show the number its target has on another page.
+	var pages []*pageOut
 	// An entity scope's entity is the main page, rendered through its own
 	// template (DES-0033); otherwise the index lists the scope.
 	if root := in.Scope.RootEntity(); root != nil {
@@ -113,9 +118,7 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 		if err := s.failed(err); err != nil {
 			return nil, err
 		}
-		if err := s.failed(s.page("index.html", "", pageTitle(root), s.finalize(content), data)); err != nil {
-			return nil, err
-		}
+		pages = append(pages, &pageOut{path: "index.html", title: pageTitle(root), content: content, stamps: data, about: root.ID, kind: "index", typ: root.Type, linkBase: "entities/"})
 	} else {
 		index, err := s.renderIndex(inScope)
 		if err := s.failed(err); err != nil {
@@ -123,9 +126,7 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 		}
 		last, revs := s.git.Page(s.indexInputs(inScope))
 		stamps := entityData{"LastChangedSHA": last, "Revisions": revisionData(revs)}
-		if err := s.failed(s.page("index.html", "", in.Repo.Component.Name, s.finalize(index), stamps)); err != nil {
-			return nil, err
-		}
+		pages = append(pages, &pageOut{path: "index.html", title: in.Repo.Component.Name, content: index, stamps: stamps, kind: "index", linkBase: "entities/"})
 	}
 	for _, ent := range inScope {
 		if !s.hasPage(ent.ID) {
@@ -135,9 +136,7 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 		if err := s.failed(err); err != nil {
 			return nil, err
 		}
-		if err := s.failed(s.page("entities/"+ent.ID+".html", "../", pageTitle(ent), s.finalize(content), data)); err != nil {
-			return nil, err
-		}
+		pages = append(pages, &pageOut{path: "entities/" + ent.ID + ".html", root: "../", title: pageTitle(ent), content: content, stamps: data, about: ent.ID, kind: "entity", typ: ent.Type, own: true})
 	}
 	for _, typ := range s.typePages() {
 		var stamps entityData
@@ -153,11 +152,44 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 		if err := s.failed(err); err != nil {
 			return nil, err
 		}
-		if err := s.failed(s.page("entities/"+typ+".html", "../", typ, s.finalize(content), stamps)); err != nil {
+		pages = append(pages, &pageOut{path: "entities/" + typ + ".html", root: "../", title: typ, content: content, stamps: stamps, kind: "type", typ: typ})
+	}
+	for _, p := range pages {
+		p.content, p.anchors = s.prepare(p.content, p.about)
+		if p.own {
+			s.own[p.about] = p.anchors
+		}
+	}
+	for _, p := range pages {
+		content, err := s.resolve(p.content, p.anchors, p.linkBase)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.failed(s.page(p, content)); err != nil {
 			return nil, err
 		}
 	}
+	if err := s.checkUnseen(); err != nil {
+		return nil, err
+	}
 	return s.files, nil
+}
+
+// pageOut is a rendered page waiting to be finished: numbered (prepare),
+// then its references resolved (resolve), then wrapped in the layout.
+type pageOut struct {
+	path, root, title string
+	content           string
+	stamps            entityData
+	// about is the entity the page is about, "" for the index and type
+	// pages; own is true for its own page in entities/. kind and typ are
+	// the layout's .Page and .Type.
+	about    string
+	kind     string
+	typ      string
+	own      bool
+	linkBase string // from the page to the entity pages
+	anchors  pageAnchors
 }
 
 // pageInputs are what e's page shows (DES-0023): the entities its
@@ -270,8 +302,14 @@ type site struct {
 	git       *export.Git
 	inputs    map[string]history.Inputs // page inputs by entity ID
 	serial    int                       // numbers caption placeholders
-	byID      map[string]*model.Entity
-	files     export.Files
+	// refs are the references to tags and captions, by their placeholder's
+	// number; tags the tags and caption ids each entity writes; own the
+	// anchors of each entity's own page (references.go).
+	refs  []ref
+	tags  map[string]map[string]written
+	own   map[string]pageAnchors
+	byID  map[string]*model.Entity
+	files export.Files
 	// cites collects the citations of the page being rendered, during its
 	// first render; pageData is the page's own entity data, with its
 	// citations, and cited those citations by ID, during its second.
@@ -362,11 +400,21 @@ type layoutData struct {
 	// Citations are what the page cites (DES-0046), as on its entity; none
 	// on the site index.
 	Citations []entityData
+	// Page is what kind of page this is: "entity" (an entity's own page),
+	// "index" (the main page) or "type" (a type's page, DES-0054). Type is
+	// the type of the entity the page is about, or the type a type page
+	// shows; Entity the ID of the entity it is about. Both are "" when
+	// there is none. The built-in layout writes all three on <body> as
+	// data-page, data-type and data-entity, for the stylesheet.
+	Page   string
+	Type   string
+	Entity string
 }
 
 // page wraps content in the layout and stores it at path. stamps holds the
 // page's LastChangedSHA, Revisions and Citations.
-func (s *site) page(path, root, title, content string, stamps entityData) error {
+func (s *site) page(p *pageOut, content string) error {
+	path, root, title, stamps := p.path, p.root, p.title, p.stamps
 	ctx := &renderCtx{site: s, linkBase: root + "entities/"}
 	t, err := parse(s.templates.layout, ctx.funcs())
 	if err == nil {
@@ -376,7 +424,7 @@ func (s *site) page(path, root, title, content string, stamps entityData) error 
 		return templateError(err)
 	}
 	var b bytes.Buffer
-	d := layoutData{Title: title, Root: root, Component: s.component, Content: template.HTML(content)}
+	d := layoutData{Title: title, Root: root, Component: s.component, Content: template.HTML(content), Page: p.kind, Type: p.typ, Entity: p.about}
 	if s.git != nil {
 		d.GitSHA, d.ContentHash = s.git.SHA, s.git.ContentHash
 	}

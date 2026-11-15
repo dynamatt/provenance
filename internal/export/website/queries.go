@@ -21,7 +21,10 @@ type QueryError = query.FileError
 // options are how the website renders entity Markdown: its fenced blocks,
 // and images copied into the site.
 func (r *resolver) options() markdown.Options {
-	return markdown.Options{Fences: r.fences(), Image: r.image}
+	ctx := r.ctx
+	return markdown.Options{Fences: r.fences(), Image: r.image, Owner: ctx.entityID(), Tag: func(t markdown.Tag) {
+		ctx.site.tagged(ctx.entity(), placed{id: t.Name, path: ctx.path(), entity: ctx.entityID(), line: ctx.fileLine(t.Line)}, true)
+	}}
 }
 
 // imageTypes are the image formats a browser shows, by file extension.
