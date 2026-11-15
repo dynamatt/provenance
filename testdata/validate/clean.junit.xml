@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites name="provenance validate" tests="52" failures="0" errors="0">
-  <testsuite name="built-in" tests="40" failures="0" errors="0" skipped="0">
+  <testsuite name="built-in" tests="41" failures="0" errors="0" skipped="0">
     <testcase name="content/caption" classname="built-in"></testcase>
     <testcase name="content/csv-column" classname="built-in"></testcase>
     <testcase name="content/csv-row" classname="built-in"></testcase>
@@ -26,6 +26,7 @@
     <testcase name="rules/query" classname="built-in"></testcase>
     <testcase name="rules/severity" classname="built-in"></testcase>
     <testcase name="rules/unknown-key" classname="built-in"></testcase>
+    <testcase name="schema/abstract-type" classname="built-in"></testcase>
     <testcase name="schema/calculated-set" classname="built-in"></testcase>
     <testcase name="schema/enum-value" classname="built-in"></testcase>
     <testcase name="schema/file" classname="built-in"></testcase>
@@ -42,7 +43,7 @@
     <testcase name="schema/unused-record" classname="built-in"></testcase>
     <testcase name="schema/unused-type" classname="built-in"></testcase>
   </testsuite>
-  <testsuite name="rules" tests="12" failures="0" errors="0" skipped="0">
+  <testsuite name="rules" tests="11" failures="0" errors="0" skipped="0">
     <testcase name="block-languages" classname="rules"></testcase>
     <testcase name="eco-change-type-valid" classname="rules"></testcase>
     <testcase name="equipment-calibration-current" classname="rules"></testcase>
@@ -56,6 +57,5 @@
     </testcase>
     <testcase name="risk-benefit-required" classname="rules"></testcase>
     <testcase name="superseded-entities-deprecated" classname="rules"></testcase>
-    <testcase name="validation-equipment-calibration-current" classname="rules"></testcase>
   </testsuite>
 </testsuites>

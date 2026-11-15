@@ -115,7 +115,18 @@ func Read(rp *repo.Repo, skip ...string) (*Result, error) {
 		return res, nil
 	}
 	for _, e := range res.Parsed {
-		if s.Types[e.Type] != nil {
+		if t := s.Types[e.Type]; t != nil {
+			if t.Abstract {
+				var subs []string
+				for _, sub := range s.Concrete(t) {
+					subs = append(subs, sub.Name)
+				}
+				msg := fmt.Sprintf("type %s is abstract: it has no entities of its own", t.Name)
+				if len(subs) > 0 {
+					msg += "; give the entity one of the types extending it (" + strings.Join(subs, ", ") + ")"
+				}
+				res.add(problem.Problem{Check: "schema/abstract-type", Path: e.Path, Line: e.Record.TypeLine(), Entity: e.ID, Msg: msg})
+			}
 			continue
 		}
 		line := e.Record.TypeLine()

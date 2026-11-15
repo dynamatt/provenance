@@ -38,6 +38,7 @@ var Checks = []Check{
 	{"rules/query", Error, "A rule whose query does not fit the schema"},
 	{"rules/severity", Error, "A rule severity other than error or warning"},
 	{"rules/unknown-key", Error, "A key a rule file does not have"},
+	{"schema/abstract-type", Error, "An entity of an abstract type"},
 	{"schema/calculated-set", Error, "A calculated field written in the file"},
 	{"schema/enum-value", Error, "A value not in its enum"},
 	{"schema/file", Error, "A schema file that cannot be loaded"},

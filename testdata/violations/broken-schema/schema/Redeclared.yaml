@@ -1,0 +1,6 @@
+# schema/file: a subtype declaring a field it inherits.
+type: Redeclared
+extends: Fine
+fields:
+  - name: title
+    type: string

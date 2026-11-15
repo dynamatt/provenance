@@ -163,9 +163,9 @@ expect 0 '<td>BES-2201</td>'                cat _site/entities/EVD-0001.html
 expect 0 '<th>serial_number</th>'           cat _site/entities/VAL-0001.html
 expect 0 '<td>CER-0310</td>'                cat _site/entities/VAL-0001.html
 expect 0 '<th>Cause</th>'                   cat _site/entities/RSK-0001.html
-sed -i.orig 's/of: Equipment/of: Equipmnet/' schema/VerificationEvidence.yaml
-expect 2 '^export: schema/VerificationEvidence\.yaml:[0-9]+: field "equipment_used": unknown list item type "Equipmnet"' "$PROV" export website
-mv schema/VerificationEvidence.yaml.orig schema/VerificationEvidence.yaml
+sed -i.orig 's/of: Equipment/of: Equipmnet/' schema/Evidence.yaml
+expect 2 '^export: schema/Evidence\.yaml:[0-9]+: field "equipment_used": unknown list item type "Equipmnet"' "$PROV" export website
+mv schema/Evidence.yaml.orig schema/Evidence.yaml
 
 # E1.8: query blocks. DOC-0001's Requirements section embeds the approved
 # requirements in order; the result is live, so an uncommitted status change
@@ -179,7 +179,7 @@ sed -i.orig 's/^status: approved/status: draft/' REQ/REQ-0002.md
 expect 1 '' grep -q 'data-entity="REQ-0002"' _site/entities/DOC-0001.html
 mv REQ/REQ-0002.md.orig REQ/REQ-0002.md
 sed -i.orig 's/operator: equals/operator: "="/' DOC/DOC-0001.md
-expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: query block: unknown operator "=" \(valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in\)$' "$PROV" export website
+expect 2 '^export: DOC/DOC-0001\.md:[0-9]+: query block: unknown operator "=" \(valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in, is_a\)$' "$PROV" export website
 mv DOC/DOC-0001.md.orig DOC/DOC-0001.md
 
 # E1.9: calculated fields. RSK-0001's row_rating is severity × occurrence
@@ -404,7 +404,7 @@ expect 1 '^RSK/RSK-0001\.md:3: error \[schema/unknown-type\] type "Rsk" is not d
 git checkout -q -- RSK/RSK-0001.md
 sed -i 's/type: ApprovalStatus/type: AprovalStatus/' schema/Requirement.yaml
 expect 1 '^schema/Requirement\.yaml:21: error \[schema/file\] field "status": unknown type "AprovalStatus"' "$PROV" validate
-expect 1 '^12 rules not run: the schema has errors$' "$PROV" validate
+expect 1 '^11 rules not run: the schema has errors$' "$PROV" validate
 git checkout -q -- schema/Requirement.yaml
 expect 2 '^validate: unknown report "xml": not a format \(text, json, junit, sarif\)' "$PROV" validate --output xml
 expect 2 '^validate: not in a Provenance repository' "$PROV" validate --path "$WORK"
@@ -430,7 +430,7 @@ sed -i 's/^\(    type: ApprovalStatus\)/\1\n    default: draft/' schema/Design.y
 expect 1 '^schema/Design\.yaml:[0-9]+: error \[schema/unknown-key\] field "status": unknown key "default": fields have no defaults' "$PROV" validate
 git checkout -q -- schema/Design.yaml
 sed -i 's/^execution_date: .*/execution_date: 2026-13-04/' VER/EVD-0001.md
-expect 1 '^VER/EVD-0001\.md:8: error \[schema/invalid-value\] execution_date: not a date \(YYYY-MM-DD\), got 2026-13-04 \(EVD-0001\)$' "$PROV" validate
+expect 1 '^VER/EVD-0001\.md:5: error \[schema/invalid-value\] execution_date: not a date \(YYYY-MM-DD\), got 2026-13-04 \(EVD-0001\)$' "$PROV" validate
 git checkout -q -- VER/EVD-0001.md
 sed -i 's/^id: DES-0001/id: DES-01/' DES/DES-0001.md
 expect 1 '^DES/DES-0001\.md:2: error \[schema/id-format\] ID DES-01 is not DES-NNNN' "$PROV" validate
@@ -469,13 +469,13 @@ rm templates/spare.tmpl
 # calibration row, or evidence run before the build it tested, appears in
 # its section. The removed forms are reported with the form that replaced them.
 "$PROV" export website >/dev/null
-expect 0 '^11$'                           sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+expect 0 '^10$'                           sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
 sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VER/EVD-0001.md
 sed -i 's/^build_date: 2026-08-06/build_date: 2026-08-20/' BLD/BLD-0002.md
 "$PROV" export website >/dev/null
 DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
 expect 0 '[> ]Equipment calibration</h2>.*href="EVD-0001\.html".*[> ]Evidence before its build</h2>.*href="EVD-0002\.html".*[> ]Verification coverage</h2>' sh -c "$DOC3_FLAT"
-expect 0 '^9$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+expect 0 '^8$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
 git checkout -q -- VER BLD
 sed -i 's/^  field: equipment_used/  field: {list: equipment_used, subfield: calibration_due_date}/' DOC/DOC-0003.md
 expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: \{list: L, subfield: S\} is now a sub-query: \{field: L, where: \{field: S, …\}\} \(DOC-0003\)$' "$PROV" validate
@@ -504,13 +504,13 @@ git checkout -q -- DOC/DOC-0003.md
 # REQ-0002, REQ-0002's parent closes a cycle that lists both (a link
 # followed to any depth), and a python block lists the entity it is in.
 "$PROV" export website >/dev/null
-expect 0 '^11$'                           sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+expect 0 '^10$'                           sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
 sed -i 's/^order: 2/order: 2\nparent_requirement: REQ-0003/' REQ/REQ-0002.md
 printf '\n```python\nprint("amplitude")\n```\n' >> DES/DES-0001.md
 "$PROV" export website >/dev/null
 DOC3_FLAT="tr -d '\\n' < _site/entities/DOC-0003.html"
 expect 0 '[> ]Decomposition cycles</h2>.*href="REQ-0002\.html".*href="REQ-0003\.html".*[> ]Block languages</h2>.*href="DES-0001\.html"' sh -c "$DOC3_FLAT"
-expect 0 '^9$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
+expect 0 '^8$'                            sh -c "grep -o 'class=\"query-empty\"' _site/entities/DOC-0003.html | wc -l"
 git checkout -q -- REQ DES
 sed -i 's/^  transitive: true/  transitive: yes/' DOC/DOC-0003.md
 expect 1 '^DOC/DOC-0003\.md:[0-9]+: error \[content/query\] query block: transitive is true or false \(DOC-0003\)$' "$PROV" validate
@@ -527,7 +527,7 @@ sed -i '/^risk_benefit_analysis:/,/^  "unacceptable"/d' RSK/RSK-0001.md
 expect 1 '^RSK/RSK-0001\.md:2: error \[risk-benefit-required\] risk-benefit analysis required when residual acceptability is unacceptable \(RSK-0001\)$' "$PROV" validate
 git checkout -q -- RSK
 sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VER/EVD-0001.md
-expect 1 '^VER/EVD-0001\.md:51: error \[equipment-calibration-current\] equipment calibration was not current at time of test execution \(EVD-0001\)$' "$PROV" validate
+expect 1 '^VER/EVD-0001\.md:11: error \[equipment-calibration-current\] equipment calibration was not current at the time of execution \(EVD-0001\)$' "$PROV" validate
 git checkout -q -- VER
 sed -i '/^verifies:$/,+1d' VER/VER-0002.md
 expect 1 '^VER/VER-0002\.md:2: error \[protocol-verifies-requirement\] verification protocol not linked to any requirement \(VER-0002\)$' "$PROV" validate
@@ -560,7 +560,7 @@ expect 1 ''                               "$PROV" validate --output junit="$WORK
 expect 0 'validates$'                     xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/broken.junit"
 expect 0 '<failure type="error" message="risk-benefit analysis required when residual acceptability is unacceptable">RSK/RSK-0001\.md:2: ' cat "$WORK/broken.junit"
 SARIF_FLAT="tr -d ' \n' < $WORK/broken.sarif"
-expect 0 '"ruleId":"equipment-calibration-current".{0,400}"uri":"VER/EVD-0001\.md","uriBaseId":"%SRCROOT%"},"region":\{"startLine":51\}' sh -c "$SARIF_FLAT"
+expect 0 '"ruleId":"equipment-calibration-current".{0,400}"uri":"VER/EVD-0001\.md","uriBaseId":"%SRCROOT%"},"region":\{"startLine":11\}' sh -c "$SARIF_FLAT"
 expect 0 '"ruleId":"risk-benefit-required".{0,400}"uri":"RSK/RSK-0001\.md","uriBaseId":"%SRCROOT%"},"region":\{"startLine":2\}' sh -c "$SARIF_FLAT"
 git checkout -q -- RSK VER
 
@@ -777,6 +777,64 @@ sed -i 's/^## Preparation {#preparation}$/## Preparation/' VER/VER-0001.md
 expect 1 'VER/VER-0001\.md:[0-9]+: error \[links/reference\] \[\[#preparation\]\]: VER-0001 has no field, tag or caption "preparation"' "$PROV" validate
 expect 1 'DOC/DOC-0005\.md:[0-9]+: error \[links/reference\] \[\[VER-0001#preparation:long\]\]' "$PROV" validate
 cp "$WORK/VER-0001.md" VER/VER-0001.md
+expect 0 '^0 errors, 1 warning$' "$PROV" validate
+
+# E8.3: type inheritance (DES-0010). Evidence is abstract: VerificationEvidence
+# and ValidationEvidence extend it, inheriting its fields first, and one rule
+# from: Evidence checks both kinds. DOC-0006, a VerificationSummaryReport
+# extending Document, numbers in Document's DOC- series and is a Document
+# wherever one is named. An entity of the abstract type, and a subtype
+# declaring an inherited field again, are errors.
+sed -i 's/calibration_due_date: 2026-11-01/calibration_due_date: 2026-09-01/' VAL/VAL-0001.md
+expect 1 '^VAL/VAL-0001\.md:[0-9]+: error \[equipment-calibration-current\] equipment calibration was not current at the time of execution \(VAL-0001\)$' "$PROV" validate
+git checkout -q -- VAL
+expect 0 '<tr><th>title</th>.*' sh -c "tr -d '\n' < _site/entities/VAL-0001.html | grep -o '<tr><th>title</th><td>[^<]*</td></tr><tr><th>execution_date</th>'"
+cat > "$WORK/documents.md" <<'DOC'
+---
+id: DOC-0099
+type: Document
+title: Documents
+status: draft
+---
+```query
+from: Document
+where:
+  field: type
+  operator: is_a
+  value: Document
+render: id
+```
+DOC
+cp "$WORK/documents.md" DOC/DOC-0099.md
+"$PROV" export website >/dev/null
+expect 0 'href="DOC-0006\.html"' cat _site/entities/DOC-0099.html
+rm DOC/DOC-0099.md
+sed -i 's/^type: ValidationEvidence/type: Evidence/' VAL/VAL-0001.md
+expect 1 '^VAL/VAL-0001\.md:3: error \[schema/abstract-type\] type Evidence is abstract: it has no entities of its own; give the entity one of the types extending it \(ValidationEvidence, VerificationEvidence\) \(VAL-0001\)$' "$PROV" validate
+git checkout -q -- VAL
+cp schema/VerificationSummaryReport.yaml "$WORK/vsr.yaml"
+printf '  - name: status\n    type: string\n' >> schema/VerificationSummaryReport.yaml
+expect 1 '^schema/VerificationSummaryReport\.yaml:[0-9]+: error \[schema/file\] field "status" is inherited from Document \(schema/Document\.yaml:[0-9]+\); a subtype adds fields, it does not declare its parent.s again$' "$PROV" validate
+cp "$WORK/vsr.yaml" schema/VerificationSummaryReport.yaml
+
+# E8.4: templates (DES-0031). DOC-0006 is laid out by Document.tmpl, whose
+# after-body block VerificationSummaryReport.tmpl fills with the matrix; a
+# cited report is an internal reference (isa . "Document"). Without the
+# report's template it is a plain Document; without Document.tmpl too, the
+# built-in page, whose after-body block the report's template fills.
+"$PROV" export website >/dev/null
+DOC6_FLAT="tr -d '\n' < _site/entities/DOC-0006.html"
+expect 0 '<p class="document-meta">.*<div class="body">.*</div><section class="trace-matrix">.*href="REQ-0003\.html".*Not verified by any protocol.*<h3>[^<]*<span[^>]*>[^<]*</span> Internal</h3>' sh -c "$DOC6_FLAT"
+expect 0 '<li><a class="ref" href="DOC-0006\.html"' cat _site/entities/DOC-0005.html
+mv templates/VerificationSummaryReport.tmpl "$WORK/vsr.tmpl"
+"$PROV" export website >/dev/null
+expect 0 '^0$' sh -c "grep -c trace-matrix _site/entities/DOC-0006.html || true"
+expect 0 '<p class="document-meta">' cat _site/entities/DOC-0006.html
+mv templates/Document.tmpl "$WORK/Document.tmpl"
+cp "$WORK/vsr.tmpl" templates/VerificationSummaryReport.tmpl
+"$PROV" export website >/dev/null
+expect 0 '<article class="entity" id="DOC-0006".*</div><section class="trace-matrix">' sh -c "$DOC6_FLAT"
+mv "$WORK/Document.tmpl" templates/Document.tmpl
 expect 0 '^0 errors, 1 warning$' "$PROV" validate
 
 if [ "$failures" -ne 0 ]; then

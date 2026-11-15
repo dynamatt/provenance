@@ -221,7 +221,7 @@ func (c *fcomp) path(ref *RefExpr, v datalog.Term) (lits []datalog.Literal, keys
 				keys = append(keys, next)
 			}
 			var targets []*schema.Type
-			for _, t := range f.Target {
+			for _, t := range f.Targets {
 				if t := c.cf.schema.Types[t]; t != nil {
 					targets = append(targets, t)
 				}
@@ -543,8 +543,11 @@ type FormulaProblem struct {
 func FormulaProblems(s *schema.Schema) []FormulaProblem {
 	fields, _ := compileCalc(s)
 	var out []FormulaProblem
+	seen := map[*schema.Field]bool{}
 	for _, cf := range fields {
-		if cf.err != "" {
+		// An inherited field is reported once, for the first type having it.
+		if cf.err != "" && !seen[cf.field] {
+			seen[cf.field] = true
 			out = append(out, FormulaProblem{Type: cf.typ, List: cf.list, Field: cf.field, Msg: cf.err})
 		}
 	}
@@ -557,6 +560,9 @@ func compileCalc(s *schema.Schema) ([]*calcField, map[string]shape) {
 	var fields []*calcField
 	for _, tn := range s.TypeNames() {
 		t := s.Types[tn]
+		if t.Abstract {
+			continue // no entities to calculate for; its subtypes have the fields
+		}
 		for _, f := range t.Fields {
 			if f.Kind == schema.Calculated {
 				fields = append(fields, &calcField{typ: t, field: f, schema: s})

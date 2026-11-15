@@ -1,5 +1,10 @@
 {{/* entity is the built-in fallback rendering of one entity (an entityPage):
-     used for its own page and when it is embedded with ![[ID]]. */}}
+     used for its own page and when it is embedded with ![[ID]].
+
+     It declares two blocks, empty here, that a type's template holding
+     only {{define}}s fills (DES-0031): "before-body" and "after-body",
+     around the body. Their dot is the entity as project templates see it
+     (.Data), not this page's view of it. */}}
 {{define "entity"}}
 <article class="entity" id="{{.ID}}" data-type="{{.Type}}">
 <p class="entity-type">{{.Type}}</p>
@@ -21,6 +26,7 @@
 {{- with .RowFile}}
 <p class="table-row">Row {{.Line}} of <code>{{.Path}}</code>.</p>
 {{- end}}
+{{- block "before-body" .Data}}{{end}}
 {{- with .BodyField}}
 <h2>{{label .Field}}</h2>
 <div class="body">
@@ -30,5 +36,6 @@
 <div class="body">
 {{markdown .}}</div>
 {{- end}}
+{{- block "after-body" .Data}}{{end}}
 </article>
 {{end}}

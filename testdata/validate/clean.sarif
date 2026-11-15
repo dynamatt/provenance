@@ -235,6 +235,15 @@
               }
             },
             {
+              "id": "schema/abstract-type",
+              "shortDescription": {
+                "text": "An entity of an abstract type"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
               "id": "schema/calculated-set",
               "shortDescription": {
                 "text": "A calculated field written in the file"
@@ -390,7 +399,7 @@
             {
               "id": "equipment-calibration-current",
               "shortDescription": {
-                "text": "equipment calibration was not current at time of test execution"
+                "text": "equipment calibration was not current at the time of execution"
               },
               "defaultConfiguration": {
                 "level": "error"
@@ -467,15 +476,6 @@
               "defaultConfiguration": {
                 "level": "error"
               }
-            },
-            {
-              "id": "validation-equipment-calibration-current",
-              "shortDescription": {
-                "text": "equipment calibration was not current at time of validation"
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              }
             }
           ]
         }
@@ -490,7 +490,7 @@
       "results": [
         {
           "ruleId": "requirement-verified",
-          "ruleIndex": 48,
+          "ruleIndex": 49,
           "level": "warning",
           "message": {
             "text": "requirement missing verification"

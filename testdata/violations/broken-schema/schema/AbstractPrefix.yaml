@@ -1,0 +1,4 @@
+# schema/file: an abstract type has no entities, so no id_prefix.
+type: AbstractPrefix
+abstract: true
+id_prefix: ABP

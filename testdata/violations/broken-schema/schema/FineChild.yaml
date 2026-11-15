@@ -1,0 +1,6 @@
+# Clean: a subtype numbering in its parent's series, adding a field.
+type: FineChild
+extends: Fine
+fields:
+  - name: note
+    type: text

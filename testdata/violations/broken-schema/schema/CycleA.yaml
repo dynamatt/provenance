@@ -1,0 +1,4 @@
+# schema/file: two types extending each other.
+type: CycleA
+extends: CycleB
+id_prefix: CYA

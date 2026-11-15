@@ -73,10 +73,10 @@
 - [x] E7.5 Numbering and resolution
 - [x] E7.6 Checks
 - [x] E7.7 Epic close-out
-- [ ] E8.1 Design
-- [ ] E8.2 Reports and evidence in the example
-- [ ] E8.3 Inheritance in the schema and model
-- [ ] E8.4 Templates
+- [x] E8.1 Design
+- [x] E8.2 Reports and evidence in the example
+- [x] E8.3 Inheritance in the schema and model
+- [x] E8.4 Templates
 - [ ] E8.5 One program for derived values
 - [ ] E8.6 Query fields
 - [ ] E8.7 Export
@@ -1974,8 +1974,19 @@ rule.
 | Q6 | Page inputs and history | **The page's inputs and "changed since" include every entity the query read,** through E1.11's dependency walk. | A report must show as changed when its scope grows though its file didn't. |
 | Q7 | Signing | **A signature covers the query and the IDs it returned at that commit;** `sign verify` reports a document whose results have changed. Settled in the `sign` epic; the ledger format leaves room. | Approving a report approves its scope. |
 
-**Settled while building:** recorded here as building settles them, as
-in Epic 7.
+**Settled while building** (E8.1–E8.4, written into DES-0007, DES-0010,
+DES-0015, DES-0030, DES-0031, DES-0032 and DES-0048):
+
+| What | Settled |
+| --- | --- |
+| Abstract types in `from:` and targets | A type stands for itself and its subtypes, leaving out abstract ones, which have no entities; `from: any` leaves them out too. `from:` naming an abstract type nothing extends is an error. |
+| Field order | Inherited fields first, so moving fields up to a parent reorders the frontmatter `fmt` writes: the example's evidence files were reformatted once. |
+| Which check | An unknown or cyclic `extends:`, a redeclared field and an abstract type with an `id_prefix` or `source:` are `schema/file` (the schema can't be read as written, so the other checks stop); an entity of an abstract type is a new check, `schema/abstract-type`, which doesn't stop an export. |
+| Inherited links | A link declared on a parent feeds its facet from every concrete type having it; a problem with it is reported once, in the file declaring it. |
+| `templates:` | A per-type template may be chosen for a type the selected ones extend; the nearest applies. |
+| Built-in blocks | The built-in entity template's `before-body` and `after-body` get the entity's template data (`.Data`), not the built-in page's view, so a template of blocks reads the same over either. A template holding only `{{define}}`s is found by parsing: outside its `define`s, only white space and comments. |
+| `isa` | Also in report templates (DES-0045). |
+| Example | Until E8.6 the report's `scope` is a many-link written by hand, so the example validates at every task; E8.6 makes it a query field. The calibration rule's message now names any execution, not a test's. The main page lists DOC-0006 under its own type. |
 
 **Order:** the design (E8.1); the example's report and evidence types as
 the fixture (E8.2, rule 4); inheritance in the schema, then templates

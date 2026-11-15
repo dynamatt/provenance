@@ -160,7 +160,7 @@ func (d *Model) ref(id string, target *model.Entity, f *schema.Field) Data {
 		return d.ByID[target.ID]
 	}
 	m := Baseline(id)
-	for _, tn := range f.Target {
+	for _, tn := range f.Targets {
 		t := d.schema.Types[tn]
 		if t == nil {
 			continue

@@ -522,18 +522,22 @@ func (ctx *renderCtx) entity() *model.Entity {
 func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named, linkBase string) (string, error) {
 	ctx := &renderCtx{site: s, chain: chain, linkBase: linkBase}
 	var b bytes.Buffer
-	src, ok := s.templates.types[e.Type]
+	src, overlays, ok := s.templates.forType(e.Schema)
 	if named != "" {
 		src, ok = s.templates.named[named]
+		overlays = nil
+	}
+	data := s.data.ByID[e.ID]
+	if len(chain) == 1 && s.pageData != nil {
+		data = s.pageData // the page's own entity, with its citations
 	}
 	if ok {
 		t, err := parse(src, ctx.funcs())
+		if err == nil {
+			err = layer(t, overlays)
+		}
 		if err != nil {
 			return "", err
-		}
-		data := s.data.ByID[e.ID]
-		if len(chain) == 1 && s.pageData != nil {
-			data = s.pageData // the page's own entity, with its citations
 		}
 		if err := t.Execute(&b, data); err != nil {
 			return "", templateError(err)
@@ -544,7 +548,11 @@ func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named, linkB
 		if err != nil {
 			return "", err
 		}
+		if err := layer(t, overlays); err != nil {
+			return "", err
+		}
 		view := entityView(e)
+		view.Data = data
 		if _, ok := e.Record.(*entity.Row); ok {
 			view.RowFile = s.data.ByID[e.ID]["File"]
 		}
@@ -563,6 +571,7 @@ func (ctx *renderCtx) funcs() template.FuncMap {
 		"link":     l.Link,
 		"href":     l.Href,
 		"title":    l.Title,
+		"isa":      l.IsA,
 		"short":    history.Short,
 	}
 }
@@ -630,6 +639,9 @@ type entityPage struct {
 	BodyField *model.Value
 	// RowFile is a CSV row's .File, nil for an entity file (DES-0053).
 	RowFile any
+	// Data is the entity as project templates see it, the dot of the
+	// blocks a subtype's template may fill (DES-0031).
+	Data any
 }
 
 func entityView(e *model.Entity) entityPage {

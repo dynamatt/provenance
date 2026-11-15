@@ -55,6 +55,26 @@ func (l Linker) Title(v any) (string, error) {
 	return TitleOf(l.Schema, ref), nil
 }
 
+// IsA reports whether entity v is of the type named name or a type
+// extending it (DES-0010): {{if isa . "Document"}}. An unresolved link
+// (nil) is of no type. A name the schema doesn't declare is an error, so a
+// misspelt type fails rather than never matching.
+func (l Linker) IsA(v any, name string) (bool, error) {
+	if l.Schema != nil && l.Schema.Types[name] == nil {
+		return false, fmt.Errorf("isa: unknown type %q (types: %s)", name, strings.Join(l.Schema.TypeNames(), ", "))
+	}
+	ref, err := asRef(v, "isa")
+	if ref == nil || err != nil {
+		return false, err
+	}
+	typ, _ := ref["Type"].(string)
+	if l.Schema == nil {
+		return typ == name, nil
+	}
+	t := l.Schema.Types[typ]
+	return t != nil && t.IsA(name), nil
+}
+
 // page is the URL, relative to the entity pages, that shows entity id, or
 // "" when none does. ref, when known, is its template data: an entity of
 // a type with pages: false is shown on the type's page.

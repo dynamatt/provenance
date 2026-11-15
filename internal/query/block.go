@@ -75,12 +75,15 @@ type TemplateChoice struct {
 	Line       int
 }
 
-// TemplateFor returns the named template chosen for results of type typ,
-// or "" when they use their type's default.
-func (b *Block) TemplateFor(typ string) TemplateChoice {
-	for _, c := range b.Templates {
-		if c.Type == typ || c.Type == "" {
-			return c
+// TemplateFor returns the named template chosen for results of type t:
+// the one chosen for every result, else the one chosen for t or its
+// nearest ancestor; its Name is "" when they use their type's default.
+func (b *Block) TemplateFor(t *schema.Type) TemplateChoice {
+	for a := t; a != nil; a = a.Parent {
+		for _, c := range b.Templates {
+			if c.Type == a.Name || c.Type == "" {
+				return c
+			}
 		}
 	}
 	return TemplateChoice{}
@@ -122,7 +125,9 @@ func ParseQuery(m *yaml.Node, s *schema.Schema, what string) (*Block, error) {
 		// Every entity type (DES-0015).
 		fromNodes = nil
 		for _, name := range s.TypeNames() {
-			b.From = append(b.From, s.Types[name])
+			if !s.Types[name].Abstract {
+				b.From = append(b.From, s.Types[name])
+			}
 		}
 	}
 	if from.Kind == yaml.SequenceNode {
@@ -131,15 +136,27 @@ func ParseQuery(m *yaml.Node, s *schema.Schema, what string) (*Block, error) {
 			return nil, errorf(from, "from: an empty list of types")
 		}
 	}
+	var named []*schema.Type
 	for _, n := range fromNodes {
 		t := s.Types[scalar(n)]
 		if t == nil {
 			return nil, errorf(n, "from: unknown type %q (types: %s)", n.Value, strings.Join(s.TypeNames(), ", "))
 		}
-		if slices.Contains(b.From, t) {
+		if slices.Contains(named, t) {
 			return nil, errorf(n, "from: %s is listed twice", t.Name)
 		}
-		b.From = append(b.From, t)
+		named = append(named, t)
+	}
+	// A type stands for its subtypes too (DES-0010).
+	for _, t := range named {
+		for _, c := range s.Concrete(t) {
+			if !slices.Contains(b.From, c) {
+				b.From = append(b.From, c)
+			}
+		}
+	}
+	if len(fromNodes) > 0 && len(b.From) == 0 {
+		return nil, errorf(from, "from: %s is abstract and no type extends it, so it has no entities", named[0].Name)
 	}
 
 	if where := yamlnode.Lookup(m, "where"); where != nil {
@@ -252,7 +269,8 @@ func (b *Block) parseTemplates(m *yaml.Node) error {
 	}
 	for i := 0; i+1 < len(perType.Content); i += 2 {
 		k, v := perType.Content[i], perType.Content[i+1]
-		if !slices.Contains(selected, k.Value) {
+		// A key may name a selected type or a type one extends.
+		if !slices.ContainsFunc(b.From, func(t *schema.Type) bool { return t.IsA(k.Value) }) {
 			return errorf(k, "templates: %s is not selected by from (%s)", k.Value, strings.Join(selected, ", "))
 		}
 		n, err := name(v)

@@ -65,8 +65,11 @@ type Field struct {
 	Title        bool
 	FriendlyName string
 	Help         string
-	// Target and Cardinality ("one" or "many") apply to links.
+	// Target and Cardinality ("one" or "many") apply to links. Target is
+	// as written; Targets are the types a link may name: each target and
+	// every subtype of it, in name order.
 	Target      []string
+	Targets     []string
 	Cardinality string
 	ReverseName string
 	// ReverseFriendlyName is how the built-in pages label the reverse_name
@@ -117,9 +120,26 @@ var CodeBlocks = &Field{Name: "code_blocks", Kind: List, Fields: []*Field{
 
 // Type is one entity type.
 type Type struct {
-	Name     string
-	IDPrefix string
+	Name string
+	// IDPrefix is the prefix of the type's IDs: its own id_prefix, else
+	// its nearest ancestor's, so a subtype numbers in its parent's series
+	// unless it declares its own. PrefixType is the type declaring it;
+	// nil when no type in the chain has one.
+	IDPrefix   string
+	PrefixType *Type
+	// Fields are every field of the type: its parent's, in the parent's
+	// order, then its own, Declared.
 	Fields   []*Field
+	Declared []*Field
+	// Parent is the type named by extends:, nil for a type without one or
+	// whose extends: names no type; Extends is the name as written, and
+	// ExtendsLine its line.
+	Parent      *Type
+	Extends     string
+	ExtendsLine int
+	// Abstract types have no entities of their own: they declare fields
+	// for their subtypes (abstract: true).
+	Abstract bool
 	// BodyField is the text field declared body: true, or nil when the body
 	// is freeform.
 	BodyField *Field
@@ -231,7 +251,7 @@ type Schema struct {
 }
 
 var (
-	typeKeys   = []string{"type", "id_prefix", "pages", "source", "fields"}
+	typeKeys   = []string{"type", "extends", "abstract", "id_prefix", "pages", "source", "fields"}
 	sourceKeys = []string{"csv", "id", "delimiter", "separator"}
 	recordKeys = []string{"record", "fields"}
 	enumKeys   = []string{"enum", "values"}
@@ -412,6 +432,20 @@ func (l *loader) read(root string) error {
 		}
 		t := &Type{Name: rt.name, IDPrefix: rt.idPrefix, File: rel, Line: rt.nameLine, Pages: true}
 		s.Types[rt.name] = t
+		if e := yamlnode.Lookup(rt.mapping, "extends"); e != nil {
+			if e.Kind != yaml.ScalarNode || e.Value == "" || e.Tag == "!!null" {
+				l.keep(&Error{Path: rel, Line: e.Line, Msg: fmt.Sprintf("type %s: extends: names the type it extends", rt.name)})
+			} else {
+				t.Extends, t.ExtendsLine = e.Value, e.Line
+			}
+		}
+		if a := yamlnode.Lookup(rt.mapping, "abstract"); a != nil {
+			if a.Kind != yaml.ScalarNode || a.Tag != "!!bool" {
+				l.keep(&Error{Path: rel, Line: a.Line, Msg: fmt.Sprintf("type %s: abstract: must be true or false", rt.name)})
+			} else {
+				t.Abstract = a.Value == "true" || a.Value == "True" || a.Value == "TRUE"
+			}
+		}
 		if p := yamlnode.Lookup(rt.mapping, "pages"); p != nil {
 			if p.Kind != yaml.ScalarNode || p.Tag != "!!bool" {
 				l.keep(&Error{Path: rel, Line: p.Line, Msg: fmt.Sprintf("type %s: pages: must be true or false", rt.name)})
@@ -432,10 +466,20 @@ func (l *loader) read(root string) error {
 		l.record(name)
 	}
 	for _, rt := range raws {
+		s.Types[rt.name].Declared = l.fields(rt.path, rt.fields, "")
+	}
+	l.inherit(raws)
+	for _, rt := range raws {
 		t := s.Types[rt.name]
-		t.Fields = l.fields(rt.path, rt.fields, "")
 		for _, f := range t.Fields {
+			own := slices.Contains(t.Declared, f)
 			if f.Title {
+				if !own {
+					if t.TitleField == nil {
+						t.TitleField = f
+					}
+					continue
+				}
 				if t.TitleField != nil {
 					l.keep(&Error{Path: rt.path, Line: f.Line, Msg: fmt.Sprintf("field %q: only one field may set title: true (%q already does)", f.Name, t.TitleField.Name)})
 				} else {
@@ -443,6 +487,12 @@ func (l *loader) read(root string) error {
 				}
 			}
 			if !f.Body {
+				continue
+			}
+			if !own {
+				if t.BodyField == nil {
+					t.BodyField = f
+				}
 				continue
 			}
 			if t.BodyField != nil {
@@ -453,8 +503,210 @@ func (l *loader) read(root string) error {
 		}
 		l.columns(t, rt.fields)
 	}
+	s.targets()
 	s.facets(l)
 	return nil
+}
+
+// inherit resolves each type's extends: (DES-0010): its parent, its
+// fields (the parent's, then its own) and its ID prefix. A type whose
+// extends: names no type, or whose chain leads back to it, is left
+// without a parent.
+func (l *loader) inherit(raws []*rawDecl) {
+	s := l.Schema
+	for _, rt := range raws {
+		t := s.Types[rt.name]
+		if t.Extends == "" {
+			continue
+		}
+		p := s.Types[t.Extends]
+		if p == nil {
+			l.keep(&Error{Path: t.File, Line: t.ExtendsLine, Msg: fmt.Sprintf("type %s: extends: unknown type %q (types: %s)", t.Name, t.Extends, strings.Join(s.TypeNames(), ", "))})
+			continue
+		}
+		t.Parent = p
+	}
+	// A chain leading back to where it started is a cycle: report it once
+	// at each of its types, and break it there.
+	for _, rt := range raws {
+		t := s.Types[rt.name]
+		chain := []string{t.Name}
+		for p := t.Parent; p != nil; p = p.Parent {
+			chain = append(chain, p.Name)
+			if p == t {
+				l.keep(&Error{Path: t.File, Line: t.ExtendsLine, Msg: fmt.Sprintf("type %s extends itself (%s)", t.Name, strings.Join(chain, " → "))})
+				break
+			}
+			if len(chain) > len(s.Types)+1 {
+				break // a cycle further up, reported at its own types
+			}
+		}
+	}
+	for _, rt := range raws {
+		if t := s.Types[rt.name]; t.Parent != nil && t.inCycle() {
+			t.Parent = nil
+		}
+	}
+	done := map[*Type]bool{}
+	var resolve func(t *Type)
+	resolve = func(t *Type) {
+		if done[t] {
+			return
+		}
+		done[t] = true
+		if t.IDPrefix != "" {
+			t.PrefixType = t
+		}
+		if t.Parent == nil {
+			t.Fields = t.Declared
+			return
+		}
+		p := t.Parent
+		resolve(p)
+		t.Fields = slices.Clone(p.Fields)
+		for _, f := range t.Declared {
+			if from := p.Field(f.Name); from != nil {
+				owner := p
+				for owner.Parent != nil && slices.Contains(owner.Parent.Fields, from) {
+					owner = owner.Parent
+				}
+				l.keep(&Error{Path: t.File, Line: f.Line, Msg: fmt.Sprintf("field %q is inherited from %s (%s:%d); a subtype adds fields, it does not declare its parent's again", f.Name, owner.Name, owner.File, from.Line)})
+				continue
+			}
+			t.Fields = append(t.Fields, f)
+		}
+		if t.PrefixType == nil {
+			t.IDPrefix, t.PrefixType = p.IDPrefix, p.PrefixType
+		}
+	}
+	for _, rt := range raws {
+		resolve(s.Types[rt.name])
+	}
+	for _, rt := range raws {
+		t := s.Types[rt.name]
+		switch {
+		case t.Abstract && rt.idPrefix != "":
+			l.keep(&Error{Path: t.File, Line: yamlnode.Lookup(rt.mapping, "id_prefix").Line, Msg: fmt.Sprintf("type %s is abstract: it has no entities, so no id_prefix; give it to the types that extend it", t.Name)})
+			t.IDPrefix, t.PrefixType = "", nil
+		case t.Abstract && t.Source != nil:
+			l.keep(&Error{Path: t.File, Line: t.Source.Line, Msg: fmt.Sprintf("type %s is abstract: it has no entities, so no source", t.Name)})
+			t.Source = nil
+		}
+	}
+}
+
+// inCycle reports whether t's chain of parents leads back to t.
+func (t *Type) inCycle() bool {
+	seen := map[*Type]bool{}
+	for p := t.Parent; p != nil; p = p.Parent {
+		if p == t {
+			return true
+		}
+		if seen[p] {
+			return false
+		}
+		seen[p] = true
+	}
+	return false
+}
+
+// Owner is the type among t and its ancestors declaring f, a top-level
+// field of t; t when none does.
+func (t *Type) Owner(f *Field) *Type {
+	for a := t; a != nil; a = a.Parent {
+		if slices.Contains(a.Declared, f) {
+			return a
+		}
+	}
+	return t
+}
+
+// IsA reports whether t is the type named name or one of its subtypes.
+func (t *Type) IsA(name string) bool {
+	for a := t; a != nil; a = a.Parent {
+		if a.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// Ancestors are t's parent, its parent's parent and so on, nearest first.
+func (t *Type) Ancestors() []*Type {
+	var out []*Type
+	for p := t.Parent; p != nil; p = p.Parent {
+		out = append(out, p)
+	}
+	return out
+}
+
+// Concrete are the types a from: written as t stands for: t unless it is
+// abstract, then its subtypes that are not, in name order.
+func (s *Schema) Concrete(t *Type) []*Type {
+	var out []*Type
+	if !t.Abstract {
+		out = append(out, t)
+	}
+	for _, o := range s.Subtypes(t) {
+		if !o.Abstract {
+			out = append(out, o)
+		}
+	}
+	return out
+}
+
+// Subtypes are the types extending t, directly or further down, in name
+// order.
+func (s *Schema) Subtypes(t *Type) []*Type {
+	var out []*Type
+	for _, n := range s.TypeNames() {
+		if o := s.Types[n]; o != t && o.IsA(t.Name) {
+			out = append(out, o)
+		}
+	}
+	return out
+}
+
+// Expand lists the types names stand for wherever a type is named (a
+// link's target:, a query's from:): each named type and every subtype of
+// it, each once, in name order, leaving out abstract types, which have
+// no entities.
+func (s *Schema) Expand(names []string) []string {
+	var out []string
+	for _, n := range s.TypeNames() {
+		if s.Types[n].Abstract {
+			continue
+		}
+		for _, want := range names {
+			if s.Types[n].IsA(want) {
+				out = append(out, n)
+				break
+			}
+		}
+	}
+	return out
+}
+
+// targets sets every link field's Targets.
+func (s *Schema) targets() {
+	set := func(fields []*Field) {
+		for _, f := range fields {
+			if f.Kind == Link {
+				f.Targets = s.Expand(f.Target)
+			}
+			for _, sub := range f.Fields {
+				if sub.Kind == Link {
+					sub.Targets = s.Expand(sub.Target)
+				}
+			}
+		}
+	}
+	for _, n := range s.TypeNames() {
+		set(s.Types[n].Declared)
+	}
+	for _, r := range s.Records {
+		set(r.Fields)
+	}
 }
 
 // checkName fails when a type or record declaration reuses a name already
@@ -499,8 +751,20 @@ func (l *loader) record(name string) *RecordType {
 // a load error: the same relationship would be stored twice, and the facet
 // is left out. Targets naming no declared type are left to validate.
 func (s *Schema) facets(ld *loader) {
+	// An inherited link feeds the facet from each type that has it; its
+	// problems are reported once, where it is declared.
+	reported := map[*Field]bool{}
+	keep := func(f *Field, e *Error) {
+		if !reported[f] {
+			reported[f] = true
+			ld.keep(e)
+		}
+	}
 	for _, n := range s.TypeNames() {
 		src := s.Types[n]
+		if src.Abstract {
+			continue
+		}
 		var links []FacetSource
 		for _, f := range src.Fields {
 			switch f.Kind {
@@ -518,28 +782,28 @@ func (s *Schema) facets(ld *loader) {
 			if l.Field.ReverseName == "" {
 				continue
 			}
-			path := src.File
+			path := src.Owner(l.Field).File
+			if l.List != nil {
+				path = src.Owner(l.List).File
+			}
 			if l.List != nil && l.List.Record != "" {
 				path = s.Records[l.List.Record].File
 			}
 			if l.Field.ReverseName == CodeBlocks.Name {
-				ld.keep(&Error{Path: path, Line: l.Field.Line, Msg: fmt.Sprintf(
+				keep(l.Field, &Error{Path: path, Line: l.Field.Line, Msg: fmt.Sprintf(
 					"field %q: reverse_name code_blocks is the list every entity derives from its Markdown; choose another name", l.Field.Name)})
 				continue
 			}
-			for _, tn := range l.Field.Target {
+			for _, tn := range l.Field.Targets {
 				target := s.Types[tn]
-				if target == nil {
-					continue
-				}
 				if clash := target.Field(l.Field.ReverseName); clash != nil {
-					ld.keep(&Error{Path: path, Line: l.Field.Line, Msg: fmt.Sprintf(
+					keep(l.Field, &Error{Path: path, Line: l.Field.Line, Msg: fmt.Sprintf(
 						"field %q: reverse_name %q repeats the field %s declared on %s (%s:%d); declare a link once, on its source side",
 						l.Field.Name, l.Field.ReverseName, clash.Name, target.Name, target.File, clash.Line)})
 					continue
 				}
 				if other := target.addFacet(l.Field.ReverseName, l); other != nil {
-					ld.keep(&Error{Path: path, Line: l.Field.Line, Msg: fmt.Sprintf(
+					keep(l.Field, &Error{Path: path, Line: l.Field.Line, Msg: fmt.Sprintf(
 						"field %q: reverse_friendly_name %q differs from %q, given by the field %s of %s for the same reverse_name %s; give one label, or leave it out on all but one",
 						l.Field.Name, l.Field.ReverseFriendlyName, other.Field.ReverseFriendlyName, other.Field.Name, other.Type.Name, l.Field.ReverseName)})
 				}

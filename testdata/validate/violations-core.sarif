@@ -235,6 +235,15 @@
               }
             },
             {
+              "id": "schema/abstract-type",
+              "shortDescription": {
+                "text": "An entity of an abstract type"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
               "id": "schema/calculated-set",
               "shortDescription": {
                 "text": "A calculated field written in the file"
@@ -904,7 +913,7 @@
           "ruleIndex": 9,
           "level": "error",
           "message": {
-            "text": "query block: unknown operator \"=\" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in)"
+            "text": "query block: unknown operator \"=\" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in, is_a)"
           },
           "locations": [
             {
@@ -1332,8 +1341,32 @@
           }
         },
         {
-          "ruleId": "schema/calculated-set",
+          "ruleId": "schema/abstract-type",
           "ruleIndex": 25,
+          "level": "error",
+          "message": {
+            "text": "type AbstractPart is abstract: it has no entities of its own; give the entity one of the types extending it (ConcretePart)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-abstract-type/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "PRT-0001"
+          }
+        },
+        {
+          "ruleId": "schema/calculated-set",
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "score is calculated (weight * 2); it cannot be written in the file"
@@ -1357,7 +1390,7 @@
         },
         {
           "ruleId": "schema/calculated-set",
-          "ruleIndex": 25,
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "steps row 1: double is calculated (n * 2); it cannot be written in the file"
@@ -1381,7 +1414,7 @@
         },
         {
           "ruleId": "schema/enum-value",
-          "ruleIndex": 26,
+          "ruleIndex": 27,
           "level": "error",
           "message": {
             "text": "tags item 2: \"retired\" is not one of Status: draft, approved"
@@ -1405,7 +1438,7 @@
         },
         {
           "ruleId": "schema/enum-value",
-          "ruleIndex": 26,
+          "ruleIndex": 27,
           "level": "error",
           "message": {
             "text": "status: \"aproved\" is not one of Status: draft, approved"
@@ -1429,7 +1462,7 @@
         },
         {
           "ruleId": "schema/enum-value",
-          "ruleIndex": 26,
+          "ruleIndex": 27,
           "level": "error",
           "message": {
             "text": "tags item 2: \"final\" is not one of Status: draft, approved"
@@ -1453,7 +1486,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 29,
+          "ruleIndex": 30,
           "level": "error",
           "message": {
             "text": "ID two words cannot be used as a page name (letters, digits, '.', '_' and '-' only)"
@@ -1477,7 +1510,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 29,
+          "ruleIndex": 30,
           "level": "error",
           "message": {
             "text": "ID COMPLAINT-0141 does not start with IDD-, the prefix of a CsvIdViolation ID"
@@ -1501,7 +1534,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 29,
+          "ruleIndex": 30,
           "level": "error",
           "message": {
             "text": "ID WID-7 is not WID-NNNN, the form of a Widget ID"
@@ -1525,7 +1558,7 @@
         },
         {
           "ruleId": "schema/invalid-value",
-          "ruleIndex": 30,
+          "ruleIndex": 31,
           "level": "error",
           "message": {
             "text": "done: not true or false, got yes"
@@ -1549,7 +1582,7 @@
         },
         {
           "ruleId": "schema/invalid-value",
-          "ruleIndex": 30,
+          "ruleIndex": 31,
           "level": "error",
           "message": {
             "text": "due: not a date (YYYY-MM-DD), got 14/08/2026"
@@ -1573,7 +1606,7 @@
         },
         {
           "ruleId": "schema/invalid-value",
-          "ruleIndex": 30,
+          "ruleIndex": 31,
           "level": "error",
           "message": {
             "text": "weight: not a number, got 1,000"
@@ -1597,7 +1630,7 @@
         },
         {
           "ruleId": "schema/invalid-value",
-          "ruleIndex": 30,
+          "ruleIndex": 31,
           "level": "error",
           "message": {
             "text": "due: not a date (YYYY-MM-DD), got 2026-13-04"
@@ -1621,7 +1654,7 @@
         },
         {
           "ruleId": "schema/invalid-value",
-          "ruleIndex": 30,
+          "ruleIndex": 31,
           "level": "error",
           "message": {
             "text": "weight: not a number, got heavy"
@@ -1645,7 +1678,7 @@
         },
         {
           "ruleId": "schema/invalid-value",
-          "ruleIndex": 30,
+          "ruleIndex": 31,
           "level": "error",
           "message": {
             "text": "steps row 1: n: not a number, got one"
@@ -1669,7 +1702,7 @@
         },
         {
           "ruleId": "schema/list-row",
-          "ruleIndex": 32,
+          "ruleIndex": 33,
           "level": "error",
           "message": {
             "text": "steps row 1: no sub-field \"size\" (sub-fields: n)"
@@ -1693,7 +1726,7 @@
         },
         {
           "ruleId": "schema/required",
-          "ruleIndex": 33,
+          "ruleIndex": 34,
           "level": "error",
           "message": {
             "text": "required field title is not set"
@@ -1717,7 +1750,7 @@
         },
         {
           "ruleId": "schema/required",
-          "ruleIndex": 33,
+          "ruleIndex": 34,
           "level": "error",
           "message": {
             "text": "steps row 2: required sub-field n is not set"
@@ -1741,7 +1774,7 @@
         },
         {
           "ruleId": "schema/unknown-field",
-          "ruleIndex": 34,
+          "ruleIndex": 35,
           "level": "error",
           "message": {
             "text": "notes is the Markdown body below the frontmatter, not a frontmatter field"
@@ -1765,7 +1798,7 @@
         },
         {
           "ruleId": "schema/unknown-field",
-          "ruleIndex": 34,
+          "ruleIndex": 35,
           "level": "error",
           "message": {
             "text": "Widget has no field \"colour\" (fields: title, status, due, weight, tags, steps, parent, uses)"
@@ -1789,7 +1822,7 @@
         },
         {
           "ruleId": "schema/unknown-field",
-          "ruleIndex": 34,
+          "ruleIndex": 35,
           "level": "error",
           "message": {
             "text": "used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it"
@@ -1813,10 +1846,10 @@
         },
         {
           "ruleId": "schema/unknown-type",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "error",
           "message": {
-            "text": "type \"Gadget\" is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)"
+            "text": "type \"Gadget\" is not declared in schema/ (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant)"
           },
           "locations": [
             {
@@ -1900,7 +1933,7 @@
           "ruleIndex": 22,
           "level": "error",
           "message": {
-            "text": "Widget has no field \"colour\" (fields: id, type, title, status, due, weight, score, tags, steps, parent, uses, notes, children, used_by, code_blocks)"
+            "text": "neither Widget nor WidgetVariant has a field \"colour\""
           },
           "locations": [
             {
@@ -1960,7 +1993,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 29,
+          "ruleIndex": 30,
           "level": "error",
           "message": {
             "text": "type DuplicatePrefixA has the id_prefix DUP, which DuplicatePrefixB (schema/DuplicatePrefixB.yaml) also has"
@@ -1981,7 +2014,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 29,
+          "ruleIndex": 30,
           "level": "error",
           "message": {
             "text": "type DuplicatePrefixB has the id_prefix DUP, which DuplicatePrefixA (schema/DuplicatePrefixA.yaml) also has"
@@ -2002,7 +2035,7 @@
         },
         {
           "ruleId": "schema/formula",
-          "ruleIndex": 28,
+          "ruleIndex": 29,
           "level": "error",
           "message": {
             "text": "field \"score\": formula: column 1: FormulaViolation has no field \"nope\" (fields: example_of, weight, score)"
@@ -2023,10 +2056,10 @@
         },
         {
           "ruleId": "schema/link-target",
-          "ruleIndex": 31,
+          "ruleIndex": 32,
           "level": "error",
           "message": {
-            "text": "field \"widget\": target \"Nothing\" is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)"
+            "text": "field \"widget\": target \"Nothing\" is not a declared type (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant)"
           },
           "locations": [
             {
@@ -2044,7 +2077,7 @@
         },
         {
           "ruleId": "schema/id-format",
-          "ruleIndex": 29,
+          "ruleIndex": 30,
           "level": "error",
           "message": {
             "text": "type NoPrefix has no id_prefix, so its IDs cannot be checked"
@@ -2065,7 +2098,7 @@
         },
         {
           "ruleId": "schema/unknown-key",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "error",
           "message": {
             "text": "field \"status\": unknown key \"default\": fields have no defaults; a field that must have a value says required: true"
@@ -2086,7 +2119,7 @@
         },
         {
           "ruleId": "schema/unused-type",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "warning",
           "message": {
             "text": "type UnusedTypeViolation has no entities and no links to or from it"
@@ -2107,7 +2140,7 @@
         },
         {
           "ruleId": "schema/unknown-key",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "error",
           "message": {
             "text": "enum Colour: unknown key \"shade\" (expected enum, values)"
@@ -2128,7 +2161,7 @@
         },
         {
           "ruleId": "schema/unused-enum",
-          "ruleIndex": 37,
+          "ruleIndex": 38,
           "level": "warning",
           "message": {
             "text": "enum UnusedEnum is not used by any field"
@@ -2149,7 +2182,7 @@
         },
         {
           "ruleId": "schema/unused-record",
-          "ruleIndex": 38,
+          "ruleIndex": 39,
           "level": "warning",
           "message": {
             "text": "record UnusedRecord is not used by any list"

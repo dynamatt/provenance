@@ -1,0 +1,7 @@
+# A type extending an abstract one: it has its parent's title.
+type: ConcretePart
+extends: AbstractPart
+id_prefix: PRT
+fields:
+  - name: mass
+    type: number

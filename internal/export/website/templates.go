@@ -11,6 +11,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	tparse "text/template/parse"
 
 	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/schema"
@@ -44,8 +45,11 @@ type source struct {
 type templateSet struct {
 	layout, index source
 	types         map[string]source // project type templates by type name
-	typePages     map[string]source // project type-page templates by type name
-	named         map[string]source // named presentation templates by name
+	// blocksOnly are the type templates holding only {{define}}s, which
+	// fill the blocks of the template they are laid over (DES-0031).
+	blocksOnly map[string]bool
+	typePages  map[string]source // project type-page templates by type name
+	named      map[string]source // named presentation templates by name
 	// cite renders inline citations; nil without a project _cite.tmpl,
 	// which has no built-in counterpart.
 	cite  *source
@@ -68,12 +72,13 @@ func builtin(file string) source {
 // instead, and err is only a failure to read one.
 func loadTemplates(root string, s *schema.Schema, check *checker) (*templateSet, error) {
 	ts := &templateSet{
-		layout:    builtin("layout.tmpl"),
-		index:     builtin("index.tmpl"),
-		types:     map[string]source{},
-		typePages: map[string]source{},
-		named:     map[string]source{},
-		style:     styleCSS,
+		layout:     builtin("layout.tmpl"),
+		index:      builtin("index.tmpl"),
+		types:      map[string]source{},
+		blocksOnly: map[string]bool{},
+		typePages:  map[string]source{},
+		named:      map[string]source{},
+		style:      styleCSS,
 	}
 	dir := filepath.Join(root, templatesDir)
 	entries, err := os.ReadDir(dir)
@@ -157,13 +162,66 @@ func loadTemplates(root string, s *schema.Schema, check *checker) (*templateSet,
 		sources = append(sources, ts.named[name])
 	}
 	for _, src := range sources {
-		if _, err := parse(src, placeholderFuncs); err != nil {
+		t, err := parse(src, placeholderFuncs)
+		if err != nil {
 			if err := check.record(err); err != nil {
 				return nil, err
+			}
+			continue
+		}
+		for name, typ := range ts.types {
+			if typ == src && onlyDefines(t) {
+				ts.blocksOnly[name] = true
 			}
 		}
 	}
 	return ts, nil
+}
+
+// onlyDefines reports whether t's text, outside its {{define}}s, is only
+// white space and comments.
+func onlyDefines(t *template.Template) bool {
+	if t.Tree == nil || t.Tree.Root == nil {
+		return true
+	}
+	for _, n := range t.Tree.Root.Nodes {
+		text, ok := n.(*tparse.TextNode)
+		if !ok || strings.TrimSpace(string(text.Text)) != "" {
+			return false
+		}
+	}
+	return true
+}
+
+// forType chooses the type template for entities of t (DES-0031): t's
+// own, else its nearest ancestor's. A template holding only {{define}}s
+// is laid over the one chosen for the type above it, filling its blocks:
+// overlays lists those, the farthest ancestor's first, to parse after
+// src. ok is false when no template in the chain has a body of its own,
+// so the built-in one is used, with the overlays laid over it.
+func (ts *templateSet) forType(t *schema.Type) (src source, overlays []source, ok bool) {
+	for a := t; a != nil; a = a.Parent {
+		s, has := ts.types[a.Name]
+		switch {
+		case !has:
+		case ts.blocksOnly[a.Name]:
+			overlays = append([]source{s}, overlays...)
+		default:
+			return s, overlays, true
+		}
+	}
+	return source{}, overlays, false
+}
+
+// layer parses each overlay into t's set, in order, so its {{define}}s
+// replace the blocks t declares.
+func layer(t *template.Template, overlays []source) error {
+	for _, o := range overlays {
+		if _, err := t.New(o.name).Parse(o.text); err != nil {
+			return tmpl.NewError(err, o.name)
+		}
+	}
+	return nil
 }
 
 // typePageType is the type whose page templates/<name> renders,
@@ -194,6 +252,7 @@ var placeholderFuncs = template.FuncMap{
 	"link":     func(any, ...any) (template.HTML, error) { return "", nil },
 	"href":     func(any) (string, error) { return "", nil },
 	"title":    func(any) (string, error) { return "", nil },
+	"isa":      func(any, string) (bool, error) { return false, nil },
 	"short":    func(string) string { return "" },
 }
 

@@ -1,0 +1,9 @@
+# schema/abstract-type: an abstract type declares fields for the types
+# extending it and has no entities of its own (DES-0010).
+type: AbstractPart
+abstract: true
+fields:
+  - name: title
+    type: string
+    title: true
+    required: true

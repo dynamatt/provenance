@@ -51,10 +51,13 @@ const (
 	Exists         Operator = "exists"
 	Missing        Operator = "missing"
 	NotIn          Operator = "not_in"
+	// IsA tests an entity's type against a type and its subtypes
+	// (DES-0010): {field: type, operator: is_a, value: Evidence}.
+	IsA Operator = "is_a"
 )
 
 // Operators lists every operator, in the order DES-0015 gives.
-var Operators = []Operator{Equals, NotEquals, GreaterOrEqual, LessOrEqual, GreaterThan, LessThan, Exists, Missing, NotIn}
+var Operators = []Operator{Equals, NotEquals, GreaterOrEqual, LessOrEqual, GreaterThan, LessThan, Exists, Missing, NotIn, IsA}
 
 var cmpOps = map[Operator]datalog.Op{
 	Equals: datalog.Eq, NotEquals: datalog.Eq, // not_equals is "no value equals"
@@ -314,6 +317,8 @@ func parseTest(n *yaml.Node) (*Test, error) {
 		}
 		t.Value = &Operand{Line: valueNode.Line}
 		return t, nil
+	case t.Operator == IsA && valueOf != nil:
+		return nil, errorf(valueOf, "is_a takes a type's name as value, not value_of")
 	case valueOf != nil:
 		r, err := parseRef(valueOf, "value_of")
 		if err != nil {
@@ -1115,7 +1120,9 @@ func FromTypes(s *schema.Schema, names []string, line int) ([]*schema.Type, erro
 	if len(names) == 1 && names[0] == "any" {
 		var all []*schema.Type
 		for _, n := range s.TypeNames() {
-			all = append(all, s.Types[n])
+			if !s.Types[n].Abstract {
+				all = append(all, s.Types[n])
+			}
 		}
 		return all, nil
 	}
@@ -1125,7 +1132,12 @@ func FromTypes(s *schema.Schema, names []string, line int) ([]*schema.Type, erro
 		if t == nil {
 			return nil, &Error{Line: line, Msg: fmt.Sprintf("from: unknown type %q (types: %s)", n, strings.Join(s.TypeNames(), ", "))}
 		}
-		out = append(out, t)
+		// A type stands for its subtypes too (DES-0010).
+		for _, c := range s.Concrete(t) {
+			if !slices.Contains(out, c) {
+				out = append(out, c)
+			}
+		}
 	}
 	return out, nil
 }
@@ -1133,10 +1145,8 @@ func FromTypes(s *schema.Schema, names []string, line int) ([]*schema.Type, erro
 // linkTypes are the declared types link field f targets.
 func linkTypes(s *schema.Schema, f *schema.Field) []*schema.Type {
 	var out []*schema.Type
-	for _, tn := range f.Target {
-		if tt := s.Types[tn]; tt != nil {
-			out = append(out, tt)
-		}
+	for _, tn := range f.Targets {
+		out = append(out, s.Types[tn])
 	}
 	return out
 }
@@ -1266,6 +1276,21 @@ func (c *compiler) compareWith(t *Test, sc *scope, left target, right *target, r
 	V, W := datalog.Var("V"), datalog.Var("W")
 	body := append(sc.binds(), readLeft...)
 	switch t.Operator {
+	case IsA:
+		name := t.Value.Literal.S
+		if t.Value.Literal.Kind != datalog.Str {
+			name = t.Value.Literal.String()
+		}
+		typ := c.s.Types[name]
+		switch {
+		case right != nil || left.rel != "" || left.ref.Field != "type":
+			return datalog.Literal{}, &Error{Line: t.Line, Msg: "is_a tests an entity's type: {field: type, operator: is_a, value: <Type>}"}
+		case t.Value.Literal.Kind != datalog.Str || typ == nil:
+			return datalog.Literal{}, &Error{Line: t.Value.Line, Msg: fmt.Sprintf("is_a: unknown type %q (types: %s)", name, strings.Join(c.s.TypeNames(), ", "))}
+		}
+		for _, sub := range c.s.Concrete(typ) {
+			c.prog.Add(datalog.Rule{Head: head, Body: append(slices.Clone(body), datalog.Cmp(V, datalog.Eq, datalog.Const(datalog.String(sub.Name))))})
+		}
 	case Exists, Missing:
 		c.prog.Add(datalog.Rule{Head: head, Body: body})
 	case NotIn:

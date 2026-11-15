@@ -374,7 +374,7 @@ func TestKeyProblems(t *testing.T) {
 	root := t.TempDir()
 	write(t, root, "schema/A.yaml", `type: A
 id_prefix: A
-extends: B
+inherits: B
 fields:
   - name: x
     type: string
@@ -395,7 +395,7 @@ fields:
 		got = append(got, p.Error())
 	}
 	want := []string{
-		`schema/A.yaml:3: type A: unknown key "extends" (expected type, id_prefix, pages, source, fields)`,
+		`schema/A.yaml:3: type A: unknown key "inherits" (expected type, extends, abstract, id_prefix, pages, source, fields)`,
 		`schema/A.yaml:7: field "x": unknown key "default": fields have no defaults; a field that must have a value says required: true`,
 		`schema/A.yaml:8: field "x": formula applies only to a calculated field`,
 		`schema/A.yaml:13: field "y": unknown key "colour" (expected name, type, required, title, friendly_name, help, body, target, cardinality, reverse_name, reverse_friendly_name, formula, fields, of, column)`,

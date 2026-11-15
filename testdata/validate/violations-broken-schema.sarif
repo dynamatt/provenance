@@ -235,6 +235,15 @@
               }
             },
             {
+              "id": "schema/abstract-type",
+              "shortDescription": {
+                "text": "An entity of an abstract type"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
               "id": "schema/calculated-set",
               "shortDescription": {
                 "text": "A calculated field written in the file"
@@ -382,7 +391,28 @@
       "results": [
         {
           "ruleId": "schema/file",
-          "ruleIndex": 27,
+          "ruleIndex": 28,
+          "level": "error",
+          "message": {
+            "text": "type AbstractPrefix is abstract: it has no entities, so no id_prefix; give it to the types that extend it"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/AbstractPrefix.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/file",
+          "ruleIndex": 28,
           "level": "error",
           "message": {
             "text": "did not find expected ',' or ']'"
@@ -403,7 +433,7 @@
         },
         {
           "ruleId": "schema/file",
-          "ruleIndex": 27,
+          "ruleIndex": 28,
           "level": "error",
           "message": {
             "text": "field \"steps\": a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)"
@@ -424,7 +454,70 @@
         },
         {
           "ruleId": "schema/file",
-          "ruleIndex": 27,
+          "ruleIndex": 28,
+          "level": "error",
+          "message": {
+            "text": "type CycleA extends itself (CycleA → CycleB → CycleA)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/CycleA.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/file",
+          "ruleIndex": 28,
+          "level": "error",
+          "message": {
+            "text": "type CycleB extends itself (CycleB → CycleA → CycleB)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/CycleB.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/file",
+          "ruleIndex": 28,
+          "level": "error",
+          "message": {
+            "text": "type ExtendsUnknown: extends: unknown type \"Nowhere\" (types: AbstractPrefix, CsvListOfRows, CycleA, CycleB, ExtendsUnknown, FieldName, Fine, FineChild, Redeclared, UnknownType)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/ExtendsUnknown.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/file",
+          "ruleIndex": 28,
           "level": "error",
           "message": {
             "text": "field \"verifiedBy\": a field's name is lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by"
@@ -445,7 +538,28 @@
         },
         {
           "ruleId": "schema/file",
-          "ruleIndex": 27,
+          "ruleIndex": 28,
+          "level": "error",
+          "message": {
+            "text": "field \"title\" is inherited from Fine (schema/Fine.yaml:4); a subtype adds fields, it does not declare its parent's again"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/Redeclared.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/file",
+          "ruleIndex": 28,
           "level": "error",
           "message": {
             "text": "field \"status\": unknown type \"AprovalStatus\" (expected string, text, number, date, boolean, link, list, calculated)"

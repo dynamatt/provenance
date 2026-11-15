@@ -1,0 +1,8 @@
+# A subtype of Widget without an id_prefix of its own: it numbers in
+# Widget's series (schema/id-format's clean case), and a link targeting
+# Widget may name it (links/target-type's).
+type: WidgetVariant
+extends: Widget
+fields:
+  - name: variant
+    type: string
