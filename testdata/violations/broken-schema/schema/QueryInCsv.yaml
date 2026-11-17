@@ -1,0 +1,10 @@
+# schema/file: a query field on a type read from a CSV file.
+type: QueryInCsv
+id_prefix: QIC
+source:
+  csv: data/none.csv
+  id: id
+fields:
+  - name: scope
+    type: query
+    of: [Fine]

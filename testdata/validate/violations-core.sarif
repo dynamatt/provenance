@@ -316,6 +316,15 @@
               }
             },
             {
+              "id": "schema/query",
+              "shortDescription": {
+                "text": "A query field whose query cannot run"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
               "id": "schema/required",
               "shortDescription": {
                 "text": "A required field not set"
@@ -1725,8 +1734,104 @@
           }
         },
         {
-          "ruleId": "schema/required",
+          "ruleId": "schema/query",
           "ruleIndex": 34,
+          "level": "error",
+          "message": {
+            "text": "scope: neither Widget nor WidgetVariant has a field \"colour\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-query/violation-field.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "QRY-0002"
+          }
+        },
+        {
+          "ruleId": "schema/query",
+          "ruleIndex": 34,
+          "level": "error",
+          "message": {
+            "text": "scope: the query depends on its own results through missing, not_in, not_equals or an aggregation, so it has no answer"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-query/violation-loop.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "QRY-0004"
+          }
+        },
+        {
+          "ruleId": "schema/query",
+          "ruleIndex": 34,
+          "level": "error",
+          "message": {
+            "text": "scope: render: a query field gives its results to its entity's template, which shows them; leave render out"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-query/violation-render.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "QRY-0003"
+          }
+        },
+        {
+          "ruleId": "schema/query",
+          "ruleIndex": 34,
+          "level": "error",
+          "message": {
+            "text": "scope: from: QueryReport is not a type scope may select (of: [Widget] in schema/QueryReport.yaml)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "cases/schema-query/violation.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "QRY-0001"
+          }
+        },
+        {
+          "ruleId": "schema/required",
+          "ruleIndex": 35,
           "level": "error",
           "message": {
             "text": "required field title is not set"
@@ -1750,7 +1855,7 @@
         },
         {
           "ruleId": "schema/required",
-          "ruleIndex": 34,
+          "ruleIndex": 35,
           "level": "error",
           "message": {
             "text": "steps row 2: required sub-field n is not set"
@@ -1774,7 +1879,7 @@
         },
         {
           "ruleId": "schema/unknown-field",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "error",
           "message": {
             "text": "notes is the Markdown body below the frontmatter, not a frontmatter field"
@@ -1798,7 +1903,7 @@
         },
         {
           "ruleId": "schema/unknown-field",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "error",
           "message": {
             "text": "Widget has no field \"colour\" (fields: title, status, due, weight, tags, steps, parent, uses)"
@@ -1822,7 +1927,7 @@
         },
         {
           "ruleId": "schema/unknown-field",
-          "ruleIndex": 35,
+          "ruleIndex": 36,
           "level": "error",
           "message": {
             "text": "used_by is derived from Widget.uses, set on the linking entity; a Widget does not store it"
@@ -1846,10 +1951,10 @@
         },
         {
           "ruleId": "schema/unknown-type",
-          "ruleIndex": 37,
+          "ruleIndex": 38,
           "level": "error",
           "message": {
-            "text": "type \"Gadget\" is not declared in schema/ (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant)"
+            "text": "type \"Gadget\" is not declared in schema/ (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, QueryReport, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant)"
           },
           "locations": [
             {
@@ -2059,7 +2164,7 @@
           "ruleIndex": 32,
           "level": "error",
           "message": {
-            "text": "field \"widget\": target \"Nothing\" is not a declared type (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant)"
+            "text": "field \"widget\": target \"Nothing\" is not a declared type (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, QueryReport, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant)"
           },
           "locations": [
             {
@@ -2098,7 +2203,7 @@
         },
         {
           "ruleId": "schema/unknown-key",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "error",
           "message": {
             "text": "field \"status\": unknown key \"default\": fields have no defaults; a field that must have a value says required: true"
@@ -2119,7 +2224,7 @@
         },
         {
           "ruleId": "schema/unused-type",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "warning",
           "message": {
             "text": "type UnusedTypeViolation has no entities and no links to or from it"
@@ -2140,7 +2245,7 @@
         },
         {
           "ruleId": "schema/unknown-key",
-          "ruleIndex": 36,
+          "ruleIndex": 37,
           "level": "error",
           "message": {
             "text": "enum Colour: unknown key \"shade\" (expected enum, values)"
@@ -2161,7 +2266,7 @@
         },
         {
           "ruleId": "schema/unused-enum",
-          "ruleIndex": 38,
+          "ruleIndex": 39,
           "level": "warning",
           "message": {
             "text": "enum UnusedEnum is not used by any field"
@@ -2182,7 +2287,7 @@
         },
         {
           "ruleId": "schema/unused-record",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "warning",
           "message": {
             "text": "record UnusedRecord is not used by any list"

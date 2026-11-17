@@ -17,7 +17,7 @@
 <article class="requirement" id="REQ-0002">
 <h1 class="requirement-title"><span class="req-id">REQ-0002</span> Single-fault amplitude ceiling</h1>
 <p class="requirement-meta">
-<span class="status status-approved">approved</span> · verified by test, analysis
+<span class="status status-approved">approved</span> · allocated to <a class="ref" href="CMP-0001.html" title="NeuroPulse implantable pulse generator">CMP-0001</a> · verified by test, analysis
 </p>
 <div class="statement"><p>The system shall not deliver a stimulation amplitude exceeding 8 mA under
 any single-fault condition, including loss of the sense-electrode feedback
@@ -31,11 +31,7 @@ signal used by the closed-loop control algorithm (<a class="ref" href="DES-0001.
 <ul>
 <li><a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a>: Bench verification of single-fault amplitude ceiling</li>
 </ul>
-<h2><span class="section-number">3</span> Reported in</h2>
-<ul>
-<li><a class="ref" href="DOC-0006.html" title="Verification Summary Report — Amplitude Control">DOC-0006</a>: Verification Summary Report — Amplitude Control</li>
-</ul>
-<h2><span class="section-number">4</span> Refined by</h2>
+<h2><span class="section-number">3</span> Refined by</h2>
 <ul>
 <li><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a>: Amplitude ceiling — subsystem allocation</li>
 </ul>
@@ -46,6 +42,7 @@ signal used by the closed-loop control algorithm (<a class="ref" href="DES-0001.
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>21fd23b</code></td><td>2026-11-17</td><td>Claude</td><td>Components form a tree; requirements are allocated to one; reports go component by component</td></tr>
 <tr><td><code>1718e46</code></td><td>2026-11-15</td><td>Claude</td><td>Evidence is an abstract type; Verification Summary Report extends Document</td></tr>
 <tr><td><code>72bd09e</code></td><td>2026-11-15</td><td>Matt Williams</td><td>Merge pull request #29 from dynamatt/epic/E7-references</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
@@ -66,7 +63,7 @@ signal used by the closed-loop control algorithm (<a class="ref" href="DES-0001.
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>1718e46</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>21fd23b</code></p>
 </footer>
 </body>
 </html>

@@ -316,6 +316,15 @@
               }
             },
             {
+              "id": "schema/query",
+              "shortDescription": {
+                "text": "A query field whose query cannot run"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
               "id": "schema/required",
               "shortDescription": {
                 "text": "A required field not set"
@@ -442,6 +451,15 @@
               }
             },
             {
+              "id": "requirement-reported",
+              "shortDescription": {
+                "text": "requirement is in no verification summary report"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
               "id": "requirement-title-unique",
               "shortDescription": {
                 "text": "two requirements share the same title — likely a duplicate or copy-paste error"
@@ -490,7 +508,7 @@
       "results": [
         {
           "ruleId": "requirement-verified",
-          "ruleIndex": 49,
+          "ruleIndex": 51,
           "level": "warning",
           "message": {
             "text": "requirement missing verification"

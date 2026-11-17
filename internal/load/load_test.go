@@ -137,7 +137,7 @@ func TestBrokenSchema(t *testing.T) {
 	if got := problems(res); len(got) != 2 || got[0].check != "content/frontmatter" || got[1].check != "schema/file" {
 		t.Errorf("problems %v", got)
 	}
-	if err := res.Err(); err == nil || err.Error() != `schema/Part.yaml:4: field "weight": unknown type "Weight" (expected string, text, number, date, boolean, link, list, calculated)` {
+	if err := res.Err(); err == nil || err.Error() != `schema/Part.yaml:4: field "weight": unknown type "Weight" (expected string, text, number, date, boolean, link, list, calculated, query)` {
 		t.Errorf("Err = %v", err)
 	}
 }

@@ -17,7 +17,7 @@
 <article class="requirement" id="REQ-0003">
 <h1 class="requirement-title"><span class="req-id">REQ-0003</span> Amplitude ceiling — subsystem allocation</h1>
 <p class="requirement-meta">
-<span class="status status-draft">draft</span> · refines <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a> · verified by inspection, test
+<span class="status status-draft">draft</span> · allocated to <a class="ref" href="CMP-0002.html" title="Pulse-generator ASIC">CMP-0002</a> · refines <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a> · verified by inspection, test
 </p>
 <div class="statement"><p>The pulse-generator ASIC shall enforce a hard current-limit circuit,
 independent of firmware, as the subsystem-level implementation of the
@@ -28,11 +28,7 @@ single-fault conditions of [<a class="ref" href="REF-0002.html" title="Medical e
 <p class="none">No user need linked.</p>
 <h2><span class="section-number">2</span> Verified by</h2>
 <p class="none">Not yet verified.</p>
-<h2><span class="section-number">3</span> Reported in</h2>
-<ul>
-<li><a class="ref" href="DOC-0006.html" title="Verification Summary Report — Amplitude Control">DOC-0006</a>: Verification Summary Report — Amplitude Control</li>
-</ul>
-<h2><span class="section-number">4</span> Known anomalies</h2>
+<h2><span class="section-number">3</span> Known anomalies</h2>
 <ul>
 <li><a class="ref" href="Anomaly.html#BUG-1042" title="Alarm tone clipped at maximum volume">BUG-1042</a>: Alarm tone clipped at maximum volume (minor)</li>
 </ul>
@@ -43,6 +39,7 @@ single-fault conditions of [<a class="ref" href="REF-0002.html" title="Medical e
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>21fd23b</code></td><td>2026-11-17</td><td>Claude</td><td>Components form a tree; requirements are allocated to one; reports go component by component</td></tr>
 <tr><td><code>1718e46</code></td><td>2026-11-15</td><td>Claude</td><td>Evidence is an abstract type; Verification Summary Report extends Document</td></tr>
 <tr><td><code>72bd09e</code></td><td>2026-11-15</td><td>Matt Williams</td><td>Merge pull request #29 from dynamatt/epic/E7-references</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
@@ -64,7 +61,7 @@ single-fault conditions of [<a class="ref" href="REF-0002.html" title="Medical e
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>1718e46</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>21fd23b</code></p>
 </footer>
 </body>
 </html>

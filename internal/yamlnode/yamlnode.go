@@ -82,3 +82,18 @@ func ErrorLine(err error) (line int, msg string) {
 	}
 	return line, msg
 }
+
+// Copy is a deep copy of n, so marshalling it, which rewrites its nodes'
+// tags, leaves n as read.
+func Copy(n *yaml.Node) *yaml.Node {
+	if n == nil {
+		return nil
+	}
+	c := *n
+	c.Content = make([]*yaml.Node, len(n.Content))
+	for i, child := range n.Content {
+		c.Content[i] = Copy(child)
+	}
+	c.Alias = Copy(n.Alias)
+	return &c
+}

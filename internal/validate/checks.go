@@ -47,6 +47,7 @@ var Checks = []Check{
 	{"schema/invalid-value", Error, "A value not of its field's type"},
 	{"schema/link-target", Error, "A link field targeting an undeclared type"},
 	{"schema/list-row", Error, "A list row with a key its list does not have"},
+	{"schema/query", Error, "A query field whose query cannot run"},
 	{"schema/required", Error, "A required field not set"},
 	{"schema/unknown-field", Error, "A frontmatter key the type does not have"},
 	{"schema/unknown-key", Error, "A key the schema language does not have"},

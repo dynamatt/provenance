@@ -248,12 +248,14 @@ func (ts *templateSet) unknownNamed(name string) string {
 // are relative to the page, markdown knows the embed chain); the
 // placeholders only let templates parse ahead of rendering.
 var placeholderFuncs = template.FuncMap{
-	"markdown": func(any) (template.HTML, error) { return "", nil },
-	"link":     func(any, ...any) (template.HTML, error) { return "", nil },
-	"href":     func(any) (string, error) { return "", nil },
-	"title":    func(any) (string, error) { return "", nil },
-	"isa":      func(any, string) (bool, error) { return false, nil },
-	"short":    func(string) string { return "" },
+	"markdown":  func(any) (template.HTML, error) { return "", nil },
+	"link":      func(any, ...any) (template.HTML, error) { return "", nil },
+	"href":      func(any) (string, error) { return "", nil },
+	"title":     func(any) (string, error) { return "", nil },
+	"isa":       func(any, string) (bool, error) { return false, nil },
+	"collect":   func(any, ...string) ([]tmpl.Data, error) { return nil, nil },
+	"titlecase": func(string) string { return "" },
+	"short":     func(string) string { return "" },
 }
 
 // parse parses src as a template set whose main template has src's name.

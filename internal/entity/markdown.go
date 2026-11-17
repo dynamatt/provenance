@@ -145,7 +145,7 @@ func written(n *yaml.Node) *Written {
 			w.Items = append(w.Items, written(c))
 		}
 	case yaml.MappingNode:
-		w.Kind, w.Row = Mapping, yamlValues{n}
+		w.Kind, w.Row, w.Node = Mapping, yamlValues{n}, n
 	default:
 		w.Kind = Other
 	}

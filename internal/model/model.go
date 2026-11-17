@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"go.yaml.in/yaml/v4"
+
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/schema"
 )
@@ -84,6 +86,9 @@ type Value struct {
 	Invalid bool
 	Raw     string
 	Problem string
+	// ProblemLine is the file line inside the value Problem is about, for
+	// a query field's query; 0 for the value as a whole.
+	ProblemLine int
 
 	Str  string   // string, text, enum, date (YYYY-MM-DD), calculated text
 	Num  float64  // number
@@ -94,6 +99,9 @@ type Value struct {
 	Targets []*Entity
 	Rows    []Row    // a list's rows, when it has sub-fields
 	Items   []*Value // a list's items, when it names an item type (Field.Elem)
+	// Query is a query field's query as written (DES-0010). The query
+	// package evaluates it and fills IDs and Targets with its results.
+	Query *yaml.Node
 
 	// Written is what the entity's record writes for the field, and
 	// where; nil when it writes nothing, and for a calculated value.
@@ -115,6 +123,8 @@ func (v *Value) Blank() bool {
 		return strings.TrimSpace(v.Str) == ""
 	case schema.Link:
 		return len(v.IDs) == 0
+	case schema.Query:
+		return v.Query == nil
 	case schema.List:
 		return len(v.Rows) == 0 && len(v.Items) == 0
 	}
@@ -330,6 +340,11 @@ func value(f *schema.Field, w *entity.Written) *Value {
 			return invalid("not a date (YYYY-MM-DD)")
 		}
 		v.Str = w.Text
+	case schema.Query:
+		if w.Kind != entity.Mapping || w.Node == nil {
+			return invalid("not a query: a mapping with from:, and where: and order_by: if wanted")
+		}
+		v.Query = w.Node
 	case schema.Link:
 		ids, ok := linkIDs(f, w)
 		if !ok {

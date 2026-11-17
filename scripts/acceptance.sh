@@ -86,7 +86,7 @@ for id in USR-0001 USR-0002 REQ-0001 REQ-0002 REQ-0003 DES-0001 SEV-0001 SEV-000
 	OCC-0001 OCC-0002 OCC-0003 RSK-0001 VER-0001 VER-0002 EVD-0001 EVD-0002 ECO-0001 DOC-0001 DOC-0002; do
 	expect 0 ">$id<"                      cat _site/index.html
 done
-expect 0 '<h2>VerificationEvidence</h2>' cat _site/index.html
+expect 0 '<h2>Verification Evidence</h2>' cat _site/index.html
 cp REQ/REQ-0001.md REQ/copy.md
 expect 2 '^export: duplicate entity ID REQ-0001 in REQ/REQ-0001\.md and REQ/copy\.md$' "$PROV" export website
 rm REQ/copy.md
@@ -404,7 +404,7 @@ expect 1 '^RSK/RSK-0001\.md:3: error \[schema/unknown-type\] type "Rsk" is not d
 git checkout -q -- RSK/RSK-0001.md
 sed -i 's/type: ApprovalStatus/type: AprovalStatus/' schema/Requirement.yaml
 expect 1 '^schema/Requirement\.yaml:21: error \[schema/file\] field "status": unknown type "AprovalStatus"' "$PROV" validate
-expect 1 '^11 rules not run: the schema has errors$' "$PROV" validate
+expect 1 '^12 rules not run: the schema has errors$' "$PROV" validate
 git checkout -q -- schema/Requirement.yaml
 expect 2 '^validate: unknown report "xml": not a format \(text, json, junit, sarif\)' "$PROV" validate --output xml
 expect 2 '^validate: not in a Provenance repository' "$PROV" validate --path "$WORK"
@@ -418,7 +418,7 @@ cd "$EXAMPLE_DIR"
 # a value not of its type, an ID not of its type's form. Each exits 1 at its
 # line; a declaration nothing uses is a warning only.
 sed -i 's/^order: 1/order: 1\ncolour: red/' REQ/REQ-0001.md
-expect 1 '^REQ/REQ-0001\.md:11: error \[schema/unknown-field\] Requirement has no field "colour" \(fields: ' "$PROV" validate
+expect 1 '^REQ/REQ-0001\.md:12: error \[schema/unknown-field\] Requirement has no field "colour" \(fields: ' "$PROV" validate
 git checkout -q -- REQ/REQ-0001.md
 sed -i 's/^status: approved/status: aproved/' REQ/REQ-0001.md
 expect 1 '^REQ/REQ-0001\.md:7: error \[schema/enum-value\] status: "aproved" is not one of ApprovalStatus: draft, in_review, approved, deprecated \(REQ-0001\)$' "$PROV" validate
@@ -457,7 +457,7 @@ expect 1 '^4 errors, 1 warning$'           "$PROV" validate
 expect 2 '^export: DOC/DOC-0001\.md:52: query block: unknown operator "="' "$PROV" export website --out "$WORK/broken"
 git checkout -q -- DOC/DOC-0001.md
 sed -i 's/^  - USR-0001$/  - REQ-0002/' REQ/REQ-0001.md
-expect 1 '^REQ/REQ-0001\.md:9: error \[links/target-type\] implements: REQ-0002 is of type Requirement, but implements links only to UserNeed \(REQ-0001\)$' "$PROV" validate
+expect 1 '^REQ/REQ-0001\.md:10: error \[links/target-type\] implements: REQ-0002 is of type Requirement, but implements links only to UserNeed \(REQ-0001\)$' "$PROV" validate
 git checkout -q -- REQ/REQ-0001.md
 printf 'x\n' > templates/spare.tmpl
 expect 0 '^templates/spare\.tmpl: warning \[content/unused-template\] named template spare is not chosen by any query block$' "$PROV" validate
@@ -535,8 +535,8 @@ expect 1 '^REQ/REQ-0002\.md:2: warning \[requirement-verified\] requirement miss
 expect 1 '^1 error, 2 warnings$'           "$PROV" validate
 git checkout -q -- VER
 sed -i 's/^order: 2/order: 2\nparent_requirement: REQ-0003/' REQ/REQ-0002.md
-expect 1 '^REQ/REQ-0002\.md:12: error \[no-requirement-decomposition-cycles\] ' "$PROV" validate
-expect 1 '^REQ/REQ-0003\.md:9: error \[no-requirement-decomposition-cycles\] ' "$PROV" validate
+expect 1 '^REQ/REQ-0002\.md:13: error \[no-requirement-decomposition-cycles\] ' "$PROV" validate
+expect 1 '^REQ/REQ-0003\.md:10: error \[no-requirement-decomposition-cycles\] ' "$PROV" validate
 git checkout -q -- REQ
 sed -i 's/^severity: warning/severity: fatal/' rules/requirement-verified.yaml
 expect 1 '^rules/requirement-verified\.yaml:4: error \[rules/severity\] severity is error or warning, not "fatal"$' "$PROV" validate
@@ -736,7 +736,7 @@ expect 1 '' test -e _site/entities/Standard.html
 expect 0 '<tr id="BUG-1042" class="open">' cat _site/entities/Anomaly.html
 expect 0 '<tr id="SEV-0003"><td class="id">SEV-0003</td><td>Critical</td><td>5</td>' cat _site/entities/SeverityLevel.html
 expect 0 'href="SeverityLevel\.html#SEV-0003"' cat _site/entities/RSK-0001.html
-expect 0 '<h2><a href="entities/SeverityLevel\.html">SeverityLevel</a></h2>' cat _site/index.html
+expect 0 '<h2><a href="entities/SeverityLevel\.html">Severity Level</a></h2>' cat _site/index.html
 
 # E6.6: a new dump changing one row moves the last-changed commit of that
 # row's page and the index only (C7), and of DOC-0003, whose queries read
@@ -818,24 +818,67 @@ expect 1 '^schema/VerificationSummaryReport\.yaml:[0-9]+: error \[schema/file\] 
 cp "$WORK/vsr.yaml" schema/VerificationSummaryReport.yaml
 
 # E8.4: templates (DES-0031). DOC-0006 is laid out by Document.tmpl, whose
-# after-body block VerificationSummaryReport.tmpl fills with the matrix; a
+# after-body block VerificationSummaryReport.tmpl fills with its sections; a
 # cited report is an internal reference (isa . "Document"). Without the
 # report's template it is a plain Document; without Document.tmpl too, the
 # built-in page, whose after-body block the report's template fills.
 "$PROV" export website >/dev/null
 DOC6_FLAT="tr -d '\n' < _site/entities/DOC-0006.html"
-expect 0 '<p class="document-meta">.*<div class="body">.*</div><section class="trace-matrix">.*href="REQ-0003\.html".*Not verified by any protocol.*<h3>[^<]*<span[^>]*>[^<]*</span> Internal</h3>' sh -c "$DOC6_FLAT"
+expect 0 '<p class="document-meta">.*<div class="body">.*</div><section class="report-components">.*href="REQ-0002\.html".*<h3>[^<]*<span[^>]*>[^<]*</span> Internal</h3>' sh -c "$DOC6_FLAT"
 expect 0 '<li><a class="ref" href="DOC-0006\.html"' cat _site/entities/DOC-0005.html
 mv templates/VerificationSummaryReport.tmpl "$WORK/vsr.tmpl"
 "$PROV" export website >/dev/null
-expect 0 '^0$' sh -c "grep -c trace-matrix _site/entities/DOC-0006.html || true"
+expect 0 '^0$' sh -c "grep -c report-components _site/entities/DOC-0006.html || true"
 expect 0 '<p class="document-meta">' cat _site/entities/DOC-0006.html
 mv templates/Document.tmpl "$WORK/Document.tmpl"
 cp "$WORK/vsr.tmpl" templates/VerificationSummaryReport.tmpl
 "$PROV" export website >/dev/null
-expect 0 '<article class="entity" id="DOC-0006".*</div><section class="trace-matrix">' sh -c "$DOC6_FLAT"
+expect 0 '<article class="entity" id="DOC-0006".*</div><section class="report-components">' sh -c "$DOC6_FLAT"
 mv "$WORK/Document.tmpl" templates/Document.tmpl
 expect 0 '^0 errors, 1 warning$' "$PROV" validate
+
+# E8.5–E8.7: query fields (DES-0010, DES-0032). A report's scope is a
+# query in its frontmatter, here selecting components; its template shows
+# the components in scope and gives each a section through the named
+# template requirements-of-component, which gives each subcomponent a
+# subsection through itself: the sections nest and are numbered by
+# embedding, with no grouping built in. DOC-0006 starts at the top of the
+# component tree, DOC-0007 at the component its build is of (^^build). A
+# component added later is in the next export, and DOC-0006's page is
+# changed; a rule reads the reverse facet through the tree; a loop through
+# missing has no answer.
+"$PROV" export website >/dev/null
+DOC6_FLAT="tr -d '\n' < _site/entities/DOC-0006.html"
+DOC7_FLAT="tr -d '\n' < _site/entities/DOC-0007.html"
+expect 0 '<p>This report covers the following and the components under it:</p><ul><li><a class="ref" href="CMP-0003\.html"[^>]*>CMP-0003</a>: NeuroPulse implantable stimulator system \(NP-SYS-1\)</li></ul>' sh -c "$DOC6_FLAT"
+expect 0 '<h3><span class="section-number">1\.1</span> NeuroPulse implantable stimulator system .*No requirement is allocated.*<h4><span class="section-number">1\.1\.1</span> NeuroPulse implantable pulse generator .*href="REQ-0002\.html".*Builds tested: <a class="ref" href="BLD-0002\.html".*<h5><span class="section-number">1\.1\.1\.1</span> Pulse-generator ASIC .*href="REQ-0003\.html".*Not verified by any protocol.*<h5><span class="section-number">1\.1\.1\.2</span> Closed-loop control firmware .*href="REQ-0001\.html".*<h4><span class="section-number">1\.1\.2</span> Stimulation and sense leads ' sh -c "$DOC6_FLAT"
+expect 0 'href="CMP-0001\.html"[^>]*>CMP-0001</a>: NeuroPulse implantable pulse generator \(NP-IPG-100\)</li></ul><p class="report-build">Build summarised: <a class="ref" href="BLD-0002\.html".*<h3><span class="section-number">1\.1</span> NeuroPulse implantable pulse generator .*<h4><span class="section-number">1\.1\.1</span> Pulse-generator ASIC ' sh -c "$DOC7_FLAT"
+expect 0 '^0$' sh -c "grep -c 'Stimulation and sense leads' _site/entities/DOC-0007.html || true"
+printf -- '---\nid: CMP-0006\ntype: Component\ntitle: Lead connector\npart_number: NP-CON-2\nstatus: draft\nparent: CMP-0004\n---\nThe connector joining the leads to the pulse generator.\n' > CMP/CMP-0006.md
+gitc add CMP && gitc commit -qm "Add the lead connector"
+"$PROV" export website >/dev/null
+expect 0 '<h5><span class="section-number">1\.1\.2\.1</span> Lead connector ' cat _site/entities/DOC-0006.html
+expect 0 "last changed in <code>$(git rev-parse --short=7 HEAD)</code>" cat _site/entities/DOC-0006.html
+git checkout -q --detach "$PIN"
+rm -f CMP/CMP-0006.md
+cp DOC/DOC-0006.md "$WORK/DOC-0006.md"
+sed -i 's/^  from: Component$/  from: Risk/' DOC/DOC-0006.md
+expect 1 '^DOC/DOC-0006\.md:7: error \[schema/query\] scope: from: Risk is not a type scope may select \(of: \[Component\] in schema/VerificationSummaryReport\.yaml\) \(DOC-0006\)$' "$PROV" validate
+cp "$WORK/DOC-0006.md" DOC/DOC-0006.md
+sed -i 's/^    field: parent$/    field: reported_in/' DOC/DOC-0006.md
+expect 1 '^DOC/DOC-0006\.md:[0-9]+: error \[schema/query\] scope: the query depends on its own results' "$PROV" validate
+git checkout -q -- DOC
+sed -i '/^build: BLD-0002$/d' DOC/DOC-0007.md
+sed -i 's/^    field: parent$/    field: id/; s/^    operator: missing$/    operator: equals\n    value: CMP-0004/' DOC/DOC-0006.md
+expect 0 '^REQ/REQ-0003\.md:9: warning \[requirement-reported\] requirement is in no verification summary report \(REQ-0003\)$' "$PROV" validate
+git checkout -q -- DOC
+expect 0 '^0 errors, 1 warning$' "$PROV" validate
+
+# titlecase (DES-0030): the example's main page shows each type's name as
+# a title; the built-in main page shows names as written.
+"$PROV" export website >/dev/null
+expect 0 '<h2>Verification Summary Report</h2>' cat _site/index.html
+expect 0 '<h2>Test Equipment</h2>' cat _site/index.html
 
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"

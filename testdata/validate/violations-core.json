@@ -434,6 +434,38 @@
       "line": 7
     },
     {
+      "rule": "schema/query",
+      "severity": "error",
+      "message": "scope: neither Widget nor WidgetVariant has a field \"colour\"",
+      "entity": "QRY-0002",
+      "path": "cases/schema-query/violation-field.md",
+      "line": 8
+    },
+    {
+      "rule": "schema/query",
+      "severity": "error",
+      "message": "scope: the query depends on its own results through missing, not_in, not_equals or an aggregation, so it has no answer",
+      "entity": "QRY-0004",
+      "path": "cases/schema-query/violation-loop.md",
+      "line": 6
+    },
+    {
+      "rule": "schema/query",
+      "severity": "error",
+      "message": "scope: render: a query field gives its results to its entity's template, which shows them; leave render out",
+      "entity": "QRY-0003",
+      "path": "cases/schema-query/violation-render.md",
+      "line": 7
+    },
+    {
+      "rule": "schema/query",
+      "severity": "error",
+      "message": "scope: from: QueryReport is not a type scope may select (of: [Widget] in schema/QueryReport.yaml)",
+      "entity": "QRY-0001",
+      "path": "cases/schema-query/violation.md",
+      "line": 6
+    },
+    {
       "rule": "schema/required",
       "severity": "error",
       "message": "required field title is not set",
@@ -476,7 +508,7 @@
     {
       "rule": "schema/unknown-type",
       "severity": "error",
-      "message": "type \"Gadget\" is not declared in schema/ (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant)",
+      "message": "type \"Gadget\" is not declared in schema/ (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, QueryReport, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant)",
       "entity": "GAD-0001",
       "path": "cases/schema-unknown-type/violation.md",
       "line": 3
@@ -556,7 +588,7 @@
     {
       "rule": "schema/link-target",
       "severity": "error",
-      "message": "field \"widget\": target \"Nothing\" is not a declared type (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant)",
+      "message": "field \"widget\": target \"Nothing\" is not a declared type (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, QueryReport, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant)",
       "entity": "",
       "path": "schema/LinkTargetViolation.yaml",
       "line": 9
@@ -643,7 +675,7 @@
     }
   ],
   "summary": {
-    "errors": 71,
+    "errors": 75,
     "warnings": 9,
     "rules_skipped": 0
   }

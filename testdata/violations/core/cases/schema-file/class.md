@@ -23,6 +23,10 @@ examples:
     expect: violation
   - file: broken-schema/schema/AbstractPrefix.yaml
     expect: violation
+  - file: broken-schema/schema/QueryInCsv.yaml
+    expect: violation
+  - file: broken-schema/schema/QueryWithoutOf.yaml
+    expect: violation
   - file: broken-schema/schema/Fine.yaml
     expect: clean
   - file: broken-schema/schema/FineChild.yaml

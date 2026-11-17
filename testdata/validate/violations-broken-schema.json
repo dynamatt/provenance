@@ -44,7 +44,7 @@
     {
       "rule": "schema/file",
       "severity": "error",
-      "message": "type ExtendsUnknown: extends: unknown type \"Nowhere\" (types: AbstractPrefix, CsvListOfRows, CycleA, CycleB, ExtendsUnknown, FieldName, Fine, FineChild, Redeclared, UnknownType)",
+      "message": "type ExtendsUnknown: extends: unknown type \"Nowhere\" (types: AbstractPrefix, CsvListOfRows, CycleA, CycleB, ExtendsUnknown, FieldName, Fine, FineChild, QueryInCsv, QueryWithoutOf, Redeclared, UnknownType)",
       "entity": "",
       "path": "schema/ExtendsUnknown.yaml",
       "line": 3
@@ -60,6 +60,22 @@
     {
       "rule": "schema/file",
       "severity": "error",
+      "message": "field \"scope\": a query has no form in a CSV cell; a type with a source cannot have a query field",
+      "entity": "",
+      "path": "schema/QueryInCsv.yaml",
+      "line": 8
+    },
+    {
+      "rule": "schema/file",
+      "severity": "error",
+      "message": "field \"scope\": a query field needs of: naming the types its query may select, e.g. of: [Requirement]",
+      "entity": "",
+      "path": "schema/QueryWithoutOf.yaml",
+      "line": 5
+    },
+    {
+      "rule": "schema/file",
+      "severity": "error",
       "message": "field \"title\" is inherited from Fine (schema/Fine.yaml:4); a subtype adds fields, it does not declare its parent's again",
       "entity": "",
       "path": "schema/Redeclared.yaml",
@@ -68,14 +84,14 @@
     {
       "rule": "schema/file",
       "severity": "error",
-      "message": "field \"status\": unknown type \"AprovalStatus\" (expected string, text, number, date, boolean, link, list, calculated)",
+      "message": "field \"status\": unknown type \"AprovalStatus\" (expected string, text, number, date, boolean, link, list, calculated, query)",
       "entity": "",
       "path": "schema/UnknownType.yaml",
       "line": 6
     }
   ],
   "summary": {
-    "errors": 9,
+    "errors": 11,
     "warnings": 0,
     "rules_skipped": 0
   }

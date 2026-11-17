@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="provenance validate" tests="52" failures="0" errors="0">
-  <testsuite name="built-in" tests="41" failures="0" errors="0" skipped="0">
+<testsuites name="provenance validate" tests="54" failures="0" errors="0">
+  <testsuite name="built-in" tests="42" failures="0" errors="0" skipped="0">
     <testcase name="content/caption" classname="built-in"></testcase>
     <testcase name="content/csv-column" classname="built-in"></testcase>
     <testcase name="content/csv-row" classname="built-in"></testcase>
@@ -35,6 +35,7 @@
     <testcase name="schema/invalid-value" classname="built-in"></testcase>
     <testcase name="schema/link-target" classname="built-in"></testcase>
     <testcase name="schema/list-row" classname="built-in"></testcase>
+    <testcase name="schema/query" classname="built-in"></testcase>
     <testcase name="schema/required" classname="built-in"></testcase>
     <testcase name="schema/unknown-field" classname="built-in"></testcase>
     <testcase name="schema/unknown-key" classname="built-in"></testcase>
@@ -43,7 +44,7 @@
     <testcase name="schema/unused-record" classname="built-in"></testcase>
     <testcase name="schema/unused-type" classname="built-in"></testcase>
   </testsuite>
-  <testsuite name="rules" tests="11" failures="0" errors="0" skipped="0">
+  <testsuite name="rules" tests="12" failures="0" errors="0" skipped="0">
     <testcase name="block-languages" classname="rules"></testcase>
     <testcase name="eco-change-type-valid" classname="rules"></testcase>
     <testcase name="equipment-calibration-current" classname="rules"></testcase>
@@ -51,6 +52,7 @@
     <testcase name="no-implements-deprecated-need" classname="rules"></testcase>
     <testcase name="no-requirement-decomposition-cycles" classname="rules"></testcase>
     <testcase name="protocol-verifies-requirement" classname="rules"></testcase>
+    <testcase name="requirement-reported" classname="rules"></testcase>
     <testcase name="requirement-title-unique" classname="rules"></testcase>
     <testcase name="requirement-verified" classname="rules">
       <system-out>REQ/REQ-0003.md:2: warning [requirement-verified] requirement missing verification (REQ-0003)&#xA;</system-out>

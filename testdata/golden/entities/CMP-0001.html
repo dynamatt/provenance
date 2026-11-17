@@ -22,7 +22,11 @@
 <tr><th>title</th><td>NeuroPulse implantable pulse generator</td></tr>
 <tr><th>part_number</th><td>NP-IPG-100</td></tr>
 <tr><th>status</th><td>approved</td></tr>
+<tr><th>parent</th><td><a class="id" href="CMP-0003.html" title="NeuroPulse implantable stimulator system">CMP-0003</a></td></tr>
 <tr class="incoming"><th>builds</th><td><a class="id" href="BLD-0001.html" title="Pulse generator, engineering build B">BLD-0001</a>, <a class="id" href="BLD-0002.html" title="Pulse generator, engineering build B2">BLD-0002</a></td></tr>
+<tr class="incoming"><th>reported_in</th><td><a class="id" href="DOC-0007.html" title="Verification Summary Report — Pulse Generator Build B2">DOC-0007</a></td></tr>
+<tr class="incoming"><th>requirements</th><td><a class="id" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a></td></tr>
+<tr class="incoming"><th>subcomponents</th><td><a class="id" href="CMP-0002.html" title="Pulse-generator ASIC">CMP-0002</a>, <a class="id" href="CMP-0005.html" title="Closed-loop control firmware">CMP-0005</a></td></tr>
 <tr class="incoming"><th>test_protocols</th><td><a class="id" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>, <a class="id" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a></td></tr>
 </tbody>
 </table>
@@ -40,6 +44,7 @@ sense leads.</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>21fd23b</code></td><td>2026-11-17</td><td>Claude</td><td>Components form a tree; requirements are allocated to one; reports go component by component</td></tr>
 <tr><td><code>72bd09e</code></td><td>2026-11-15</td><td>Matt Williams</td><td>Merge pull request #29 from dynamatt/epic/E7-references</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>1082cd4</code></td><td>2026-11-05</td><td>Matt Williams</td><td>Merge pull request #25 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
@@ -59,7 +64,7 @@ sense leads.</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>72bd09e</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>21fd23b</code></p>
 </footer>
 </body>
 </html>

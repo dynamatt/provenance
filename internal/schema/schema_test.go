@@ -108,7 +108,7 @@ func TestLoadErrors(t *testing.T) {
 		name, file, content, want string
 	}{
 		{"unknown type", "schema/R.yaml", "type: R\nfields:\n  - name: title\n    type: strnig\n",
-			`schema/R.yaml:4: field "title": unknown type "strnig" (expected string, text, number, date, boolean, link, list, calculated, or an enum: ApprovalStatus)`},
+			`schema/R.yaml:4: field "title": unknown type "strnig" (expected string, text, number, date, boolean, link, list, calculated, query, or an enum: ApprovalStatus)`},
 		{"missing type name", "schema/R.yaml", "id_prefix: R\n", "schema/R.yaml:1: missing type name"},
 		{"missing field type", "schema/R.yaml", "type: R\nfields:\n  - name: title\n", `schema/R.yaml:3: field "title": missing type`},
 		{"unnamed field", "schema/R.yaml", "type: R\nfields:\n  - type: string\n", "schema/R.yaml:3: field without a name"},
@@ -351,7 +351,7 @@ fields:
 	want := []string{
 		"schema/enums/Bad.yaml:1: missing enum name (enum: <Name>)",
 		"schema/B.yaml:1: did not find expected node content",
-		`schema/A.yaml:5: field "x": unknown type "strnig" (expected string, text, number, date, boolean, link, list, calculated)`,
+		`schema/A.yaml:5: field "x": unknown type "strnig" (expected string, text, number, date, boolean, link, list, calculated, query)`,
 		`schema/A.yaml:8: field "y": link cardinality must be one or many, got ""`,
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
@@ -626,7 +626,7 @@ func TestReverseFriendlyName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(s2.KeyProblems) != 1 || !strings.Contains(s2.KeyProblems[0].Msg, `field "a": reverse_friendly_name applies only to a link field`) {
+	if len(s2.KeyProblems) != 1 || !strings.Contains(s2.KeyProblems[0].Msg, `field "a": reverse_friendly_name applies only to a link or query field`) {
 		t.Errorf("key problems %v", s2.KeyProblems)
 	}
 }

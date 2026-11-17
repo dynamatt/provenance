@@ -6,6 +6,8 @@ package entity
 import (
 	"fmt"
 
+	"go.yaml.in/yaml/v4"
+
 	"github.com/dynamatt/provenance/internal/schema"
 )
 
@@ -90,6 +92,9 @@ type Written struct {
 	// Source renders the value as written, for saying what is wrong with
 	// it; nil for a single value, whose Source is its Text as written.
 	Source func() string
+	// Node is a mapping's YAML, read by a query field (DES-0010); nil for
+	// any other value and for a value not read from YAML.
+	Node *yaml.Node
 }
 
 // SourceText is the value as written.

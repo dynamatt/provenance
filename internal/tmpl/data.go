@@ -110,7 +110,7 @@ func (d *Model) value(v *model.Value) any {
 			return v.Bool
 		}
 		return v.Str
-	case f.Kind == schema.Link && f.Cardinality == "many":
+	case f.Kind == schema.Link && f.Cardinality == "many", f.Kind == schema.Query:
 		refs := []Data{}
 		if v.Present && !v.Invalid {
 			for i, id := range v.IDs {

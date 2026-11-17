@@ -17,7 +17,7 @@
 <article class="requirement" id="REQ-0001">
 <h1 class="requirement-title"><span class="req-id">REQ-0001</span> Closed-loop amplitude adjustment</h1>
 <p class="requirement-meta">
-<span class="status status-approved">approved</span> · verified by test
+<span class="status status-approved">approved</span> · allocated to <a class="ref" href="CMP-0005.html" title="Closed-loop control firmware">CMP-0005</a> · verified by test
 </p>
 <div class="statement"><p>The system shall automatically adjust stimulation amplitude within a
 pre-configured safe range, using the measured evoked neural response as
@@ -31,11 +31,7 @@ feedback, without requiring clinician intervention.</p>
 <ul>
 <li><a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>: Bench verification of closed-loop amplitude adjustment</li>
 </ul>
-<h2><span class="section-number">3</span> Reported in</h2>
-<ul>
-<li><a class="ref" href="DOC-0006.html" title="Verification Summary Report — Amplitude Control">DOC-0006</a>: Verification Summary Report — Amplitude Control</li>
-</ul>
-<h2><span class="section-number">4</span> Known anomalies</h2>
+<h2><span class="section-number">3</span> Known anomalies</h2>
 <ul>
 <li><a class="ref" href="Anomaly.html#BUG-1042" title="Alarm tone clipped at maximum volume">BUG-1042</a>: Alarm tone clipped at maximum volume (minor)</li>
 <li><a class="ref" href="Anomaly.html#BUG-1057" title="Amplitude log rounds to whole milliamps">BUG-1057</a>: Amplitude log rounds to whole milliamps (minor, fixed)</li>
@@ -47,6 +43,7 @@ feedback, without requiring clinician intervention.</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>21fd23b</code></td><td>2026-11-17</td><td>Claude</td><td>Components form a tree; requirements are allocated to one; reports go component by component</td></tr>
 <tr><td><code>1718e46</code></td><td>2026-11-15</td><td>Claude</td><td>Evidence is an abstract type; Verification Summary Report extends Document</td></tr>
 <tr><td><code>72bd09e</code></td><td>2026-11-15</td><td>Matt Williams</td><td>Merge pull request #29 from dynamatt/epic/E7-references</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
@@ -65,7 +62,7 @@ feedback, without requiring clinician intervention.</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>1718e46</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>21fd23b</code></p>
 </footer>
 </body>
 </html>

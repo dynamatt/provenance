@@ -14,6 +14,8 @@
 <div class="text">{{markdown .Str}}</div>
 {{- else if eq $k "link" -}}
 {{range $i, $id := .IDs}}{{if $i}}, {{end}}{{ref $id (index $.Targets $i)}}{{end}}
+{{- else if eq $k "query" -}}
+{{range $i, $id := .IDs}}{{if $i}}, {{end}}{{ref $id (index $.Targets $i)}}{{else}}<span class="absent">nothing selected</span>{{end}}
 {{- else if eq $k "list" -}}
 {{template "list" .}}
 {{- else -}}

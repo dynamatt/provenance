@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DOC-0006 Verification Summary Report — Amplitude Control — NEURO DHF</title>
+<title>DOC-0006 Verification Summary Report — NeuroPulse System — NEURO DHF</title>
 <link rel="stylesheet" href="../style.css">
 </head>
 <body data-page="entity" data-type="VerificationSummaryReport" data-entity="DOC-0006">
@@ -15,29 +15,87 @@
 <main class="dhf-main">
 
 <article class="document" id="DOC-0006">
-<h1><span class="id">DOC-0006</span> Verification Summary Report — Amplitude Control</h1>
+<h1><span class="id">DOC-0006</span> Verification Summary Report — NeuroPulse System</h1>
 <p class="document-meta"><span class="status status-draft">draft</span></p>
+<section class="report-scope">
+<p>This report covers the following and the components under it:</p>
+<ul>
+<li><a class="ref" href="CMP-0003.html" title="NeuroPulse implantable stimulator system">CMP-0003</a>: NeuroPulse implantable stimulator system (NP-SYS-1)</li>
+</ul>
+</section>
+
 <div class="body">
-<h1>Verification Summary Report — Amplitude Control</h1>
-<p>This report summarises the verification of the amplitude control
-requirements: for each requirement in its scope, the protocols that verify
-it, their executions and results. The procedures are in <a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a> and
+<h1>Verification Summary Report — NeuroPulse System</h1>
+<p>This report summarises the verification of the system, component by
+component: for each requirement allocated to a component, the protocols
+that verify it, their executions and results. The procedures are in <a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a> and
 their executions are reported in <a class="ref" href="DOC-0005.html" title="Verification Report — Amplitude Control">DOC-0005</a>.</p>
 <p>A Verification Summary Report is a type of its own that extends Document:
-the matrix below is its template's, so every report of this type lays out
-its scope the same way, and the report itself holds only this prose and the
-requirements it covers.</p>
+its sections are its template's, so every report of this type lays out
+its scope the same way. The report holds only this prose and its scope, a
+query for the top of the component tree; each component gets a section of
+the requirements allocated to it, and each subcomponent a subsection of its
+own, so a component or requirement added later is in the next export of
+this report without editing it.</p>
 </div>
-<section class="trace-matrix">
-<h2><span class="section-number">1</span> Traceability matrix</h2>
-<table>
+<section class="report-components">
+<h2><span class="section-number">1</span> Verification by component</h2>
+<div class="query">
+<section class="embed" data-entity="CMP-0003" data-type="Component">
+<section class="component-section">
+<h3><span class="section-number">1.1</span> NeuroPulse implantable stimulator system <span class="id">CMP-0003</span></h3>
+<p class="none">No requirement is allocated to NeuroPulse implantable stimulator system itself.</p>
+<div class="query">
+<section class="embed" data-entity="CMP-0001" data-type="Component">
+<section class="component-section">
+<h4><span class="section-number">1.1.1</span> NeuroPulse implantable pulse generator <span class="id">CMP-0001</span></h4>
+<table class="trace-matrix">
 <thead><tr><th>Requirement</th><th>Protocol</th><th>Execution</th><th>Result</th></tr></thead>
 <tbody>
-<tr><td><a class="ref" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a>: Closed-loop amplitude adjustment</td><td><a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a></td><td><a class="ref" href="EVD-0001.html" title="Execution record — closed-loop amplitude adjustment bench test">EVD-0001</a> (2026-08-04)</td><td class="result-pass">pass</td></tr>
 <tr><td><a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>: Single-fault amplitude ceiling</td><td><a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a></td><td><a class="ref" href="EVD-0002.html" title="Execution record — single-fault amplitude ceiling bench test">EVD-0002</a> (2026-08-11)</td><td class="result-pass">pass</td></tr>
+</tbody>
+</table>
+<p class="builds-tested">Builds tested: <a class="ref" href="BLD-0002.html" title="Pulse generator, engineering build B2">BLD-0002</a> Pulse generator, engineering build B2.</p>
+<div class="query">
+<section class="embed" data-entity="CMP-0002" data-type="Component">
+<section class="component-section">
+<h5><span class="section-number">1.1.1.1</span> Pulse-generator ASIC <span class="id">CMP-0002</span></h5>
+<table class="trace-matrix">
+<thead><tr><th>Requirement</th><th>Protocol</th><th>Execution</th><th>Result</th></tr></thead>
+<tbody>
 <tr><td><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a>: Amplitude ceiling — subsystem allocation</td><td class="none" colspan="3">Not verified by any protocol</td></tr>
 </tbody>
 </table>
+</section>
+</section>
+<section class="embed" data-entity="CMP-0005" data-type="Component">
+<section class="component-section">
+<h5><span class="section-number">1.1.1.2</span> Closed-loop control firmware <span class="id">CMP-0005</span></h5>
+<table class="trace-matrix">
+<thead><tr><th>Requirement</th><th>Protocol</th><th>Execution</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td><a class="ref" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a>: Closed-loop amplitude adjustment</td><td><a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a></td><td><a class="ref" href="EVD-0001.html" title="Execution record — closed-loop amplitude adjustment bench test">EVD-0001</a> (2026-08-04)</td><td class="result-pass">pass</td></tr>
+</tbody>
+</table>
+<p class="builds-tested">Builds tested: <a class="ref" href="BLD-0001.html" title="Pulse generator, engineering build B">BLD-0001</a> Pulse generator, engineering build B.</p>
+</section>
+</section>
+</div>
+
+</section>
+</section>
+<section class="embed" data-entity="CMP-0004" data-type="Component">
+<section class="component-section">
+<h4><span class="section-number">1.1.2</span> Stimulation and sense leads <span class="id">CMP-0004</span></h4>
+<p class="none">No requirement is allocated to Stimulation and sense leads itself.</p>
+</section>
+</section>
+</div>
+
+</section>
+</section>
+</div>
+
 </section>
 
 <section class="references">
@@ -55,6 +113,10 @@ requirements it covers.</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>579a7f8</code></td><td>2026-11-17</td><td>Claude</td><td>Reports list the components in scope instead of showing their query</td></tr>
+<tr><td><code>91fa0b1</code></td><td>2026-11-17</td><td>Claude</td><td>DOC-0007 summarises a build: build replaces covers, its query reads ^^build</td></tr>
+<tr><td><code>21fd23b</code></td><td>2026-11-17</td><td>Claude</td><td>Components form a tree; requirements are allocated to one; reports go component by component</td></tr>
+<tr><td><code>9a50783</code></td><td>2026-11-17</td><td>Claude</td><td>Verification summary reports state their scope as a query</td></tr>
 <tr><td><code>1718e46</code></td><td>2026-11-15</td><td>Claude</td><td>Evidence is an abstract type; Verification Summary Report extends Document</td></tr>
 <tr><td><code>72bd09e</code></td><td>2026-11-15</td><td>Matt Williams</td><td>Merge pull request #29 from dynamatt/epic/E7-references</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
@@ -72,7 +134,7 @@ requirements it covers.</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>1718e46</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>579a7f8</code></p>
 </footer>
 </body>
 </html>

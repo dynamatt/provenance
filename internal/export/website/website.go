@@ -567,12 +567,14 @@ func (s *site) renderEntity(e *model.Entity, chain []*model.Entity, named, linkB
 func (ctx *renderCtx) funcs() template.FuncMap {
 	l := ctx.linker()
 	return template.FuncMap{
-		"markdown": ctx.markdown,
-		"link":     l.Link,
-		"href":     l.Href,
-		"title":    l.Title,
-		"isa":      l.IsA,
-		"short":    history.Short,
+		"markdown":  ctx.markdown,
+		"link":      l.Link,
+		"href":      l.Href,
+		"title":     l.Title,
+		"isa":       l.IsA,
+		"collect":   tmpl.Collect,
+		"titlecase": tmpl.TitleCase,
+		"short":     history.Short,
 	}
 }
 
