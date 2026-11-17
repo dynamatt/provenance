@@ -839,7 +839,7 @@ expect 0 '^0 errors, 1 warning$' "$PROV" validate
 
 # E8.5–E8.7: query fields (DES-0010, DES-0032). A report's scope is a
 # query in its frontmatter, here selecting components; its template shows
-# the query (queryof) and gives each component a section through the named
+# the components in scope and gives each a section through the named
 # template requirements-of-component, which gives each subcomponent a
 # subsection through itself: the sections nest and are numbered by
 # embedding, with no grouping built in. DOC-0006 starts at the top of the
@@ -850,9 +850,9 @@ expect 0 '^0 errors, 1 warning$' "$PROV" validate
 "$PROV" export website >/dev/null
 DOC6_FLAT="tr -d '\n' < _site/entities/DOC-0006.html"
 DOC7_FLAT="tr -d '\n' < _site/entities/DOC-0007.html"
-expect 0 '<p>This report covers <a class="ref" href="CMP-0003\.html"[^>]*>CMP-0003</a> NeuroPulse implantable stimulator system and the components under it, selected by:</p><pre class="query"><code>from: Component' sh -c "$DOC6_FLAT"
+expect 0 '<p>This report covers the following and the components under it:</p><ul><li><a class="ref" href="CMP-0003\.html"[^>]*>CMP-0003</a>: NeuroPulse implantable stimulator system \(NP-SYS-1\)</li></ul>' sh -c "$DOC6_FLAT"
 expect 0 '<h3><span class="section-number">1\.1</span> NeuroPulse implantable stimulator system .*No requirement is allocated.*<h4><span class="section-number">1\.1\.1</span> NeuroPulse implantable pulse generator .*href="REQ-0002\.html".*Builds tested: <a class="ref" href="BLD-0002\.html".*<h5><span class="section-number">1\.1\.1\.1</span> Pulse-generator ASIC .*href="REQ-0003\.html".*Not verified by any protocol.*<h5><span class="section-number">1\.1\.1\.2</span> Closed-loop control firmware .*href="REQ-0001\.html".*<h4><span class="section-number">1\.1\.2</span> Stimulation and sense leads ' sh -c "$DOC6_FLAT"
-expect 0 'value_of: \^\^build.*Build summarised: <a class="ref" href="BLD-0002\.html".*<h3><span class="section-number">1\.1</span> NeuroPulse implantable pulse generator .*<h4><span class="section-number">1\.1\.1</span> Pulse-generator ASIC ' sh -c "$DOC7_FLAT"
+expect 0 'href="CMP-0001\.html"[^>]*>CMP-0001</a>: NeuroPulse implantable pulse generator \(NP-IPG-100\)</li></ul><p class="report-build">Build summarised: <a class="ref" href="BLD-0002\.html".*<h3><span class="section-number">1\.1</span> NeuroPulse implantable pulse generator .*<h4><span class="section-number">1\.1\.1</span> Pulse-generator ASIC ' sh -c "$DOC7_FLAT"
 expect 0 '^0$' sh -c "grep -c 'Stimulation and sense leads' _site/entities/DOC-0007.html || true"
 printf -- '---\nid: CMP-0006\ntype: Component\ntitle: Lead connector\npart_number: NP-CON-2\nstatus: draft\nparent: CMP-0004\n---\nThe connector joining the leads to the pulse generator.\n' > CMP/CMP-0006.md
 gitc add CMP && gitc commit -qm "Add the lead connector"

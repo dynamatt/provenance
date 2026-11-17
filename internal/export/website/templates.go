@@ -254,7 +254,6 @@ var placeholderFuncs = template.FuncMap{
 	"title":    func(any) (string, error) { return "", nil },
 	"isa":      func(any, string) (bool, error) { return false, nil },
 	"collect":  func(any, ...string) ([]tmpl.Data, error) { return nil, nil },
-	"queryof":  func(any, string) (string, error) { return "", nil },
 	"short":    func(string) string { return "" },
 }
 

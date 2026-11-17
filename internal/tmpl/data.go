@@ -5,7 +5,6 @@ import (
 
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/model"
-	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/schema"
 )
 
@@ -80,18 +79,11 @@ func NewModel(s *schema.Schema, entities []*model.Entity) *Model {
 		m := d.ByID[e.ID]
 		m["Type"], m["Body"], m["Resolved"] = e.Type, e.Body, true
 		m["File"] = FileData(e.Path, e.IDLine())
-		queries := map[string]string{}
 		for _, v := range e.Fields {
 			m[v.Field.Name] = d.value(v)
-			if v.Field.Kind == schema.Query {
-				queries[v.Field.Name] = query.QueryText(v.Query)
-			}
 			if v.Field == e.Schema.BodyField {
 				m["Body"] = v.Str
 			}
-		}
-		if len(queries) > 0 {
-			m["Queries"] = queries
 		}
 		for _, in := range e.Incoming {
 			refs := make([]Data, len(in.From))

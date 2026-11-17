@@ -573,7 +573,6 @@ func (ctx *renderCtx) funcs() template.FuncMap {
 		"title":    l.Title,
 		"isa":      l.IsA,
 		"collect":  tmpl.Collect,
-		"queryof":  tmpl.QueryOf,
 		"short":    history.Short,
 	}
 }

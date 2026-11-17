@@ -58,16 +58,3 @@ func entities(v any, fn string) ([]Data, error) {
 	}
 	return nil, fmt.Errorf("%s: want an entity or a list of entities, got %T", fn, v)
 }
-
-// QueryOf is the query of entity v's query field name, as YAML in block
-// style, for a template to show what the entity selects (DES-0030).
-func QueryOf(v any, name string) (string, error) {
-	e, err := asRef(v, "queryof")
-	if e == nil || err != nil {
-		return "", err
-	}
-	if q, ok := e["Queries"].(map[string]string)[name]; ok {
-		return q, nil
-	}
-	return "", fmt.Errorf("queryof: %s has no query field %q", e["ID"], name)
-}

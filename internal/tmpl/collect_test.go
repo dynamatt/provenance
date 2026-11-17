@@ -41,13 +41,3 @@ func TestCollect(t *testing.T) {
 		t.Errorf("not a link: %v", err)
 	}
 }
-
-func TestQueryOf(t *testing.T) {
-	e := Data{"ID": "DOC-1", "Queries": map[string]string{"scope": "from: Req"}}
-	if got, err := QueryOf(e, "scope"); got != "from: Req" || err != nil {
-		t.Errorf("got %q, %v", got, err)
-	}
-	if _, err := QueryOf(e, "title"); err == nil || err.Error() != `queryof: DOC-1 has no query field "title"` {
-		t.Errorf("no such query field: %v", err)
-	}
-}

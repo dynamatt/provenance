@@ -1990,7 +1990,7 @@ DES-0023, DES-0030, DES-0031, DES-0032, DES-0038 and DES-0048):
 | One program (E8.5) | Inside the program a derived value is a relation of its own, and a read of a name goes to the union of the stored facts and what derives it (`dl:<name>` for links and facets, `cv:<name>` for calculated values), so stratification sees exactly the fields a query or formula reads, not every link. Each entity's query field is compiled on its own (`qf:<ID>.<field>`), as a sub-query on `from` of the entity holding it, so `^` reads the holder. Derived values are written back as stored facts after evaluation, so query blocks and rules read them unchanged. |
 | Loops (Q3) | A loop with no answer is found by the engine's stratification; the query fields in it are reported and left empty, and the rest evaluated without them. `not_equals` counts as negation, as `missing` and `not_in` do. |
 | Which check | A query field's problems are a new check, `schema/query`, at their line inside the query: not a mapping, an unknown key (`render` and `template` with their own message), `from:` outside `of:` or `any`, a field the types lack, an `order_by` that can't sort, a loop. A query field in a list's rows, without `of:`, or on a CSV type is `schema/file`. |
-| `queryof` (Q2) | `.scope.Query` became the function `queryof . "scope"`, backed by an engine key `.Queries`; it gives the query in block style. |
+| `queryof` (Q2) | *Removed, Matt 2026-11-17:* `.scope.Query` became a function `queryof . "scope"` giving the query in block style, then went: a DHF states what a document covers by listing it (the example lists the components in scope), not by showing the query. |
 | `collect` (Q4) | Takes one entity or a list; a name the entities don't have, or one that isn't a link, facet or query field, stops the export. |
 | Page inputs (Q6) | A query field's results join the page's entities, as a query block's `render: id` results do, and the types it selects or reads across links join its types. |
 | `fmt` | A query field is written in block style throughout; its scalars as written. |
@@ -2011,7 +2011,7 @@ export (E8.7); the checks (E8.8); docs and release (E8.9).
 **Deliverables:** in the DDF, a requirement for reusable document types
 and one for type inheritance; DES-0010 amended (`extends`, `abstract`,
 `type: query`, `of:`), DES-0007 (I3), DES-0032 (query fields in the
-grammar, `is_a`), DES-0030 (`collect`, `queryof`), DES-0031 (template
+grammar, `is_a`), DES-0030 (`collect`), DES-0031 (template
 fallback and blocks, I5), DES-0048 (the new errors); I1–I7 and Q1–Q7 as
 decided.
 
@@ -2075,7 +2075,7 @@ requirements no report covers.
 
 ### E8.7 Export
 
-**Deliverables:** `.scope` in templates, `collect` and `queryof`
+**Deliverables:** `.scope` in templates and `collect`
 (Q2, Q4); page inputs include what the query read (Q6). The golden site
 gains both reports.
 

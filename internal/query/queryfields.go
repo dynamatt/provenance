@@ -119,8 +119,8 @@ func ParseQueryField(s *schema.Schema, holder *schema.Type, f *schema.Field, n *
 	return b, nil
 }
 
-// QueryText is a query field's query as YAML, in block style, for a
-// template to show what it selects (DES-0030).
+// QueryText is a query field's query as YAML, in block style: how an
+// invalid query is shown beside its problem.
 func QueryText(n *yaml.Node) string {
 	if n == nil {
 		return ""
