@@ -17,6 +17,16 @@
 <article class="document" id="DOC-0006">
 <h1><span class="id">DOC-0006</span> Verification Summary Report — Amplitude Control</h1>
 <p class="document-meta"><span class="status status-draft">draft</span></p>
+<section class="report-scope">
+<p>This report covers 2 requirements, selected by:</p>
+<pre class="query"><code>from: Requirement
+where:
+  field: status
+  operator: equals
+  value: approved
+order_by: order</code></pre>
+</section>
+
 <div class="body">
 <h1>Verification Summary Report — Amplitude Control</h1>
 <p>This report summarises the verification of the amplitude control
@@ -25,8 +35,9 @@ it, their executions and results. The procedures are in <a class="ref" href="DOC
 their executions are reported in <a class="ref" href="DOC-0005.html" title="Verification Report — Amplitude Control">DOC-0005</a>.</p>
 <p>A Verification Summary Report is a type of its own that extends Document:
 the matrix below is its template's, so every report of this type lays out
-its scope the same way, and the report itself holds only this prose and the
-requirements it covers.</p>
+its scope the same way. The report holds only this prose and its scope, a
+query for every approved requirement, so a requirement approved later is
+in the next export of this report without editing it.</p>
 </div>
 <section class="trace-matrix">
 <h2><span class="section-number">1</span> Traceability matrix</h2>
@@ -35,14 +46,26 @@ requirements it covers.</p>
 <tbody>
 <tr><td><a class="ref" href="REQ-0001.html" title="Closed-loop amplitude adjustment">REQ-0001</a>: Closed-loop amplitude adjustment</td><td><a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a></td><td><a class="ref" href="EVD-0001.html" title="Execution record — closed-loop amplitude adjustment bench test">EVD-0001</a> (2026-08-04)</td><td class="result-pass">pass</td></tr>
 <tr><td><a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a>: Single-fault amplitude ceiling</td><td><a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a></td><td><a class="ref" href="EVD-0002.html" title="Execution record — single-fault amplitude ceiling bench test">EVD-0002</a> (2026-08-11)</td><td class="result-pass">pass</td></tr>
-<tr><td><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a>: Amplitude ceiling — subsystem allocation</td><td class="none" colspan="3">Not verified by any protocol</td></tr>
 </tbody>
 </table>
 </section>
+<section class="report-gathered">
+<h2><span class="section-number">2</span> Test equipment</h2>
+<ul>
+<li><a class="ref" href="EQP-0001.html" title="Bench ECAP simulator">EQP-0001</a>: Bench ECAP simulator</li>
+<li><a class="ref" href="EQP-0002.html" title="Precision current probe">EQP-0002</a>: Precision current probe</li>
+<li><a class="ref" href="EQP-0003.html" title="Fault-injection lead simulator">EQP-0003</a>: Fault-injection lead simulator</li>
+</ul>
+<h2><span class="section-number">3</span> Builds tested</h2>
+<ul>
+<li><a class="ref" href="BLD-0001.html" title="Pulse generator, engineering build B">BLD-0001</a>: Pulse generator, engineering build B</li>
+<li><a class="ref" href="BLD-0002.html" title="Pulse generator, engineering build B2">BLD-0002</a>: Pulse generator, engineering build B2</li>
+</ul>
+</section>
 
 <section class="references">
-<h2><span class="section-number">2</span> References</h2>
-<h3><span class="section-number">2.1</span> Internal</h3>
+<h2><span class="section-number">4</span> References</h2>
+<h3><span class="section-number">4.1</span> Internal</h3>
 <ul>
 <li><a class="ref" href="DOC-0004.html" title="Verification Protocol — Amplitude Control">DOC-0004</a>: Verification Protocol — Amplitude Control</li>
 <li><a class="ref" href="DOC-0005.html" title="Verification Report — Amplitude Control">DOC-0005</a>: Verification Report — Amplitude Control</li>
@@ -55,16 +78,21 @@ requirements it covers.</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>9a50783</code></td><td>2026-11-17</td><td>Claude</td><td>Verification summary reports state their scope as a query</td></tr>
 <tr><td><code>1718e46</code></td><td>2026-11-15</td><td>Claude</td><td>Evidence is an abstract type; Verification Summary Report extends Document</td></tr>
 <tr><td><code>72bd09e</code></td><td>2026-11-15</td><td>Matt Williams</td><td>Merge pull request #29 from dynamatt/epic/E7-references</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
+<tr><td><code>4dab2f7</code></td><td>2026-11-01</td><td>Matt Williams</td><td>Merge pull request #22 from dynamatt/epic/E4-fmt</td></tr>
 <tr><td><code>5f7b810</code></td><td>2026-10-25</td><td>Matt Williams</td><td>Merge pull request #21 from dynamatt/epic/E2-validate</td></tr>
 <tr><td><code>8068898</code></td><td>2026-10-18</td><td>Matt Williams</td><td>Merge pull request #14 from dynamatt/cookbook-glossary</td></tr>
 <tr><td><code>58b2168</code></td><td>2026-10-11</td><td>Matt Williams</td><td>Merge pull request #12 from dynamatt/task/E2.1-validate-design</td></tr>
 <tr><td><code>55388be</code></td><td>2026-10-10</td><td>Matt Williams</td><td>Merge pull request #10 from dynamatt/ddf-references</td></tr>
 <tr><td><code>1b28c4c</code></td><td>2026-10-08</td><td>Matt Williams</td><td>Merge pull request #9 from dynamatt/cite-template</td></tr>
+<tr><td><code>b617654</code></td><td>2026-10-06</td><td>Matt Williams</td><td>Merge pull request #8 from dynamatt/references</td></tr>
 <tr><td><code>bd98829</code></td><td>2026-10-04</td><td>Matt Williams</td><td>Merge pull request #7 from dynamatt/scope-git-captions</td></tr>
+<tr><td><code>b6dfc5c</code></td><td>2026-10-03</td><td>Matt Williams</td><td>Lists that name their type: a record, an enum and a built-in type</td></tr>
 <tr><td><code>4cf41f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Make templates/ functional: Requirement page, layout, index, stylesheet</td></tr>
+<tr><td><code>7aee1f1</code></td><td>2026-09-28</td><td>Matt Williams</td><td>Declare the verification link on the VerificationProtocol side instead</td></tr>
 <tr><td><code>32bb0cb</code></td><td>2026-09-26</td><td>Matt Williams</td><td>Initial commit.</td></tr>
 </tbody>
 </table>
@@ -72,7 +100,7 @@ requirements it covers.</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>1718e46</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>9a50783</code></p>
 </footer>
 </body>
 </html>

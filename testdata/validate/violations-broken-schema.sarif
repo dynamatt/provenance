@@ -316,6 +316,15 @@
               }
             },
             {
+              "id": "schema/query",
+              "shortDescription": {
+                "text": "A query field whose query cannot run"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
               "id": "schema/required",
               "shortDescription": {
                 "text": "A required field not set"
@@ -499,7 +508,7 @@
           "ruleIndex": 28,
           "level": "error",
           "message": {
-            "text": "type ExtendsUnknown: extends: unknown type \"Nowhere\" (types: AbstractPrefix, CsvListOfRows, CycleA, CycleB, ExtendsUnknown, FieldName, Fine, FineChild, Redeclared, UnknownType)"
+            "text": "type ExtendsUnknown: extends: unknown type \"Nowhere\" (types: AbstractPrefix, CsvListOfRows, CycleA, CycleB, ExtendsUnknown, FieldName, Fine, FineChild, QueryInCsv, QueryWithoutOf, Redeclared, UnknownType)"
           },
           "locations": [
             {
@@ -541,6 +550,48 @@
           "ruleIndex": 28,
           "level": "error",
           "message": {
+            "text": "field \"scope\": a query has no form in a CSV cell; a type with a source cannot have a query field"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/QueryInCsv.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/file",
+          "ruleIndex": 28,
+          "level": "error",
+          "message": {
+            "text": "field \"scope\": a query field needs of: naming the types its query may select, e.g. of: [Requirement]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "schema/QueryWithoutOf.yaml",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "schema/file",
+          "ruleIndex": 28,
+          "level": "error",
+          "message": {
             "text": "field \"title\" is inherited from Fine (schema/Fine.yaml:4); a subtype adds fields, it does not declare its parent's again"
           },
           "locations": [
@@ -562,7 +613,7 @@
           "ruleIndex": 28,
           "level": "error",
           "message": {
-            "text": "field \"status\": unknown type \"AprovalStatus\" (expected string, text, number, date, boolean, link, list, calculated)"
+            "text": "field \"status\": unknown type \"AprovalStatus\" (expected string, text, number, date, boolean, link, list, calculated, query)"
           },
           "locations": [
             {

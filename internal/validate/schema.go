@@ -267,6 +267,14 @@ func (c *entityCheck) value(v *model.Value) {
 			c.add("schema/invalid-value", c.e.IDLine(), "%s: %s", f.Name, v.Problem)
 		}
 		return
+	case f.Kind == schema.Query && v.Invalid:
+		// A query that cannot run, at its line (DES-0032).
+		line := v.ProblemLine
+		if line == 0 && v.Written != nil {
+			line = v.Written.Line
+		}
+		c.add("schema/query", line, "%s: %s", f.Name, v.Problem)
+		return
 	case f.Required && v.Blank():
 		c.add("schema/required", c.e.IDLine(), "required field %s is not set", f.Name)
 		return

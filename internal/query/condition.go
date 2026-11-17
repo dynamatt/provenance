@@ -603,6 +603,7 @@ func describe(tg target) string {
 
 type compiler struct {
 	s    *schema.Schema
+	d    *derived // nil outside the program deriving calculated and query fields
 	prog *datalog.Program
 	// prefix keeps this compilation's relations apart from any other
 	// program evaluated alongside.
@@ -651,7 +652,7 @@ func classOf(s *schema.Schema, f *schema.Field) (valueClass, *schema.EnumType) {
 		return classDate, nil
 	case schema.Enum:
 		return classEnum, s.Enums[f.EnumName]
-	case schema.Link:
+	case schema.Link, schema.Query:
 		return classID, nil
 	case schema.Calculated:
 		return classAny, nil
@@ -720,7 +721,7 @@ func (c *compiler) resolve(r *Ref, sc *scope) (tg target, ok bool, err error) {
 	case f != nil:
 		tg.class, tg.enum = classOf(c.s, f)
 		tg.rel = RelField
-		if f.Kind == schema.Link {
+		if f.Kind == schema.Link || f.Kind == schema.Query {
 			tg.rel = RelLink
 		}
 	case at.facet(r.Field) != nil:
@@ -856,7 +857,13 @@ func Compile(s *schema.Schema, types []*schema.Type, cond *Condition, prefix str
 }
 
 func compile(s *schema.Schema, types []*schema.Type, cond *Condition, prefix string) (*compiled, error) {
-	c := &compiler{s: s, prog: &datalog.Program{}, prefix: prefix, witnesses: map[*Test][]string{}}
+	return compileWith(s, nil, types, cond, prefix)
+}
+
+// compileWith is compile reading the values d derives, while calculated
+// and query fields are evaluated; d nil reads the stored facts.
+func compileWith(s *schema.Schema, d *derived, types []*schema.Type, cond *Condition, prefix string) (*compiled, error) {
+	c := &compiler{s: s, d: d, prog: &datalog.Program{}, prefix: prefix, witnesses: map[*Test][]string{}}
 	match := prefix + "match"
 	E := datalog.Var("E")
 	var names []string
@@ -979,7 +986,7 @@ func (c *compiler) subQuery(t *Test, sc *scope, top bool) (datalog.Literal, erro
 		}
 		kind = target{ref: t.Field, at: sc, rows: true}
 		alts = []*scope{{list: f, bind: []datalog.Literal{datalog.P(RelRow, sc.node, lname, item)}}}
-	case f != nil && f.Kind == schema.Link:
+	case f != nil && (f.Kind == schema.Link || f.Kind == schema.Query):
 		reached = linkTypes(c.s, f)
 	case f != nil:
 		return datalog.Literal{}, &Error{Line: t.Field.Line, Msg: fmt.Sprintf("%q is %s: a sub-query reads the rows of a list or the entities a link reaches", name, valueKind(c.s, f))}
@@ -987,10 +994,10 @@ func (c *compiler) subQuery(t *Test, sc *scope, top bool) (datalog.Literal, erro
 		reached = facetTypes(facet)
 	}
 	if reached != nil {
-		via := datalog.P(RelLink, sc.node, lname, item)
+		via := c.d.link(sc.node, name, item)
 		if t.Transitive {
 			reached = transitiveTypes(c.s, reached, name)
-			via = datalog.P(c.reach(lname), sc.node, item)
+			via = datalog.P(c.reach(name), sc.node, item)
 		}
 		for _, tt := range reached {
 			alts = append(alts, &scope{t: tt, bind: []datalog.Literal{via, datalog.P(RelEntity, item, datalog.Const(datalog.String(tt.Name)))}})
@@ -1080,7 +1087,7 @@ func (c *compiler) aggregate(t *Test, sc *scope, alts []*scope, sub string) (dat
 				return datalog.Literal{}, &Error{Line: a.Field.Line, Msg: fmt.Sprintf("%s reads numbers; %s is %s", a.Type, a.Field.Field, describe(tg))}
 			}
 			body := append(alt.binds(), datalog.P(sub, items...))
-			c.prog.Add(datalog.Rule{Head: datalog.NewAtom(in, inArgs...), Body: append(body, read(tg, V)...)})
+			c.prog.Add(datalog.Rule{Head: datalog.NewAtom(in, inArgs...), Body: append(body, c.read(tg, V)...)})
 		}
 	}
 	c.prog.Add(datalog.Rule{
@@ -1188,11 +1195,11 @@ func transitiveTypes(s *schema.Schema, first []*schema.Type, name string) []*sch
 // or an incoming facet, as a relation of (node, reached entity), and returns
 // it. A cycle reaches each entity once, so evaluation ends (REQ-0040), and
 // an entity on a cycle reaches itself.
-func (c *compiler) reach(name datalog.Term) string {
+func (c *compiler) reach(name string) string {
 	rel := c.rel("reach")
 	X, M, T := datalog.Var("X"), datalog.Var("M"), datalog.Var("T")
-	c.prog.Add(datalog.Rule{Head: datalog.NewAtom(rel, X, T), Body: []datalog.Literal{datalog.P(RelLink, X, name, T)}})
-	c.prog.Add(datalog.Rule{Head: datalog.NewAtom(rel, X, T), Body: []datalog.Literal{datalog.P(rel, X, M), datalog.P(RelLink, M, name, T)}})
+	c.prog.Add(datalog.Rule{Head: datalog.NewAtom(rel, X, T), Body: []datalog.Literal{c.d.link(X, name, T)}})
+	c.prog.Add(datalog.Rule{Head: datalog.NewAtom(rel, X, T), Body: []datalog.Literal{datalog.P(rel, X, M), c.d.link(M, name, T)}})
 	return rel
 }
 
@@ -1226,7 +1233,7 @@ func (c *compiler) test(t *Test, sc *scope) (datalog.Literal, error) {
 		// The value is empty on this alternative.
 		return c.absent(t, sc), nil
 	}
-	return c.compareWith(t, sc, left, right, read(left, datalog.Var("V")))
+	return c.compareWith(t, sc, left, right, c.read(left, datalog.Var("V")))
 }
 
 // compare compiles t's operator and value against left, read into V by
@@ -1300,7 +1307,7 @@ func (c *compiler) compareWith(t *Test, sc *scope, left target, right *target, r
 	default:
 		other := datalog.Const(t.Value.Literal)
 		if right != nil {
-			body = append(body, read(*right, W)...)
+			body = append(body, c.read(*right, W)...)
 			other = W
 		}
 		c.prog.Add(datalog.Rule{Head: head, Body: append(body, datalog.Cmp(V, cmpOps[t.Operator], other))})
@@ -1309,7 +1316,7 @@ func (c *compiler) compareWith(t *Test, sc *scope, left target, right *target, r
 }
 
 // read returns literals binding v to each value of tg.
-func read(tg target, v datalog.Term) []datalog.Literal {
+func (c *compiler) read(tg target, v datalog.Term) []datalog.Literal {
 	node := tg.at.node
 	name := datalog.Const(datalog.String(tg.ref.Field))
 	switch {
@@ -1320,7 +1327,10 @@ func read(tg target, v datalog.Term) []datalog.Literal {
 	case tg.rel == "" && tg.ref.Field == "type":
 		return []datalog.Literal{datalog.P(RelEntity, node, v)}
 	}
-	return []datalog.Literal{datalog.P(tg.rel, node, name, v)}
+	if tg.rel == RelLink {
+		return []datalog.Literal{c.d.link(node, tg.ref.Field, v)}
+	}
+	return []datalog.Literal{c.d.field(node, tg.ref.Field, v)}
 }
 
 // noneOfNames names types as the subject of "has no …": "neither Risk nor

@@ -71,3 +71,16 @@ func TestDiffer(t *testing.T) {
 		}
 	}
 }
+
+// A query field is written in block style throughout, its comments kept.
+func TestFormatQuery(t *testing.T) {
+	qs := &schema.Schema{Types: map[string]*schema.Type{"Widget": {Name: "Widget", Fields: []*schema.Field{
+		{Name: "scope", Kind: schema.Query, Target: []string{"Widget"}, Cardinality: "many"},
+	}}}}
+	in := "---\nid: W-1\ntype: Widget\nscope: {from: Widget, where: {field: id, operator: not_in, value: [W-1, W-2]}} # mine\n---\n"
+	want := "---\nid: W-1\ntype: Widget\nscope: # mine\n  from: Widget\n  where:\n    field: id\n    operator: not_in\n    value:\n      - W-1\n      - W-2\n---\n"
+	got, _, ok, err := Format(parse(t, in), qs)
+	if err != nil || !ok || string(got) != want {
+		t.Errorf("got ok %v err %v:\n%s\nwant:\n%s", ok, err, got, want)
+	}
+}

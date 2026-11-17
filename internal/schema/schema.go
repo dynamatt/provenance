@@ -40,13 +40,16 @@ const (
 	Link       Kind = "link"
 	List       Kind = "list"
 	Calculated Kind = "calculated"
+	// Query is a field whose value is a query written in the entity's
+	// frontmatter; it holds the entities the query selects (DES-0010).
+	Query Kind = "query"
 )
 
 // DateLayout is how a date field's value is written: YYYY-MM-DD.
 const DateLayout = "2006-01-02"
 
 // builtinKinds are the type keywords a field may use directly.
-var builtinKinds = []Kind{String, Text, Number, Date, Boolean, Link, List, Calculated}
+var builtinKinds = []Kind{String, Text, Number, Date, Boolean, Link, List, Calculated, Query}
 
 // itemKinds are the built-in types a list may name with of:, one value per
 // item. Enums and records may be named too.
@@ -67,7 +70,8 @@ type Field struct {
 	Help         string
 	// Target and Cardinality ("one" or "many") apply to links. Target is
 	// as written; Targets are the types a link may name: each target and
-	// every subtype of it, in name order.
+	// every subtype of it, in name order. A query field's of: is its
+	// Target, and it is a many-link to the entities its query selects.
 	Target      []string
 	Targets     []string
 	Cardinality string
@@ -261,9 +265,9 @@ var (
 		"name": nil, "type": nil, "required": nil, "help": nil,
 		"body":  {Text},
 		"title": {String}, "friendly_name": nil,
-		"target": {Link}, "cardinality": {Link}, "reverse_name": {Link}, "reverse_friendly_name": {Link},
+		"target": {Link}, "cardinality": {Link}, "reverse_name": {Link, Query}, "reverse_friendly_name": {Link, Query},
 		"formula": {Calculated},
-		"fields":  {List}, "of": {List},
+		"fields":  {List}, "of": {List, Query},
 		"column": nil,
 	}
 	fieldKeyOrder = []string{"name", "type", "required", "title", "friendly_name", "help", "body", "target", "cardinality", "reverse_name", "reverse_friendly_name", "formula", "fields", "of", "column"}
@@ -691,7 +695,7 @@ func (s *Schema) Expand(names []string) []string {
 func (s *Schema) targets() {
 	set := func(fields []*Field) {
 		for _, f := range fields {
-			if f.Kind == Link {
+			if f.Kind == Link || f.Kind == Query {
 				f.Targets = s.Expand(f.Target)
 			}
 			for _, sub := range f.Fields {
@@ -768,7 +772,7 @@ func (s *Schema) facets(ld *loader) {
 		var links []FacetSource
 		for _, f := range src.Fields {
 			switch f.Kind {
-			case Link:
+			case Link, Query:
 				links = append(links, FacetSource{Type: src, Field: f})
 			case List:
 				for _, sub := range f.Fields {
@@ -988,7 +992,7 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 	if rf.ReverseName != "" && !nameForm.MatchString(rf.ReverseName) {
 		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s: reverse_name %q is not lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by", label, rf.ReverseName)}
 	}
-	if rf.ReverseFriendly != "" && rf.ReverseName == "" && rf.Type == string(Link) {
+	if rf.ReverseFriendly != "" && rf.ReverseName == "" && (rf.Type == string(Link) || rf.Type == string(Query)) {
 		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s: reverse_friendly_name labels the reverse_name, and there is none; give reverse_name too", label)}
 	}
 	if prev, dup := seen[rf.Name]; dup {
@@ -1021,8 +1025,8 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 		return nil, &Error{Path: path, Line: typeLine, Msg: fmt.Sprintf("%s: unknown type %q (expected %s)", label, rf.Type, l.expected())}
 	}
 	of := yamlnode.Lookup(n, "of")
-	if of != nil && f.Kind != List {
-		return nil, &Error{Path: path, Line: of.Line, Msg: label + ": of: applies only to type: list"}
+	if of != nil && f.Kind != List && f.Kind != Query {
+		return nil, &Error{Path: path, Line: of.Line, Msg: label + ": of: applies only to type: list or type: query"}
 	}
 
 	if f.Title && (f.Kind != String || within != "") {
@@ -1032,6 +1036,27 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": body: true is only allowed on a top-level text field"}
 	}
 	switch f.Kind {
+	case Query:
+		if within != "" {
+			return nil, &Error{Path: path, Line: typeLine, Msg: label + ": a query field is a field of an entity type, not of a list's rows"}
+		}
+		if of == nil {
+			return nil, &Error{Path: path, Line: n.Line, Msg: label + ": a query field needs of: naming the types its query may select, e.g. of: [Requirement]"}
+		}
+		names := []*yaml.Node{of}
+		if of.Kind == yaml.SequenceNode {
+			names = of.Content
+		}
+		for _, tn := range names {
+			if tn.Kind != yaml.ScalarNode || tn.Value == "" {
+				return nil, &Error{Path: path, Line: tn.Line, Msg: label + ": of: names types, e.g. of: [Requirement]"}
+			}
+			f.Target = append(f.Target, tn.Value)
+		}
+		if len(f.Target) == 0 {
+			return nil, &Error{Path: path, Line: of.Line, Msg: label + ": of: names types, e.g. of: [Requirement]"}
+		}
+		f.Cardinality = "many"
 	case Link:
 		if f.Cardinality != "one" && f.Cardinality != "many" {
 			return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s: link cardinality must be one or many, got %q", label, f.Cardinality)}
@@ -1206,6 +1231,9 @@ func (l *loader) columns(t *Type, nodes []*yaml.Node) {
 			continue
 		case f.Kind == List && f.Elem == nil:
 			fail(f, "a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)")
+			continue
+		case f.Kind == Query:
+			fail(f, "a query has no form in a CSV cell; a type with a source cannot have a query field")
 			continue
 		case f.Kind == Calculated:
 			if f.Column != "" {

@@ -77,10 +77,10 @@
 - [x] E8.2 Reports and evidence in the example
 - [x] E8.3 Inheritance in the schema and model
 - [x] E8.4 Templates
-- [ ] E8.5 One program for derived values
-- [ ] E8.6 Query fields
-- [ ] E8.7 Export
-- [ ] E8.8 Checks
+- [x] E8.5 One program for derived values
+- [x] E8.6 Query fields
+- [x] E8.7 Export
+- [x] E8.8 Checks
 - [ ] E8.9 Epic close-out
 
 ## Shape of the plan
@@ -1974,8 +1974,8 @@ rule.
 | Q6 | Page inputs and history | **The page's inputs and "changed since" include every entity the query read,** through E1.11's dependency walk. | A report must show as changed when its scope grows though its file didn't. |
 | Q7 | Signing | **A signature covers the query and the IDs it returned at that commit;** `sign verify` reports a document whose results have changed. Settled in the `sign` epic; the ledger format leaves room. | Approving a report approves its scope. |
 
-**Settled while building** (E8.1–E8.4, written into DES-0007, DES-0010,
-DES-0015, DES-0030, DES-0031, DES-0032 and DES-0048):
+**Settled while building** (written into DES-0007, DES-0010, DES-0015,
+DES-0023, DES-0030, DES-0031, DES-0032, DES-0038 and DES-0048):
 
 | What | Settled |
 | --- | --- |
@@ -1987,6 +1987,15 @@ DES-0015, DES-0030, DES-0031, DES-0032 and DES-0048):
 | Built-in blocks | The built-in entity template's `before-body` and `after-body` get the entity's template data (`.Data`), not the built-in page's view, so a template of blocks reads the same over either. A template holding only `{{define}}`s is found by parsing: outside its `define`s, only white space and comments. |
 | `isa` | Also in report templates (DES-0045). |
 | Example | Until E8.6 the report's `scope` is a many-link written by hand, so the example validates at every task; E8.6 makes it a query field. The calibration rule's message now names any execution, not a test's. The main page lists DOC-0006 under its own type. |
+| One program (E8.5) | Inside the program a derived value is a relation of its own, and a read of a name goes to the union of the stored facts and what derives it (`dl:<name>` for links and facets, `cv:<name>` for calculated values), so stratification sees exactly the fields a query or formula reads, not every link. Each entity's query field is compiled on its own (`qf:<ID>.<field>`), as a sub-query on `from` of the entity holding it, so `^` reads the holder. Derived values are written back as stored facts after evaluation, so query blocks and rules read them unchanged. |
+| Loops (Q3) | A loop with no answer is found by the engine's stratification; the query fields in it are reported and left empty, and the rest evaluated without them. `not_equals` counts as negation, as `missing` and `not_in` do. |
+| Which check | A query field's problems are a new check, `schema/query`, at their line inside the query: not a mapping, an unknown key (`render` and `template` with their own message), `from:` outside `of:` or `any`, a field the types lack, an `order_by` that can't sort, a loop. A query field in a list's rows, without `of:`, or on a CSV type is `schema/file`. |
+| `queryof` (Q2) | `.scope.Query` became the function `queryof . "scope"`, backed by an engine key `.Queries`; it gives the query in block style. |
+| `collect` (Q4) | Takes one entity or a list; a name the entities don't have, or one that isn't a link, facet or query field, stops the export. |
+| Page inputs (Q6) | A query field's results join the page's entities, as a query block's `render: id` results do, and the types it selects or reads across links join its types. |
+| `fmt` | A query field is written in block style throughout; its scalars as written. |
+| Built-in page | Shows a query field's results as links, or *nothing selected*. |
+| Example | `VerificationSummaryReport.covers` (a link) and `requirement_count` (`COUNT(scope)`); DOC-0007 scopes by `^covers`; `rules/requirement-reported.yaml` reads `reported_in`. Q8 (grouping into sections) is not in this epic yet: to discuss with Matt. |
 
 **Order:** the design (E8.1); the example's report and evidence types as
 the fixture (E8.2, rule 4); inheritance in the schema, then templates

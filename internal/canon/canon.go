@@ -146,6 +146,8 @@ func differ(a, b *model.Value) string {
 		return fmt.Sprintf("%q becomes %q", a.Str, b.Str)
 	case a.Num != b.Num || a.Bool != b.Bool:
 		return "a different value"
+	case a.Field.Kind == schema.Query && !sameYAML(a.Query, b.Query):
+		return "a different query"
 	case !slices.Equal(a.IDs, b.IDs):
 		return fmt.Sprintf("links %s become %s", strings.Join(a.IDs, ", "), strings.Join(b.IDs, ", "))
 	case len(a.Items) != len(b.Items) || len(a.Rows) != len(b.Rows):
@@ -164,6 +166,22 @@ func differ(a, b *model.Value) string {
 		}
 	}
 	return ""
+}
+
+// sameYAML reports whether a and b hold the same values, however written.
+func sameYAML(a, b *yaml.Node) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	if a.Kind != b.Kind || a.Value != b.Value || a.ShortTag() != b.ShortTag() || len(a.Content) != len(b.Content) {
+		return false
+	}
+	for i := range a.Content {
+		if !sameYAML(a.Content[i], b.Content[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 // comments are the comments of e's frontmatter, sorted: fmt moves a

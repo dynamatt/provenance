@@ -13,8 +13,8 @@ import (
 
 // Deps is what an entity's rendering pulls content from (DES-0033 scope
 // resolution, DES-0023 last-changed commit): the entity itself, every entity it
-// embeds with ![[ID]], every result of its query blocks, and the same for
-// each entity rendered in full inside it. A wikilink reference ([[ID]]) is
+// embeds with ![[ID]], every result of its query blocks and query fields,
+// and the same for each entity rendered in full inside it. A wikilink reference ([[ID]]) is
 // not a dependency: it shows only the target's ID or one field, and out of
 // scope it falls back to the plain ID.
 type Deps struct {
@@ -27,8 +27,8 @@ type Deps struct {
 	// field, tag or caption it shows, sorted. They are inputs of the
 	// page, not part of a scope.
 	Read []string
-	// Types are the types the query blocks select or read across links,
-	// sorted. Every entity of these types can change a result set, whether
+	// Types are the types the query blocks and query fields select or read
+	// across links, sorted. Every entity of these types can change a result set, whether
 	// it is in it now or not.
 	Types []string
 	// Templates are the named templates the query blocks choose, sorted.
@@ -49,6 +49,7 @@ func (g *Graph) Dependencies(root *model.Entity) (*Deps, error) {
 	for len(w.queue) > 0 {
 		e := w.queue[0]
 		w.queue = w.queue[1:]
+		w.queryFields(e)
 		for _, text := range textSources(e) {
 			refs, err := e.Record.Refs(text)
 			if err != nil {
@@ -217,6 +218,32 @@ func depError(e *model.Entity, text string, err error) error {
 		return &ContentError{Path: e.Path, Line: e.TextFileLine(text, te.Line), Entity: e.ID, Msg: te.Msg}
 	}
 	return fmt.Errorf("%s: %w", e.Path, err)
+}
+
+// queryFields notes what e's query fields read and find (DES-0032): their
+// results are shown by e's template, and every entity of the types they
+// read can change them, as a query block's (DES-0023).
+func (w *walker) queryFields(e *model.Entity) {
+	for _, v := range e.Fields {
+		if v.Field.Kind != schema.Query || v.Query == nil || v.Invalid {
+			continue
+		}
+		q, err := ParseQueryField(w.g.Schema, e.Schema, v.Field, v.Query)
+		if err != nil {
+			continue // reported on the value
+		}
+		for _, t := range q.From {
+			w.types[t.Name] = true
+		}
+		for _, t := range viaTypes(w.g.Schema, q.From, q.Where) {
+			w.types[t] = true
+		}
+		for _, r := range v.Targets {
+			if r != nil {
+				w.add(r, false)
+			}
+		}
+	}
 }
 
 // query notes what the query block b reads and finds.

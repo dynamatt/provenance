@@ -404,7 +404,7 @@ expect 1 '^RSK/RSK-0001\.md:3: error \[schema/unknown-type\] type "Rsk" is not d
 git checkout -q -- RSK/RSK-0001.md
 sed -i 's/type: ApprovalStatus/type: AprovalStatus/' schema/Requirement.yaml
 expect 1 '^schema/Requirement\.yaml:21: error \[schema/file\] field "status": unknown type "AprovalStatus"' "$PROV" validate
-expect 1 '^11 rules not run: the schema has errors$' "$PROV" validate
+expect 1 '^12 rules not run: the schema has errors$' "$PROV" validate
 git checkout -q -- schema/Requirement.yaml
 expect 2 '^validate: unknown report "xml": not a format \(text, json, junit, sarif\)' "$PROV" validate --output xml
 expect 2 '^validate: not in a Provenance repository' "$PROV" validate --path "$WORK"
@@ -824,7 +824,7 @@ cp "$WORK/vsr.yaml" schema/VerificationSummaryReport.yaml
 # built-in page, whose after-body block the report's template fills.
 "$PROV" export website >/dev/null
 DOC6_FLAT="tr -d '\n' < _site/entities/DOC-0006.html"
-expect 0 '<p class="document-meta">.*<div class="body">.*</div><section class="trace-matrix">.*href="REQ-0003\.html".*Not verified by any protocol.*<h3>[^<]*<span[^>]*>[^<]*</span> Internal</h3>' sh -c "$DOC6_FLAT"
+expect 0 '<p class="document-meta">.*<div class="body">.*</div><section class="trace-matrix">.*href="REQ-0002\.html".*<h3>[^<]*<span[^>]*>[^<]*</span> Internal</h3>' sh -c "$DOC6_FLAT"
 expect 0 '<li><a class="ref" href="DOC-0006\.html"' cat _site/entities/DOC-0005.html
 mv templates/VerificationSummaryReport.tmpl "$WORK/vsr.tmpl"
 "$PROV" export website >/dev/null
@@ -835,6 +835,41 @@ cp "$WORK/vsr.tmpl" templates/VerificationSummaryReport.tmpl
 "$PROV" export website >/dev/null
 expect 0 '<article class="entity" id="DOC-0006".*</div><section class="trace-matrix">' sh -c "$DOC6_FLAT"
 mv "$WORK/Document.tmpl" templates/Document.tmpl
+expect 0 '^0 errors, 1 warning$' "$PROV" validate
+
+# E8.5–E8.7: query fields (DES-0010, DES-0032). A report's scope is a
+# query in its frontmatter; its results are a many-link the template lays
+# out, with the query shown (queryof) and equipment gathered once
+# (collect). DOC-0006 selects every approved requirement; DOC-0007 the
+# requirement it covers and those refining it (^covers). Approving
+# REQ-0003 brings it into DOC-0006 without editing the report, and makes
+# DOC-0006's page changed; a rule reads the reverse facet; a loop through
+# missing has no answer.
+"$PROV" export website >/dev/null
+DOC6_FLAT="tr -d '\n' < _site/entities/DOC-0006.html"
+DOC7_FLAT="tr -d '\n' < _site/entities/DOC-0007.html"
+expect 0 '<p>This report covers 2 requirements, selected by:</p><pre class="query"><code>from: Requirement' sh -c "$DOC6_FLAT"
+expect 0 'trace-matrix.*href="REQ-0001\.html".*href="REQ-0002\.html".*</table>' sh -c "$DOC6_FLAT"
+expect 0 '^0$' sh -c "grep -c 'href=\"REQ-0003.html\"' _site/entities/DOC-0006.html || true"
+expect 0 'value_of: \^covers.*trace-matrix.*href="REQ-0002\.html".*href="REQ-0003\.html".*Not verified by any protocol.*Test equipment</h2><ul><li><a class="ref" href="EQP-0003\.html"' sh -c "$DOC7_FLAT"
+expect 0 'Reported in</h2><ul><li><a class="ref" href="DOC-0007\.html"' sh -c "tr -d '\n' < _site/entities/REQ-0003.html"
+sed -i 's/^status: draft$/status: approved/' REQ/REQ-0003.md
+gitc commit -qam "Approve REQ-0003"
+"$PROV" export website >/dev/null
+expect 0 '<p>This report covers 3 requirements' cat _site/entities/DOC-0006.html
+expect 0 "last changed in <code>$(git rev-parse --short=7 HEAD)</code>" cat _site/entities/DOC-0006.html
+git checkout -q --detach "$PIN"
+cp DOC/DOC-0006.md "$WORK/DOC-0006.md"
+sed -i 's/^  from: Requirement$/  from: Risk/' DOC/DOC-0006.md
+expect 1 '^DOC/DOC-0006\.md:7: error \[schema/query\] scope: from: Risk is not a type scope may select \(of: \[Requirement\] in schema/VerificationSummaryReport\.yaml\) \(DOC-0006\)$' "$PROV" validate
+cp "$WORK/DOC-0006.md" DOC/DOC-0006.md
+git checkout -q -- DOC
+sed -i 's/^    field: status$/    field: reported_in/; s/^    operator: equals$/    operator: missing/; /^    value: approved$/d' DOC/DOC-0006.md
+expect 1 '^DOC/DOC-0006\.md:[0-9]+: error \[schema/query\] scope: the query depends on its own results' "$PROV" validate
+git checkout -q -- DOC
+sed -i '/^covers: REQ-0002$/d' DOC/DOC-0007.md
+expect 0 '^REQ/REQ-0003\.md:2: warning \[requirement-reported\] requirement is in no verification summary report \(REQ-0003\)$' "$PROV" validate
+git checkout -q -- DOC
 expect 0 '^0 errors, 1 warning$' "$PROV" validate
 
 if [ "$failures" -ne 0 ]; then

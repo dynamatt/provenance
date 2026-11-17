@@ -32,7 +32,7 @@ func NewGraph(s *schema.Schema, entities []*model.Entity) (*Graph, error) {
 	for _, e := range entities {
 		g.byID[e.ID] = e
 	}
-	if err := g.Calculate(); err != nil {
+	if err := g.derive(); err != nil {
 		return nil, err
 	}
 	return g, nil
@@ -115,10 +115,31 @@ func ParseScope(src string, s *schema.Schema) (*Block, error) {
 // rule file (DES-0016), against the schema; what names it in errors. The
 // caller checks m's other keys.
 func ParseQuery(m *yaml.Node, s *schema.Schema, what string) (*Block, error) {
+	b, _, err := parseFromTypes(m, s, what)
+	if err != nil {
+		return nil, err
+	}
+	if where := yamlnode.Lookup(m, "where"); where != nil {
+		cond, err := ParseCondition(where)
+		if err != nil {
+			return nil, err
+		}
+		b.Where = cond
+		// Compile now, so every schema error is reported while parsing.
+		if _, _, err := Compile(s, b.From, cond, "q_"); err != nil {
+			return nil, err
+		}
+	}
+	return b, nil
+}
+
+// parseFromTypes reads m's from: into a block's From, every type it stands for,
+// and returns the types named as written; nil for any.
+func parseFromTypes(m *yaml.Node, s *schema.Schema, what string) (*Block, []*schema.Type, error) {
 	b := &Block{Render: Render{Mode: RenderFull}}
 	from := yamlnode.Lookup(m, "from")
 	if from == nil {
-		return nil, errorf(m, "%s has no from: <type>, from: [<type>, …] or from: any", what)
+		return nil, nil, errorf(m, "%s has no from: <type>, from: [<type>, …] or from: any", what)
 	}
 	fromNodes := []*yaml.Node{from}
 	if from.Kind == yaml.ScalarNode && from.Value == "any" {
@@ -133,17 +154,17 @@ func ParseQuery(m *yaml.Node, s *schema.Schema, what string) (*Block, error) {
 	if from.Kind == yaml.SequenceNode {
 		fromNodes = from.Content
 		if len(fromNodes) == 0 {
-			return nil, errorf(from, "from: an empty list of types")
+			return nil, nil, errorf(from, "from: an empty list of types")
 		}
 	}
 	var named []*schema.Type
 	for _, n := range fromNodes {
 		t := s.Types[scalar(n)]
 		if t == nil {
-			return nil, errorf(n, "from: unknown type %q (types: %s)", n.Value, strings.Join(s.TypeNames(), ", "))
+			return nil, nil, errorf(n, "from: unknown type %q (types: %s)", n.Value, strings.Join(s.TypeNames(), ", "))
 		}
 		if slices.Contains(named, t) {
-			return nil, errorf(n, "from: %s is listed twice", t.Name)
+			return nil, nil, errorf(n, "from: %s is listed twice", t.Name)
 		}
 		named = append(named, t)
 	}
@@ -156,21 +177,9 @@ func ParseQuery(m *yaml.Node, s *schema.Schema, what string) (*Block, error) {
 		}
 	}
 	if len(fromNodes) > 0 && len(b.From) == 0 {
-		return nil, errorf(from, "from: %s is abstract and no type extends it, so it has no entities", named[0].Name)
+		return nil, nil, errorf(from, "from: %s is abstract and no type extends it, so it has no entities", named[0].Name)
 	}
-
-	if where := yamlnode.Lookup(m, "where"); where != nil {
-		cond, err := ParseCondition(where)
-		if err != nil {
-			return nil, err
-		}
-		b.Where = cond
-		// Compile now, so every schema error is reported while parsing.
-		if _, _, err := Compile(s, b.From, cond, "q_"); err != nil {
-			return nil, err
-		}
-	}
-	return b, nil
+	return b, named, nil
 }
 
 func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Block, error) {
@@ -191,18 +200,8 @@ func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Bloc
 		return nil, err
 	}
 
-	if ob := yamlnode.Lookup(m, "order_by"); ob != nil {
-		nodes := []*yaml.Node{ob}
-		if ob.Kind == yaml.SequenceNode {
-			nodes = ob.Content
-		}
-		for _, n := range nodes {
-			name := scalar(n)
-			if err := checkOrderField(b.From, name); err != nil {
-				return nil, errorf(n, "order_by: %v", err)
-			}
-			b.OrderBy = append(b.OrderBy, name)
-		}
+	if b.OrderBy, err = parseOrderBy(m, b.From); err != nil {
+		return nil, err
 	}
 
 	if r := yamlnode.Lookup(m, "render"); r != nil {
@@ -318,6 +317,28 @@ func noField(types []*schema.Type, name string) string {
 	return fmt.Sprintf("%s has a field %q", noneOf(types), name)
 }
 
+// parseOrderBy reads m's order_by: one field or a list, each one the types
+// from selects can sort by.
+func parseOrderBy(m *yaml.Node, from []*schema.Type) ([]string, error) {
+	ob := yamlnode.Lookup(m, "order_by")
+	if ob == nil {
+		return nil, nil
+	}
+	nodes := []*yaml.Node{ob}
+	if ob.Kind == yaml.SequenceNode {
+		nodes = ob.Content
+	}
+	var out []string
+	for _, n := range nodes {
+		name := scalar(n)
+		if err := checkOrderField(from, name); err != nil {
+			return nil, errorf(n, "order_by: %v", err)
+		}
+		out = append(out, name)
+	}
+	return out, nil
+}
+
 func yamlError(err error) error {
 	line, msg := yamlnode.ErrorLine(err)
 	return &Error{Line: line, Msg: msg}
@@ -334,9 +355,16 @@ func (g *Graph) Run(b *Block) ([]*model.Entity, error) {
 	for i, id := range ids {
 		out[i] = g.byID[id]
 	}
+	g.sortEntities(out, b.OrderBy)
+	return out, nil
+}
+
+// sortEntities sorts out by each of orderBy's fields ascending, entities
+// without a value after those with one, then by ID.
+func (g *Graph) sortEntities(out []*model.Entity, orderBy []string) {
 	keys := make(map[string][]datalog.Value, len(out))
 	for _, e := range out {
-		for _, name := range b.OrderBy {
+		for _, name := range orderBy {
 			keys[e.ID] = append(keys[e.ID], g.sortValue(e.ID, name))
 		}
 	}
@@ -348,7 +376,6 @@ func (g *Graph) Run(b *Block) ([]*model.Entity, error) {
 		}
 		return strings.Compare(a.ID, b.ID)
 	})
-	return out, nil
 }
 
 // Match returns the IDs of the entities of the given types satisfying cond

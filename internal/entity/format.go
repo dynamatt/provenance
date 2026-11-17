@@ -109,6 +109,12 @@ func (f formatter) mapping(m *yaml.Node, fields []*schema.Field) {
 func (f formatter) value(fd *schema.Field, n *yaml.Node) {
 	switch {
 	case fd.Kind == schema.Calculated:
+	case fd.Kind == schema.Query:
+		// A query is written in block style throughout, its scalars as
+		// written: a query's grammar, not the field, says what they are.
+		if n.Kind == yaml.MappingNode {
+			blockStyle(n)
+		}
 	case fd.Kind == schema.Link && fd.Cardinality != "one", fd.Kind == schema.List:
 		if n.Kind != yaml.SequenceNode {
 			return
@@ -134,6 +140,22 @@ func (f formatter) value(fd *schema.Field, n *yaml.Node) {
 		f.scalar(schema.String, n)
 	default:
 		f.scalar(fd.Kind, n)
+	}
+}
+
+// blockStyle writes n's mappings and lists in block style.
+func blockStyle(n *yaml.Node) {
+	if n.Kind == yaml.MappingNode || n.Kind == yaml.SequenceNode {
+		n.Style = 0
+		if n.LineComment != "" && len(n.Content) > 0 {
+			// A flow collection's comment, which a block one has no line for.
+			k := n.Content[0]
+			k.LineComment = strings.TrimSpace(k.LineComment + " " + n.LineComment)
+			n.LineComment = ""
+		}
+	}
+	for _, c := range n.Content {
+		blockStyle(c)
 	}
 }
 
