@@ -86,7 +86,7 @@ for id in USR-0001 USR-0002 REQ-0001 REQ-0002 REQ-0003 DES-0001 SEV-0001 SEV-000
 	OCC-0001 OCC-0002 OCC-0003 RSK-0001 VER-0001 VER-0002 EVD-0001 EVD-0002 ECO-0001 DOC-0001 DOC-0002; do
 	expect 0 ">$id<"                      cat _site/index.html
 done
-expect 0 '<h2>VerificationEvidence</h2>' cat _site/index.html
+expect 0 '<h2>Verification Evidence</h2>' cat _site/index.html
 cp REQ/REQ-0001.md REQ/copy.md
 expect 2 '^export: duplicate entity ID REQ-0001 in REQ/REQ-0001\.md and REQ/copy\.md$' "$PROV" export website
 rm REQ/copy.md
@@ -736,7 +736,7 @@ expect 1 '' test -e _site/entities/Standard.html
 expect 0 '<tr id="BUG-1042" class="open">' cat _site/entities/Anomaly.html
 expect 0 '<tr id="SEV-0003"><td class="id">SEV-0003</td><td>Critical</td><td>5</td>' cat _site/entities/SeverityLevel.html
 expect 0 'href="SeverityLevel\.html#SEV-0003"' cat _site/entities/RSK-0001.html
-expect 0 '<h2><a href="entities/SeverityLevel\.html">SeverityLevel</a></h2>' cat _site/index.html
+expect 0 '<h2><a href="entities/SeverityLevel\.html">Severity Level</a></h2>' cat _site/index.html
 
 # E6.6: a new dump changing one row moves the last-changed commit of that
 # row's page and the index only (C7), and of DOC-0003, whose queries read
@@ -873,6 +873,12 @@ sed -i 's/^    field: parent$/    field: id/; s/^    operator: missing$/    oper
 expect 0 '^REQ/REQ-0003\.md:9: warning \[requirement-reported\] requirement is in no verification summary report \(REQ-0003\)$' "$PROV" validate
 git checkout -q -- DOC
 expect 0 '^0 errors, 1 warning$' "$PROV" validate
+
+# titlecase (DES-0030): the example's main page shows each type's name as
+# a title; the built-in main page shows names as written.
+"$PROV" export website >/dev/null
+expect 0 '<h2>Verification Summary Report</h2>' cat _site/index.html
+expect 0 '<h2>Test Equipment</h2>' cat _site/index.html
 
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"

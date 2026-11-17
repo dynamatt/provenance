@@ -23,5 +23,5 @@ func ReportFuncs(s *schema.Schema) template.FuncMap {
 			}
 		}
 	}
-	return template.FuncMap{"link": l.Link, "href": l.Href, "title": l.Title, "isa": l.IsA, "collect": Collect, "short": history.Short}
+	return template.FuncMap{"link": l.Link, "href": l.Href, "title": l.Title, "isa": l.IsA, "collect": Collect, "titlecase": TitleCase, "short": history.Short}
 }
