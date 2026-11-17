@@ -104,6 +104,13 @@ section.embed:has(> table.joined-rows) { margin: 0; padding: 0; background: none
    They read as the report's own sections and subsections, aligned like
    any document's, not as boxed entities inside it. */
 .report-components section.embed { margin: 0; padding: 0; background: none; border: 0; }
+/* Each component's table has the same columns, so they share widths:
+   fixed layout takes them from the header, whatever each table holds. */
+.component-section table.trace-matrix { table-layout: fixed; width: 100%; }
+.component-section table.trace-matrix th:nth-child(1) { width: 46%; }
+.component-section table.trace-matrix th:nth-child(2) { width: 14%; }
+.component-section table.trace-matrix th:nth-child(3) { width: 28%; }
+.component-section table.trace-matrix th:nth-child(4) { width: 12%; }
 table.joined-rows { table-layout: fixed; margin: 0; }
 table.joined-rows th, table.joined-rows td { border: 1px solid var(--rule); padding: 6px 8px; }
 table.joined-rows thead th { background: var(--brand-soft); font-weight: 600; }
