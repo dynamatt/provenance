@@ -42,10 +42,10 @@ func TestReadAndURL(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "assets", "a b.png"), []byte("png"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if b, err := Read(root, "assets/a b.png"); err != nil || string(b) != "png" {
+	if b, err := Read(os.DirFS(root), "assets/a b.png"); err != nil || string(b) != "png" {
 		t.Errorf("Read: %q %v", b, err)
 	}
-	if _, err := Read(root, "assets/missing.png"); err == nil || err.Error() != "image assets/missing.png does not exist" {
+	if _, err := Read(os.DirFS(root), "assets/missing.png"); err == nil || err.Error() != "image assets/missing.png does not exist" {
 		t.Errorf("missing: %v", err)
 	}
 	if got := URL("../", "assets/a b.png"); got != "../assets/a%20b.png" {
@@ -58,7 +58,7 @@ func TestSVGLineEndings(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "a.svg"), []byte("<svg>\r\n</svg>\r\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := Read(root, "a.svg"); string(b) != "<svg>\n</svg>\n" {
+	if b, _ := Read(os.DirFS(root), "a.svg"); string(b) != "<svg>\n</svg>\n" {
 		t.Errorf("CRLF kept: %q", b)
 	}
 }

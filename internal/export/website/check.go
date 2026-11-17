@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -32,7 +30,7 @@ func (e *Exporter) Check(in *export.Input) ([]Problem, error) {
 	if _, err := e.run(&unstamped, c); err != nil {
 		return nil, err
 	}
-	if err := c.templateFiles(in.Repo.Root, in.Schema); err != nil {
+	if err := c.templateFiles(in.Repo.Files(), in.Schema); err != nil {
 		return nil, err
 	}
 	return c.problems, nil
@@ -195,8 +193,8 @@ var siteOverrides = []string{"_layout.tmpl", "_index.tmpl", "_cite.tmpl"}
 // templateFiles warns of templates/ files the export never uses: a
 // _-prefixed one that is no site override, a named template no query
 // block chooses, and one that is neither a type's nor a named template.
-func (c *checker) templateFiles(root string, s *schema.Schema) error {
-	entries, err := os.ReadDir(filepath.Join(root, templatesDir))
+func (c *checker) templateFiles(fsys fs.FS, s *schema.Schema) error {
+	entries, err := fs.ReadDir(fsys, templatesDir)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}

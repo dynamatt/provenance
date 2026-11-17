@@ -5,6 +5,7 @@ package repo
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -28,6 +29,36 @@ type Repo struct {
 	// Root is the absolute path of the directory holding .component.
 	Root      string
 	Component Component
+	// FS is what the repository's files are read from, slash-separated
+	// paths relative to Root: the working tree, or a commit's tree
+	// (DES-0055). Nil is the working tree at Root.
+	FS fs.FS
+}
+
+// Files is what the repository's files are read from: FS, or the working
+// tree at Root.
+func (r *Repo) Files() fs.FS {
+	if r.FS != nil {
+		return r.FS
+	}
+	return os.DirFS(r.Root)
+}
+
+// FromFS is the repository at root whose files are read from fsys, such
+// as a commit's tree; its .component is fsys's.
+func FromFS(root string, fsys fs.FS) (*Repo, error) {
+	data, err := fs.ReadFile(fsys, ComponentFile)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("no %s file: not a Provenance repository there", ComponentFile)
+	}
+	if err != nil {
+		return nil, err
+	}
+	c, err := parseComponent(data)
+	if err != nil {
+		return nil, err
+	}
+	return &Repo{Root: root, Component: c, FS: fsys}, nil
 }
 
 // ErrNotFound is returned when no .component exists in the start directory or
@@ -75,13 +106,17 @@ func Open(start string) (*Repo, error) {
 }
 
 func loadComponent(root string) (Component, error) {
-	var c Component
 	data, err := os.ReadFile(filepath.Join(root, ComponentFile))
 	if err != nil {
-		return c, err
+		return Component{}, err
 	}
+	return parseComponent(data)
+}
+
+func parseComponent(data []byte) (Component, error) {
+	var c Component
 	var doc yaml.Node
-	err = yamlnode.Unmarshal(data, 1, &doc)
+	err := yamlnode.Unmarshal(data, 1, &doc)
 	if err == nil && len(doc.Content) > 0 {
 		err = doc.Content[0].Decode(&c)
 	}

@@ -1,6 +1,7 @@
 package load
 
 import (
+	"io/fs"
 	"slices"
 	"testing"
 
@@ -15,9 +16,10 @@ import (
 // needs; a source that doesn't need it, such as Markdown, also runs when
 // the schema has problems.
 type Source interface {
-	// Load reads the source's files under root, leaving out the folders in
-	// skip (absolute paths).
-	Load(root string, skip []string) (*Loaded, error)
+	// Load reads the source's files from fsys, the repository's files,
+	// leaving out the folders in skip (slash-separated, relative to the
+	// repository root).
+	Load(fsys fs.FS, skip []string) (*Loaded, error)
 	// Entities lists the entities path holds, each with the text it is
 	// written as, for history to compare two versions of the file (G5).
 	// ok is false when path is not one of the source's files, and data,

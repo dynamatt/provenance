@@ -16,6 +16,7 @@ import (
 	"io/fs"
 	"maps"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -377,33 +378,39 @@ func Load(root string) (*Schema, error) {
 // usable but incomplete when there are problems. err is an I/O error, which
 // stops reading.
 func Read(root string) (s *Schema, problems []*Error, err error) {
+	return ReadFS(os.DirFS(root))
+}
+
+// ReadFS is Read from fsys, the repository's files: the working tree or a
+// commit's tree (DES-0055).
+func ReadFS(fsys fs.FS) (s *Schema, problems []*Error, err error) {
 	s = &Schema{Types: map[string]*Type{}, Enums: map[string]*EnumType{}, Records: map[string]*RecordType{}}
 	l := &loader{Schema: s, pending: map[string]*rawDecl{}}
-	err = l.read(root)
+	err = l.read(fsys)
 	return s, l.problems, err
 }
 
-func (l *loader) read(root string) error {
+func (l *loader) read(fsys fs.FS) error {
 	s := l.Schema
 	// Enums first: field types are resolved against them.
-	enumFiles, err := yamlFiles(root, filepath.Join(Dir, "enums"))
+	enumFiles, err := yamlFiles(fsys, path.Join(Dir, "enums"))
 	if err != nil {
 		return err
 	}
 	for _, rel := range enumFiles {
-		if err := s.loadEnum(root, rel); err != nil && !l.keep(err) {
+		if err := s.loadEnum(fsys, rel); err != nil && !l.keep(err) {
 			return err
 		}
 	}
 	// Every name is registered before any fields are resolved, so a list's
 	// of: can name a record declared in any file.
-	recordFiles, err := yamlFiles(root, filepath.Join(Dir, "records"))
+	recordFiles, err := yamlFiles(fsys, path.Join(Dir, "records"))
 	if err != nil {
 		return err
 	}
 	var records []string
 	for _, rel := range recordFiles {
-		rr, err := readDecl(root, rel, "record")
+		rr, err := readDecl(fsys, rel, "record")
 		if err == nil {
 			err = s.checkName("record", rr)
 		}
@@ -418,13 +425,13 @@ func (l *loader) read(root string) error {
 		l.pending[rr.name] = rr
 		records = append(records, rr.name)
 	}
-	typeFiles, err := yamlFiles(root, Dir)
+	typeFiles, err := yamlFiles(fsys, Dir)
 	if err != nil {
 		return err
 	}
 	var raws []*rawDecl
 	for _, rel := range typeFiles {
-		rt, err := readDecl(root, rel, "type")
+		rt, err := readDecl(fsys, rel, "type")
 		if err == nil {
 			err = s.checkName("type", rt)
 		}
@@ -839,10 +846,9 @@ func (t *Type) addFacet(name string, src FacetSource) *FacetSource {
 	return nil
 }
 
-// yamlFiles lists *.yaml directly in root/dir, slash-separated and relative to
-// root, in name order.
-func yamlFiles(root, dir string) ([]string, error) {
-	entries, err := os.ReadDir(filepath.Join(root, dir))
+// yamlFiles lists *.yaml directly in dir, slash-separated, in name order.
+func yamlFiles(fsys fs.FS, dir string) ([]string, error) {
+	entries, err := fs.ReadDir(fsys, dir)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
@@ -851,16 +857,16 @@ func yamlFiles(root, dir string) ([]string, error) {
 	}
 	var files []string
 	for _, e := range entries {
-		if !e.IsDir() && strings.EqualFold(filepath.Ext(e.Name()), ".yaml") {
-			files = append(files, filepath.ToSlash(filepath.Join(dir, e.Name())))
+		if !e.IsDir() && strings.EqualFold(path.Ext(e.Name()), ".yaml") {
+			files = append(files, path.Join(dir, e.Name()))
 		}
 	}
 	sort.Strings(files)
 	return files, nil
 }
 
-func readMapping(root, rel string) (*yaml.Node, error) {
-	data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+func readMapping(fsys fs.FS, rel string) (*yaml.Node, error) {
+	data, err := fs.ReadFile(fsys, rel)
 	if err != nil {
 		return nil, err
 	}
@@ -879,8 +885,8 @@ func yamlError(path string, err error) error {
 	return &Error{Path: path, Line: line, Msg: msg}
 }
 
-func (s *Schema) loadEnum(root, rel string) error {
-	m, err := readMapping(root, rel)
+func (s *Schema) loadEnum(fsys fs.FS, rel string) error {
+	m, err := readMapping(fsys, rel)
 	if err != nil {
 		return err
 	}
@@ -915,8 +921,8 @@ type rawDecl struct {
 }
 
 // readDecl reads a declaration whose name is under key: "type" or "record".
-func readDecl(root, rel, key string) (*rawDecl, error) {
-	m, err := readMapping(root, rel)
+func readDecl(fsys fs.FS, rel, key string) (*rawDecl, error) {
+	m, err := readMapping(fsys, rel)
 	if err != nil {
 		return nil, err
 	}

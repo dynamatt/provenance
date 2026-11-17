@@ -10,9 +10,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/url"
-	"os"
 	"path"
-	"path/filepath"
 	"strings"
 )
 
@@ -48,12 +46,12 @@ func Resolve(entityPath, dest string) (rel string, inline bool, err error) {
 	return rel, false, nil
 }
 
-// Read reads a resolved image from the repository at root. SVG is text:
-// its line endings are normalized to LF, as entity bodies and templates
-// are, so a Windows core.autocrlf checkout exports the same bytes.
-// Binary formats are read as they are.
-func Read(root, rel string) ([]byte, error) {
-	b, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+// Read reads a resolved image from fsys, the repository's files. SVG is
+// text: its line endings are normalized to LF, as entity bodies and
+// templates are, so a Windows core.autocrlf checkout exports the same
+// bytes. Binary formats are read as they are.
+func Read(fsys fs.FS, rel string) ([]byte, error) {
+	b, err := fs.ReadFile(fsys, rel)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("image %s does not exist", rel)
 	}

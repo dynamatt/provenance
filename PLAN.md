@@ -83,7 +83,7 @@
 - [x] E8.8 Checks
 - [x] E8.9 Epic close-out
 - [x] E9.1 Design
-- [ ] E9.2 Loading a ref
+- [x] E9.2 Loading a ref
 - [ ] E9.3 The comparison and `diff`
 - [ ] E9.4 Diff templates
 - [ ] E9.5 The rendered diff
@@ -2171,7 +2171,13 @@ read through `os` in about a dozen places.
 | D9 | Exit codes and problems | **`2` for a ref that doesn't resolve, always, with or without `--exit-code`. Otherwise `0` whether or not anything changed, unless `--exit-code` is given: then `1` when something did, as git's.** *Clarified 2026-11-17, Matt.* A side that has load problems is compared as far as it loads, and its problems are listed first in the output; the rendered diff of a side that can't export is skipped with the reason. | `diff` reports, `validate` judges; the old side of a long-lived repository may not meet today's checks. |
 | D10 | Not in this epic | **Flagging what depends on a change for re-review (USR-0023)** belongs with history in rules; **signatures** (`sign verify` reporting a changed scope, Q7) reuse this epic's comparison in the `sign` epic; **the website** linking a page's revision to its diff is later. | Keeps the epic to the comparison and its outputs. |
 
-**Settled while building:** recorded here as building settles them.
+**Settled while building:**
+
+| Topic | Settled |
+| --- | --- |
+| What reads through the file system | `repo` (`Repo.Files()`, `FromFS`), `schema` (`ReadFS`), the sources (`Source.Load` takes an `fs.FS` and skips folders by repository path) and the website exporter's templates and images: everything a diff loads and renders. `validate`'s rule files and report templates still read the working tree: `diff` never validates. (E9.2) |
+| A commit's tree | `history.Tree`: files as committed; a link to a file in the tree read as that file, as the working tree follows it; submodules and links to folders or out of the tree left out. A commit with no `.component` isn't a Provenance repository there. (E9.2) |
+| Checking it | `load`'s test loads each violation case, the starter and the example both from a commit and from its clean checkout, and compares the entities, problems and every exported file; CI checks the example out before the unit tests so the example's case runs. (E9.2) |
 
 **Order:** the design (E9.1); loading a ref (E9.2), on which everything
 stands; the comparison and the text output (E9.3); JSON and templates

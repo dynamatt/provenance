@@ -6,8 +6,6 @@ import (
 	"html/template"
 	"io/fs"
 	"maps"
-	"os"
-	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
@@ -70,7 +68,7 @@ func builtin(file string) source {
 // and parses every one, so a broken template fails the export even when no
 // page would use it. With a checker, every broken template is recorded
 // instead, and err is only a failure to read one.
-func loadTemplates(root string, s *schema.Schema, check *checker) (*templateSet, error) {
+func loadTemplates(fsys fs.FS, s *schema.Schema, check *checker) (*templateSet, error) {
 	ts := &templateSet{
 		layout:     builtin("layout.tmpl"),
 		index:      builtin("index.tmpl"),
@@ -80,8 +78,7 @@ func loadTemplates(root string, s *schema.Schema, check *checker) (*templateSet,
 		named:      map[string]source{},
 		style:      styleCSS,
 	}
-	dir := filepath.Join(root, templatesDir)
-	entries, err := os.ReadDir(dir)
+	entries, err := fs.ReadDir(fsys, templatesDir)
 	if errors.Is(err, fs.ErrNotExist) {
 		return ts, nil
 	}
@@ -97,7 +94,7 @@ func loadTemplates(root string, s *schema.Schema, check *checker) (*templateSet,
 	sort.Strings(names)
 	for _, name := range names {
 		rel := templatesDir + "/" + name
-		read := func() (string, error) { return tmpl.Read(filepath.Join(dir, name)) }
+		read := func() (string, error) { return tmpl.ReadFS(fsys, rel) }
 		switch {
 		case name == "style.css":
 			text, err := read()
