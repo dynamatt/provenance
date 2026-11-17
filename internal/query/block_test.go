@@ -104,7 +104,7 @@ func TestQueryBlockErrors(t *testing.T) {
 	g := graph(t, evidence)
 	for _, tc := range []struct{ name, src, want string }{
 		{"symbol operator", "from: Requirement\nwhere:\n  field: status\n  operator: \"=\"\n  value: approved\n",
-			`line 4: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in)`},
+			`line 4: unknown operator "=" (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in, is_a)`},
 		{"no from", "where: {field: status, operator: exists}\n", "line 1: query block has no from: <type>"},
 		{"unknown type", "from: Requirment\n", `line 1: from: unknown type "Requirment" (types: Document, Evidence, OccurrenceLevel, Requirement, Risk, SeverityLevel, UserNeed)`},
 		{"unknown key", "from: Requirement\nsort: order\n", `line 2: unknown key "sort" in a query block (expected from, where, order_by, render, template, templates)`},
@@ -220,10 +220,10 @@ func TestQueryBlockTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := b.TemplateFor("Evidence"); got != (TemplateChoice{Type: "Evidence", Name: "evidence-row", Line: 3}) {
+	if got := b.TemplateFor(g.Schema.Types["Evidence"]); got != (TemplateChoice{Type: "Evidence", Name: "evidence-row", Line: 3}) {
 		t.Errorf("Evidence: %+v", got)
 	}
-	if got := b.TemplateFor("Requirement"); got.Name != "" {
+	if got := b.TemplateFor(g.Schema.Types["Requirement"]); got.Name != "" {
 		t.Errorf("Requirement should keep its default, got %+v", got)
 	}
 	b, err = ParseBlock("from: [Requirement, Evidence]\ntemplate: compact\n", g.Schema)
@@ -231,7 +231,7 @@ func TestQueryBlockTemplates(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, typ := range []string{"Requirement", "Evidence"} {
-		if got := b.TemplateFor(typ).Name; got != "compact" {
+		if got := b.TemplateFor(g.Schema.Types[typ]).Name; got != "compact" {
 			t.Errorf("%s: template %q, want compact", typ, got)
 		}
 	}

@@ -21,5 +21,7 @@ examples:
     expect: clean
   - file: core/schema/IdFormatClean.yaml
     expect: clean
+  - file: core/cases/schema-id-format/clean-subtype.md
+    expect: clean
 ---
 An entity ID that is not `PREFIX-NNNN`, a CSV row's ID that doesn't start with `PREFIX-`, or an ID that cannot be a page name; a type with no `id_prefix`; two types with one `id_prefix`.

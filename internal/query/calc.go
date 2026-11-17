@@ -2,7 +2,6 @@ package query
 
 import (
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
 
@@ -154,6 +153,7 @@ func (sh shape) find(name string) (member, error) {
 // fcomp compiles one formula.
 type fcomp struct {
 	cf     *calcField
+	d      *derived
 	home   shape
 	n      int
 	shapes map[string]shape // node relations used, by name
@@ -212,16 +212,16 @@ func (c *fcomp) path(ref *RefExpr, v datalog.Term) (lits []datalog.Literal, keys
 		}
 		switch {
 		case m.facet != nil:
-			lits = append(lits, datalog.P(RelLink, cur, str(st.Name), next))
+			lits = append(lits, c.d.link(cur, st.Name, next))
 			keys = append(keys, next)
 			sh = shape{types: m.facet}
-		case f.Kind == schema.Link:
-			lits = append(lits, datalog.P(RelLink, cur, str(st.Name), next))
+		case f.Kind == schema.Link || f.Kind == schema.Query:
+			lits = append(lits, c.d.link(cur, st.Name, next))
 			if f.Cardinality == "many" {
 				keys = append(keys, next)
 			}
 			var targets []*schema.Type
-			for _, t := range f.Target {
+			for _, t := range f.Targets {
 				if t := c.cf.schema.Types[t]; t != nil {
 					targets = append(targets, t)
 				}
@@ -479,55 +479,6 @@ func (c *fcomp) aggregate(r string, e *Call) error {
 	return nil
 }
 
-// Calculate evaluates every calculated field of every entity, fills in
-// their model values (Present with a Result, blank, or Invalid with the
-// problem), and adds the values to the graph's facts so queries and order_by
-// read them like stored fields.
-func (g *Graph) Calculate() error {
-	fields, shapes := compileCalc(g.Schema)
-	if len(fields) == 0 {
-		return nil
-	}
-
-	prog := &datalog.Program{}
-	for _, name := range slices.Sorted(maps.Keys(shapes)) {
-		prog.Add(shapes[name].nodeRules()...)
-	}
-	for _, cf := range fields {
-		if cf.err == "" {
-			prog.Add(cf.rules...)
-		}
-	}
-	out, err := datalog.Eval(prog, g.facts)
-	if err != nil {
-		return fmt.Errorf("evaluating calculated fields: %w", err)
-	}
-
-	for _, e := range g.Entities {
-		for _, cf := range fields {
-			if cf.typ.Name != e.Type {
-				continue
-			}
-			if cf.list == nil {
-				g.setCalc(out, cf, e.Field(cf.field.Name), datalog.String(e.ID))
-				continue
-			}
-			list := e.Field(cf.list.Name)
-			if !list.Present || list.Invalid {
-				continue
-			}
-			for i, row := range list.Rows {
-				for _, cell := range row {
-					if cell.Field == cf.field {
-						g.setCalc(out, cf, cell, RowNode(e.ID, cf.list.Name, i))
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
-
 // FormulaProblem is a calculated field whose formula cannot be evaluated:
 // it does not parse, names a field that does not exist, or depends on
 // itself. Every entity's value of the field is then Invalid with Msg.
@@ -541,10 +492,13 @@ type FormulaProblem struct {
 // FormulaProblems lists the schema's calculated fields that cannot be
 // evaluated, in type, list and field order.
 func FormulaProblems(s *schema.Schema) []FormulaProblem {
-	fields, _ := compileCalc(s)
+	fields, _ := compileCalc(s, nil)
 	var out []FormulaProblem
+	seen := map[*schema.Field]bool{}
 	for _, cf := range fields {
-		if cf.err != "" {
+		// An inherited field is reported once, for the first type having it.
+		if cf.err != "" && !seen[cf.field] {
+			seen[cf.field] = true
 			out = append(out, FormulaProblem{Type: cf.typ, List: cf.list, Field: cf.field, Msg: cf.err})
 		}
 	}
@@ -553,10 +507,13 @@ func FormulaProblems(s *schema.Schema) []FormulaProblem {
 
 // compileCalc compiles every calculated field of s to Datalog rules, in
 // type, list and field order, marking the ones that cannot be evaluated.
-func compileCalc(s *schema.Schema) ([]*calcField, map[string]shape) {
+func compileCalc(s *schema.Schema, d *derived) ([]*calcField, map[string]shape) {
 	var fields []*calcField
 	for _, tn := range s.TypeNames() {
 		t := s.Types[tn]
+		if t.Abstract {
+			continue // no entities to calculate for; its subtypes have the fields
+		}
 		for _, f := range t.Fields {
 			if f.Kind == schema.Calculated {
 				fields = append(fields, &calcField{typ: t, field: f, schema: s})
@@ -581,7 +538,7 @@ func compileCalc(s *schema.Schema) ([]*calcField, map[string]shape) {
 			err = &FormulaError{Msg: "no formula"}
 		}
 		if err == nil {
-			c := &fcomp{cf: cf, home: home, shapes: shapes}
+			c := &fcomp{cf: cf, d: d, home: home, shapes: shapes}
 			var top string
 			top, err = c.single(expr)
 			if err == nil {

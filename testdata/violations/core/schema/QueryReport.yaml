@@ -1,0 +1,15 @@
+# schema/query: a query field, selecting Widgets (DES-0010).
+type: QueryReport
+id_prefix: QRY
+fields:
+  - name: title
+    type: string
+    title: true
+  - name: about
+    type: link
+    target: [Widget]
+    cardinality: one
+  - name: scope
+    type: query
+    of: [Widget]
+    reverse_name: reported_in

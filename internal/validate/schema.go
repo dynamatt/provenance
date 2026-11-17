@@ -29,7 +29,7 @@ func declaredFields(s *schema.Schema) []declared {
 	var out []declared
 	for _, tn := range s.TypeNames() {
 		t := s.Types[tn]
-		for _, f := range t.Fields {
+		for _, f := range t.Declared {
 			out = append(out, declared{t.File, f})
 			if f.Kind == schema.List && f.Record == "" {
 				for _, sub := range f.Fields {
@@ -72,7 +72,12 @@ func (r *Report) schemaChecks(s *schema.Schema, entities []*entity.Entity) {
 	}
 
 	for _, p := range query.FormulaProblems(s) {
-		path := p.Type.File
+		var path string
+		if p.List != nil {
+			path = p.Type.Owner(p.List).File
+		} else {
+			path = p.Type.Owner(p.Field).File
+		}
 		if p.List != nil && p.List.Record != "" {
 			path = s.Records[p.List.Record].File
 		}
@@ -83,12 +88,16 @@ func (r *Report) schemaChecks(s *schema.Schema, entities []*entity.Entity) {
 	prefixes := map[string][]*schema.Type{}
 	for _, tn := range s.TypeNames() {
 		t := s.Types[tn]
-		if t.IDPrefix == "" {
+		switch {
+		case t.Abstract:
+		case t.IDPrefix == "":
 			r.add(Violation{Rule: "schema/id-format", Severity: Error, Path: t.File, Line: t.Line,
 				Message: fmt.Sprintf("type %s has no id_prefix, so its IDs cannot be checked", t.Name)})
-			continue
+		case t.PrefixType == t:
+			// A subtype numbering in its parent's series shares the prefix
+			// declared once, up its chain (DES-0007).
+			prefixes[t.IDPrefix] = append(prefixes[t.IDPrefix], t)
 		}
-		prefixes[t.IDPrefix] = append(prefixes[t.IDPrefix], t)
 	}
 	for _, p := range slices.Sorted(maps.Keys(prefixes)) {
 		types := prefixes[p]
@@ -102,9 +111,15 @@ func (r *Report) schemaChecks(s *schema.Schema, entities []*entity.Entity) {
 		}
 	}
 
+	// A type has entities when it or a subtype does.
 	hasEntities := map[string]bool{}
 	for _, e := range entities {
 		hasEntities[e.Type] = true
+		if t := s.Types[e.Type]; t != nil {
+			for _, a := range t.Ancestors() {
+				hasEntities[a.Name] = true
+			}
+		}
 	}
 	for _, en := range slices.Sorted(maps.Keys(s.Enums)) {
 		if e := s.Enums[en]; !enumsUsed[en] {
@@ -221,7 +236,14 @@ func (c *entityCheck) unknownField(name string) string {
 		}
 		var from []string
 		for _, src := range fc.Sources {
-			from = append(from, src.Type.Name+"."+src.Field.Name)
+			// An inherited link is named once, on the type declaring it.
+			at := src.Type.Owner(src.Field)
+			if src.List != nil {
+				at = src.Type.Owner(src.List)
+			}
+			if name := at.Name + "." + src.Field.Name; !slices.Contains(from, name) {
+				from = append(from, name)
+			}
 		}
 		return fmt.Sprintf("%s is derived from %s, set on the linking entity; a %s does not store it", name, strings.Join(from, ", "), t.Name)
 	}
@@ -244,6 +266,14 @@ func (c *entityCheck) value(v *model.Value) {
 		if v.Invalid && !c.broken[f] {
 			c.add("schema/invalid-value", c.e.IDLine(), "%s: %s", f.Name, v.Problem)
 		}
+		return
+	case f.Kind == schema.Query && v.Invalid:
+		// A query that cannot run, at its line (DES-0032).
+		line := v.ProblemLine
+		if line == 0 && v.Written != nil {
+			line = v.Written.Line
+		}
+		c.add("schema/query", line, "%s: %s", f.Name, v.Problem)
 		return
 	case f.Required && v.Blank():
 		c.add("schema/required", c.e.IDLine(), "required field %s is not set", f.Name)
@@ -282,7 +312,7 @@ func (c *entityCheck) check(label string, w *entity.Written, v *model.Value) {
 			switch t := v.Targets[i]; {
 			case t == nil:
 				c.add("links/unresolved", line, "%s: no entity %s", label, id)
-			case len(v.Field.Target) > 0 && !slices.Contains(v.Field.Target, t.Type):
+			case len(v.Field.Target) > 0 && !slices.Contains(v.Field.Targets, t.Type):
 				c.add("links/target-type", line, "%s: %s is of type %s, but %s links only to %s", label, id, t.Type, v.Field.Name, strings.Join(v.Field.Target, ", "))
 			}
 		}

@@ -108,7 +108,7 @@ func TestLoadErrors(t *testing.T) {
 		name, file, content, want string
 	}{
 		{"unknown type", "schema/R.yaml", "type: R\nfields:\n  - name: title\n    type: strnig\n",
-			`schema/R.yaml:4: field "title": unknown type "strnig" (expected string, text, number, date, boolean, link, list, calculated, or an enum: ApprovalStatus)`},
+			`schema/R.yaml:4: field "title": unknown type "strnig" (expected string, text, number, date, boolean, link, list, calculated, query, or an enum: ApprovalStatus)`},
 		{"missing type name", "schema/R.yaml", "id_prefix: R\n", "schema/R.yaml:1: missing type name"},
 		{"missing field type", "schema/R.yaml", "type: R\nfields:\n  - name: title\n", `schema/R.yaml:3: field "title": missing type`},
 		{"unnamed field", "schema/R.yaml", "type: R\nfields:\n  - type: string\n", "schema/R.yaml:3: field without a name"},
@@ -351,7 +351,7 @@ fields:
 	want := []string{
 		"schema/enums/Bad.yaml:1: missing enum name (enum: <Name>)",
 		"schema/B.yaml:1: did not find expected node content",
-		`schema/A.yaml:5: field "x": unknown type "strnig" (expected string, text, number, date, boolean, link, list, calculated)`,
+		`schema/A.yaml:5: field "x": unknown type "strnig" (expected string, text, number, date, boolean, link, list, calculated, query)`,
 		`schema/A.yaml:8: field "y": link cardinality must be one or many, got ""`,
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
@@ -374,7 +374,7 @@ func TestKeyProblems(t *testing.T) {
 	root := t.TempDir()
 	write(t, root, "schema/A.yaml", `type: A
 id_prefix: A
-extends: B
+inherits: B
 fields:
   - name: x
     type: string
@@ -395,7 +395,7 @@ fields:
 		got = append(got, p.Error())
 	}
 	want := []string{
-		`schema/A.yaml:3: type A: unknown key "extends" (expected type, id_prefix, pages, source, fields)`,
+		`schema/A.yaml:3: type A: unknown key "inherits" (expected type, extends, abstract, id_prefix, pages, source, fields)`,
 		`schema/A.yaml:7: field "x": unknown key "default": fields have no defaults; a field that must have a value says required: true`,
 		`schema/A.yaml:8: field "x": formula applies only to a calculated field`,
 		`schema/A.yaml:13: field "y": unknown key "colour" (expected name, type, required, title, friendly_name, help, body, target, cardinality, reverse_name, reverse_friendly_name, formula, fields, of, column)`,
@@ -626,7 +626,7 @@ func TestReverseFriendlyName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(s2.KeyProblems) != 1 || !strings.Contains(s2.KeyProblems[0].Msg, `field "a": reverse_friendly_name applies only to a link field`) {
+	if len(s2.KeyProblems) != 1 || !strings.Contains(s2.KeyProblems[0].Msg, `field "a": reverse_friendly_name applies only to a link or query field`) {
 		t.Errorf("key problems %v", s2.KeyProblems)
 	}
 }

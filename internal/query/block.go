@@ -32,7 +32,7 @@ func NewGraph(s *schema.Schema, entities []*model.Entity) (*Graph, error) {
 	for _, e := range entities {
 		g.byID[e.ID] = e
 	}
-	if err := g.Calculate(); err != nil {
+	if err := g.derive(); err != nil {
 		return nil, err
 	}
 	return g, nil
@@ -75,12 +75,15 @@ type TemplateChoice struct {
 	Line       int
 }
 
-// TemplateFor returns the named template chosen for results of type typ,
-// or "" when they use their type's default.
-func (b *Block) TemplateFor(typ string) TemplateChoice {
-	for _, c := range b.Templates {
-		if c.Type == typ || c.Type == "" {
-			return c
+// TemplateFor returns the named template chosen for results of type t:
+// the one chosen for every result, else the one chosen for t or its
+// nearest ancestor; its Name is "" when they use their type's default.
+func (b *Block) TemplateFor(t *schema.Type) TemplateChoice {
+	for a := t; a != nil; a = a.Parent {
+		for _, c := range b.Templates {
+			if c.Type == a.Name || c.Type == "" {
+				return c
+			}
 		}
 	}
 	return TemplateChoice{}
@@ -112,36 +115,10 @@ func ParseScope(src string, s *schema.Schema) (*Block, error) {
 // rule file (DES-0016), against the schema; what names it in errors. The
 // caller checks m's other keys.
 func ParseQuery(m *yaml.Node, s *schema.Schema, what string) (*Block, error) {
-	b := &Block{Render: Render{Mode: RenderFull}}
-	from := yamlnode.Lookup(m, "from")
-	if from == nil {
-		return nil, errorf(m, "%s has no from: <type>, from: [<type>, …] or from: any", what)
+	b, _, err := parseFromTypes(m, s, what)
+	if err != nil {
+		return nil, err
 	}
-	fromNodes := []*yaml.Node{from}
-	if from.Kind == yaml.ScalarNode && from.Value == "any" {
-		// Every entity type (DES-0015).
-		fromNodes = nil
-		for _, name := range s.TypeNames() {
-			b.From = append(b.From, s.Types[name])
-		}
-	}
-	if from.Kind == yaml.SequenceNode {
-		fromNodes = from.Content
-		if len(fromNodes) == 0 {
-			return nil, errorf(from, "from: an empty list of types")
-		}
-	}
-	for _, n := range fromNodes {
-		t := s.Types[scalar(n)]
-		if t == nil {
-			return nil, errorf(n, "from: unknown type %q (types: %s)", n.Value, strings.Join(s.TypeNames(), ", "))
-		}
-		if slices.Contains(b.From, t) {
-			return nil, errorf(n, "from: %s is listed twice", t.Name)
-		}
-		b.From = append(b.From, t)
-	}
-
 	if where := yamlnode.Lookup(m, "where"); where != nil {
 		cond, err := ParseCondition(where)
 		if err != nil {
@@ -154,6 +131,55 @@ func ParseQuery(m *yaml.Node, s *schema.Schema, what string) (*Block, error) {
 		}
 	}
 	return b, nil
+}
+
+// parseFromTypes reads m's from: into a block's From, every type it stands for,
+// and returns the types named as written; nil for any.
+func parseFromTypes(m *yaml.Node, s *schema.Schema, what string) (*Block, []*schema.Type, error) {
+	b := &Block{Render: Render{Mode: RenderFull}}
+	from := yamlnode.Lookup(m, "from")
+	if from == nil {
+		return nil, nil, errorf(m, "%s has no from: <type>, from: [<type>, …] or from: any", what)
+	}
+	fromNodes := []*yaml.Node{from}
+	if from.Kind == yaml.ScalarNode && from.Value == "any" {
+		// Every entity type (DES-0015).
+		fromNodes = nil
+		for _, name := range s.TypeNames() {
+			if !s.Types[name].Abstract {
+				b.From = append(b.From, s.Types[name])
+			}
+		}
+	}
+	if from.Kind == yaml.SequenceNode {
+		fromNodes = from.Content
+		if len(fromNodes) == 0 {
+			return nil, nil, errorf(from, "from: an empty list of types")
+		}
+	}
+	var named []*schema.Type
+	for _, n := range fromNodes {
+		t := s.Types[scalar(n)]
+		if t == nil {
+			return nil, nil, errorf(n, "from: unknown type %q (types: %s)", n.Value, strings.Join(s.TypeNames(), ", "))
+		}
+		if slices.Contains(named, t) {
+			return nil, nil, errorf(n, "from: %s is listed twice", t.Name)
+		}
+		named = append(named, t)
+	}
+	// A type stands for its subtypes too (DES-0010).
+	for _, t := range named {
+		for _, c := range s.Concrete(t) {
+			if !slices.Contains(b.From, c) {
+				b.From = append(b.From, c)
+			}
+		}
+	}
+	if len(fromNodes) > 0 && len(b.From) == 0 {
+		return nil, nil, errorf(from, "from: %s is abstract and no type extends it, so it has no entities", named[0].Name)
+	}
+	return b, named, nil
 }
 
 func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Block, error) {
@@ -174,18 +200,8 @@ func parseBlock(src string, s *schema.Schema, keys []string, what string) (*Bloc
 		return nil, err
 	}
 
-	if ob := yamlnode.Lookup(m, "order_by"); ob != nil {
-		nodes := []*yaml.Node{ob}
-		if ob.Kind == yaml.SequenceNode {
-			nodes = ob.Content
-		}
-		for _, n := range nodes {
-			name := scalar(n)
-			if err := checkOrderField(b.From, name); err != nil {
-				return nil, errorf(n, "order_by: %v", err)
-			}
-			b.OrderBy = append(b.OrderBy, name)
-		}
+	if b.OrderBy, err = parseOrderBy(m, b.From); err != nil {
+		return nil, err
 	}
 
 	if r := yamlnode.Lookup(m, "render"); r != nil {
@@ -252,7 +268,8 @@ func (b *Block) parseTemplates(m *yaml.Node) error {
 	}
 	for i := 0; i+1 < len(perType.Content); i += 2 {
 		k, v := perType.Content[i], perType.Content[i+1]
-		if !slices.Contains(selected, k.Value) {
+		// A key may name a selected type or a type one extends.
+		if !slices.ContainsFunc(b.From, func(t *schema.Type) bool { return t.IsA(k.Value) }) {
 			return errorf(k, "templates: %s is not selected by from (%s)", k.Value, strings.Join(selected, ", "))
 		}
 		n, err := name(v)
@@ -300,6 +317,28 @@ func noField(types []*schema.Type, name string) string {
 	return fmt.Sprintf("%s has a field %q", noneOf(types), name)
 }
 
+// parseOrderBy reads m's order_by: one field or a list, each one the types
+// from selects can sort by.
+func parseOrderBy(m *yaml.Node, from []*schema.Type) ([]string, error) {
+	ob := yamlnode.Lookup(m, "order_by")
+	if ob == nil {
+		return nil, nil
+	}
+	nodes := []*yaml.Node{ob}
+	if ob.Kind == yaml.SequenceNode {
+		nodes = ob.Content
+	}
+	var out []string
+	for _, n := range nodes {
+		name := scalar(n)
+		if err := checkOrderField(from, name); err != nil {
+			return nil, errorf(n, "order_by: %v", err)
+		}
+		out = append(out, name)
+	}
+	return out, nil
+}
+
 func yamlError(err error) error {
 	line, msg := yamlnode.ErrorLine(err)
 	return &Error{Line: line, Msg: msg}
@@ -316,9 +355,16 @@ func (g *Graph) Run(b *Block) ([]*model.Entity, error) {
 	for i, id := range ids {
 		out[i] = g.byID[id]
 	}
+	g.sortEntities(out, b.OrderBy)
+	return out, nil
+}
+
+// sortEntities sorts out by each of orderBy's fields ascending, entities
+// without a value after those with one, then by ID.
+func (g *Graph) sortEntities(out []*model.Entity, orderBy []string) {
 	keys := make(map[string][]datalog.Value, len(out))
 	for _, e := range out {
-		for _, name := range b.OrderBy {
+		for _, name := range orderBy {
 			keys[e.ID] = append(keys[e.ID], g.sortValue(e.ID, name))
 		}
 	}
@@ -330,7 +376,6 @@ func (g *Graph) Run(b *Block) ([]*model.Entity, error) {
 		}
 		return strings.Compare(a.ID, b.ID)
 	})
-	return out, nil
 }
 
 // Match returns the IDs of the entities of the given types satisfying cond

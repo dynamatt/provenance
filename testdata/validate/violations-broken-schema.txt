@@ -1,5 +1,12 @@
+schema/AbstractPrefix.yaml:4: error [schema/file] type AbstractPrefix is abstract: it has no entities, so no id_prefix; give it to the types that extend it
 schema/Broken.yaml:2: error [schema/file] did not find expected ',' or ']'
 schema/CsvListOfRows.yaml:8: error [schema/file] field "steps": a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)
+schema/CycleA.yaml:3: error [schema/file] type CycleA extends itself (CycleA → CycleB → CycleA)
+schema/CycleB.yaml:3: error [schema/file] type CycleB extends itself (CycleB → CycleA → CycleB)
+schema/ExtendsUnknown.yaml:3: error [schema/file] type ExtendsUnknown: extends: unknown type "Nowhere" (types: AbstractPrefix, CsvListOfRows, CycleA, CycleB, ExtendsUnknown, FieldName, Fine, FineChild, QueryInCsv, QueryWithoutOf, Redeclared, UnknownType)
 schema/FieldName.yaml:6: error [schema/file] field "verifiedBy": a field's name is lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by
-schema/UnknownType.yaml:6: error [schema/file] field "status": unknown type "AprovalStatus" (expected string, text, number, date, boolean, link, list, calculated)
-4 errors, 0 warnings
+schema/QueryInCsv.yaml:8: error [schema/file] field "scope": a query has no form in a CSV cell; a type with a source cannot have a query field
+schema/QueryWithoutOf.yaml:5: error [schema/file] field "scope": a query field needs of: naming the types its query may select, e.g. of: [Requirement]
+schema/Redeclared.yaml:5: error [schema/file] field "title" is inherited from Fine (schema/Fine.yaml:4); a subtype adds fields, it does not declare its parent's again
+schema/UnknownType.yaml:6: error [schema/file] field "status": unknown type "AprovalStatus" (expected string, text, number, date, boolean, link, list, calculated, query)
+11 errors, 0 warnings

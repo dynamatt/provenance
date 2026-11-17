@@ -26,12 +26,11 @@ passed check. The same queries are the project's rules in <code>rules/</code>, w
 <code>provenance validate</code> runs at the merge gate (DES-0016): what a rule
 reports is exactly what its section here lists.</p>
 <h2><span class="section-number">1</span> Equipment calibration</h2>
-<p>Verification evidence recorded with equipment whose calibration was due
-before the test was run (<code>rules/equipment-calibration-current.yaml</code>):</p>
-<p class="query-empty">No VerificationEvidence matches this query.</p>
-<p>The same for validation evidence
-(<code>rules/validation-equipment-calibration-current.yaml</code>):</p>
-<p class="query-empty">No ValidationEvidence matches this query.</p>
+<p>Evidence of either kind, verification or validation, recorded with
+equipment whose calibration was due before it was executed
+(<code>rules/equipment-calibration-current.yaml</code>). <code>Evidence</code> is an abstract
+type both kinds extend, so one query asks of both:</p>
+<p class="query-empty">No ValidationEvidence or VerificationEvidence matches this query.</p>
 <h2><span class="section-number">2</span> Evidence before its build</h2>
 <p>Verification evidence executed before the build it names was built
 (<code>rules/evidence-after-build.yaml</code>):</p>
@@ -73,7 +72,7 @@ Every requirement on the cycle is listed:</p>
 <h2><span class="section-number">10</span> Block languages</h2>
 <p>Entities with a fenced block in a language this project doesn't use
 (<code>rules/block-languages.yaml</code>). <code>none</code> is a fence with no language:</p>
-<p class="query-empty">No Anomaly or BuildStandard or ChangeRequest or Complaint or Component or Definition or Design or Document or OccurrenceLevel or Reference or Requirement or Risk or SeverityLevel or Standard or TestEquipment or UserNeed or ValidationEvidence or VerificationEvidence or VerificationProtocol matches this query.</p>
+<p class="query-empty">No Anomaly or BuildStandard or ChangeRequest or Complaint or Component or Definition or Design or Document or OccurrenceLevel or Reference or Requirement or Risk or SeverityLevel or Standard or TestEquipment or UserNeed or ValidationEvidence or VerificationEvidence or VerificationProtocol or VerificationSummaryReport matches this query.</p>
 </div>
 </article>
 
@@ -82,6 +81,11 @@ Every requirement on the cycle is listed:</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>91fa0b1</code></td><td>2026-11-17</td><td>Claude</td><td>DOC-0007 summarises a build: build replaces covers, its query reads ^^build</td></tr>
+<tr><td><code>21fd23b</code></td><td>2026-11-17</td><td>Claude</td><td>Components form a tree; requirements are allocated to one; reports go component by component</td></tr>
+<tr><td><code>9a50783</code></td><td>2026-11-17</td><td>Claude</td><td>Verification summary reports state their scope as a query</td></tr>
+<tr><td><code>a90316c</code></td><td>2026-11-15</td><td>Claude</td><td>Document.tmpl: the empty before-body block adds no blank line</td></tr>
+<tr><td><code>1718e46</code></td><td>2026-11-15</td><td>Claude</td><td>Evidence is an abstract type; Verification Summary Report extends Document</td></tr>
 <tr><td><code>72bd09e</code></td><td>2026-11-15</td><td>Matt Williams</td><td>Merge pull request #29 from dynamatt/epic/E7-references</td></tr>
 <tr><td><code>2a0d54a</code></td><td>2026-11-10</td><td>Matt Williams</td><td>Merge pull request #26 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
 <tr><td><code>1082cd4</code></td><td>2026-11-05</td><td>Matt Williams</td><td>Merge pull request #25 from dynamatt/claude/busy-carson-mbb6nm</td></tr>
@@ -107,7 +111,7 @@ Every requirement on the cycle is listed:</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>72bd09e</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>91fa0b1</code></p>
 </footer>
 </body>
 </html>

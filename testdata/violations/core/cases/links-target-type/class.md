@@ -9,5 +9,7 @@ examples:
     expect: violation
   - file: core/cases/links-target-type/clean.md
     expect: clean
+  - file: core/cases/links-target-type/clean-subtype.md
+    expect: clean
 ---
 A link field pointing at a type outside its `target:`.

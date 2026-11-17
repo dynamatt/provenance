@@ -1,0 +1,4 @@
+# schema/file: extends: names no declared type.
+type: ExtendsUnknown
+extends: Nowhere
+id_prefix: EXU

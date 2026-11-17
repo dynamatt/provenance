@@ -161,7 +161,7 @@ func viaTypes(s *schema.Schema, types []*schema.Type, cond *Condition) []string 
 				continue
 			case f != nil && f.Kind == schema.Link:
 				reached = linkTypes(s, f)
-				out = append(out, f.Target...)
+				out = append(out, f.Targets...)
 			case sc.facet(name) != nil:
 				reached = facetTypes(sc.facet(name))
 			}

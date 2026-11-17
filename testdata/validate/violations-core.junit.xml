@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="provenance validate" tests="47" failures="31" errors="0">
-  <testsuite name="built-in" tests="40" failures="31" errors="0" skipped="0">
+<testsuites name="provenance validate" tests="49" failures="33" errors="0">
+  <testsuite name="built-in" tests="42" failures="33" errors="0" skipped="0">
     <testcase name="content/caption" classname="built-in">
       <failure type="error" message="a caption must come right after the figure, table, equation or embed it captions">cases/content-caption/violation.md:8: error [content/caption] a caption must come right after the figure, table, equation or embed it captions (WID-0030)</failure>
       <failure type="error" message="caption: did not find expected &#39;,&#39; or &#39;]&#39;">cases/content-caption/violation.md:16: error [content/caption] caption: did not find expected &#39;,&#39; or &#39;]&#39; (WID-0030)</failure>
@@ -39,7 +39,7 @@
       <failure type="error" message="image assets/figure.bmp: the website export does not support this format (supported: .gif, .jpeg, .jpg, .png, .svg, .webp)">cases/content-image/violation.md:12: error [content/image] image assets/figure.bmp: the website export does not support this format (supported: .gif, .jpeg, .jpg, .png, .svg, .webp) (WID-0028)</failure>
     </testcase>
     <testcase name="content/query" classname="built-in">
-      <failure type="error" message="query block: unknown operator &#34;=&#34; (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in)">cases/content-query/violation.md:10: error [content/query] query block: unknown operator &#34;=&#34; (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in) (WID-0026)</failure>
+      <failure type="error" message="query block: unknown operator &#34;=&#34; (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in, is_a)">cases/content-query/violation.md:10: error [content/query] query block: unknown operator &#34;=&#34; (valid operators: equals, not_equals, greater_or_equal, less_or_equal, greater_than, less_than, exists, missing, not_in, is_a) (WID-0026)</failure>
     </testcase>
     <testcase name="content/tag" classname="built-in">
       <failure type="error" message="#setup is used twice in WID-0043 (first at cases/content-tag/violation.md:6): tags and caption ids must be unique within an entity">cases/content-tag/violation.md:8: error [content/tag] #setup is used twice in WID-0043 (first at cases/content-tag/violation.md:6): tags and caption ids must be unique within an entity (WID-0043)</failure>
@@ -90,13 +90,16 @@
       <failure type="error" message="a rule file is named for its ID, in lower-case kebab-case, with .yaml: Rules_Name_Violation.yaml is not">rules/Rules_Name_Violation.yaml: error [rules/name] a rule file is named for its ID, in lower-case kebab-case, with .yaml: Rules_Name_Violation.yaml is not</failure>
     </testcase>
     <testcase name="rules/query" classname="built-in">
-      <failure type="error" message="Widget has no field &#34;colour&#34; (fields: id, type, title, status, due, weight, score, tags, steps, parent, uses, notes, children, used_by, code_blocks)">rules/rules-query-violation.yaml:4: error [rules/query] Widget has no field &#34;colour&#34; (fields: id, type, title, status, due, weight, score, tags, steps, parent, uses, notes, children, used_by, code_blocks)</failure>
+      <failure type="error" message="neither Widget nor WidgetVariant has a field &#34;colour&#34;">rules/rules-query-violation.yaml:4: error [rules/query] neither Widget nor WidgetVariant has a field &#34;colour&#34;</failure>
     </testcase>
     <testcase name="rules/severity" classname="built-in">
       <failure type="error" message="severity is error or warning, not &#34;fatal&#34;">rules/rules-severity-violation.yaml:1: error [rules/severity] severity is error or warning, not &#34;fatal&#34;</failure>
     </testcase>
     <testcase name="rules/unknown-key" classname="built-in">
       <failure type="error" message="unknown key &#34;id&#34;: a rule&#39;s ID is its file name, rules-unknown-key-violation">rules/rules-unknown-key-violation.yaml:1: error [rules/unknown-key] unknown key &#34;id&#34;: a rule&#39;s ID is its file name, rules-unknown-key-violation</failure>
+    </testcase>
+    <testcase name="schema/abstract-type" classname="built-in">
+      <failure type="error" message="type AbstractPart is abstract: it has no entities of its own; give the entity one of the types extending it (ConcretePart)">cases/schema-abstract-type/violation.md:3: error [schema/abstract-type] type AbstractPart is abstract: it has no entities of its own; give the entity one of the types extending it (ConcretePart) (PRT-0001)</failure>
     </testcase>
     <testcase name="schema/calculated-set" classname="built-in">
       <failure type="error" message="score is calculated (weight * 2); it cannot be written in the file">cases/schema-calculated-set/violation.md:6: error [schema/calculated-set] score is calculated (weight * 2); it cannot be written in the file (WID-0010)</failure>
@@ -128,10 +131,16 @@
       <failure type="error" message="steps row 1: n: not a number, got one">cases/schema-invalid-value/violation.md:8: error [schema/invalid-value] steps row 1: n: not a number, got one (WID-0016)</failure>
     </testcase>
     <testcase name="schema/link-target" classname="built-in">
-      <failure type="error" message="field &#34;widget&#34;: target &#34;Nothing&#34; is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)">schema/LinkTargetViolation.yaml:9: error [schema/link-target] field &#34;widget&#34;: target &#34;Nothing&#34; is not a declared type (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)</failure>
+      <failure type="error" message="field &#34;widget&#34;: target &#34;Nothing&#34; is not a declared type (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, QueryReport, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant)">schema/LinkTargetViolation.yaml:9: error [schema/link-target] field &#34;widget&#34;: target &#34;Nothing&#34; is not a declared type (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, QueryReport, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant)</failure>
     </testcase>
     <testcase name="schema/list-row" classname="built-in">
       <failure type="error" message="steps row 1: no sub-field &#34;size&#34; (sub-fields: n)">cases/schema-list-row/violation.md:7: error [schema/list-row] steps row 1: no sub-field &#34;size&#34; (sub-fields: n) (WID-0018)</failure>
+    </testcase>
+    <testcase name="schema/query" classname="built-in">
+      <failure type="error" message="scope: neither Widget nor WidgetVariant has a field &#34;colour&#34;">cases/schema-query/violation-field.md:8: error [schema/query] scope: neither Widget nor WidgetVariant has a field &#34;colour&#34; (QRY-0002)</failure>
+      <failure type="error" message="scope: the query depends on its own results through missing, not_in, not_equals or an aggregation, so it has no answer">cases/schema-query/violation-loop.md:6: error [schema/query] scope: the query depends on its own results through missing, not_in, not_equals or an aggregation, so it has no answer (QRY-0004)</failure>
+      <failure type="error" message="scope: render: a query field gives its results to its entity&#39;s template, which shows them; leave render out">cases/schema-query/violation-render.md:7: error [schema/query] scope: render: a query field gives its results to its entity&#39;s template, which shows them; leave render out (QRY-0003)</failure>
+      <failure type="error" message="scope: from: QueryReport is not a type scope may select (of: [Widget] in schema/QueryReport.yaml)">cases/schema-query/violation.md:6: error [schema/query] scope: from: QueryReport is not a type scope may select (of: [Widget] in schema/QueryReport.yaml) (QRY-0001)</failure>
     </testcase>
     <testcase name="schema/required" classname="built-in">
       <failure type="error" message="required field title is not set">cases/schema-required/violation.md:2: error [schema/required] required field title is not set (WID-0012)</failure>
@@ -147,7 +156,7 @@
       <failure type="error" message="enum Colour: unknown key &#34;shade&#34; (expected enum, values)">schema/enums/Colour.yaml:4: error [schema/unknown-key] enum Colour: unknown key &#34;shade&#34; (expected enum, values)</failure>
     </testcase>
     <testcase name="schema/unknown-type" classname="built-in">
-      <failure type="error" message="type &#34;Gadget&#34; is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget)">cases/schema-unknown-type/violation.md:3: error [schema/unknown-type] type &#34;Gadget&#34; is not declared in schema/ (declared: BrokenTemplate, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget) (GAD-0001)</failure>
+      <failure type="error" message="type &#34;Gadget&#34; is not declared in schema/ (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, QueryReport, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant)">cases/schema-unknown-type/violation.md:3: error [schema/unknown-type] type &#34;Gadget&#34; is not declared in schema/ (declared: AbstractPart, BrokenTemplate, ConcretePart, CsvColumnClean, CsvColumnViolation, CsvEnumViolation, CsvIdViolation, CsvLinkViolation, CsvRowClean, CsvRowViolation, CsvValueViolation, DuplicatePrefixA, DuplicatePrefixB, ErrorClass, FormulaClean, FormulaViolation, IdFormatClean, LinkTargetClean, LinkTargetViolation, NoPrefix, QueryReport, UnknownKeyClean, UnknownKeyViolation, UnusedTypeClean, UnusedTypeViolation, Widget, WidgetVariant) (GAD-0001)</failure>
     </testcase>
     <testcase name="schema/unused-enum" classname="built-in">
       <system-out>schema/enums/UnusedEnum.yaml:2: warning [schema/unused-enum] enum UnusedEnum is not used by any field&#xA;</system-out>

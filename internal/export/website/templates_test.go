@@ -2,6 +2,7 @@ package website
 
 import (
 	"errors"
+	"maps"
 	"strings"
 	"testing"
 
@@ -179,5 +180,81 @@ func TestFieldsBesideEngineKeys(t *testing.T) {
 	want := "[One|One] [a field|The body.] [false|true] [f.pdf|R/R-1.md] [7]"
 	if page := string(files["entities/R-1.html"]); !strings.Contains(page, want) {
 		t.Errorf("want %s in:\n%s", want, page)
+	}
+}
+
+// A subtype without a template uses its nearest ancestor's; one holding only
+// {{define}}s fills the blocks of the template above it, the project's or
+// the built-in one (DES-0031).
+func TestTemplatesOfSubtypes(t *testing.T) {
+	base := map[string]string{
+		"schema/Doc.yaml":    "type: Doc\nid_prefix: DOC\nfields:\n  - {name: title, type: string, title: true}\n",
+		"schema/Report.yaml": "type: Report\nextends: Doc\nfields:\n  - {name: scope, type: string}\n",
+		"schema/Memo.yaml":   "type: Memo\nextends: Report\n",
+		"D/DOC-0001.md":      "---\nid: DOC-0001\ntype: Doc\ntitle: Plain\n---\nBody one.\n",
+		"D/DOC-0002.md":      "---\nid: DOC-0002\ntype: Report\ntitle: Rep\nscope: all\n---\nBody two. [[DOC-0001]]\n",
+		"D/DOC-0003.md":      "---\nid: DOC-0003\ntype: Memo\ntitle: Mem\nscope: some\n---\nBody three.\n",
+	}
+	with := func(extra map[string]string) map[string][]byte {
+		t.Helper()
+		files := maps.Clone(base)
+		maps.Copy(files, extra)
+		out, err := exportRepo(t, files)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	docTmpl := `<doc>{{title .}}|{{block "before-body" .}}{{end}}|{{markdown .Body}}|{{block "after-body" .}}{{end}}|{{if isa . "Report"}}report{{else}}plain{{end}}</doc>`
+	page := func(files map[string][]byte, id string) string { return string(files["entities/"+id+".html"]) }
+
+	// Report and Memo have no template: Doc's is used.
+	files := with(map[string]string{"templates/Doc.tmpl": docTmpl})
+	for id, want := range map[string]string{"DOC-0001": "|plain</doc>", "DOC-0002": "|report</doc>", "DOC-0003": "|report</doc>"} {
+		if p := page(files, id); !strings.Contains(p, "<doc>") || !strings.Contains(p, want) {
+			t.Errorf("%s: want Doc's template, ending %q:\n%s", id, want, p)
+		}
+	}
+
+	// Report's template fills a block of Doc's; Memo's fills another over
+	// both, and Report's block stays.
+	files = with(map[string]string{
+		"templates/Doc.tmpl":    docTmpl,
+		"templates/Report.tmpl": "{{/* blocks only */}}\n{{define \"after-body\"}}<scope>{{.scope}}</scope>{{end}}\n",
+		"templates/Memo.tmpl":   "{{define \"before-body\"}}<memo/>{{end}}",
+	})
+	if p := page(files, "DOC-0002"); !strings.Contains(p, "|<scope>all</scope>|report</doc>") || strings.Contains(p, "<memo/>") {
+		t.Errorf("DOC-0002:\n%s", p)
+	}
+	if p := page(files, "DOC-0003"); !strings.Contains(p, "<doc>Mem|<memo/>|") || !strings.Contains(p, "|<scope>some</scope>|report</doc>") {
+		t.Errorf("DOC-0003:\n%s", p)
+	}
+	if p := page(files, "DOC-0001"); !strings.Contains(p, "<doc>Plain||") || !strings.Contains(p, "||plain</doc>") {
+		t.Errorf("DOC-0001: blocks should be empty:\n%s", p)
+	}
+
+	// A template with a body of its own replaces its parent's.
+	files = with(map[string]string{"templates/Doc.tmpl": docTmpl, "templates/Report.tmpl": "<rep>{{.scope}}</rep>"})
+	if p := page(files, "DOC-0003"); !strings.Contains(p, "<rep>some</rep>") || strings.Contains(p, "<doc>") {
+		t.Errorf("DOC-0003 should use Report's template:\n%s", p)
+	}
+
+	// Without a project template above it, a template of blocks fills the
+	// built-in page's, whose dot is the entity as templates see it.
+	files = with(map[string]string{"templates/Report.tmpl": "{{define \"after-body\"}}<scope>{{.scope}} {{title .}}</scope>{{end}}"})
+	p := page(files, "DOC-0002")
+	if !strings.Contains(p, `<table class="fields">`) || !strings.Contains(p, "</div><scope>all Rep</scope>\n</article>") {
+		t.Errorf("DOC-0002 on the built-in page:\n%s", p)
+	}
+	if p := page(files, "DOC-0001"); strings.Contains(p, "<scope>") {
+		t.Errorf("DOC-0001 has no blocks filled:\n%s", p)
+	}
+
+	// isa names a declared type.
+	if _, err := exportRepo(t, maps.Clone(map[string]string{
+		"schema/Doc.yaml": base["schema/Doc.yaml"], "D/DOC-0001.md": base["D/DOC-0001.md"],
+		"templates/Doc.tmpl": `{{if isa . "Dco"}}x{{end}}`,
+	})); err == nil || !strings.Contains(err.Error(), `isa: unknown type "Dco" (types: Doc)`) {
+		t.Errorf("isa with an unknown type: %v", err)
 	}
 }

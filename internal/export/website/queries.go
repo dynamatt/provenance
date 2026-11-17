@@ -121,7 +121,7 @@ func (r *resolver) query(w util.BufWriter, q markdown.Fence) error {
 	case query.RenderFull:
 		_, _ = w.WriteString("<div class=\"query\">\n")
 		for _, e := range results {
-			if err := r.embed(w, e, b.TemplateFor(e.Type).Name, r.ctx.fileLine(q.Line-1)); err != nil {
+			if err := r.embed(w, e, b.TemplateFor(e.Schema).Name, r.ctx.fileLine(q.Line-1)); err != nil {
 				return err
 			}
 		}

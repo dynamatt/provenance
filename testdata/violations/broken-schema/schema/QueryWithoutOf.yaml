@@ -1,0 +1,6 @@
+# schema/file: a query field without of:.
+type: QueryWithoutOf
+id_prefix: QWO
+fields:
+  - name: scope
+    type: query

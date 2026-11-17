@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="provenance validate" tests="40" failures="1" errors="0">
-  <testsuite name="built-in" tests="40" failures="1" errors="0" skipped="0">
+<testsuites name="provenance validate" tests="42" failures="1" errors="0">
+  <testsuite name="built-in" tests="42" failures="1" errors="0" skipped="0">
     <testcase name="content/caption" classname="built-in"></testcase>
     <testcase name="content/csv-column" classname="built-in"></testcase>
     <testcase name="content/csv-row" classname="built-in"></testcase>
@@ -26,19 +26,28 @@
     <testcase name="rules/query" classname="built-in"></testcase>
     <testcase name="rules/severity" classname="built-in"></testcase>
     <testcase name="rules/unknown-key" classname="built-in"></testcase>
+    <testcase name="schema/abstract-type" classname="built-in"></testcase>
     <testcase name="schema/calculated-set" classname="built-in"></testcase>
     <testcase name="schema/enum-value" classname="built-in"></testcase>
     <testcase name="schema/file" classname="built-in">
+      <failure type="error" message="type AbstractPrefix is abstract: it has no entities, so no id_prefix; give it to the types that extend it">schema/AbstractPrefix.yaml:4: error [schema/file] type AbstractPrefix is abstract: it has no entities, so no id_prefix; give it to the types that extend it</failure>
       <failure type="error" message="did not find expected &#39;,&#39; or &#39;]&#39;">schema/Broken.yaml:2: error [schema/file] did not find expected &#39;,&#39; or &#39;]&#39;</failure>
       <failure type="error" message="field &#34;steps&#34;: a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)">schema/CsvListOfRows.yaml:8: error [schema/file] field &#34;steps&#34;: a list of rows has no form in a CSV cell; a type with a source can list only values (of: a built-in type or an enum)</failure>
+      <failure type="error" message="type CycleA extends itself (CycleA → CycleB → CycleA)">schema/CycleA.yaml:3: error [schema/file] type CycleA extends itself (CycleA → CycleB → CycleA)</failure>
+      <failure type="error" message="type CycleB extends itself (CycleB → CycleA → CycleB)">schema/CycleB.yaml:3: error [schema/file] type CycleB extends itself (CycleB → CycleA → CycleB)</failure>
+      <failure type="error" message="type ExtendsUnknown: extends: unknown type &#34;Nowhere&#34; (types: AbstractPrefix, CsvListOfRows, CycleA, CycleB, ExtendsUnknown, FieldName, Fine, FineChild, QueryInCsv, QueryWithoutOf, Redeclared, UnknownType)">schema/ExtendsUnknown.yaml:3: error [schema/file] type ExtendsUnknown: extends: unknown type &#34;Nowhere&#34; (types: AbstractPrefix, CsvListOfRows, CycleA, CycleB, ExtendsUnknown, FieldName, Fine, FineChild, QueryInCsv, QueryWithoutOf, Redeclared, UnknownType)</failure>
       <failure type="error" message="field &#34;verifiedBy&#34;: a field&#39;s name is lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by">schema/FieldName.yaml:6: error [schema/file] field &#34;verifiedBy&#34;: a field&#39;s name is lower-case snake_case: a letter, then letters, digits and single underscores, such as verified_by</failure>
-      <failure type="error" message="field &#34;status&#34;: unknown type &#34;AprovalStatus&#34; (expected string, text, number, date, boolean, link, list, calculated)">schema/UnknownType.yaml:6: error [schema/file] field &#34;status&#34;: unknown type &#34;AprovalStatus&#34; (expected string, text, number, date, boolean, link, list, calculated)</failure>
+      <failure type="error" message="field &#34;scope&#34;: a query has no form in a CSV cell; a type with a source cannot have a query field">schema/QueryInCsv.yaml:8: error [schema/file] field &#34;scope&#34;: a query has no form in a CSV cell; a type with a source cannot have a query field</failure>
+      <failure type="error" message="field &#34;scope&#34;: a query field needs of: naming the types its query may select, e.g. of: [Requirement]">schema/QueryWithoutOf.yaml:5: error [schema/file] field &#34;scope&#34;: a query field needs of: naming the types its query may select, e.g. of: [Requirement]</failure>
+      <failure type="error" message="field &#34;title&#34; is inherited from Fine (schema/Fine.yaml:4); a subtype adds fields, it does not declare its parent&#39;s again">schema/Redeclared.yaml:5: error [schema/file] field &#34;title&#34; is inherited from Fine (schema/Fine.yaml:4); a subtype adds fields, it does not declare its parent&#39;s again</failure>
+      <failure type="error" message="field &#34;status&#34;: unknown type &#34;AprovalStatus&#34; (expected string, text, number, date, boolean, link, list, calculated, query)">schema/UnknownType.yaml:6: error [schema/file] field &#34;status&#34;: unknown type &#34;AprovalStatus&#34; (expected string, text, number, date, boolean, link, list, calculated, query)</failure>
     </testcase>
     <testcase name="schema/formula" classname="built-in"></testcase>
     <testcase name="schema/id-format" classname="built-in"></testcase>
     <testcase name="schema/invalid-value" classname="built-in"></testcase>
     <testcase name="schema/link-target" classname="built-in"></testcase>
     <testcase name="schema/list-row" classname="built-in"></testcase>
+    <testcase name="schema/query" classname="built-in"></testcase>
     <testcase name="schema/required" classname="built-in"></testcase>
     <testcase name="schema/unknown-field" classname="built-in"></testcase>
     <testcase name="schema/unknown-key" classname="built-in"></testcase>
