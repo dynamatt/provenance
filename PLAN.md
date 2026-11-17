@@ -81,7 +81,7 @@
 - [x] E8.6 Query fields
 - [x] E8.7 Export
 - [x] E8.8 Checks
-- [ ] E8.9 Epic close-out
+- [x] E8.9 Epic close-out
 
 ## Shape of the plan
 
@@ -1883,7 +1883,9 @@ downloaded binary exports the example with its references.
 
 ## Epic 8 — Query fields and type inheritance
 
-> **Status: agreed with Matt 2026-11-15.** Query fields were outlined
+> **Status: closed 2026-11-17**, released as `v0.7.0-alpha`; the
+> example's and the DDF's Validate workflows are pinned to it. Agreed
+> with Matt 2026-11-15. Query fields were outlined
 > 2026-10-18 (Q1–Q7); Matt, 2026-11-15: their purpose is reusable
 > documents, such as a Verification Summary Report type whose query
 > field selects the requirements it covers, and this is the time to
@@ -2116,10 +2118,8 @@ order after Epic 2, with the reason it comes where it does:
 3. **`init`** — Epic 5, detailed above (closed 2026-11-01).
 4. **CSV-backed entity types** — Epic 6, detailed above (closed 2026-11-11).
 5. **Section and item references** — Epic 7, detailed above (closed 2026-11-15).
-6. **Query fields and type inheritance** — Epic 8, detailed above
-   (agreed 2026-11-15). Before `report`, which can then count over a
-   report's scope, and before `rename`, which must rewrite IDs inside
-   query fields.
+6. **Query fields and type inheritance** — Epic 8, detailed above (closed
+   2026-11-17).
 7. **`report`** — coverage metrics over the shared query engine.
 8. **`diff`** — rendered/semantic diff between refs.
 9. **History in rules** — rules ask what changed when, such as evidence
