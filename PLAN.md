@@ -85,7 +85,7 @@
 - [ ] E9.1 Design
 - [ ] E9.2 Loading a ref
 - [ ] E9.3 The comparison and `diff`
-- [ ] E9.4 JSON and diff templates
+- [ ] E9.4 Diff templates
 - [ ] E9.5 The rendered diff
 - [ ] E9.6 The example's pull-request summary
 - [ ] E9.7 Epic close-out
@@ -2163,8 +2163,8 @@ read through `os` in about a dozen places.
 | D3 | What a change is | **Entities matched by ID:** added, removed, changed, or retyped. A file moved or renamed with its entities unchanged is no change (REQ IDs independent of path). Files that aren't entities (`schema/`, `rules/`, `templates/`, `.component`, images) are listed by path as added, removed or changed. | The ID is the record's identity; a path is where it is kept. Schema, rules and templates change what the content means or looks like, so a reviewer must see them, but not as a field diff. |
 | D4 | Comparing values | **Typed values, as the schema at each side reads them, so a change of formatting is no change** (DES-0038's canonical form). A field: old → new; a many-link or list: the IDs or items added and removed; the body: by Markdown block, and within a changed block by word. A field the schema added or removed shows as one present only on one side. | `fmt` must not show as an edit to the content; a reviewer reads what changed, not which lines moved. |
 | D5 | Derived values | **Calculated fields and query-field results are compared too, marked *derived*, so an entity can be changed by derivation alone** (a report whose scope grew). Reverse facets aren't: the link they mirror is shown on the entity that declares it (DES-0011). | A report's scope is what it approves (Q7); facets would show every link change twice. |
-| D6 | Output | **As `validate`: `--output text\|json\|html\|<template>[=file]`, repeatable, text to standard output by default.** A project's own report is `templates/diff/<name>.tmpl` (Markdown for a PR summary, say), with the change list as data, documented in a DES like DES-0049. | One way to choose outputs across commands; CI writes the step summary and an artifact from one run. |
-| D7 | The rendered diff | **`--output html` writes one self-contained HTML file:** the change list, then each page the change touched, rendered at each side through that side's own templates, compared by block (paragraph, list item, table row, heading, caption) and marked word by word with `<ins>`/`<del>`. Pages are rendered without git stamps and revision history, which would differ on every page. A page touched only by a template change or by its inputs (a query block's results) is included. | REQ-0101's "rendered": what the reader of the DHF sees. One file goes in a CI artifact or an email; rendering each side by its own templates shows a template change as the change it makes. |
+| D6 | Output | **As `validate`: `--output text\|html\|<template>[=file]`, repeatable, text to standard output by default. Every output is a template over one change model:** `text` and `html` are built in, and a project's own is `templates/diff/<name>.tmpl` (Markdown for a PR summary, say), documented in a DES like DES-0049. A project's `templates/diff/html.tmpl` replaces the built-in HTML, with the same data. **No JSON until something needs it**: its field names would be a format to keep stable. `html` is the audit record: its header names both refs, their commits and content hashes, and the binary's version. `text` doesn't render pages, so it is fast and works when a side can't export. *Agreed 2026-11-17, Matt.* | One way to choose outputs across commands; the terminal and CI log read text, a reviewer a PR summary, an auditor the HTML. |
+| D7 | The rendered diff | **`--output html` writes one self-contained HTML file:** the change list, then each page the change touched, rendered at each side through that side's own templates, compared by block (paragraph, list item, table row, heading, caption) and marked word by word with `<ins>`/`<del>`. Pages are rendered without git stamps and revision history, which would differ on every page. A page touched only by a template change or by its inputs (a query block's results) is included, marked as changed by another change. Unchanged blocks are folded, with a toggle to show the whole page; a new page is collapsed. A table row whose cells changed is marked word by word in place; a row whose structure changed (cells merged or split) is shown struck out, then as it is now. A changed status badge is marked inline, like any other value. *Agreed 2026-11-17, Matt, from the mock-up.* | REQ-0101's "rendered": what the reader of the DHF sees. One file goes in a CI artifact or an email; rendering each side by its own templates shows a template change as the change it makes. |
 | D8 | Scope | **`--scope <path>`, as `export`'s (DES-0033), resolved at each side and joined;** it replaces the stub's `--entity`. | One scope grammar; a document's own scope gives "what changed in this report". |
 | D9 | Exit codes and problems | **`2` for a ref that doesn't resolve, always, with or without `--exit-code`. Otherwise `0` whether or not anything changed, unless `--exit-code` is given: then `1` when something did, as git's.** *Clarified 2026-11-17, Matt.* A side that has load problems is compared as far as it loads, and its problems are listed first in the output; the rendered diff of a side that can't export is skipped with the reason. | `diff` reports, `validate` judges; the old side of a long-lived repository may not meet today's checks. |
 | D10 | Not in this epic | **Flagging what depends on a change for re-review (USR-0023)** belongs with history in rules; **signatures** (`sign verify` reporting a changed scope, Q7) reuse this epic's comparison in the `sign` epic; **the website** linking a page's revision to its diff is later. | Keeps the epic to the comparison and its outputs. |
@@ -2213,20 +2213,24 @@ Evidence's subtypes retyped, the components and DOC-0006/7 added, the
 requirements' `component` set; `prov fmt --all` after reordering a
 file's keys → `prov diff` shows nothing.
 
-### E9.4 JSON and diff templates
+### E9.4 Diff templates
 
-**Deliverables:** `--output json` and `templates/diff/<name>.tmpl`
-(D6), with their DES; a template that doesn't render is exit 2 before
-anything is written, as `validate`'s.
+**Deliverables:** `templates/diff/<name>.tmpl` and the built-in text
+output as a template over the same change model (D6), with their DES;
+a template that doesn't render is exit 2 before anything is written,
+as `validate`'s.
 
-**Check it yourself:** `prov diff 72bd09e 5a845df --output json` →
-the same changes as text.
+**Check it yourself:** `prov diff 72bd09e 5a845df --output
+summary.md` with a project template → the same changes as the text
+output, in Markdown.
 
 ### E9.5 The rendered diff
 
 **Deliverables:** `--output html[=file]` (D7): each side exported in
 memory without stamps, pages compared by block and word, one
-self-contained file.
+self-contained file stamped with both refs' commits and content hashes
+and the binary's version; unchanged blocks folded; overridable by
+`templates/diff/html.tmpl` (D6).
 
 **Check it yourself:** edit a word in REQ-0002 and open the HTML →
 REQ-0002's page with the word struck and its replacement marked, and
