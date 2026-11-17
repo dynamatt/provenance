@@ -99,6 +99,11 @@ figure.captioned figcaption { font: 0.9rem system-ui, sans-serif; color: var(--m
    result is its own one-row table inside its own embed section; these
    rules make consecutive ones read as one table. */
 section.embed:has(> table.joined-rows) { margin: 0; padding: 0; background: none; border: 0; }
+/* A Verification Summary Report's component sections are embeds nested
+   down the component tree (templates/requirements-of-component.tmpl).
+   They read as the report's own sections and subsections, aligned like
+   any document's, not as boxed entities inside it. */
+.report-components section.embed { margin: 0; padding: 0; background: none; border: 0; }
 table.joined-rows { table-layout: fixed; margin: 0; }
 table.joined-rows th, table.joined-rows td { border: 1px solid var(--rule); padding: 6px 8px; }
 table.joined-rows thead th { background: var(--brand-soft); font-weight: 600; }
