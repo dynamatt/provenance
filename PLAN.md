@@ -82,7 +82,7 @@
 - [x] E8.7 Export
 - [x] E8.8 Checks
 - [x] E8.9 Epic close-out
-- [ ] E9.1 Design
+- [x] E9.1 Design
 - [ ] E9.2 Loading a ref
 - [ ] E9.3 The comparison and `diff`
 - [ ] E9.4 Diff templates
@@ -2117,13 +2117,15 @@ downloaded binary exports the example with both reports.
 
 ## Epic 9 — `diff`
 
-> **Status: proposed 2026-11-17, for Matt's review.** `report` is
+> **Status: agreed with Matt 2026-11-17** (D6, D7 and D9 as revised
+> in review; the rest as proposed). `report` is
 > dropped (Matt, 2026-11-17): coverage is already reported by the DHF's
 > own documents, through query blocks, query fields, counts and
 > templates, and gated by rules; DES-0019 amended, REQ-0094 traced to
 > DES-0031 and DES-0032. A change in coverage between two refs is
-> this epic's. Nothing beyond E9.1's first PR is built until D1–D10 are
-> agreed. The plan is carried on the epic branch.
+> this epic's. The design is DES-0055 (the semantic diff), DES-0056
+> (the rendered diff) and DES-0057 (outputs and templates). The plan is
+> carried on the epic branch.
 
 **Goal:** a reviewer sees what a change did to the design history file,
 not to its files. `provenance diff main...HEAD` on a pull request lists
@@ -2271,7 +2273,7 @@ order after Epic 2, with the reason it comes where it does:
 7. ~~**`report`**~~ — *dropped 2026-11-17:* coverage is the DHF's own
    documents (query blocks, query fields, counts, templates) and rules;
    a change in coverage between refs is `diff`'s.
-8. **`diff`** — Epic 9, detailed above (proposed 2026-11-17).
+8. **`diff`** — Epic 9, detailed above (agreed 2026-11-17).
 9. **History in rules** — rules ask what changed when, such as evidence
    older than what it verifies (see below). Before `sign` and
    `release tag`, whose rules (REQ-0115, REQ-0051) are built on it.
