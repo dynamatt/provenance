@@ -82,6 +82,13 @@
 - [x] E8.7 Export
 - [x] E8.8 Checks
 - [x] E8.9 Epic close-out
+- [ ] E9.1 Design
+- [ ] E9.2 Loading a ref
+- [ ] E9.3 The comparison and `diff`
+- [ ] E9.4 JSON and diff templates
+- [ ] E9.5 The rendered diff
+- [ ] E9.6 The example's pull-request summary
+- [ ] E9.7 Epic close-out
 
 ## Shape of the plan
 
@@ -2108,6 +2115,143 @@ example's and the DDF's Validate workflows pinned to it.
 **Check it yourself:** the release's `SHA256SUMS` verifies; the
 downloaded binary exports the example with both reports.
 
+## Epic 9 — `diff`
+
+> **Status: proposed 2026-11-17, for Matt's review.** `report` is
+> dropped (Matt, 2026-11-17): coverage is already reported by the DHF's
+> own documents, through query blocks, query fields, counts and
+> templates, and gated by rules; DES-0019 amended, REQ-0094 traced to
+> DES-0031 and DES-0032. A change in coverage between two refs is
+> this epic's. Nothing beyond E9.1's first PR is built until D1–D10 are
+> agreed. The plan is carried on the epic branch.
+
+**Goal:** a reviewer sees what a change did to the design history file,
+not to its files. `provenance diff main...HEAD` on a pull request lists
+the entities added, removed and changed, field by field, the body's
+text, and what changed only because something else did: a report whose
+scope grew, a calculated count that moved. `--output html` shows the
+same changes as the reader of the exported site sees them, each page
+redlined. `diff v1.0 v1.1` is the release diff (REQ-0107, DES-0043).
+
+```text
+$ provenance diff main...HEAD
+schema/Requirement.yaml      changed
+REQ-0004  Requirement        added      Lead impedance check
+REQ-0002  Requirement        changed
+  status       draft → approved
+  component    CMP-0001 → CMP-0004
+  body         2 lines changed
+DOC-0006  VerificationSummaryReport   changed (derived)
+  scope        + CMP-0004
+EVD-0003  VerificationEvidence        removed
+3 entities changed, 1 added, 1 removed; 1 schema file changed
+```
+
+**What is there to build on:** `history` already reads a file at any
+commit and compares its entities by ID (DES-0023, DES-0051), and the
+exporter renders a page from a loaded graph. What is missing is loading
+a whole graph, schema and all, from a commit rather than the working
+tree: `schema`, `load`, `validate`'s rules and the website's templates
+read through `os` in about a dozen places.
+
+### Decisions (for Matt)
+
+| # | Decision | Proposal | Why |
+| --- | --- | --- | --- |
+| D1 | The refs | **`diff [<a> [<b>]]`, as git's:** no ref compares `HEAD` with the working tree, one compares that ref with the working tree, two compare `a` with `b`. `a...b` compares `b` with its merge base with `a`, which is what a pull request changes. Any revision go-git resolves (branch, tag, SHA, `HEAD~2`). | Reviewers already know git's forms; `main...HEAD` is the PR's own change, not main's since. |
+| D2 | Reading a ref | **Each side is loaded from git objects through go-git (DES-0026), never checked out,** with its own schema, templates and `.component`, by the same loader: `load` reads through an `fs.FS`, the working tree being one and a commit's tree another. | No temporary checkout to clean up, and nothing the loader does differs between a ref and the working tree. A schema change between the refs is then compared as it was meant at each. |
+| D3 | What a change is | **Entities matched by ID:** added, removed, changed, or retyped. A file moved or renamed with its entities unchanged is no change (REQ IDs independent of path). Files that aren't entities (`schema/`, `rules/`, `templates/`, `.component`, images) are listed by path as added, removed or changed. | The ID is the record's identity; a path is where it is kept. Schema, rules and templates change what the content means or looks like, so a reviewer must see them, but not as a field diff. |
+| D4 | Comparing values | **Typed values, as the schema at each side reads them, so a change of formatting is no change** (DES-0038's canonical form). A field: old → new; a many-link or list: the IDs or items added and removed; the body: by Markdown block, and within a changed block by word. A field the schema added or removed shows as one present only on one side. | `fmt` must not show as an edit to the content; a reviewer reads what changed, not which lines moved. |
+| D5 | Derived values | **Calculated fields and query-field results are compared too, marked *derived*, so an entity can be changed by derivation alone** (a report whose scope grew). Reverse facets aren't: the link they mirror is shown on the entity that declares it (DES-0011). | A report's scope is what it approves (Q7); facets would show every link change twice. |
+| D6 | Output | **As `validate`: `--output text\|json\|html\|<template>[=file]`, repeatable, text to standard output by default.** A project's own report is `templates/diff/<name>.tmpl` (Markdown for a PR summary, say), with the change list as data, documented in a DES like DES-0049. | One way to choose outputs across commands; CI writes the step summary and an artifact from one run. |
+| D7 | The rendered diff | **`--output html` writes one self-contained HTML file:** the change list, then each page the change touched, rendered at each side through that side's own templates, compared by block (paragraph, list item, table row, heading, caption) and marked word by word with `<ins>`/`<del>`. Pages are rendered without git stamps and revision history, which would differ on every page. A page touched only by a template change or by its inputs (a query block's results) is included. | REQ-0101's "rendered": what the reader of the DHF sees. One file goes in a CI artifact or an email; rendering each side by its own templates shows a template change as the change it makes. |
+| D8 | Scope | **`--scope <path>`, as `export`'s (DES-0033), resolved at each side and joined;** it replaces the stub's `--entity`. | One scope grammar; a document's own scope gives "what changed in this report". |
+| D9 | Exit codes and problems | **`0` whether or not anything changed; `--exit-code` gives `1` when something did, as git's. `2` for a ref that doesn't resolve.** A side that has load problems is compared as far as it loads, and its problems are listed first in the output; the rendered diff of a side that can't export is skipped with the reason. | `diff` reports, `validate` judges; the old side of a long-lived repository may not meet today's checks. |
+| D10 | Not in this epic | **Flagging what depends on a change for re-review (USR-0023)** belongs with history in rules; **signatures** (`sign verify` reporting a changed scope, Q7) reuse this epic's comparison in the `sign` epic; **the website** linking a page's revision to its diff is later. | Keeps the epic to the comparison and its outputs. |
+
+**Settled while building:** recorded here as building settles them.
+
+**Order:** the design (E9.1); loading a ref (E9.2), on which everything
+stands; the comparison and the text output (E9.3); JSON and templates
+(E9.4); the rendered diff (E9.5); the example's PR summary as the
+fixture of a template (E9.6); docs and release (E9.7). The fixture is
+the example's own history: its pinned clone has every commit, so
+acceptance diffs two of its merges (Epic 7's and Epic 8's) and the
+working tree after an edit.
+
+### E9.1 Design
+
+**Deliverables:** `report` dropped (PLAN, DES-0019, REQ-0094's trace,
+the CLI stub and its reference page). Then, once D1–D10 are agreed, a
+DES for the semantic diff (D3–D5, D9), one for the rendered diff (D7)
+and one for diff report templates (D6), all implementing REQ-0101 and
+REQ-0107; DES-0019's `diff` row and DES-0043 amended.
+
+**Check it yourself:** `prov report` → unknown command, exit 2; read the
+new DES in the DDF's export.
+
+### E9.2 Loading a ref
+
+**Deliverables:** `repo`, `schema`, `load`, rule files and the
+website's templates read through an `fs.FS`; a commit's tree is one
+(`history.Tree`); `load.At(rp, rev)` loads a commit. Nothing changes
+for the working tree.
+
+**Check it yourself:** `make test` → loading the example's HEAD tree and
+its clean checkout give the same graph, entity by entity; `make
+acceptance` unchanged.
+
+### E9.3 The comparison and `diff`
+
+**Deliverables:** `internal/diff`: entities matched by ID, typed field
+and body comparison, derived values, non-entity files (D3–D5); the
+command with D1's refs, `--scope`, `--exit-code` and the text output
+(D9).
+
+**Check it yourself:** in the example, `prov diff 72bd09e 5a845df` →
+Evidence's subtypes retyped, the components and DOC-0006/7 added, the
+requirements' `component` set; `prov fmt --all` after reordering a
+file's keys → `prov diff` shows nothing.
+
+### E9.4 JSON and diff templates
+
+**Deliverables:** `--output json` and `templates/diff/<name>.tmpl`
+(D6), with their DES; a template that doesn't render is exit 2 before
+anything is written, as `validate`'s.
+
+**Check it yourself:** `prov diff 72bd09e 5a845df --output json` →
+the same changes as text.
+
+### E9.5 The rendered diff
+
+**Deliverables:** `--output html[=file]` (D7): each side exported in
+memory without stamps, pages compared by block and word, one
+self-contained file.
+
+**Check it yourself:** edit a word in REQ-0002 and open the HTML →
+REQ-0002's page with the word struck and its replacement marked, and
+DOC-0006's matrix row marked the same.
+
+### E9.6 The example's pull-request summary
+
+**Deliverables:** in `provenance-example`, its own PR: a
+`templates/diff/pr-changes.md.tmpl` and a Validate step writing
+`diff origin/main...HEAD` to the run's summary page and the HTML as an
+artifact (once released, E9.7).
+
+**Check it yourself:** the template renders in acceptance against the
+two pinned merges.
+
+### E9.7 Epic close-out
+
+**Deliverables:** the `diff` reference and a reviewing-changes recipe
+on the website; the epic merged into `main` in each repository; release
+`v0.8.0-alpha`; the example's and the DDF's workflows pinned to it, with
+the PR summary step on.
+
+**Check it yourself:** the release's `SHA256SUMS` verifies; a pull
+request on the example shows its changes on the run's summary page.
+
 ## Later epics (outline)
 
 Detailed task breakdowns are written when the preceding epic closes. Proposed
@@ -2120,8 +2264,10 @@ order after Epic 2, with the reason it comes where it does:
 5. **Section and item references** — Epic 7, detailed above (closed 2026-11-15).
 6. **Query fields and type inheritance** — Epic 8, detailed above (closed
    2026-11-17).
-7. **`report`** — coverage metrics over the shared query engine.
-8. **`diff`** — rendered/semantic diff between refs.
+7. ~~**`report`**~~ — *dropped 2026-11-17:* coverage is the DHF's own
+   documents (query blocks, query fields, counts, templates) and rules;
+   a change in coverage between refs is `diff`'s.
+8. **`diff`** — Epic 9, detailed above (proposed 2026-11-17).
 9. **History in rules** — rules ask what changed when, such as evidence
    older than what it verifies (see below). Before `sign` and
    `release tag`, whose rules (REQ-0115, REQ-0051) are built on it.
