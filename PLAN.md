@@ -1996,6 +1996,8 @@ DES-0023, DES-0030, DES-0031, DES-0032, DES-0038 and DES-0048):
 | `fmt` | A query field is written in block style throughout; its scalars as written. |
 | Built-in page | Shows a query field's results as links, or *nothing selected*. |
 | Example | `VerificationSummaryReport.covers` (a link) and `requirement_count` (`COUNT(scope)`); DOC-0007 scopes by `^covers`; `rules/requirement-reported.yaml` reads `reported_in`. Q8 (grouping into sections) is not in this epic yet: to discuss with Matt. |
+| Grouping (Q8, *Matt, 2026-11-17*) | **No grouping built in.** The example's components form a tree (`parent`, reverse `subcomponents`) and each requirement is allocated to one (`component`, reverse `requirements`); a report's scope selects components. The named template `requirements-of-component` lays out one component and reaches its subcomponents with a query block it writes and runs with `markdown`, choosing itself again, so sections nest and are numbered by embedding (DES-0035). `add`, `dict`, `within` and a transitive `collect` were not needed. |
+| Page inputs, found while building | A page is not marked changed by an edit to an entity its template reaches by following links (a requirement in a component section, a protocol in a requirement's page): page inputs (DES-0023) count embeds, query results and the types queries read, not what templates read. True before this epic; grouping by component makes it wider. A task for a later epic: record what each render reads. |
 
 **Order:** the design (E8.1); the example's report and evidence types as
 the fixture (E8.2, rule 4); inheritance in the schema, then templates

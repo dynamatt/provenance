@@ -46,7 +46,7 @@ approach evaluated clinically in [<a class="ref" href="REF-0003.html" title="Lon
 <article class="requirement" id="REQ-0001">
 <h3 class="requirement-title"><span class="section-number">2.1</span> <span class="req-id">REQ-0001</span> Closed-loop amplitude adjustment</h3>
 <p class="requirement-meta">
-<span class="status status-approved">approved</span> · verified by test
+<span class="status status-approved">approved</span> · allocated to <a class="ref" href="CMP-0005.html" title="Closed-loop control firmware">CMP-0005</a> · verified by test
 </p>
 <div class="statement"><p>The system shall automatically adjust stimulation amplitude within a
 pre-configured safe range, using the measured evoked neural response as
@@ -60,11 +60,7 @@ feedback, without requiring clinician intervention.</p>
 <ul>
 <li><a class="ref" href="VER-0001.html" title="Bench verification of closed-loop amplitude adjustment">VER-0001</a>: Bench verification of closed-loop amplitude adjustment</li>
 </ul>
-<h4><span class="section-number">2.1.3</span> Reported in</h4>
-<ul>
-<li><a class="ref" href="DOC-0006.html" title="Verification Summary Report — Amplitude Control">DOC-0006</a>: Verification Summary Report — Amplitude Control</li>
-</ul>
-<h4><span class="section-number">2.1.4</span> Known anomalies</h4>
+<h4><span class="section-number">2.1.3</span> Known anomalies</h4>
 <ul>
 <li><a class="ref" href="Anomaly.html#BUG-1042" title="Alarm tone clipped at maximum volume">BUG-1042</a>: Alarm tone clipped at maximum volume (minor)</li>
 <li><a class="ref" href="Anomaly.html#BUG-1057" title="Amplitude log rounds to whole milliamps">BUG-1057</a>: Amplitude log rounds to whole milliamps (minor, fixed)</li>
@@ -75,7 +71,7 @@ feedback, without requiring clinician intervention.</p>
 <article class="requirement" id="REQ-0002">
 <h3 class="requirement-title"><span class="section-number">2.2</span> <span class="req-id">REQ-0002</span> Single-fault amplitude ceiling</h3>
 <p class="requirement-meta">
-<span class="status status-approved">approved</span> · verified by test, analysis
+<span class="status status-approved">approved</span> · allocated to <a class="ref" href="CMP-0001.html" title="NeuroPulse implantable pulse generator">CMP-0001</a> · verified by test, analysis
 </p>
 <div class="statement"><p>The system shall not deliver a stimulation amplitude exceeding 8 mA under
 any single-fault condition, including loss of the sense-electrode feedback
@@ -89,12 +85,7 @@ signal used by the closed-loop control algorithm (<a class="ref" href="DES-0001.
 <ul>
 <li><a class="ref" href="VER-0002.html" title="Bench verification of single-fault amplitude ceiling">VER-0002</a>: Bench verification of single-fault amplitude ceiling</li>
 </ul>
-<h4><span class="section-number">2.2.3</span> Reported in</h4>
-<ul>
-<li><a class="ref" href="DOC-0006.html" title="Verification Summary Report — Amplitude Control">DOC-0006</a>: Verification Summary Report — Amplitude Control</li>
-<li><a class="ref" href="DOC-0007.html" title="Verification Summary Report — Single-Fault Amplitude Ceiling">DOC-0007</a>: Verification Summary Report — Single-Fault Amplitude Ceiling</li>
-</ul>
-<h4><span class="section-number">2.2.4</span> Refined by</h4>
+<h4><span class="section-number">2.2.3</span> Refined by</h4>
 <ul>
 <li><a class="ref" href="REQ-0003.html" title="Amplitude ceiling — subsystem allocation">REQ-0003</a>: Amplitude ceiling — subsystem allocation</li>
 </ul>
@@ -134,7 +125,7 @@ limits at each level.</p>
 <article class="requirement" id="REQ-0003">
 <h3 class="requirement-title"><span class="section-number">3.1</span> <span class="req-id">REQ-0003</span> Amplitude ceiling — subsystem allocation</h3>
 <p class="requirement-meta">
-<span class="status status-draft">draft</span> · refines <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a> · verified by inspection, test
+<span class="status status-draft">draft</span> · allocated to <a class="ref" href="CMP-0002.html" title="Pulse-generator ASIC">CMP-0002</a> · refines <a class="ref" href="REQ-0002.html" title="Single-fault amplitude ceiling">REQ-0002</a> · verified by inspection, test
 </p>
 <div class="statement"><p>The pulse-generator ASIC shall enforce a hard current-limit circuit,
 independent of firmware, as the subsystem-level implementation of the
@@ -145,11 +136,7 @@ single-fault conditions of [<a class="ref" href="REF-0002.html" title="Medical e
 <p class="none">No user need linked.</p>
 <h4><span class="section-number">3.1.2</span> Verified by</h4>
 <p class="none">Not yet verified.</p>
-<h4><span class="section-number">3.1.3</span> Reported in</h4>
-<ul>
-<li><a class="ref" href="DOC-0007.html" title="Verification Summary Report — Single-Fault Amplitude Ceiling">DOC-0007</a>: Verification Summary Report — Single-Fault Amplitude Ceiling</li>
-</ul>
-<h4><span class="section-number">3.1.4</span> Known anomalies</h4>
+<h4><span class="section-number">3.1.3</span> Known anomalies</h4>
 <ul>
 <li><a class="ref" href="Anomaly.html#BUG-1042" title="Alarm tone clipped at maximum volume">BUG-1042</a>: Alarm tone clipped at maximum volume (minor)</li>
 </ul>
@@ -201,6 +188,7 @@ works. The system must stay safe in any single fault condition.</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>21fd23b</code></td><td>2026-11-17</td><td>Claude</td><td>Components form a tree; requirements are allocated to one; reports go component by component</td></tr>
 <tr><td><code>a90316c</code></td><td>2026-11-15</td><td>Claude</td><td>Document.tmpl: the empty before-body block adds no blank line</td></tr>
 <tr><td><code>1718e46</code></td><td>2026-11-15</td><td>Claude</td><td>Evidence is an abstract type; Verification Summary Report extends Document</td></tr>
 <tr><td><code>72bd09e</code></td><td>2026-11-15</td><td>Matt Williams</td><td>Merge pull request #29 from dynamatt/epic/E7-references</td></tr>
@@ -225,7 +213,7 @@ works. The system must stay safe in any single fault condition.</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>a90316c</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>21fd23b</code></p>
 </footer>
 </body>
 </html>
