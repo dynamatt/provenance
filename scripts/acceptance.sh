@@ -843,7 +843,7 @@ expect 0 '^0 errors, 1 warning$' "$PROV" validate
 # template requirements-of-component, which gives each subcomponent a
 # subsection through itself: the sections nest and are numbered by
 # embedding, with no grouping built in. DOC-0006 starts at the top of the
-# component tree, DOC-0007 at the component it covers (^covers). A
+# component tree, DOC-0007 at the component its build is of (^^build). A
 # component added later is in the next export, and DOC-0006's page is
 # changed; a rule reads the reverse facet through the tree; a loop through
 # missing has no answer.
@@ -852,7 +852,7 @@ DOC6_FLAT="tr -d '\n' < _site/entities/DOC-0006.html"
 DOC7_FLAT="tr -d '\n' < _site/entities/DOC-0007.html"
 expect 0 '<p>This report covers <a class="ref" href="CMP-0003\.html"[^>]*>CMP-0003</a> NeuroPulse implantable stimulator system and the components under it, selected by:</p><pre class="query"><code>from: Component' sh -c "$DOC6_FLAT"
 expect 0 '<h3><span class="section-number">1\.1</span> NeuroPulse implantable stimulator system .*No requirement is allocated.*<h4><span class="section-number">1\.1\.1</span> NeuroPulse implantable pulse generator .*href="REQ-0002\.html".*Builds tested: <a class="ref" href="BLD-0002\.html".*<h5><span class="section-number">1\.1\.1\.1</span> Pulse-generator ASIC .*href="REQ-0003\.html".*Not verified by any protocol.*<h5><span class="section-number">1\.1\.1\.2</span> Closed-loop control firmware .*href="REQ-0001\.html".*<h4><span class="section-number">1\.1\.2</span> Stimulation and sense leads ' sh -c "$DOC6_FLAT"
-expect 0 'value_of: \^covers.*<h3><span class="section-number">1\.1</span> NeuroPulse implantable pulse generator .*<h4><span class="section-number">1\.1\.1</span> Pulse-generator ASIC ' sh -c "$DOC7_FLAT"
+expect 0 'value_of: \^\^build.*Build summarised: <a class="ref" href="BLD-0002\.html".*<h3><span class="section-number">1\.1</span> NeuroPulse implantable pulse generator .*<h4><span class="section-number">1\.1\.1</span> Pulse-generator ASIC ' sh -c "$DOC7_FLAT"
 expect 0 '^0$' sh -c "grep -c 'Stimulation and sense leads' _site/entities/DOC-0007.html || true"
 printf -- '---\nid: CMP-0006\ntype: Component\ntitle: Lead connector\npart_number: NP-CON-2\nstatus: draft\nparent: CMP-0004\n---\nThe connector joining the leads to the pulse generator.\n' > CMP/CMP-0006.md
 gitc add CMP && gitc commit -qm "Add the lead connector"
@@ -868,7 +868,7 @@ cp "$WORK/DOC-0006.md" DOC/DOC-0006.md
 sed -i 's/^    field: parent$/    field: reported_in/' DOC/DOC-0006.md
 expect 1 '^DOC/DOC-0006\.md:[0-9]+: error \[schema/query\] scope: the query depends on its own results' "$PROV" validate
 git checkout -q -- DOC
-sed -i '/^covers: CMP-0001$/d' DOC/DOC-0007.md
+sed -i '/^build: BLD-0002$/d' DOC/DOC-0007.md
 sed -i 's/^    field: parent$/    field: id/; s/^    operator: missing$/    operator: equals\n    value: CMP-0004/' DOC/DOC-0006.md
 expect 0 '^REQ/REQ-0003\.md:9: warning \[requirement-reported\] requirement is in no verification summary report \(REQ-0003\)$' "$PROV" validate
 git checkout -q -- DOC

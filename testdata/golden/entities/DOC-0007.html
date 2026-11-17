@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DOC-0007 Verification Summary Report — Pulse Generator — NEURO DHF</title>
+<title>DOC-0007 Verification Summary Report — Pulse Generator Build B2 — NEURO DHF</title>
 <link rel="stylesheet" href="../style.css">
 </head>
 <body data-page="entity" data-type="VerificationSummaryReport" data-entity="DOC-0007">
@@ -15,24 +15,28 @@
 <main class="dhf-main">
 
 <article class="document" id="DOC-0007">
-<h1><span class="id">DOC-0007</span> Verification Summary Report — Pulse Generator</h1>
+<h1><span class="id">DOC-0007</span> Verification Summary Report — Pulse Generator Build B2</h1>
 <p class="document-meta"><span class="status status-draft">draft</span></p>
 <section class="report-scope">
 <p>This report covers <a class="ref" href="CMP-0001.html" title="NeuroPulse implantable pulse generator">CMP-0001</a> NeuroPulse implantable pulse generator and the components under it, selected by:</p>
 <pre class="query"><code>from: Component
 where:
-  field: id
-  operator: equals
-  value_of: ^covers</code></pre>
+  field: builds
+  where:
+    field: id
+    operator: equals
+    value_of: ^^build</code></pre>
+<p class="report-build">Build summarised: <a class="ref" href="BLD-0002.html" title="Pulse generator, engineering build B2">BLD-0002</a> Pulse generator, engineering build B2, HW rev B, FW 1.3.1.</p>
 </section>
 
 <div class="body">
-<h1>Verification Summary Report — Pulse Generator</h1>
-<p>This report summarises the verification of the pulse generator
-(<a class="ref" href="CMP-0001.html" title="NeuroPulse implantable pulse generator">CMP-0001</a>) and its parts. Its scope is the same query as any report
-about one component, reading the component from the report itself
-(<code>^covers</code>); its subcomponents follow from the component tree, so a part
-added to the pulse generator later is covered without editing this report.</p>
+<h1>Verification Summary Report — Pulse Generator Build B2</h1>
+<p>This report summarises the verification of the component that build B2
+(<a class="ref" href="BLD-0002.html" title="Pulse generator, engineering build B2">BLD-0002</a>) is a build of, and the components under it. Its scope is
+the same query as any report about one build: the component whose builds
+include the report's own <code>build</code> (<code>^^build</code>, read from inside the query
+on the component's builds), so a report for the next build changes only
+the <code>build</code> it names.</p>
 </div>
 <section class="report-components">
 <h2><span class="section-number">1</span> Verification by component</h2>
@@ -86,6 +90,7 @@ added to the pulse generator later is covered without editing this report.</p>
 <table>
 <thead><tr><th>Commit</th><th>Date</th><th>Author</th><th>Change</th></tr></thead>
 <tbody>
+<tr><td><code>91fa0b1</code></td><td>2026-11-17</td><td>Claude</td><td>DOC-0007 summarises a build: build replaces covers, its query reads ^^build</td></tr>
 <tr><td><code>21fd23b</code></td><td>2026-11-17</td><td>Claude</td><td>Components form a tree; requirements are allocated to one; reports go component by component</td></tr>
 <tr><td><code>9a50783</code></td><td>2026-11-17</td><td>Claude</td><td>Verification summary reports state their scope as a query</td></tr>
 <tr><td><code>1718e46</code></td><td>2026-11-15</td><td>Claude</td><td>Evidence is an abstract type; Verification Summary Report extends Document</td></tr>
@@ -104,7 +109,7 @@ added to the pulse generator later is covered without editing this report.</p>
 </main>
 <footer class="dhf-footer">
 Controlled content, generated from the design repository. Printed copies are uncontrolled.
-<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>21fd23b</code></p>
+<p class="dhf-stamp">Generated from commit <code>HEAD</code> · content hash <code>sha256:CONTENT</code> · this page last changed in <code>91fa0b1</code></p>
 </footer>
 </body>
 </html>
