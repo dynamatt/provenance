@@ -41,9 +41,17 @@ var templateFS embed.FS
 var styleCSS []byte
 
 // Exporter renders the website format.
-type Exporter struct{}
+type Exporter struct {
+	withoutImages bool
+}
 
 func New() *Exporter { return &Exporter{} }
+
+// WithoutImages is an exporter that checks each image a page shows exists
+// but doesn't copy it into the site, for diff, which compares images by
+// their git object hash rather than holding them (DES-0056). The site's
+// images are then keys with no bytes.
+func WithoutImages() *Exporter { return &Exporter{withoutImages: true} }
 
 // safeID matches IDs usable as a file name on every platform.
 var safeID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
@@ -73,6 +81,7 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 	s := &site{
 		component: in.Repo.Component,
 		repoFS:    in.Repo.Files(),
+		noImages:  e.withoutImages,
 		templates: ts,
 		data:      tmpl.NewModel(in.Schema, in.Entities),
 		graph:     in.Graph,
@@ -296,6 +305,7 @@ func pageTitle(e *model.Entity) string {
 type site struct {
 	component repo.Component
 	repoFS    fs.FS // the repository's files, for images
+	noImages  bool  // check images exist, but don't copy them
 	templates *templateSet
 	data      *tmpl.Model
 	graph     *query.Graph

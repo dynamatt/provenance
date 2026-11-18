@@ -81,7 +81,13 @@ func ResolveScope(g *query.Graph, root, cwd, path string) (*Scope, error) {
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return nil, &ScopeError{Path: path, Msg: "is outside the repository"}
 	}
-	rel = filepath.ToSlash(rel)
+	return ResolveScopeIn(g, os.DirFS(root), filepath.ToSlash(rel))
+}
+
+// ResolveScopeIn resolves the scope file rel, a repository path, read
+// from fsys: the working tree or a commit's tree, for diff, which resolves
+// a scope at each side (DES-0055).
+func ResolveScopeIn(g *query.Graph, fsys fs.FS, rel string) (*Scope, error) {
 	sc := &Scope{Path: rel}
 	for _, e := range g.Entities {
 		if e.Path == rel {
@@ -94,7 +100,7 @@ func ResolveScope(g *query.Graph, root, cwd, path string) (*Scope, error) {
 		}
 	}
 
-	src, err := os.ReadFile(abs)
+	src, err := fs.ReadFile(fsys, rel)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, &ScopeError{Path: rel, Msg: "no such file"}
 	}

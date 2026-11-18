@@ -179,6 +179,28 @@ func (h *Repo) Resolve(rev string) (string, error) {
 	return hash.String(), nil
 }
 
+// MergeBase is the best common ancestor of two commits, given as full
+// hashes: what a pull request from b into a changes is the difference
+// from it to b (DES-0055).
+func (h *Repo) MergeBase(a, b string) (string, error) {
+	ca, err := h.r.CommitObject(plumbing.NewHash(a))
+	if err != nil {
+		return "", err
+	}
+	cb, err := h.r.CommitObject(plumbing.NewHash(b))
+	if err != nil {
+		return "", err
+	}
+	bases, err := ca.MergeBase(cb)
+	if err != nil {
+		return "", err
+	}
+	if len(bases) == 0 {
+		return "", fmt.Errorf("commits %s and %s have no common ancestor", Short(a), Short(b))
+	}
+	return bases[0].Hash.String(), nil
+}
+
 // Excluded reports whether a path is outside the content hash: the
 // signature ledger, whose records are made about the content and so cannot
 // be part of it.

@@ -84,9 +84,9 @@
 - [x] E8.9 Epic close-out
 - [x] E9.1 Design
 - [x] E9.2 Loading a ref
-- [ ] E9.3 The comparison and `diff`
-- [ ] E9.4 Diff templates
-- [ ] E9.5 The rendered diff
+- [x] E9.3 The comparison and `diff`
+- [x] E9.4 Diff templates
+- [x] E9.5 The rendered diff
 - [ ] E9.6 The example's pull-request summary
 - [ ] E9.7 Epic close-out
 
@@ -2178,6 +2178,10 @@ read through `os` in about a dozen places.
 | What reads through the file system | `repo` (`Repo.Files()`, `FromFS`), `schema` (`ReadFS`), the sources (`Source.Load` takes an `fs.FS` and skips folders by repository path) and the website exporter's templates and images: everything a diff loads and renders. `validate`'s rule files and report templates still read the working tree: `diff` never validates. (E9.2) |
 | A commit's tree | `history.Tree`: files as committed; a link to a file in the tree read as that file, as the working tree follows it; submodules and links to folders or out of the tree left out. A commit with no `.component` isn't a Provenance repository there. (E9.2) |
 | Checking it | `load`'s test loads each violation case, the starter and the example both from a commit and from its clean checkout, and compares the entities, problems and every exported file; CI checks the example out before the unit tests so the example's case runs. (E9.2) |
+| Text blocks | A removed and an added block pair as one changed block when they share half their words (most pairs, in order); fenced blocks pair whatever they hold and are shown line by line. A long run of differences (past 4,000 steps of the edit search) is taken as replaced whole, so memory stays bounded. (E9.3) |
+| Order and files | Entities by type name, then ID; non-entity files (`.component`, everything under the configuration folders, images entities show) listed whatever `--scope` says. A side whose schema didn't load compares an entity by the text its source writes it as. (E9.3) |
+| Templates | Every output, `text` included, is a template over the `Diff`; a project's template of a built-in's name replaces it; templates are read from the new side; a template whose name is `html` or ends `.html` gets the pages. The data's names are recorded in DES-0057. (E9.4) |
+| Pages | Pages are compared whole, the layout included (the layouts list no entities, so adding one changes no other page). The exporter's `WithoutImages` checks images exist without copying them; the html output inlines only the images of pages it shows. Removed blocks are placed after the new block before them, in a table or list of their own where needed; unchanged runs fold in `<details>`, never inside a table or list; links to pages in the file become links to their sections, others are dropped (external links kept). (E9.5) |
 
 **Order:** the design (E9.1); loading a ref (E9.2), on which everything
 stands; the comparison and the text output (E9.3); JSON and templates
@@ -2238,7 +2242,9 @@ output, in Markdown.
 memory without stamps, pages compared by block and word, one
 self-contained file stamped with both refs' commits and content hashes
 and the binary's version; unchanged blocks folded; overridable by
-`templates/diff/html.tmpl` (D6).
+`templates/diff/html.tmpl` (D6). Images are compared by their git object
+hash, not their bytes, and a page's rendered bytes are dropped once it
+is compared, so two sides cost little more than one (Matt, 2026-11-18).
 
 **Check it yourself:** edit a word in REQ-0002 and open the HTML →
 REQ-0002's page with the word struck and its replacement marked, and

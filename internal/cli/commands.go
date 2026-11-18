@@ -172,15 +172,43 @@ Exit codes: 0 done, or every file canonical with --check; 1 files not canonical 
 
 func newDiffCmd() *cobra.Command {
 	c := &cobra.Command{
-		Use:   "diff <ref-a> <ref-b>",
-		Short: "Show a rendered, semantic diff between two git refs",
-		Long: `Produce a rendered/semantic diff between two git refs, for the whole repository or
-one entity.`,
-		Args:        exactArgs("ref-a", "ref-b"),
-		Annotations: notImplementedYet,
-		RunE:        notImplemented,
+		Use:   "diff [<old> [<new>]]",
+		Short: "Show what changed in the design history file between two git refs",
+		Long: `Compare the design history file at two git refs, entity by entity: what was
+added, removed or retyped, and for a changed entity, each field that changed, its
+text block by block and word by word. A value is compared as the schema types it, so
+reformatting a file, as fmt does, is no change; a moved file is no change either.
+Calculated fields and query fields' results are compared too, marked derived.
+Files that are not entities (.component, schema/, rules/, templates/, assets/, and
+the images entities show) are listed by path.
+
+The refs are written as git's: with none, diff compares HEAD with the working
+tree; with one, that ref with the working tree; with two, the first with the
+second. old..new is old and new; old...new compares new with its merge base with
+old, which is what a pull request from new into old changes. A ref is a branch,
+tag, commit or any revision git resolves, such as HEAD~2. Each side is read from
+git's objects with its own schema and templates; nothing is checked out.
+
+A side that has problems loading is compared as far as it loads, and its problems
+are listed first. --scope takes a query file or an entity file, as export's does,
+resolved at each side; an entity in either side's scope is compared.
+
+Each --output names an output: text; html, one self-contained file showing each
+page the change touched as the site renders it at each side, marked block by block
+and word by word, with unchanged blocks folded; or a project's template
+templates/diff/<name>.tmpl, which replaces a built-in of the same name. name=file
+writes it to file, and with no --output the text goes to standard output. Nothing
+is written unless every output renders.
+
+Exit codes: 2 for a ref that doesn't resolve, or any other error; otherwise 0,
+whether or not anything changed, unless --exit-code is given: then 1 when
+anything did.`,
+		Args: maxArgs(2),
+		RunE: runDiff,
 	}
-	c.Flags().String("entity", "", "limit the diff to the entity with this `id`")
+	c.Flags().String("scope", "", "`path` to a query file or entity file that limits the entities compared")
+	c.Flags().StringArray("output", nil, "output to write, as `name` or name=file: text, html or a template in templates/diff/; repeatable (default: text to standard output)")
+	c.Flags().Bool("exit-code", false, "exit 1 when anything differs")
 	return c
 }
 
