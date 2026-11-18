@@ -69,7 +69,6 @@ The same binary runs locally and as the CI merge gate. Exit codes are the CI con
 		newFmtCmd(),
 		newDiffCmd(),
 		newExportCmd(),
-		newReportCmd(),
 		newReleaseCmd(),
 		newPluginCmd(),
 		newSignCmd(),

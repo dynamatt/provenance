@@ -209,25 +209,6 @@ is validate's job.`,
 	return c
 }
 
-func newReportCmd() *cobra.Command {
-	c := &cobra.Command{
-		Use:   "report",
-		Short: "Generate a coverage or progress report",
-		Long: `Generate a coverage/progress report from the current branch HEAD.
-
---scope takes a path to a standalone query file or an entity file and resolves it to an
-entity set; pointed at a Document, the Document's scoped entities become the reporting
-population.`,
-		Args:        noArgs,
-		Annotations: notImplementedYet,
-		RunE:        notImplemented,
-	}
-	c.Flags().String("metric", "", "report only the metric with this `name`")
-	c.Flags().String("scope", "", "`path` to a query file or entity file that limits the population")
-	c.Flags().Bool("json", false, "emit machine-readable JSON")
-	return c
-}
-
 func newReleaseCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "release",
