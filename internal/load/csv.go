@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
-	"path/filepath"
 
 	"github.com/dynamatt/provenance/internal/entity"
 	"github.com/dynamatt/provenance/internal/history"
@@ -25,11 +23,11 @@ func (c csvSource) table(t *schema.Type) *entity.Table {
 
 // Load reads every source's file, in type name order. A file that is
 // missing is a content/csv-row problem at the schema's source:.
-func (c csvSource) Load(root string, _ []string) (*Loaded, error) {
+func (c csvSource) Load(fsys fs.FS, _ []string) (*Loaded, error) {
 	out := &Loaded{}
 	for _, t := range c.s.SourceTypes() {
 		table := c.table(t)
-		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(table.Path)))
+		data, err := fs.ReadFile(fsys, table.Path)
 		if errors.Is(err, fs.ErrNotExist) {
 			msg := fmt.Sprintf("no file %s, the source of type %s", table.Path, t.Name)
 			out.Problems = append(out.Problems, problem.Problem{Check: "content/csv-row", Path: t.File, Line: t.Source.Line, Msg: msg,

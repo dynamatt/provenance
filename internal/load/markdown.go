@@ -4,9 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/dynamatt/provenance/internal/entity"
@@ -39,15 +37,13 @@ func (markdown) Entities(p string, data func() ([]byte, error)) ([]history.FileE
 // problem. Of several files declaring one ID only the first found is an
 // entity; every one of them is a content/duplicate-id problem, naming the
 // others, where the walk first found the duplicate.
-func (markdown) Load(root string, skip []string) (*Loaded, error) {
+func (markdown) Load(fsys fs.FS, skip []string) (*Loaded, error) {
 	skipped := map[string]bool{}
 	for _, s := range skip {
-		if abs, err := filepath.Abs(s); err == nil {
-			skipped[abs] = true
-		}
+		skipped[s] = true
 	}
 	for _, d := range entity.ConfigDirs {
-		skipped[filepath.Join(root, d)] = true
+		skipped[d] = true
 	}
 
 	out := &Loaded{}
@@ -61,25 +57,20 @@ func (markdown) Load(root string, skip []string) (*Loaded, error) {
 	var found []finding
 	var partial []problem.Problem
 	copies := map[string][]*entity.DuplicateIDError{}
-	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(fsys, ".", func(rel string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() {
-			if p != root && (d.Name() == ".git" || skipped[p]) {
-				return filepath.SkipDir
+			if rel != "." && (d.Name() == ".git" || skipped[rel]) {
+				return fs.SkipDir
 			}
 			return nil
 		}
-		if !strings.EqualFold(filepath.Ext(p), ".md") {
+		if !strings.EqualFold(path.Ext(rel), ".md") {
 			return nil
 		}
-		rel, err := filepath.Rel(root, p)
-		if err != nil {
-			return err
-		}
-		rel = filepath.ToSlash(rel)
-		raw, err := os.ReadFile(p)
+		raw, err := fs.ReadFile(fsys, rel)
 		if err != nil {
 			return err
 		}
@@ -111,12 +102,6 @@ func (markdown) Load(root string, skip []string) (*Loaded, error) {
 		return nil
 	})
 	if err != nil {
-		var pathErr *fs.PathError
-		if errors.As(err, &pathErr) {
-			if rel, relErr := filepath.Rel(root, pathErr.Path); relErr == nil {
-				pathErr.Path = filepath.ToSlash(rel)
-			}
-		}
 		return nil, err
 	}
 	for _, f := range found {

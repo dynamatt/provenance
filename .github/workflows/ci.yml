@@ -28,14 +28,16 @@ jobs:
       - name: Lint
         run: make lint
 
+      # Before the unit tests: load's tests compare the example loaded from
+      # git with its checkout (E9.2).
+      - name: Check out example repository
+        run: make example
+
       - name: Unit tests
         run: make test
 
       - name: Build
         run: make build
-
-      - name: Check out example repository
-        run: make example
 
       # acceptance checks the JUnit report against its XSD with xmllint.
       - name: Install xmllint

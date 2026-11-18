@@ -5,6 +5,7 @@ package tmpl
 
 import (
 	htmltemplate "html/template"
+	"io/fs"
 	"os"
 	"regexp"
 	"strconv"
@@ -16,6 +17,12 @@ import (
 // core.autocrlf checkout renders the same bytes.
 func Read(path string) (string, error) {
 	b, err := os.ReadFile(path)
+	return strings.ReplaceAll(string(b), "\r\n", "\n"), err
+}
+
+// ReadFS is Read of name, slash-separated, from fsys.
+func ReadFS(fsys fs.FS, name string) (string, error) {
+	b, err := fs.ReadFile(fsys, name)
 	return strings.ReplaceAll(string(b), "\r\n", "\n"), err
 }
 

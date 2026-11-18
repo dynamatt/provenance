@@ -2,7 +2,7 @@ package load
 
 import (
 	"github.com/dynamatt/provenance/internal/history"
-	"path/filepath"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -34,7 +34,7 @@ func TestMarkdownWalk(t *testing.T) {
 		files[d+"/x.md"] = entityFile("CFG-"+d, "Ignored")
 	}
 	write(t, root, files)
-	l, err := markdown{}.Load(root, []string{filepath.Join(root, "_site")})
+	l, err := markdown{}.Load(os.DirFS(root), []string{"_site"})
 	if err != nil || len(l.Problems) != 0 {
 		t.Fatal(err, l.Problems)
 	}
@@ -64,7 +64,7 @@ func TestMarkdownProblems(t *testing.T) {
 		"REQ/half.md":     "---\ntitle: x\ntype: Requirement\n---\n",
 		"Z/bad.md":        "---\nid: [\n---\n",
 	})
-	l, err := markdown{}.Load(root, nil)
+	l, err := markdown{}.Load(os.DirFS(root), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

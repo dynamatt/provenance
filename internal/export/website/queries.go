@@ -46,7 +46,7 @@ func (r *resolver) image(dest string) (string, error) {
 	}
 	s := r.ctx.site
 	if _, done := s.files[rel]; !done {
-		data, err := assets.Read(s.root, rel)
+		data, err := assets.Read(s.repoFS, rel)
 		if err != nil {
 			return "", err
 		}

@@ -7,6 +7,8 @@ package load
 
 import (
 	"fmt"
+	"io/fs"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -42,6 +44,8 @@ type Result struct {
 	// Tables are the CSV files entities were read from, in type name
 	// order (DES-0053).
 	Tables []*entity.Table
+	// Commit is the commit At loaded, or "" for the working tree.
+	Commit string
 
 	content     *content
 	history     *History
@@ -90,7 +94,8 @@ func Read(rp *repo.Repo, skip ...string) (*Result, error) {
 	res := &Result{Repo: rp}
 	// The schema comes first, since a source may be declared in it; its
 	// problems are reported after the entity files', as export meets them.
-	s, problems, err := schema.Read(rp.Root)
+	fsys := rp.Files()
+	s, problems, err := schema.ReadFS(fsys)
 	if err != nil && len(problems) == 0 {
 		return nil, err
 	}
@@ -101,7 +106,7 @@ func Read(rp *repo.Repo, skip ...string) (*Result, error) {
 	if len(problems) > 0 {
 		srcs = slices.DeleteFunc(srcs, func(src Source) bool { _, ok := src.(csvSource); return ok })
 	}
-	if err := res.read(srcs, skip); err != nil {
+	if err := res.read(fsys, srcs, relSkip(rp.Root, skip)); err != nil {
 		return nil, err
 	}
 	for _, p := range problems {
@@ -157,13 +162,13 @@ func ContentOf(rp *repo.Repo, skip ...string) (history.Content, error) {
 // read runs every source, in order, keeping the first entity of each ID.
 // An ID two sources both hold is a content/duplicate-id problem, as two
 // files of one source holding it are.
-func (r *Result) read(srcs []Source, skip []string) error {
+func (r *Result) read(fsys fs.FS, srcs []Source, skip []string) error {
 	var files []string
 	byID := map[string]*entity.Entity{}
 	across := map[string][]*entity.DuplicateIDError{}
 	var acrossIDs []string
 	for _, src := range srcs {
-		l, err := src.Load(r.Repo.Root, skip)
+		l, err := src.Load(fsys, skip)
 		if err != nil {
 			return err
 		}
@@ -194,6 +199,25 @@ func (r *Result) read(srcs []Source, skip []string) error {
 	return nil
 }
 
+// relSkip is skip's folders (absolute, or relative to the working
+// directory) inside root, slash-separated and relative to root; a folder
+// outside root is never read anyway.
+func relSkip(root string, skip []string) []string {
+	var rel []string
+	for _, s := range skip {
+		abs, err := filepath.Abs(s)
+		if err != nil {
+			continue
+		}
+		r, err := filepath.Rel(root, abs)
+		if err != nil || r == ".." || strings.HasPrefix(r, ".."+string(filepath.Separator)) {
+			continue
+		}
+		rel = append(rel, filepath.ToSlash(r))
+	}
+	return rel
+}
+
 func (r *Result) add(p problem.Problem) { r.Problems = append(r.Problems, p) }
 
 // fromOtherSource reports, as a content/frontmatter problem, an entity of
@@ -213,4 +237,27 @@ func (r *Result) fromOtherSource(e *entity.Entity) bool {
 	r.add(problem.Problem{Check: "content/frontmatter", Path: e.Path, Line: line, Entity: e.ID, Msg: msg,
 		Err: &entity.Error{Path: e.Path, Line: line, Msg: msg}})
 	return true
+}
+
+// At loads the repository rp as it was at commit, a full hash h resolved,
+// from git's objects rather than the working tree (DES-0055): the same
+// loader over the commit's tree, with the commit's own .component, schema
+// and templates. Its Repo reads the tree; Commit is set; it has no History,
+// which describes HEAD and the working tree.
+func At(rp *repo.Repo, h *history.Repo, commit string) (*Result, error) {
+	tree, err := h.Tree(commit)
+	if err != nil {
+		return nil, err
+	}
+	at, err := repo.FromFS(rp.Root, tree)
+	if err != nil {
+		return nil, fmt.Errorf("commit %s: %w", history.Short(commit), err)
+	}
+	res, err := Load(at)
+	if err != nil {
+		return nil, err
+	}
+	res.Commit = commit
+	res.historyRead = true
+	return res, nil
 }

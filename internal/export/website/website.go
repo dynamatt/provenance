@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/fs"
 	"maps"
 	"regexp"
 	"slices"
@@ -65,13 +66,13 @@ func (e *Exporter) run(in *export.Input, check *checker) (export.Files, error) {
 			}
 		}
 	}
-	ts, err := loadTemplates(in.Repo.Root, in.Schema, check)
+	ts, err := loadTemplates(in.Repo.Files(), in.Schema, check)
 	if err != nil {
 		return nil, err
 	}
 	s := &site{
 		component: in.Repo.Component,
-		root:      in.Repo.Root,
+		repoFS:    in.Repo.Files(),
 		templates: ts,
 		data:      tmpl.NewModel(in.Schema, in.Entities),
 		graph:     in.Graph,
@@ -294,7 +295,7 @@ func pageTitle(e *model.Entity) string {
 
 type site struct {
 	component repo.Component
-	root      string // the repository root, for images
+	repoFS    fs.FS // the repository's files, for images
 	templates *templateSet
 	data      *tmpl.Model
 	graph     *query.Graph
