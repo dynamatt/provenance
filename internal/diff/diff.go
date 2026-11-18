@@ -46,6 +46,9 @@ type Diff struct {
 	Rendered bool
 	// Version is the binary's, for the html output's header.
 	Version string
+	// WorkingTree is the working tree's files, where a template the new
+	// side lacks is read from; nil for none.
+	WorkingTree fs.FS
 	// Style is the new side's site stylesheet, once Render has exported
 	// it, so the html output's pages look as the site's do.
 	Style htmltemplate.CSS

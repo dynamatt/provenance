@@ -2,6 +2,8 @@ package diff
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -102,6 +104,14 @@ func TestRenderAndOutputs(t *testing.T) {
 	var unknown *UnknownOutputError
 	if _, err := d.Output("nope"); !errors.As(err, &unknown) || err.Error() != "--output nope: no such output (text, html, broken, summary.md)" {
 		t.Errorf("unknown output: %v", err)
+	}
+	// A template the new side lacks is read from the working tree.
+	wt := t.TempDir()
+	os.MkdirAll(filepath.Join(wt, "templates", "diff"), 0o755)
+	os.WriteFile(filepath.Join(wt, "templates", "diff", "late.tmpl"), []byte("late: {{len .Entities}}"), 0o644)
+	d.WorkingTree = os.DirFS(wt)
+	if b, err := d.Output("late"); err != nil || string(b) != "late: 2" {
+		t.Errorf("a working-tree template: %q, %v", b, err)
 	}
 	var te *tmpl.Error
 	if _, err := d.Output("broken"); !errors.As(err, &te) || te.Path != "templates/diff/broken.tmpl" {
