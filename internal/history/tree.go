@@ -251,3 +251,22 @@ func (d *treeDir) ReadDir(n int) ([]fs.DirEntry, error) {
 	d.read += len(rest)
 	return rest, nil
 }
+
+// BlobHash is the git object hash of the file name in fsys: the hash a
+// commit's tree records, without reading the file, or else the hash of the
+// file's bytes as git would store them. Two sides of a diff compare a file,
+// such as an image, by it without holding its bytes (DES-0056).
+func BlobHash(fsys fs.FS, name string) (string, error) {
+	if t, ok := fsys.(*treeFS); ok {
+		hash, ok := t.files[name]
+		if !ok {
+			return "", &fs.PathError{Op: "read", Path: name, Err: fs.ErrNotExist}
+		}
+		return hash.String(), nil
+	}
+	b, err := fs.ReadFile(fsys, name)
+	if err != nil {
+		return "", err
+	}
+	return plumbing.ComputeHash(plumbing.BlobObject, b).String(), nil
+}

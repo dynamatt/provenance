@@ -1,0 +1,30 @@
+{{- /* The built-in text output of provenance diff (DES-0057): a template
+     over the change model, as a project's own templates/diff/<name>.tmpl
+     is. */ -}}
+diff {{.Old.Name}} → {{.New.Name}}
+{{- range $side := sides .}}{{if .Problems}}
+problems loading {{.Name}}, compared as far as it loaded:
+{{- range .Problems}}
+  {{.Path}}{{if .Line}}:{{.Line}}{{end}}: [{{.Check}}] {{.Msg}}{{end}}{{end}}{{end}}
+{{- range .Files}}
+{{.Path}}  {{.Op}}{{end}}
+{{- range .Entities}}
+{{.ID}}  {{.Type}}  {{if eq .Op "retyped"}}retyped from {{.OldType}}{{else}}{{.Op}}{{if .Derived}} (derived){{end}}{{end}}{{if and .Title (ne .Op "changed")}}  {{.Title}}{{end}}
+{{- range .Fields}}{{template "field" (at "  " .)}}{{end}}{{end}}
+{{- if .Rendered}}{{range .Pages}}{{if eq .Op "page"}}
+{{.Name}}  page changed by another change{{end}}{{end}}{{else if .NotRendered}}
+pages not compared: {{.NotRendered}}{{end}}
+{{summary .}}
+{{- define "field"}}{{$in := .Indent}}{{with .Field}}
+{{$in}}{{.Name}}{{if .Derived}} (derived){{end}}:
+{{- if .Text}}{{range .Text.Blocks}}{{if and (eq .Op "changed") .Code}}{{range .Lines}}
+{{$in}}  {{if eq .Op "removed"}}-{{else if eq .Op "added"}}+{{else}} {{end}} {{.Text}}{{end}}
+{{- else if eq .Op "changed"}}
+{{$in}}  ~ {{range $i, $w := .Words}}{{if $i}} {{end}}{{if eq .Op "removed"}}[-{{.Text}}-]{{else if eq .Op "added"}}{+{{.Text}}+}{{else}}{{.Text}}{{end}}{{end}}
+{{- else if eq .Op "removed"}}{{range lines .Old}}
+{{$in}}  - {{.}}{{end}}{{else if eq .Op "added"}}{{range lines .New}}
+{{$in}}  + {{.}}{{end}}{{end}}{{end}}
+{{- else if .Rows}}{{range .Rows}}
+{{$in}}  row {{.Index}} {{.Op}}{{range .Fields}}{{template "field" (at (print $in "    ") .)}}{{end}}{{end}}
+{{- else if or .Added .Removed}}{{with .Added}} + {{join .}}{{end}}{{with .Removed}}{{if $.Field.Added}};{{end}} - {{join .}}{{end}}
+{{- else}} {{or .Old "(none)"}} → {{or .New "(none)"}}{{end}}{{end}}{{end}}
