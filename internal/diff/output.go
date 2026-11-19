@@ -12,6 +12,7 @@ import (
 	"strings"
 	texttemplate "text/template"
 
+	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/tmpl"
 )
 
@@ -42,9 +43,15 @@ func funcs() map[string]any {
 		"lines":   func(s string) []string { return strings.Split(s, "\n") },
 		"sides":   func(d *Diff) []*Side { return []*Side{d.Old, d.New} },
 		"summary": Summary,
-		"count":   func(d *Diff, op string) int { return d.Count(op) },
-		"add":     func(a, b int) int { return a + b },
-		"plural":  plural,
+		"short":   history.Short,
+		// cell makes a value safe in a Markdown table cell: | escaped,
+		// line breaks as spaces.
+		"cell": func(s string) string {
+			return strings.ReplaceAll(strings.Join(strings.Fields(s), " "), "|", `\|`)
+		},
+		"count":  func(d *Diff, op string) int { return d.Count(op) },
+		"add":    func(a, b int) int { return a + b },
+		"plural": plural,
 		"pageOnly": func(d *Diff) int {
 			n := 0
 			for _, p := range d.Pages {
@@ -120,37 +127,58 @@ func (e *UnknownOutputError) Error() string {
 	return fmt.Sprintf("--output %s: no such output (%s)", e.Name, strings.Join(e.Available, ", "))
 }
 
-// Outputs are the outputs available: text and html, then the new side's
-// templates/diff/<name>.tmpl, by name.
+// templateFiles are where templates are read from: the new side, the
+// one under review, then the working tree, so a template a project adds
+// later still renders a diff of older refs (DES-0057).
+func (d *Diff) templateFiles() []fs.FS {
+	out := []fs.FS{d.New.Files()}
+	if d.WorkingTree != nil && d.New.Commit != "" {
+		out = append(out, d.WorkingTree)
+	}
+	return out
+}
+
+// Outputs are the outputs available: text and html, then the templates
+// in templates/diff/, by name.
 func (d *Diff) Outputs() ([]string, error) {
 	out := []string{"text", "html"}
-	entries, err := fs.ReadDir(d.New.Files(), TemplatesDir)
-	if errors.Is(err, fs.ErrNotExist) {
-		return out, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	for _, e := range entries {
-		if name, ok := strings.CutSuffix(e.Name(), ".tmpl"); ok && name != "" && !e.IsDir() && !slices.Contains(out, name) {
-			out = append(out, name)
+	var names []string
+	for _, fsys := range d.templateFiles() {
+		entries, err := fs.ReadDir(fsys, TemplatesDir)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		for _, e := range entries {
+			if name, ok := strings.CutSuffix(e.Name(), ".tmpl"); ok && name != "" && !e.IsDir() && !slices.Contains(out, name) && !slices.Contains(names, name) {
+				names = append(names, name)
+			}
 		}
 	}
-	return out, nil
+	slices.Sort(names)
+	return append(out, names...), nil
 }
 
 // NeedsPages reports whether output name shows rendered pages: html, and
 // a template whose name ends .html, so Render must compare them first.
 func NeedsPages(name string) bool { return name == "html" || strings.HasSuffix(name, ".html") }
 
-// Output renders output name: the new side's templates/diff/<name>.tmpl,
-// which replaces a built-in of the same name, or the built-in text or
-// html. A template is Go's html/template when its name is html or ends
+// Output renders output name: templates/diff/<name>.tmpl, the new
+// side's or else the working tree's, which replaces a built-in of the same
+// name, or the built-in text or html. A template is Go's html/template when its name is html or ends
 // .html, text/template otherwise, and receives the Diff as ".". A
 // template that fails is a *tmpl.Error at its file and line.
 func (d *Diff) Output(name string) ([]byte, error) {
 	path := TemplatesDir + "/" + name + ".tmpl"
-	text, err := tmpl.ReadFS(d.New.Files(), path)
+	var text string
+	var err error
+	for _, fsys := range d.templateFiles() {
+		if text, err = tmpl.ReadFS(fsys, path); !errors.Is(err, fs.ErrNotExist) {
+			break
+		}
+	}
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		if name != "text" && name != "html" {

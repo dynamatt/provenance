@@ -92,6 +92,7 @@ func runDiff(c *cobra.Command, args []string) error {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 	d.Version = version.Version
+	d.WorkingTree = rp.Files()
 	bufs, err := renderDiff(d, outs)
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)

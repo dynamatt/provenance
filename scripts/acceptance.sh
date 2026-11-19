@@ -924,10 +924,18 @@ expect 1 '^diff: 1 entity: 1 changed$'    "$PROV" diff --exit-code
 mkdir -p templates/diff
 printf '{{range .Entities}}{{.ID}} {{.Op}}{{range .Fields}} {{.Name}}{{end}}\n{{end}}' > templates/diff/ids.tmpl
 expect 0 '^REQ-0002 changed statement status$' "$PROV" diff --output ids
-expect 2 '^diff: --output nope: no such output \(text, html, ids\)$' "$PROV" diff --output nope
+expect 2 '^diff: --output nope: no such output \(text, html, ids, pr-changes\.md\)$' "$PROV" diff --output nope
 printf '{{.Nope}}' > templates/diff/broken.tmpl
 expect 2 'templates/diff/broken\.tmpl:1:2: .*Nope' "$PROV" diff --output broken
-rm -r templates/diff
+rm templates/diff/ids.tmpl templates/diff/broken.tmpl
+
+# E9.6: the example's pull-request summary, templates/diff/pr-changes.md,
+# over Epic 7's merge to Epic 8's. Neither commit has the template, so it
+# is read from the working tree.
+expect 0 '^From `72bd09e` to `5a845df`: 12 entities: 7 changed, 5 added; 16 other files changed\.$' "$PROV" diff 72bd09e 5a845df --output pr-changes.md
+expect 0 '^\| \*\*REQ-0002\*\* \| Requirement \| changed \| component: \(none\) → CMP-0001 \|$' "$PROV" diff 72bd09e 5a845df --output pr-changes.md
+expect 0 '^\| \*\*DOC-0006\*\* \| VerificationSummaryReport \| added \| Verification Summary Report — NeuroPulse System \|$' "$PROV" diff 72bd09e 5a845df --output pr-changes.md
+expect 0 '^- `schema/Evidence\.yaml` added$' "$PROV" diff 72bd09e 5a845df --output pr-changes.md
 
 # E9.5: the rendered diff (DES-0056): one self-contained file holding each
 # page the change touched, rendered by each side's templates and marked

@@ -87,7 +87,7 @@
 - [x] E9.3 The comparison and `diff`
 - [x] E9.4 Diff templates
 - [x] E9.5 The rendered diff
-- [ ] E9.6 The example's pull-request summary
+- [x] E9.6 The example's pull-request summary
 - [ ] E9.7 Epic close-out
 
 ## Shape of the plan
@@ -2182,6 +2182,8 @@ read through `os` in about a dozen places.
 | Order and files | Entities by type name, then ID; non-entity files (`.component`, everything under the configuration folders, images entities show) listed whatever `--scope` says. A side whose schema didn't load compares an entity by the text its source writes it as. (E9.3) |
 | Templates | Every output, `text` included, is a template over the `Diff`; a project's template of a built-in's name replaces it; templates are read from the new side; a template whose name is `html` or ends `.html` gets the pages. The data's names are recorded in DES-0057. (E9.4) |
 | Pages | Pages are compared whole, the layout included (the layouts list no entities, so adding one changes no other page). The exporter's `WithoutImages` checks images exist without copying them; the html output inlines only the images of pages it shows. Removed blocks are placed after the new block before them, in a table or list of their own where needed; unchanged runs fold in `<details>`, never inside a table or list; links to pages in the file become links to their sections, others are dropped (external links kept). (E9.5) |
+| Where templates are read | The new side, then the working tree when the new side has none of that name: a template added later still renders a diff of older refs, as the example's `pr-changes.md` renders Epic 7's merge to Epic 8's, neither of which has it. Template functions `short` and `cell` added for Markdown tables. (E9.6) |
+| The example's workflow | The Validate step writing `diff origin/main...HEAD` to the run's summary page and the HTML as an artifact needs a release with `diff`: added with the pin to `v0.8.0-alpha` (E9.7). (E9.6) |
 
 **Order:** the design (E9.1); loading a ref (E9.2), on which everything
 stands; the comparison and the text output (E9.3); JSON and templates
