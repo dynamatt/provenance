@@ -88,7 +88,7 @@
 - [x] E9.4 Diff templates
 - [x] E9.5 The rendered diff
 - [x] E9.6 The example's pull-request summary
-- [ ] E9.7 Epic close-out
+- [x] E9.7 Epic close-out
 
 ## Shape of the plan
 
@@ -2117,7 +2117,10 @@ downloaded binary exports the example with both reports.
 
 ## Epic 9 — `diff`
 
-> **Status: agreed with Matt 2026-11-17** (D6, D7 and D9 as revised
+> **Status: closed 2026-11-19**, released as `v0.8.0-alpha`; the
+> example's and the DDF's Validate workflows are pinned to it, and the
+> example's writes a pull request's changes to the run's summary page.
+> Agreed with Matt 2026-11-17 (D6, D7 and D9 as revised
 > in review; the rest as proposed). `report` is
 > dropped (Matt, 2026-11-17): coverage is already reported by the DHF's
 > own documents, through query blocks, query fields, counts and
@@ -2287,7 +2290,7 @@ order after Epic 2, with the reason it comes where it does:
 7. ~~**`report`**~~ — *dropped 2026-11-17:* coverage is the DHF's own
    documents (query blocks, query fields, counts, templates) and rules;
    a change in coverage between refs is `diff`'s.
-8. **`diff`** — Epic 9, detailed above (agreed 2026-11-17).
+8. **`diff`** — Epic 9, detailed above (closed 2026-11-19).
 9. **History in rules** — rules ask what changed when, such as evidence
    older than what it verifies (see below). Before `sign` and
    `release tag`, whose rules (REQ-0115, REQ-0051) are built on it.
