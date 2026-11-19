@@ -89,6 +89,12 @@
 - [x] E9.5 The rendered diff
 - [x] E9.6 The example's pull-request summary
 - [x] E9.7 Epic close-out
+- [ ] E10.1 Design
+- [ ] E10.2 The example's stale evidence
+- [ ] E10.3 Revisions by value
+- [ ] E10.4 `last_changed`
+- [ ] E10.5 History it can't read
+- [ ] E10.6 Epic close-out
 
 ## Shape of the plan
 
@@ -2275,6 +2281,126 @@ the PR summary step on.
 **Check it yourself:** the release's `SHA256SUMS` verifies; a pull
 request on the example shows its changes on the run's summary page.
 
+## Epic 10 — History in rules
+
+> **Status: proposed 2026-11-19, for Matt's review.** Outlined
+> 2026-10-25 (H1–H5); revised after Epic 9: H1 is now a built-in
+> name rather than a new operator, H5 takes `diff`'s comparison, and
+> H6–H8 are new. Once agreed, the plan is carried on the epic branch.
+
+**Goal:** a rule can ask what changed when. The first case is stale
+evidence. Evidence verified its protocol and requirement as they were,
+so a later change to either leaves it stale, and the gate says so.
+That is USR-0023's re-review flag, in the link's direction only.
+`sign` (a new commit leaves a signed entity unsigned, REQ-0115) and
+`release tag` (content frozen after release, REQ-0051) ask the same
+question of other entities, and build on this epic.
+
+```yaml
+# rules/evidence-current.yaml
+severity: warning
+message: "the protocol it executed has changed since"
+from: VerificationEvidence
+where:
+  field: tests
+  where:
+    field: last_changed
+    operator: greater_than
+    value_of: ^last_changed
+```
+
+```text
+$ provenance validate
+VER/EVD-0002.md:1  warning  [evidence-current]  the protocol it executed has changed since
+```
+
+**What is there to build on:**
+
+| Already there | From |
+| --- | --- |
+| The entities each first-parent commit changed, read once, when asked | E3.4, G7 (`history.Log`) |
+| Uncommitted changes against HEAD | `history.Status` |
+| The shallow-clone error, for export | DES-0023 |
+| A typed comparison of an entity at two sides, where formatting and moves are no change | Epic 9 (DES-0055) |
+| `^name` for the enclosing entity's field in a sub-query, and `value_of` | DES-0015 |
+
+What's missing is history as facts the condition grammar can read.
+
+### Decisions (for Matt)
+
+| # | Decision | Proposal | Why |
+| --- | --- | --- | --- |
+| H1 | How a condition says it | **A built-in name, `last_changed`, as `id`, `type` and `code_blocks` are.** It compares with the existing operators and `value_of: ^last_changed`, as in the rule above, and works with `max` and sorting. Its value is the entity's revision number: how many first-parent commits lead to the one that last changed it, counting the root commit as 1. *Revised from the outline's `changed_since: ^` operator.* | No new syntax: the rule reads like `evidence-after-build`, which compares dates the same way. A number orders and aggregates; a commit SHA doesn't. |
+| H2 | What "after" means | **Order along the first-parent history of the commit being validated, never commit dates. Uncommitted changes are the newest.** One first-parent commit is one change: on `main`, a merged pull request is one revision. A pull request that changes a protocol and re-runs its evidence leaves it current. One that changes only the protocol leaves it stale, as the gate sees it on the merge ref. | Dates can be set to anything, and rebases rewrite them. First-parent order is what export's last-changed stamp already uses (DES-0023). A pull request is reviewed as a whole. |
+| H3 | Squash and rebase merges | **No rule compares a commit hash written in a file; order is worked out from history when validating,** so a rule gives the same answer whichever merge strategy the host uses. Signatures bind to a commit hash (DES-0040), which a squash merge discards; the `sign` epic settles that. *As outlined.* | A record on a pull-request branch names commits that a squash merge drops. |
+| H4 | History it can't read | **When a condition reads `last_changed` and history was cut off by a shallow clone, or there is no git repository, `validate`, `export` and `diff` stop with exit 2,** naming `fetch-depth: 0`. Projects that never use the name keep running in shallow clones. Both Validate workflows already fetch full history: the example's since its `diff` step (E9.7), the DDF's from this epic on. | Read from a shallow clone, history would make every entity look new. A gate that passes or fails silently is worse than one that stops. |
+| H5 | What counts as a change | **A change to any of the entity's own values, compared as `diff` compares them (DES-0055).** Reformatting, moving or renaming a file is no change. A derived value (calculated or query field) never counts on its own: its inputs change at their own revisions. REQ-0051's "content fields" may narrow this per type, in `release tag`. *Revised: the outline compared each entity's source text (E3.4).* | `fmt` or a reorganisation must not make every record that verified the moved files stale. One meaning of "changed" for `diff` and rules. |
+| H6 | Export's revision stamps | **Unchanged in this epic:** a page's last-changed stamp and revision history keep DES-0023's text comparison. Moving them to H5's comparison would change stamps across every site, which is its own decision. | Keeps the epic to rules. A reformat is still a commit to the page's file that a reader may want listed. |
+| H7 | Where the name works | **Everywhere the grammar does: rules, query blocks, query fields and `--scope` files, with history read only when one uses it (G7).** A `diff` side at a commit reads history up to that commit. A query field using it then changes with history, and `diff` shows it as derived. | DES-0015 is one grammar. A report can then list stale evidence, not just the gate. |
+| H8 | Clearing a flag (USR-0023) | **A flag clears when the dependent record changes after what it depends on.** Whoever committed that change cleared it, and the record's revision history shows who. Re-review with no change to the content means changing a value the schema gives for it: the example adds a `reviewed` date to evidence. Signatures become the formal clearing in `sign`. | No mechanism outside the records. The record states it was reviewed, as a field the schema author chose. |
+
+### Order
+
+| Task | Builds on it |
+| --- | --- |
+| E10.1 Design | everything |
+| E10.2 The example's stale evidence | the fixture for E10.4–E10.5 |
+| E10.3 Revisions by value | H5, before any rule reads it |
+| E10.4 `last_changed` | the facts and the name |
+| E10.5 History it can't read | H4's errors |
+| E10.6 Close-out | docs, release |
+
+The fixture is the example's own history: its pinned clone has every commit.
+
+### E10.1 Design
+
+**Deliverables:** once H1–H8 are agreed:
+- a DES for history as facts and `last_changed` (H1, H2, H4, H5, H7);
+- DES-0015 gains the name;
+- DES-0023 notes H6;
+- USR-0023 is traced through a requirement for stale records, linked to REQ-0051 and REQ-0115;
+- the website's rules reference.
+
+### E10.2 The example's stale evidence
+
+**Deliverables:** in `provenance-example`:
+- `rules/evidence-current.yaml`;
+- a `reviewed` date on Evidence (H8);
+- a commit that changes VER-0002's procedure after EVD-0002 was recorded, so the rule reports one warning, and its explanation in `README.md`.
+
+The pin moves to the epic branch.
+
+### E10.3 Revisions by value
+
+**Deliverables:** `history` finds which entities a commit changed by comparing their values (H5), as `diff` does, not their text. The revision number of each commit is kept for rules. DES-0023's text comparison stays for export (H6).
+
+**Check it yourself:** in the example, `provenance fmt --all` then a commit leaves every revision number unchanged, and so does moving a file.
+
+### E10.4 `last_changed`
+
+**Deliverables:**
+- the name in the grammar and the facts, read only when a condition uses it;
+- an uncommitted change counts as the newest revision;
+- `diff` sides at a commit read history up to it;
+- unit tests over a synthetic repository for merge commits, a squash, and a move;
+- acceptance: the example's rule reports EVD-0002, and editing EVD-0002's `reviewed` date in the working tree clears it.
+
+### E10.5 History it can't read
+
+**Deliverables:**
+- exit 2 naming `fetch-depth: 0` when a condition reads `last_changed` in a shallow clone, or outside a git repository (H4);
+- the DDF's Validate fetches full history.
+
+**Check it yourself:** `git clone --depth 1` the example, then `provenance validate` exits 2 with the message. Removing the rule makes it run.
+
+### E10.6 Epic close-out
+
+**Deliverables:**
+- a stale-evidence recipe on the website;
+- the epic merged into `main` in each repository;
+- release `v0.9.0-alpha`;
+- the example's and the DDF's workflows pinned to it.
+
 ## Later epics (outline)
 
 Detailed task breakdowns are written when the preceding epic closes. Proposed
@@ -2291,8 +2417,7 @@ order after Epic 2, with the reason it comes where it does:
    documents (query blocks, query fields, counts, templates) and rules;
    a change in coverage between refs is `diff`'s.
 8. **`diff`** — Epic 9, detailed above (closed 2026-11-19).
-9. **History in rules** — rules ask what changed when, such as evidence
-   older than what it verifies (see below). Before `sign` and
+9. **History in rules** — Epic 10, detailed above (proposed 2026-11-19). Before `sign` and
    `release tag`, whose rules (REQ-0115, REQ-0051) are built on it.
 10. **`rename`** — ID rewrite across links, wikilinks, tagged references,
    query filters and query fields.
@@ -2309,38 +2434,3 @@ order after Epic 2, with the reason it comes where it does:
    fidelity spike deferred from High-Level Design §4.7 (now DES-0037). Last because it's a
    thin client over everything above.
 16. **`plugin`**.
-
-### History in rules (proposed 2026-10-25, for Matt's review)
-
-**Goal:** a rule can ask what changed when. The first case: an assurance
-record is evidence for the activity and requirement it verified as they
-were, so a later change to either leaves the evidence stale, and the
-gate should say so. `sign` (a signature goes stale on a new commit,
-REQ-0115) and `release tag` (content frozen after release, REQ-0051)
-are the same question about other entities.
-
-**What it builds on:** E3.4 records which entities each commit changed,
-and G7 has `load` read history once, when asked. This epic puts history
-in the graph as facts and lets conditions use them.
-
-**Decisions (for Matt, before the epic is detailed):**
-
-| # | Decision | Proposal | Why |
-| --- | --- | --- | --- |
-| H1 | How a rule says it | **A condition operator comparing when two entities last changed,** with `^` naming the entity the rule is about, as in a sub-query: on AssuranceRecord, `{field: activity, where: {changed_since: ^}}` finds records whose activity changed after them. History is Datalog facts (an entity changed at a commit, commits ordered), so it composes with the rest of the grammar, and no entity gets implicit fields. | One general mechanism over the graph, and nothing in the files that the author didn't write. |
-| H2 | What "after" means | **Order along the first-parent history of the commit being validated, never commit dates;** a change not yet committed is the newest. | Dates can be set to anything and rebases rewrite them; first-parent order is what export's last-changed commit already uses (DES-0023). |
-| H3 | Squash and rebase merges | **Order is worked out from history when validating; no rule compares a commit hash written in a file.** A rule then gives the same answer whichever merge strategy the host uses. Signatures bind to a commit hash (DES-0040), which a squash merge discards: the `sign` epic must settle this, either by requiring merge commits or by binding a signature to the entity's content. | A record on a pull request branch names commits that a squash merge drops, so a hash-based check would report every squashed record stale. |
-| H4 | Shallow clones | **`validate` fails with exit 2 when a rule needs history the clone cut off,** naming `fetch-depth: 0`; the example's and the DDF's Validate workflows fetch full history from this epic on. | `actions/checkout` fetches one commit by default, and history read from it would make every entity look new: a gate that silently passes or fails is worse than one that stops. |
-| H5 | What counts as a change | **A change to any of the entity's values,** found by comparing the entity on both sides of a commit through its source (E3.4), so reformatting a file doesn't count; REQ-0051's "content fields" may narrow it to some fields per type. | Re-saving or reformatting a protocol must not make every record that verified it stale. |
-
-**Rough shape:**
-
-1. **Design:** DES elements for history facts and the operator; H1–H5 as
-   decided; REQ-0051 and REQ-0115 linked to them.
-2. **Example repo:** a verification record older than a change to its
-   protocol, reported by a rule.
-3. **Facts:** history in the graph, read only when a rule uses it (G7).
-4. **Grammar:** `changed_since`, with `^`.
-5. **validate:** the shallow-clone error (H4); both Validate workflows
-   fetch full history.
-6. **Close-out:** docs (the rules reference), release.
