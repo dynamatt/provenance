@@ -6,8 +6,6 @@ package loadtest
 
 import (
 	"io/fs"
-	"os"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -30,27 +28,22 @@ var _ load.Source = Rows{}
 
 const ext = ".rows"
 
-func (Rows) Load(root string, skip []string) (*load.Loaded, error) {
+func (Rows) Load(fsys fs.FS, skip []string) (*load.Loaded, error) {
 	out := &load.Loaded{}
-	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(fsys, ".", func(rel string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() {
-			if slices.Contains(skip, p) || d.Name() == ".git" {
-				return filepath.SkipDir
+			if slices.Contains(skip, rel) || d.Name() == ".git" {
+				return fs.SkipDir
 			}
 			return nil
 		}
-		if !strings.HasSuffix(p, ext) {
+		if !strings.HasSuffix(rel, ext) {
 			return nil
 		}
-		rel, err := filepath.Rel(root, p)
-		if err != nil {
-			return err
-		}
-		rel = filepath.ToSlash(rel)
-		data, err := os.ReadFile(p)
+		data, err := fs.ReadFile(fsys, rel)
 		if err != nil {
 			return err
 		}

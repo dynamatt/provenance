@@ -880,6 +880,81 @@ expect 0 '^0 errors, 1 warning$' "$PROV" validate
 expect 0 '<h2>Verification Summary Report</h2>' cat _site/index.html
 expect 0 '<h2>Test Equipment</h2>' cat _site/index.html
 
+# E9.3: diff (DES-0055). Each side is loaded from git's objects with its
+# own schema; entities are matched by ID and compared by typed value, so
+# reformatting a file is no change. Epic 7's merge to Epic 8's: the
+# components and reports added, each requirement allocated to a component,
+# the schema and templates changed. A..B and A...B (from the merge base)
+# read as git's; --scope as export's; a ref that doesn't resolve is exit 2
+# whatever --exit-code says.
+expect 0 '^no changes$'                   "$PROV" diff
+expect 0 '^diff 72bd09e → 5a845df$'       "$PROV" diff 72bd09e 5a845df
+expect 0 '^12 entities: 7 changed, 5 added; 16 other files changed$' "$PROV" diff 72bd09e 5a845df
+expect 0 '^DOC-0007  VerificationSummaryReport  added  Verification Summary Report — Pulse Generator Build B2$' "$PROV" diff 72bd09e 5a845df
+expect 0 '^REQ-0002  Requirement  changed
+  component: \(none\) → CMP-0001$'      "$PROV" diff 72bd09e 5a845df
+expect 0 '^schema/Evidence\.yaml  added$' "$PROV" diff 72bd09e 5a845df
+expect 0 '^rules/validation-equipment-calibration-current\.yaml  removed$' "$PROV" diff 72bd09e 5a845df
+expect 0 '^12 entities: 7 changed, 5 added; 16 other files changed$' "$PROV" diff 72bd09e..5a845df
+expect 0 '^diff merge base of 72bd09e and 5a845df \(72bd09e\) → 5a845df$' "$PROV" diff 72bd09e...5a845df
+expect 0 '^3 entities: 3 changed; 16 other files changed$' "$PROV" diff 72bd09e 5a845df --scope DOC/DOC-0001.md
+expect 2 '^diff: unknown commit "nosuchref"$' "$PROV" diff nosuchref
+expect 2 '^diff: unknown commit "nosuchref"$' "$PROV" diff --exit-code nosuchref
+expect 0 '^diff HEAD \(.{7}\) → working tree$' "$PROV" diff
+cp REQ/REQ-0002.md "$WORK/REQ-0002.md"
+python3 - REQ/REQ-0002.md <<'PY'
+import sys
+p = sys.argv[1]
+lines = open(p).read().split("\n")
+status = next(i for i, l in enumerate(lines) if l.startswith("status:"))
+lines.insert(2, lines.pop(status))  # keys reordered
+text = "\n".join(lines).replace("title: Single-fault amplitude ceiling", 'title: "Single-fault amplitude ceiling"')
+open(p, "w").write(text.replace("under\nany single-fault", "under any\nsingle-fault"))  # rewrapped
+PY
+expect 0 '^no changes$'                   "$PROV" diff
+expect 0 '^ M REQ/REQ-0002\.md$'         git status --short
+sed -i 's/exceeding 8 mA/exceeding 6 mA/; s/^status: approved/status: in_review/' REQ/REQ-0002.md
+expect 0 '^    ~ The system shall not deliver a stimulation amplitude exceeding \[-8-\] \{\+6\+\} mA under' "$PROV" diff
+expect 0 '^  status: approved → in_review$' "$PROV" diff
+expect 0 '^1 entity: 1 changed$'          "$PROV" diff
+expect 1 '^diff: 1 entity: 1 changed$'    "$PROV" diff --exit-code
+
+# E9.4: diff templates (DES-0057). A project's templates/diff/<name>.tmpl
+# is an output over the same change model; an unknown output is exit 2.
+mkdir -p templates/diff
+printf '{{range .Entities}}{{.ID}} {{.Op}}{{range .Fields}} {{.Name}}{{end}}\n{{end}}' > templates/diff/ids.tmpl
+expect 0 '^REQ-0002 changed statement status$' "$PROV" diff --output ids
+expect 2 '^diff: --output nope: no such output \(text, html, ids, pr-changes\.md\)$' "$PROV" diff --output nope
+printf '{{.Nope}}' > templates/diff/broken.tmpl
+expect 2 'templates/diff/broken\.tmpl:1:2: .*Nope' "$PROV" diff --output broken
+rm templates/diff/ids.tmpl templates/diff/broken.tmpl
+
+# E9.6: the example's pull-request summary, templates/diff/pr-changes.md,
+# over Epic 7's merge to Epic 8's. Neither commit has the template, so it
+# is read from the working tree.
+expect 0 '^From `72bd09e` to `5a845df`: 12 entities: 7 changed, 5 added; 16 other files changed\.$' "$PROV" diff 72bd09e 5a845df --output pr-changes.md
+expect 0 '^\| \*\*REQ-0002\*\* \| Requirement \| changed \| component: \(none\) → CMP-0001 \|$' "$PROV" diff 72bd09e 5a845df --output pr-changes.md
+expect 0 '^\| \*\*DOC-0006\*\* \| VerificationSummaryReport \| added \| Verification Summary Report — NeuroPulse System \|$' "$PROV" diff 72bd09e 5a845df --output pr-changes.md
+expect 0 '^- `schema/Evidence\.yaml` added$' "$PROV" diff 72bd09e 5a845df --output pr-changes.md
+
+# E9.5: the rendered diff (DES-0056): one self-contained file holding each
+# page the change touched, rendered by each side's templates and marked
+# word by word: REQ-0002's statement, and, changed only through it,
+# DOC-0001, whose query lists approved requirements, and DOC-0002, which
+# now lists REQ-0002 as open. Stamped with both sides; the same bytes
+# each time.
+expect 0 '^DOC-0001  page changed by another change$' "$PROV" diff --output text --output html="$WORK/diff.html"
+expect 0 'exceeding <del class="pd">8</del><ins class="pd">6</ins> mA' cat "$WORK/diff.html"
+expect 0 'id="pd-page-DOC-0002"'          cat "$WORK/diff.html"
+expect 0 '<tr><th>To</th><td>the working tree<br>content hash <code>sha256:[0-9a-f]{64}-dirty</code>' cat "$WORK/diff.html"
+# Nothing points out of the file but external links: other pages are
+# sections of it, images are inline.
+expect 0 '^0$' sh -c "grep -Eo '(src|href)=\"[^\"]*' '$WORK/diff.html' | grep -Evc '\"(#|data:|https?:)' || true"
+"$PROV" diff --output html="$WORK/diff2.html"
+expect 0 ''                               cmp "$WORK/diff.html" "$WORK/diff2.html"
+cp "$WORK/REQ-0002.md" REQ/REQ-0002.md
+expect 0 '^no changes$'                   "$PROV" diff
+
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"
 	exit 1

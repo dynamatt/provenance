@@ -3,6 +3,7 @@ package website
 import (
 	"fmt"
 	"html/template"
+	"io/fs"
 	"path"
 	"slices"
 	"strings"
@@ -45,8 +46,13 @@ func (r *resolver) image(dest string) (string, error) {
 		return "", fmt.Errorf("image %s: the website export does not support this format (supported: %s)", rel, strings.Join(imageTypes, ", "))
 	}
 	s := r.ctx.site
-	if _, done := s.files[rel]; !done {
-		data, err := assets.Read(s.root, rel)
+	if _, done := s.files[rel]; !done && s.noImages {
+		if _, err := fs.Stat(s.repoFS, rel); err != nil {
+			return "", fmt.Errorf("image %s does not exist", rel)
+		}
+		s.files[rel] = nil
+	} else if !done {
+		data, err := assets.Read(s.repoFS, rel)
 		if err != nil {
 			return "", err
 		}

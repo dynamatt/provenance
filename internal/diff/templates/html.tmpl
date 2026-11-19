@@ -1,0 +1,127 @@
+{{- /* The built-in html output of provenance diff (DES-0056, DES-0057): one
+     self-contained file, the audit record of a change. A project's
+     templates/diff/html.tmpl replaces it, with the same data. */ -}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Changes {{.Old.Name}} → {{.New.Name}}</title>
+<style>
+{{.Style}}
+</style>
+<style>
+.pd-doc { --pd-ins: #d6f5dc; --pd-ins-ink: #0f4d22; --pd-ins-rule: #3fae5c; --pd-del: #fde0dc; --pd-del-ink: #8a2416; --pd-del-rule: #c0392b; --pd-chg: #e0b43a; --pd-page: #8a6bbf; --pd-muted: #5d6b76; --pd-rule: #d5dde3; --pd-soft: #f5f7f9; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #16242f; max-width: 1000px; margin: 0 auto; padding: 0 16px 48px; }
+.pd-doc code { font-family: ui-monospace, Menlo, Consolas, monospace; }
+.pd-head { border-bottom: 3px solid #0f5c6e; padding: 20px 0 14px; margin-bottom: 16px; }
+.pd-kicker { font: 12px ui-monospace, Menlo, monospace; color: var(--pd-muted); }
+.pd-head h1 { margin: 2px 0 8px; font-size: 26px; }
+.pd-sides { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pd-sides th, .pd-sides td { text-align: left; padding: 3px 8px 3px 0; vertical-align: top; overflow-wrap: anywhere; }
+.pd-sides th { color: var(--pd-muted); font-weight: 600; white-space: nowrap; }
+.pd-tiles { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+.pd-tile { flex: 1 1 120px; border: 1px solid var(--pd-rule); border-radius: 6px; padding: 8px 12px; background: #fff; }
+.pd-tile b { display: block; font-size: 22px; }
+.pd-tile span { font-size: 12px; color: var(--pd-muted); }
+.pd-doc h2.pd-h { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--pd-muted); border-bottom: 1px solid var(--pd-rule); padding-bottom: 4px; margin: 28px 0 8px; }
+.pd-scroll { overflow-x: auto; }
+table.pd-list { width: 100%; border-collapse: collapse; font-size: 14px; background: #fff; }
+table.pd-list th, table.pd-list td { border: 1px solid var(--pd-rule); padding: 5px 9px; text-align: left; vertical-align: top; }
+table.pd-list thead th { background: #e6f1f3; }
+table.pd-list tr.pd-derived td { background: #faf8fd; }
+.pd-chip { display: inline-block; font: 600 11px/1 system-ui, sans-serif; padding: 4px 7px; border-radius: 10px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.pd-chip-changed, .pd-chip-retyped { background: #fff1c9; color: #7a5600; }
+.pd-chip-added { background: #dcf3e1; color: #1d6b33; }
+.pd-chip-removed { background: #fbe0dc; color: #9c2f1f; }
+.pd-chip-page, .pd-chip-derived { background: #ece4f7; color: #5b3f8f; }
+.pd-problems { border: 1px solid #e8d49a; background: #fff8e6; border-radius: 6px; padding: 8px 12px; font-size: 13px; }
+.pd-doc ins.pd, .pd-doc .pd-field ins { background: var(--pd-ins); color: var(--pd-ins-ink); text-decoration: none; border-bottom: 2px solid var(--pd-ins-rule); }
+.pd-doc del.pd, .pd-doc .pd-field del { background: var(--pd-del); color: var(--pd-del-ink); text-decoration: line-through; text-decoration-color: var(--pd-del-rule); }
+.pd-page { background: #fff; border: 1px solid var(--pd-rule); border-left: 5px solid var(--pd-chg); border-radius: 6px; margin: 18px 0; }
+.pd-page.pd-op-page { border-left-color: var(--pd-page); }
+.pd-page.pd-op-added { border-left-color: var(--pd-ins-rule); }
+.pd-page.pd-op-removed { border-left-color: var(--pd-del-rule); }
+.pd-bar { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; padding: 8px 16px; background: var(--pd-soft); border-bottom: 1px solid var(--pd-rule); }
+.pd-bar .pd-name { font: 600 14px ui-monospace, Menlo, monospace; }
+.pd-bar .pd-title { flex: 1 1 200px; font-size: 14px; }
+.pd-bar button { font: 12px system-ui, sans-serif; border: 1px solid var(--pd-rule); background: #fff; border-radius: 4px; padding: 3px 8px; cursor: pointer; }
+.pd-body { padding: 4px 20px 12px; overflow-x: auto; }
+.pd-body .pd-changed { box-shadow: -12px 0 0 -8px var(--pd-chg); }
+.pd-body tr.pd-changed > :first-child { box-shadow: inset 4px 0 0 var(--pd-chg); }
+.pd-body .pd-added { background: #f0faf2; box-shadow: -12px 0 0 -8px var(--pd-ins-rule); }
+.pd-body .pd-removed, .pd-body .pd-removed * { background: #fdeeec; color: var(--pd-del-ink) !important; text-decoration: line-through; text-decoration-color: var(--pd-del-rule); }
+.pd-body .pd-removed { box-shadow: -12px 0 0 -8px var(--pd-del-rule); }
+.pd-body tr.pd-added > :first-child { box-shadow: inset 4px 0 0 var(--pd-ins-rule); }
+.pd-body tr.pd-removed > :first-child { box-shadow: inset 4px 0 0 var(--pd-del-rule); }
+.pd-body img.pd-image-changed { outline: 3px solid var(--pd-ins-rule); outline-offset: 2px; }
+.pd-body table.pd-removed-table, .pd-body ul.pd-removed-list { margin: 0; }
+details.pd-fold { margin: 10px 0; }
+details.pd-fold > summary { cursor: pointer; font: 13px system-ui, sans-serif; color: var(--pd-muted); list-style: none; background: repeating-linear-gradient(135deg, #f6f8fa, #f6f8fa 6px, #fff 6px, #fff 12px); border: 1px dashed var(--pd-rule); border-radius: 4px; padding: 5px 10px; }
+details.pd-fold > summary::before { content: "▸ "; }
+details.pd-fold[open] > summary::before { content: "▾ "; }
+details.pd-whole > summary { cursor: pointer; font: 14px system-ui, sans-serif; color: #0f5c6e; margin: 8px 0; }
+.pd-whole.pd-added { background: #f0faf2; }
+.pd-whole.pd-removed, .pd-whole.pd-removed * { color: var(--pd-del-ink) !important; text-decoration: line-through; text-decoration-color: var(--pd-del-rule); }
+.pd-foot { margin-top: 28px; font-size: 13px; color: var(--pd-muted); }
+@media (max-width: 600px) { .pd-body { padding: 4px 12px 10px; } .pd-bar { padding: 8px 12px; } table.pd-list { font-size: 13px; } }
+</style>
+</head>
+<body>
+<div class="pd-doc">
+<header class="pd-head">
+<div class="pd-kicker">provenance diff</div>
+<h1>Changes to {{.New.Repo.Component.Name}}</h1>
+<table class="pd-sides">
+<tr><th>From</th><td>{{template "side" .Old}}</td></tr>
+<tr><th>To</th><td>{{template "side" .New}}</td></tr>
+<tr><th>Compared by</th><td>Provenance <code>{{or .Version "dev"}}</code></td></tr>
+</table>
+</header>
+{{- range sides .}}{{if .Problems}}
+<div class="pd-problems"><b>{{.Name}}</b> has problems loading; it is compared as far as it loaded.
+<ul>{{range .Problems}}<li><code>{{.Path}}{{if .Line}}:{{.Line}}{{end}}</code> [{{.Check}}] {{.Msg}}</li>{{end}}</ul></div>{{end}}{{end}}
+<div class="pd-tiles">
+<div class="pd-tile"><b>{{count . "changed"}}</b><span>changed</span></div>
+<div class="pd-tile"><b>{{count . "added"}}</b><span>added</span></div>
+<div class="pd-tile"><b>{{count . "removed"}}</b><span>removed</span></div>
+<div class="pd-tile"><b>{{add (count . "derived") (pageOnly .)}}</b><span>changed by another change</span></div>
+<div class="pd-tile"><b>{{len .Files}}</b><span>other files</span></div>
+</div>
+<p>{{summary .}}.{{if .NotRendered}} The pages were not compared: {{.NotRendered}}.{{end}}</p>
+{{- if .Files}}
+<h2 class="pd-h">Other files</h2>
+<div class="pd-scroll"><table class="pd-list"><thead><tr><th>File</th><th>Change</th></tr></thead><tbody>
+{{- range .Files}}
+<tr><td><code>{{.Path}}</code></td><td><span class="pd-chip pd-chip-{{.Op}}">{{.Op}}</span></td></tr>{{end}}
+</tbody></table></div>{{end}}
+{{- if .Entities}}
+<h2 class="pd-h">Changes</h2>
+<div class="pd-scroll"><table class="pd-list"><thead><tr><th>Entity</th><th>Type</th><th>Change</th><th>What changed</th></tr></thead><tbody>
+{{- range .Entities}}
+<tr{{if .Derived}} class="pd-derived"{{end}}><td>{{if hasPage $ .ID}}<a href="#pd-page-{{.ID}}">{{.ID}}</a>{{else}}{{.ID}}{{end}}</td><td>{{.Type}}</td>
+<td><span class="pd-chip pd-chip-{{if .Derived}}derived{{else}}{{.Op}}{{end}}">{{if .Derived}}derived{{else}}{{.Op}}{{end}}</span></td>
+<td>{{if eq .Op "retyped"}}was {{.OldType}}{{if .Fields}}<br>{{end}}{{end}}{{if or (eq .Op "added") (eq .Op "removed")}}{{.Title}}{{end}}
+{{- range .Fields}}<div class="pd-field">{{template "field" .}}</div>{{end}}</td></tr>{{end}}
+{{- range .Pages}}{{if eq .Op "page"}}
+<tr class="pd-derived"><td><a href="#pd-page-{{.Name}}">{{.Name}}</a></td><td>{{.Type}}</td><td><span class="pd-chip pd-chip-page">page only</span></td><td>Unchanged itself; its page shows what changed.</td></tr>{{end}}{{end}}
+</tbody></table></div>{{end}}
+{{- if .Pages}}
+<h2 class="pd-h">Pages</h2>
+{{- range .Pages}}
+<section class="pd-page pd-op-{{.Op}}" id="pd-page-{{.Name}}">
+<div class="pd-bar"><span class="pd-name">{{.Name}}</span><span class="pd-chip pd-chip-{{.Op}}">{{if eq .Op "page"}}page only{{else}}{{.Op}}{{end}}</span><span class="pd-title">{{.Title}}</span>
+{{- if or (eq .Op "added") (eq .Op "removed")}}{{else}}<button type="button" onclick="this.closest('.pd-page').querySelectorAll('details.pd-fold').forEach(function (d) { d.open = !d.open })">Show or fold the unchanged</button>{{end}}</div>
+<div class="pd-body">
+{{- if or (eq .Op "added") (eq .Op "removed")}}<details class="pd-whole"><summary>Show the whole page ({{.Op}})</summary>{{.HTML}}</details>{{else}}{{.HTML}}{{end}}
+</div>
+</section>{{end}}{{end}}
+<footer class="pd-foot">Pages are rendered with each side's own templates, without commit stamps or revision histories, which differ on every page. Unchanged blocks are folded. Images are compared by their git object hash.</footer>
+</div>
+</body>
+</html>
+{{- define "side"}}{{if .Commit}}<code>{{.Commit}}</code>{{if .Ref}} ({{.Ref}}){{end}}{{else}}the working tree{{end}}{{with .ContentHash}}<br>content hash <code>{{.}}</code>{{end}}{{end}}
+{{- define "field"}}<b>{{.Label}}</b>{{if .Derived}} <span class="pd-chip pd-chip-derived">derived</span>{{end}}
+{{- if .Text}} {{plural .Text.Changed "block" "blocks"}} changed
+{{- else if .Rows}} rows {{range $i, $r := .Rows}}{{if $i}}, {{end}}{{.Index}} {{.Op}}{{end}}
+{{- else if or .Added .Removed}}{{range .Added}} <ins>{{.}}</ins>{{end}}{{range .Removed}} <del>{{.}}</del>{{end}}
+{{- else}} {{with .Old}}<del>{{.}}</del>{{else}}(none){{end}} → {{with .New}}<ins>{{.}}</ins>{{else}}(none){{end}}{{end}}{{end}}
