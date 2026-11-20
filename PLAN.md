@@ -2322,9 +2322,9 @@ where:
   where:
     field: changes                # …has a change…
     where:
-      - field: fields             # …to its content…
-        operator: equals
-        value: [procedure, steps]
+      - any_of:                   # …to its content…
+          - {field: fields, operator: equals, value: procedure}
+          - {field: fields, operator: equals, value: steps}
       - field: date               # …after the evidence was run or justified
         operator: greater_than
         value_of: ^^current_as_of
