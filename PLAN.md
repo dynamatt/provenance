@@ -89,7 +89,7 @@
 - [x] E9.5 The rendered diff
 - [x] E9.6 The example's pull-request summary
 - [x] E9.7 Epic close-out
-- [ ] E10.1 Design and git's behaviour
+- [x] E10.1 Design and git's behaviour
 - [ ] E10.2 The example's approvals and justifications
 - [ ] E10.3 Changes by value
 - [ ] E10.4 `changes` and `last_changed`
@@ -2284,9 +2284,8 @@ request on the example shows its changes on the run's summary page.
 
 ## Epic 10 — History in rules
 
-> **Status: decisions agreed with Matt 2026-11-20**, except that git's
-> behaviour (H3) and the scenarios are reviewed in E10.1 before
-> anything is built. Outlined 2026-10-25 (H1–H5). Revised with Matt
+> **Status: decisions agreed with Matt 2026-11-20**; git's behaviour
+> reviewed in E10.1, and the design is DES-0058. Outlined 2026-10-25 (H1–H5). Revised with Matt
 > after Epic 9:
 > - H1 is a per-entity list of changes, not a new operator, and
 >   `last_changed` is its newest change, not a number;
@@ -2368,7 +2367,7 @@ E10.1 checks each scenario against git and GitHub, records it in the DES, and ea
 | S3 | Protocol changed, then a justification dated after it | Current |
 | S4 | A second protocol change after S3's justification | Stale again |
 | S5 | A protocol change and its justification in one pull request, merged with a merge commit | Current (H3: the change's date is its own commit's, not the merge's) |
-| S6 | S5, squash-merged | To review in E10.1: depends on the squashed commit's author date |
+| S6 | S5, squash-merged | Stale unless the justification is dated on or after the merge day: GitHub's squash commit is authored by whoever merged, dated when merged (E10.1) |
 | S7 | S5, rebase-merged | Current: rebasing keeps author dates |
 | S8 | A pull request that merged `main` into itself before merging | Only the pull request's own changes are its changes |
 | S9 | The protocol reformatted (`fmt`), or its file moved | No change |
@@ -2381,6 +2380,15 @@ E10.1 checks each scenario against git and GitHub, records it in the DES, and ea
 | S16 | A commit backdated with `--date` | Taken at its author date. The DES records it as a limit: a git history is a claim, which `sign` makes verifiable |
 | S17 | The change and the justification on the same day, or authored in different time zones | Same day counts as after (`greater_than` is false). Each date is a day in its author's time zone |
 | S18 | A shallow clone, or no git repository | Exit 2, naming `fetch-depth: 0` (H4) |
+
+**Settled while building:**
+
+| Topic | Settled |
+| --- | --- |
+| Git and GitHub, reviewed | Test pull requests 39–42 in the example, merged into a scratch branch: a merge commit is authored and dated by whoever merged, and the branch's commits keep their author dates on its second parent. A rebase merge keeps author dates and rewrites committers. A squash merge is one commit authored by whoever merged and dated when merged, so the changes it squashes have no date of their own. A branch that merged its base into itself made no change itself in that merge. DES-0058 records the table, and recommends merge commits or rebase merges where rules compare dates. (E10.1) |
+| A change's commit, date and author | `commit` is the commit on the history being validated: the merge, for a merged branch. `date`, `author` and `subject` come from the newest commit on the merged side whose values for the entity differ from those at each of its parents, so a merge of the base into the branch is passed over. (E10.1) |
+| An uncommitted change | A row with no commit and no date: a comparison of a blank fails, so date rules see it once committed. (E10.1) |
+| Requirements | REQ-0142 (changes in conditions) and REQ-0143 (stale dependent records), both tracing USR-0023, implemented by DES-0058; DES-0015 and DES-0016 cite them. (E10.1) |
 
 ### Order
 
