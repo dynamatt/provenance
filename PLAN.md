@@ -89,12 +89,12 @@
 - [x] E9.5 The rendered diff
 - [x] E9.6 The example's pull-request summary
 - [x] E9.7 Epic close-out
-- [ ] E10.1 Design and git's behaviour
-- [ ] E10.2 The example's approvals and justifications
-- [ ] E10.3 Changes by value
-- [ ] E10.4 `changes` and `last_changed`
-- [ ] E10.5 The scenarios
-- [ ] E10.6 History it can't read
+- [x] E10.1 Design and git's behaviour
+- [x] E10.2 The example's approvals and justifications
+- [x] E10.3 Changes by value
+- [x] E10.4 `changes` and `last_changed`
+- [x] E10.5 The scenarios
+- [x] E10.6 History it can't read
 - [ ] E10.7 Epic close-out
 
 ## Shape of the plan
@@ -2284,9 +2284,8 @@ request on the example shows its changes on the run's summary page.
 
 ## Epic 10 — History in rules
 
-> **Status: decisions agreed with Matt 2026-11-20**, except that git's
-> behaviour (H3) and the scenarios are reviewed in E10.1 before
-> anything is built. Outlined 2026-10-25 (H1–H5). Revised with Matt
+> **Status: decisions agreed with Matt 2026-11-20**; git's behaviour
+> reviewed in E10.1, and the design is DES-0058. Outlined 2026-10-25 (H1–H5). Revised with Matt
 > after Epic 9:
 > - H1 is a per-entity list of changes, not a new operator, and
 >   `last_changed` is its newest change, not a number;
@@ -2368,7 +2367,7 @@ E10.1 checks each scenario against git and GitHub, records it in the DES, and ea
 | S3 | Protocol changed, then a justification dated after it | Current |
 | S4 | A second protocol change after S3's justification | Stale again |
 | S5 | A protocol change and its justification in one pull request, merged with a merge commit | Current (H3: the change's date is its own commit's, not the merge's) |
-| S6 | S5, squash-merged | To review in E10.1: depends on the squashed commit's author date |
+| S6 | S5, squash-merged | Stale unless the justification is dated on or after the merge day: GitHub's squash commit is authored by whoever merged, dated when merged (E10.1) |
 | S7 | S5, rebase-merged | Current: rebasing keeps author dates |
 | S8 | A pull request that merged `main` into itself before merging | Only the pull request's own changes are its changes |
 | S9 | The protocol reformatted (`fmt`), or its file moved | No change |
@@ -2381,6 +2380,28 @@ E10.1 checks each scenario against git and GitHub, records it in the DES, and ea
 | S16 | A commit backdated with `--date` | Taken at its author date. The DES records it as a limit: a git history is a claim, which `sign` makes verifiable |
 | S17 | The change and the justification on the same day, or authored in different time zones | Same day counts as after (`greater_than` is false). Each date is a day in its author's time zone |
 | S18 | A shallow clone, or no git repository | Exit 2, naming `fetch-depth: 0` (H4) |
+
+**Settled while building:**
+
+| Topic | Settled |
+| --- | --- |
+| Git and GitHub, reviewed | Test pull requests 39–42 in the example, merged into a scratch branch: a merge commit is authored and dated by whoever merged, and the branch's commits keep their author dates on its second parent. A rebase merge keeps author dates and rewrites committers. A squash merge is one commit authored by whoever merged and dated when merged, so the changes it squashes have no date of their own. A branch that merged its base into itself made no change itself in that merge. DES-0058 records the table, and recommends merge commits or rebase merges where rules compare dates. (E10.1) |
+| A change's commit, date and author | `commit` is the commit on the history being validated: the merge, for a merged branch. `date`, `author` and `subject` come from the newest commit on the merged side whose values for the entity differ from those at each of its parents, so a merge of the base into the branch is passed over. (E10.1) |
+| An uncommitted change | A row with no commit and no date: a comparison of a blank fails, so date rules see it once committed. (E10.1) |
+| The example's history | The example already holds the case: VER-0002 gained its steps on 2026-10-18, after EVD-0002 was run on 2026-08-11, so no new commit was needed. Its protocols entered git a month after their evidence's fictional execution dates, as an import would, so a change row says whether it added the entity (`kind: added` or `changed`) and the rules count only `changed` (DES-0058, 2026-11-21). Both protocols are approved on 2026-11-18, after every change to their content; EVD-0001 is justified on 2026-11-19, and EVD-0002 is left stale on purpose. (E10.2) |
+| The fourth rule | `execution-not-in-future`: an execution date after the author date of the commit that set it (Matt, 2026-11-20). (E10.2) |
+| The pin | The rules name `changes`, which `v0.8.0-alpha` doesn't have, so the example's Validate fails on its epic branch until the release, and the pin moves to the epic branch with the implementation (E10.4), not before. (E10.2) |
+| Where the comparison lives | `diff`'s value and text comparison moved to `internal/compare`, which `diff` aliases, so `load` can give `history` a `Values` that compares two versions of some files without an import cycle. Each source gained `Parse`. (E10.3) |
+| Schemas at old commits | Each version is typed by its own schema, read once per version of `schema/` (`history.DirKey`, from the tree's object hashes). Where an old commit's schema doesn't load today, as the example's first commits' don't, its entities are compared as written and the fields are the names written differently. (E10.3) |
+| Cost | The example's 34 first-parent commits, side branches included, take about 0.2 s; read only when asked (`History.Changes`). (E10.3) |
+| The names | `schema.Changes` and `schema.LastChanged`, built-in lists like `code_blocks` and reserved the same way. The graph adds their facts the first time a compiled condition, formula or query field names one (`NewGraphWith`, `query.History`); without git, naming one is `ErrNoHistory`. `last_changed.date` reads its one row in a formula. (E10.4) |
+| Commits and dates | A commit is a Datalog value of its own kind: shown as its hash, ordered by its first-parent position, never equal to a string. `max` and `min` read dates (`YYYY-MM-DD`) in formulas and aggregations; dates and numbers together have none. (E10.4) |
+| Templates | Through a calculated field (`changed_on: last_changed.date`), not names in the template data, which is built for every page and would read the history on every export. DES-0058 says so. (E10.4) |
+| A shallow clone | The example's rules read history, so `validate` in a shallow clone of it now stops with exit 2, naming `fetch-depth: 0`; the acceptance step that ran validate in one expects that, and runs it without those rules. (E10.4) |
+| The pin | On the example's `task/E10.2-example` commit until that PR merges into its epic branch; then on the epic branch. (E10.4) |
+| The scenarios | S1–S17 and S19 run as `validate`'s tests over repositories `historytest` builds commit by commit, with the example's four rules (S18 is acceptance's, E10.6). S2 found that `execution-not-in-future` as first written compared the date with every change that ever set it, so evidence run again tripped it on its first record; it now counts the changes made on or after the date and reports none (example, DES-0058). (E10.5) |
+| History it can't read | Already the case from E10.4: a shallow clone is history's `ShallowError`, naming `fetch-depth: 0`; no git repository is `query.ErrNoHistory`; both stop `validate` (exit 2) at the first rule reading history. Export of the example reads none and carries on. E10.6 adds the test and acceptance step for each, and the DDF's Validate fetches the whole history. (E10.6) |
+| Requirements | REQ-0142 (changes in conditions) and REQ-0143 (stale dependent records), both tracing USR-0023, implemented by DES-0058; DES-0015 and DES-0016 cite them. (E10.1) |
 
 ### Order
 

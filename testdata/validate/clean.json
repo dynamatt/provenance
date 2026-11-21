@@ -8,11 +8,27 @@
       "entity": "REQ-0003",
       "path": "REQ/REQ-0003.md",
       "line": 2
+    },
+    {
+      "rule": "evidence-after-approval",
+      "severity": "warning",
+      "message": "run or justified before the protocol's latest approval",
+      "entity": "EVD-0002",
+      "path": "VER/EVD-0002.md",
+      "line": 11
+    },
+    {
+      "rule": "evidence-current",
+      "severity": "warning",
+      "message": "the protocol it executed has changed since it was run or justified",
+      "entity": "EVD-0002",
+      "path": "VER/EVD-0002.md",
+      "line": 11
     }
   ],
   "summary": {
     "errors": 0,
-    "warnings": 1,
+    "warnings": 3,
     "rules_skipped": 0
   }
 }

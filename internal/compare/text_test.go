@@ -1,4 +1,4 @@
-package diff
+package compare
 
 import (
 	"fmt"
@@ -56,7 +56,7 @@ func TestCompareText(t *testing.T) {
 		{"code block by line", "```\nx = 1\n\ny = 2\n```\n", "```\nx = 1\n\ny = 3\n```\n", "~  ```| x = 1| |-y = 2|+y = 3| ```"},
 	}
 	for _, c := range cases {
-		if got := show(compareText(c.old, c.new)); got != c.want {
+		if got := show(CompareText(c.old, c.new)); got != c.want {
 			t.Errorf("%s:\n%s\nwant\n%s", c.name, got, c.want)
 		}
 	}
@@ -70,7 +70,7 @@ func TestCompareLongText(t *testing.T) {
 		fmt.Fprintf(&a, "a%d\n\n", i)
 		fmt.Fprintf(&b, "b%d\n\n", i)
 	}
-	got := compareText(a.String(), b.String())
+	got := CompareText(a.String(), b.String())
 	if got == nil || len(got.Blocks) != 12000 || got.Blocks[0].Op != Removed || got.Blocks[11999].Op != Added {
 		t.Fatalf("got %d blocks", len(got.Blocks))
 	}

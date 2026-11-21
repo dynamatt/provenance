@@ -77,6 +77,19 @@ func (Rows) Entities(path string, data func() ([]byte, error)) ([]history.FileEn
 	return out, true, nil
 }
 
+// Parse is the entities of a .rows file, as a source parses them.
+func (Rows) Parse(path string, data func() ([]byte, error)) ([]*entity.Entity, bool, error) {
+	if !strings.HasSuffix(path, ext) {
+		return nil, false, nil
+	}
+	b, err := data()
+	if err != nil {
+		return nil, true, err
+	}
+	entities, _ := Parse(path, b)
+	return entities, true, nil
+}
+
 // Parse reads the entities of a .rows file.
 func Parse(path string, data []byte) ([]*entity.Entity, *entity.Error) {
 	var header []string

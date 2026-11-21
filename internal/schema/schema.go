@@ -123,6 +123,50 @@ var CodeBlocks = &Field{Name: "code_blocks", Kind: List, Fields: []*Field{
 	{Name: "line", Kind: Number},
 }}
 
+// changeFields are a row of an entity's changes from git (DES-0058).
+var changeFields = []*Field{
+	{Name: "commit", Kind: String},
+	{Name: "date", Kind: Date},
+	{Name: "author", Kind: String},
+	{Name: "subject", Kind: String},
+	{Name: "kind", Kind: String},
+	{Name: "fields", Kind: List, Elem: &Field{Name: "fields", Kind: String}},
+}
+
+// Changes is the list every entity derives from git, one row per change to
+// its values, newest first (DES-0058): commit, the commit on the history
+// read, ordered by first-parent ancestry; date, the author date of the
+// commit that made the change; author and subject; kind, added or
+// changed; fields, the fields it changed. LastChanged is its newest row,
+// read as one item. Neither is written in a file, and no type may declare
+// a field or reverse_name of either name.
+var (
+	Changes     = &Field{Name: "changes", Kind: List, Fields: changeFields}
+	LastChanged = &Field{Name: "last_changed", Kind: List, Cardinality: "one", Fields: changeFields}
+)
+
+// Builtin returns the list every entity derives, of name: code_blocks,
+// changes or last_changed; nil for any other name.
+func Builtin(name string) *Field {
+	for _, f := range []*Field{CodeBlocks, Changes, LastChanged} {
+		if f.Name == name {
+			return f
+		}
+	}
+	return nil
+}
+
+// builtinIs says what a built-in list is, for errors.
+func builtinIs(f *Field) string {
+	if f == CodeBlocks {
+		return "the list every entity derives from its Markdown"
+	}
+	return "the list every entity derives from its git history"
+}
+
+// History reports whether f is one of the lists derived from git.
+func History(f *Field) bool { return f == Changes || f == LastChanged }
+
 // Type is one entity type.
 type Type struct {
 	Name string
@@ -800,9 +844,9 @@ func (s *Schema) facets(ld *loader) {
 			if l.List != nil && l.List.Record != "" {
 				path = s.Records[l.List.Record].File
 			}
-			if l.Field.ReverseName == CodeBlocks.Name {
+			if b := Builtin(l.Field.ReverseName); b != nil {
 				keep(l.Field, &Error{Path: path, Line: l.Field.Line, Msg: fmt.Sprintf(
-					"field %q: reverse_name code_blocks is the list every entity derives from its Markdown; choose another name", l.Field.Name)})
+					"field %q: reverse_name %s is %s; choose another name", l.Field.Name, b.Name, builtinIs(b))})
 				continue
 			}
 			for _, tn := range l.Field.Targets {
@@ -1005,8 +1049,8 @@ func (l *loader) field(path string, n *yaml.Node, within string, seen map[string
 		return nil, &Error{Path: path, Line: n.Line, Msg: fmt.Sprintf("%s is declared twice (first at line %d)", label, prev)}
 	}
 	seen[rf.Name] = n.Line
-	if within == "" && rf.Name == CodeBlocks.Name {
-		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": code_blocks is the list every entity derives from its Markdown; choose another name"}
+	if b := Builtin(rf.Name); within == "" && b != nil {
+		return nil, &Error{Path: path, Line: n.Line, Msg: label + ": " + b.Name + " is " + builtinIs(b) + "; choose another name"}
 	}
 
 	f := &Field{

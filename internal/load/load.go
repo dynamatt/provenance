@@ -67,10 +67,17 @@ func (r *Result) Input() *export.Input {
 // failure to read the repository or to evaluate the graph, not a problem
 // with its content.
 func Load(rp *repo.Repo, skip ...string) (*Result, error) {
+	return load(rp, "", skip...)
+}
+
+// load is Load of commit's tree, read by At, or of the working tree when
+// commit is "".
+func load(rp *repo.Repo, commit string, skip ...string) (*Result, error) {
 	res, err := Read(rp, skip...)
 	if err != nil || res.SchemaBroken {
 		return res, err
 	}
+	res.Commit = commit
 	var known []*entity.Entity
 	for _, e := range res.Parsed {
 		if res.Schema.Types[e.Type] != nil {
@@ -80,7 +87,7 @@ func Load(rp *repo.Repo, skip ...string) (*Result, error) {
 	if res.Entities, err = model.Build(res.Schema, known); err != nil {
 		return nil, err
 	}
-	if res.Graph, err = query.NewGraph(res.Schema, res.Entities); err != nil {
+	if res.Graph, err = query.NewGraphWith(res.Schema, res.Entities, res.changes); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -253,7 +260,7 @@ func At(rp *repo.Repo, h *history.Repo, commit string) (*Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf("commit %s: %w", history.Short(commit), err)
 	}
-	res, err := Load(at)
+	res, err := load(at, commit)
 	if err != nil {
 		return nil, err
 	}

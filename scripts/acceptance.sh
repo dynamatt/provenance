@@ -387,7 +387,7 @@ git worktree remove --force "$WORK/worktree"
 # copy of a duplicated ID, an unknown type, a schema problem (which skips
 # the rules). Tool and usage errors exit 2. --out writes the report to a
 # file; --path validates another repository.
-expect 0 '^0 errors, 1 warning$'          "$PROV" validate
+expect 0 '^0 errors, 3 warnings$'          "$PROV" validate
 cp REQ/REQ-0002.md REQ/copy.md
 sed -i '2s/.*/id: OCC-0003: x/' OCC/OCC-0003.md
 printf -- '---\nid: REQ-0099\ntitle: no type\n---\n' > REQ/half.md
@@ -395,21 +395,21 @@ expect 1 '^OCC/OCC-0003\.md:2: error \[content/frontmatter\] invalid frontmatter
 expect 1 '^REQ/REQ-0002\.md:2: error \[content/duplicate-id\] duplicate entity ID REQ-0002, also in REQ/copy\.md \(REQ-0002\)$' "$PROV" validate
 expect 1 '^REQ/copy\.md:2: error \[content/duplicate-id\] duplicate entity ID REQ-0002, also in REQ/REQ-0002\.md \(REQ-0002\)$' "$PROV" validate
 expect 1 '^REQ/half\.md:2: error \[content/frontmatter\] frontmatter has an id but no type, so the file is not read as an entity$' "$PROV" validate
-expect 1 '^4 errors, 1 warning$'          "$PROV" validate
-expect 1 '^validate: 4 errors, 1 warning$' "$PROV" validate --output text="$WORK/reports/v.txt"
-expect 0 '^4 errors, 1 warning$'          tail -n 1 "$WORK/reports/v.txt"
+expect 1 '^4 errors, 3 warnings$'          "$PROV" validate
+expect 1 '^validate: 4 errors, 3 warnings$' "$PROV" validate --output text="$WORK/reports/v.txt"
+expect 0 '^4 errors, 3 warnings$'          tail -n 1 "$WORK/reports/v.txt"
 git checkout -q -- OCC/OCC-0003.md && rm REQ/copy.md REQ/half.md
 sed -i 's/^type: Risk/type: Rsk/' RSK/RSK-0001.md
 expect 1 '^RSK/RSK-0001\.md:3: error \[schema/unknown-type\] type "Rsk" is not declared in schema/ ' "$PROV" validate
 git checkout -q -- RSK/RSK-0001.md
 sed -i 's/type: ApprovalStatus/type: AprovalStatus/' schema/Requirement.yaml
 expect 1 '^schema/Requirement\.yaml:21: error \[schema/file\] field "status": unknown type "AprovalStatus"' "$PROV" validate
-expect 1 '^12 rules not run: the schema has errors$' "$PROV" validate
+expect 1 '^16 rules not run: the schema has errors$' "$PROV" validate
 git checkout -q -- schema/Requirement.yaml
 expect 2 '^validate: unknown report "xml": not a format \(text, json, junit, sarif\)' "$PROV" validate --output xml
 expect 2 '^validate: not in a Provenance repository' "$PROV" validate --path "$WORK"
 cd "$WORK"
-expect 0 '^0 errors, 1 warning$'          "$PROV" validate --path "$EXAMPLE_DIR/REQ"
+expect 0 '^0 errors, 3 warnings$'          "$PROV" validate --path "$EXAMPLE_DIR/REQ"
 cd "$EXAMPLE_DIR"
 
 # E2.3: schema conformance. Each entity is checked against its type and
@@ -437,7 +437,7 @@ expect 1 '^DES/DES-0001\.md:2: error \[schema/id-format\] ID DES-01 is not DES-N
 git checkout -q -- DES/DES-0001.md
 printf 'enum: Unused\nvalues: [a]\n' > schema/enums/Unused.yaml
 expect 0 '^schema/enums/Unused\.yaml:1: warning \[schema/unused-enum\] enum Unused is not used by any field$' "$PROV" validate
-expect 0 '^0 errors, 2 warnings$'              "$PROV" validate
+expect 0 '^0 errors, 4 warnings$'              "$PROV" validate
 rm schema/enums/Unused.yaml
 
 # E2.4: content and links. validate renders the site as export does but
@@ -453,7 +453,7 @@ expect 1 '^DOC/DOC-0001\.md:34: error \[content/image\] image assets/missing\.pn
 expect 1 '^DOC/DOC-0001\.md:52: error \[content/query\] query block: unknown operator "="' "$PROV" validate
 expect 1 '^DOC/DOC-0001\.md:65: error \[links/unresolved\] \[\[REQ-0999\]\]: no entity REQ-0999 \(DOC-0001\)$' "$PROV" validate
 expect 1 '^DOC/DOC-0001\.md:[0-9]+: error \[content/unrendered-block\] mermaid block: ' "$PROV" validate
-expect 1 '^4 errors, 1 warning$'           "$PROV" validate
+expect 1 '^4 errors, 3 warnings$'           "$PROV" validate
 expect 2 '^export: DOC/DOC-0001\.md:52: query block: unknown operator "="' "$PROV" export website --out "$WORK/broken"
 git checkout -q -- DOC/DOC-0001.md
 sed -i 's/^  - USR-0001$/  - REQ-0002/' REQ/REQ-0001.md
@@ -527,12 +527,12 @@ sed -i '/^risk_benefit_analysis:/,/^  "unacceptable"/d' RSK/RSK-0001.md
 expect 1 '^RSK/RSK-0001\.md:2: error \[risk-benefit-required\] risk-benefit analysis required when residual acceptability is unacceptable \(RSK-0001\)$' "$PROV" validate
 git checkout -q -- RSK
 sed -i 's/calibration_due_date: 2026-09-30/calibration_due_date: 2026-08-01/' VER/EVD-0001.md
-expect 1 '^VER/EVD-0001\.md:11: error \[equipment-calibration-current\] equipment calibration was not current at the time of execution \(EVD-0001\)$' "$PROV" validate
+expect 1 '^VER/EVD-0001\.md:18: error \[equipment-calibration-current\] equipment calibration was not current at the time of execution \(EVD-0001\)$' "$PROV" validate
 git checkout -q -- VER
 sed -i '/^verifies:$/,+1d' VER/VER-0002.md
 expect 1 '^VER/VER-0002\.md:2: error \[protocol-verifies-requirement\] verification protocol not linked to any requirement \(VER-0002\)$' "$PROV" validate
 expect 1 '^REQ/REQ-0002\.md:2: warning \[requirement-verified\] requirement missing verification \(REQ-0002\)$' "$PROV" validate
-expect 1 '^1 error, 2 warnings$'           "$PROV" validate
+expect 1 '^1 error, 4 warnings$'           "$PROV" validate
 git checkout -q -- VER
 sed -i 's/^order: 2/order: 2\nparent_requirement: REQ-0003/' REQ/REQ-0002.md
 expect 1 '^REQ/REQ-0002\.md:13: error \[no-requirement-decomposition-cycles\] ' "$PROV" validate
@@ -540,7 +540,7 @@ expect 1 '^REQ/REQ-0003\.md:10: error \[no-requirement-decomposition-cycles\] ' 
 git checkout -q -- REQ
 sed -i 's/^severity: warning/severity: fatal/' rules/requirement-verified.yaml
 expect 1 '^rules/requirement-verified\.yaml:4: error \[rules/severity\] severity is error or warning, not "fatal"$' "$PROV" validate
-expect 1 '^1 error, 0 warnings$'           "$PROV" validate
+expect 1 '^1 error, 2 warnings$'           "$PROV" validate
 git checkout -q -- rules
 printf 'id: requirement-verified\n' >> rules/requirement-verified.yaml
 expect 1 '^rules/requirement-verified\.yaml:[0-9]+: error \[rules/unknown-key\] unknown key "id": a rule.s ID is its file name, requirement-verified$' "$PROV" validate
@@ -560,7 +560,7 @@ expect 1 ''                               "$PROV" validate --output junit="$WORK
 expect 0 'validates$'                     xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/broken.junit"
 expect 0 '<failure type="error" message="risk-benefit analysis required when residual acceptability is unacceptable">RSK/RSK-0001\.md:2: ' cat "$WORK/broken.junit"
 SARIF_FLAT="tr -d ' \n' < $WORK/broken.sarif"
-expect 0 '"ruleId":"equipment-calibration-current".{0,400}"uri":"VER/EVD-0001\.md","uriBaseId":"%SRCROOT%"},"region":\{"startLine":11\}' sh -c "$SARIF_FLAT"
+expect 0 '"ruleId":"equipment-calibration-current".{0,400}"uri":"VER/EVD-0001\.md","uriBaseId":"%SRCROOT%"},"region":\{"startLine":18\}' sh -c "$SARIF_FLAT"
 expect 0 '"ruleId":"risk-benefit-required".{0,400}"uri":"RSK/RSK-0001\.md","uriBaseId":"%SRCROOT%"},"region":\{"startLine":2\}' sh -c "$SARIF_FLAT"
 git checkout -q -- RSK VER
 
@@ -583,12 +583,12 @@ expect 0 '^### Design controls: passed$'           "$PROV" validate --output pr-
 "$PROV" validate --output validation.html >"$WORK/r2.html"
 expect 0 ''                               diff "$WORK/r1.html" "$WORK/r2.html"
 sed -i '/^verifies:$/{n;s/REQ-0002/REQ-0099/}' VER/VER-0002.md
-expect 1 'validate: 2 errors, 2 warnings$' "$PROV" validate --output validation.html=_site/validation.html
+expect 1 'validate: 2 errors, 4 warnings$' "$PROV" validate --output validation.html=_site/validation.html
 expect 0 '^2$'                            sh -c "grep -o '<a class=\"ref\" href=\"entities/VER-0002\.html\"' _site/validation.html | wc -l"
 expect 0 ''                               test -f _site/entities/VER-0002.html
-expect 1 '^\| error \| `VER/VER-0002\.md:25` \| `links/unresolved` \| verifies: no entity REQ-0099 \|$' "$PROV" validate --output pr-summary.md
+expect 1 '^\| error \| `VER/VER-0002\.md:29` \| `links/unresolved` \| verifies: no entity REQ-0099 \|$' "$PROV" validate --output pr-summary.md
 mkdir "$WORK/gate"
-expect 1 '^VER/VER-0002\.md:25: error \[links/unresolved\] verifies: no entity REQ-0099 \(VER-0002\)$' "$PROV" validate --output text --output sarif="$WORK/gate/v.sarif" --output junit="$WORK/gate/v.xml" --output pr-summary.md="$WORK/gate/summary.md" --output validation.html="$WORK/gate/validation.html"
+expect 1 '^VER/VER-0002\.md:29: error \[links/unresolved\] verifies: no entity REQ-0099 \(VER-0002\)$' "$PROV" validate --output text --output sarif="$WORK/gate/v.sarif" --output junit="$WORK/gate/v.xml" --output pr-summary.md="$WORK/gate/summary.md" --output validation.html="$WORK/gate/validation.html"
 expect 0 '"ruleId": "links/unresolved"'   cat "$WORK/gate/v.sarif"
 expect 0 'validates$'                     xmllint --noout --schema "$SCHEMAS_DIR/junit-10.xsd" "$WORK/gate/v.xml"
 expect 0 '^### Design controls: failed$'  cat "$WORK/gate/summary.md"
@@ -639,12 +639,15 @@ for r in core broken-schema; do
 done
 
 # E3.4: export's last-changed commits need the whole history, which a
-# shallow clone cuts off, so it says so and exits 2; validate and its
-# report stamps need only HEAD.
+# shallow clone cuts off, so it says so and exits 2. So does validate
+# since E10.4, for the example's rules read its entities' changes
+# (DES-0058); without them it needs only HEAD.
 git clone -q --depth 1 "file://$EXAMPLE_DIR" "$WORK/shallow" 2>/dev/null
 cd "$WORK/shallow"
 expect 2 '^export: the history before commit [0-9a-f]{7} was not fetched \(a shallow clone\).*fetch-depth: 0' "$PROV" export website
-expect 0 'warnings? at `[0-9a-f]{7}`\.$' "$PROV" validate --output pr-summary.md
+expect 2 'the history before commit [0-9a-f]{7} was not fetched \(a shallow clone\).*fetch-depth: 0' "$PROV" validate --output pr-summary.md
+rm rules/evidence-current.yaml rules/approval-current.yaml rules/execution-not-in-future.yaml
+expect 0 'warnings? at `[0-9a-f]{7}`, with uncommitted changes\.$' "$PROV" validate --output pr-summary.md
 cd "$EXAMPLE_DIR"
 
 # E3.5: one renderer, two ways to report. A wikilink to no entity is a
@@ -704,7 +707,7 @@ cd "$EXAMPLE_DIR"
 # E6.3: the example's three CSV files load (DES-0053): it validates with
 # its usual warning; RSK-0001's lead-fracture failure mode counts the four
 # complaints it links to, and REQ-0001 lists the anomalies that name it.
-expect 0 '^0 errors, 1 warning$' "$PROV" validate
+expect 0 '^0 errors, 3 warnings$' "$PROV" validate
 expect 0 '^exported website to _site$' "$PROV" export website
 expect 0 'CPL-2026-0141</a></td><td>4</td></tr>' cat _site/entities/RSK-0001.html
 expect 0 '<a class="ref" href="Anomaly\.html#BUG-1042"' cat _site/entities/REQ-0001.html
@@ -743,7 +746,7 @@ expect 0 '<h2><a href="entities/SeverityLevel\.html">Severity Level</a></h2>' ca
 # every type: git dates each row.
 PIN=$(git rev-parse HEAD)
 sed -i 's/Charger does not start/Charger will not start/' data/complaints.csv
-expect 0 '^0 errors, 1 warning$' "$PROV" validate
+expect 0 '^0 errors, 3 warnings$' "$PROV" validate
 gitc commit -qam "Complaints dump of 2026-10-31"
 NEW=$(git rev-parse --short=7 HEAD)
 "$PROV" export website --out "$WORK/dump" >/dev/null
@@ -777,7 +780,7 @@ sed -i 's/^## Preparation {#preparation}$/## Preparation/' VER/VER-0001.md
 expect 1 'VER/VER-0001\.md:[0-9]+: error \[links/reference\] \[\[#preparation\]\]: VER-0001 has no field, tag or caption "preparation"' "$PROV" validate
 expect 1 'DOC/DOC-0005\.md:[0-9]+: error \[links/reference\] \[\[VER-0001#preparation:long\]\]' "$PROV" validate
 cp "$WORK/VER-0001.md" VER/VER-0001.md
-expect 0 '^0 errors, 1 warning$' "$PROV" validate
+expect 0 '^0 errors, 3 warnings$' "$PROV" validate
 
 # E8.3: type inheritance (DES-0010). Evidence is abstract: VerificationEvidence
 # and ValidationEvidence extend it, inheriting its fields first, and one rule
@@ -835,7 +838,7 @@ cp "$WORK/vsr.tmpl" templates/VerificationSummaryReport.tmpl
 "$PROV" export website >/dev/null
 expect 0 '<article class="entity" id="DOC-0006".*</div><section class="report-components">' sh -c "$DOC6_FLAT"
 mv "$WORK/Document.tmpl" templates/Document.tmpl
-expect 0 '^0 errors, 1 warning$' "$PROV" validate
+expect 0 '^0 errors, 3 warnings$' "$PROV" validate
 
 # E8.5–E8.7: query fields (DES-0010, DES-0032). A report's scope is a
 # query in its frontmatter, here selecting components; its template shows
@@ -872,7 +875,7 @@ sed -i '/^build: BLD-0002$/d' DOC/DOC-0007.md
 sed -i 's/^    field: parent$/    field: id/; s/^    operator: missing$/    operator: equals\n    value: CMP-0004/' DOC/DOC-0006.md
 expect 0 '^REQ/REQ-0003\.md:9: warning \[requirement-reported\] requirement is in no verification summary report \(REQ-0003\)$' "$PROV" validate
 git checkout -q -- DOC
-expect 0 '^0 errors, 1 warning$' "$PROV" validate
+expect 0 '^0 errors, 3 warnings$' "$PROV" validate
 
 # titlecase (DES-0030): the example's main page shows each type's name as
 # a title; the built-in main page shows names as written.
@@ -954,6 +957,46 @@ expect 0 '^0$' sh -c "grep -Eo '(src|href)=\"[^\"]*' '$WORK/diff.html' | grep -E
 expect 0 ''                               cmp "$WORK/diff.html" "$WORK/diff2.html"
 cp "$WORK/REQ-0002.md" REQ/REQ-0002.md
 expect 0 '^no changes$'                   "$PROV" diff
+
+# E10.4: rules read what changed when, from git (DES-0058). EVD-0002 ran
+# before VER-0002 gained its steps and nothing justifies it since, so two
+# rules report it; a justification dated after the change clears both,
+# before it is committed. A change to VER-0002's steps is no change for
+# date rules until committed; committed the day after the justification,
+# it is after VER-0002's approval and EVD-0002's justification. An
+# execution date after the commit that recorded it is reported. Commits
+# go to a clone.
+expect 0 '^VER/EVD-0002\.md:11: warning \[evidence-current\] the protocol it executed has changed since it was run or justified \(EVD-0002\)$' "$PROV" validate
+expect 0 '^VER/EVD-0002\.md:11: warning \[evidence-after-approval\] run or justified before the protocol.s latest approval \(EVD-0002\)$' "$PROV" validate
+git clone -q "file://$EXAMPLE_DIR" "$WORK/history" 2>/dev/null
+cd "$WORK/history"
+git config user.name Acceptance
+git config user.email acceptance@example.com
+at() { GIT_AUTHOR_DATE="$1T12:00:00Z" GIT_COMMITTER_DATE="$1T12:00:00Z" git commit -qam "$2"; }
+sed -i 's/^result: pass$/result: pass\njustifications:\n  - date: 2026-11-21\n    reason: The steps restate the procedure that was run./' VER/EVD-0002.md
+expect 0 '^0 errors, 1 warning$'          "$PROV" validate
+at 2026-11-21 "Justify EVD-0002"
+sed -i 's/Delivered amplitude does not exceed 8 mA at any time/Delivered amplitude never exceeds 8 mA at any time/' VER/VER-0002.md
+expect 0 '^0 errors, 1 warning$'          "$PROV" validate
+at 2026-11-22 "Tighten VER-0002's acceptance criteria"
+expect 1 '^VER/VER-0002\.md:2: error \[approval-current\] the procedure or steps changed after the latest approval \(VER-0002\)$' "$PROV" validate
+expect 1 '^VER/EVD-0002\.md:14: warning \[evidence-current\] ' "$PROV" validate
+git reset -q --hard HEAD~1
+sed -i 's/^execution_date: 2026-08-04$/execution_date: 2027-01-04/' VER/EVD-0001.md
+at 2026-11-22 "Record EVD-0001 as run in January"
+expect 1 '^VER/EVD-0001\.md:2: error \[execution-not-in-future\] execution date is after the commit that recorded it \(EVD-0001\)$' "$PROV" validate
+cd "$EXAMPLE_DIR"
+
+# E10.6: history rules need the history. Outside a git repository, as in
+# an archive of the example, validate stops with exit 2 and says why
+# (the shallow clone is E3.4's step); export, whose templates read no
+# history, carries on.
+mkdir "$WORK/archive"
+git -C "$EXAMPLE_DIR" archive HEAD | tar -x -C "$WORK/archive"
+cd "$WORK/archive"
+expect 2 '^validate: rules/[a-z-]+\.yaml: changes and last_changed read the repository.s git history, and there is none here' "$PROV" validate
+expect 0 '^exported website to _site$' "$PROV" export website
+cd "$EXAMPLE_DIR"
 
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"
