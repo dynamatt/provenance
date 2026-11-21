@@ -128,8 +128,9 @@ const (
 // named nowhere in the body) receives Func over Of, grouped by the head's
 // other arguments. Aggregation ranges over the distinct satisfying
 // assignments of all body variables, so two rows with equal values both
-// count. Max, Min, Sum and Avg read only Num values and ignore the rest; a
-// group with none gets no result, except Sum, which is 0. Count counts
+// count. Sum and Avg read only Num values and ignore the rest; Max and Min
+// read Num values, or dates (Str values YYYY-MM-DD), and a group with both
+// gets no result. A group with none gets no result, except Sum, which is 0. Count counts
 // assignments and ignores Of.
 type Aggregate struct {
 	Func AggFunc

@@ -612,6 +612,8 @@ type compiler struct {
 	// witnesses are, for each sub-query among the top-level conditions,
 	// the relations holding (entity, item) for the items it matched.
 	witnesses map[*Test][]string
+	// history is set when the condition reads changes or last_changed.
+	history bool
 }
 
 func (c *compiler) rel(kind string) string {
@@ -628,7 +630,7 @@ func fieldNames(t *schema.Type) string {
 	for _, f := range t.Facets {
 		names = append(names, f.Name)
 	}
-	return strings.Join(append(names, schema.CodeBlocks.Name), ", ")
+	return strings.Join(append(names, schema.CodeBlocks.Name, schema.Changes.Name, schema.LastChanged.Name), ", ")
 }
 
 func subFieldNames(list *schema.Field) string {
@@ -670,10 +672,10 @@ func (sc *scope) field(name string) *schema.Field {
 		}
 		return nil
 	}
-	if f := sc.t.Field(name); f != nil || name != schema.CodeBlocks.Name {
+	if f := sc.t.Field(name); f != nil {
 		return f
 	}
-	return schema.CodeBlocks
+	return schema.Builtin(name)
 }
 
 func (sc *scope) facet(name string) *schema.Facet {
@@ -827,7 +829,10 @@ func checkLiteral(t *Test, left target, v datalog.Value) error {
 
 // compiled is a condition compiled to a program.
 type compiled struct {
-	prog *datalog.Program
+	// history is set when the condition reads the entities' changes from
+	// git (DES-0058): the graph adds them to its facts first.
+	history bool
+	prog    *datalog.Program
 	// match holds the matching entities, as a unary relation.
 	match string
 	// witnesses holds, for each sub-query among the top-level conditions,
@@ -886,7 +891,7 @@ func compileWith(s *schema.Schema, d *derived, types []*schema.Type, cond *Condi
 	if err := lv.check(); err != nil {
 		return nil, err
 	}
-	cp := &compiled{prog: c.prog, match: match}
+	cp := &compiled{prog: c.prog, match: match, history: c.history}
 	I := datalog.Var("I")
 	for _, t := range topSubQueries(cond) {
 		rel := c.rel("witness")
@@ -981,6 +986,12 @@ func (c *compiler) subQuery(t *Test, sc *scope, top bool) (datalog.Literal, erro
 	var reached []*schema.Type
 	switch {
 	case f != nil && f.Kind == schema.List && f.Elem == nil:
+		if schema.History(f) {
+			c.history = true
+			if c.d != nil {
+				c.d.history = true
+			}
+		}
 		if t.Transitive {
 			return datalog.Literal{}, &Error{Line: t.Field.Line, Msg: fmt.Sprintf("%q is a list of rows: transitive follows a link field or incoming facet", name)}
 		}
@@ -1057,8 +1068,8 @@ func (c *compiler) items(t *Test, sc *scope, alts []*scope, top bool) (datalog.L
 
 // aggregate compiles a sub-query's aggregation to a relation of the chain
 // and the aggregate, items being sub's, and returns the literal testing it.
-// As in calculated fields (DES-0012): each item counts once; sum, min, max
-// and avg read numbers and skip the rest; with nothing to read, count and
+// As in calculated fields (DES-0012): each item counts once; sum and avg
+// read numbers and skip the rest, min and max numbers or dates; with nothing to read, count and
 // sum are 0 and the others blank.
 func (c *compiler) aggregate(t *Test, sc *scope, alts []*scope, sub string) (datalog.Literal, error) {
 	a := t.Aggregation
@@ -1072,6 +1083,9 @@ func (c *compiler) aggregate(t *Test, sc *scope, alts []*scope, sub string) (dat
 	inArgs := items
 	fn := map[AggregationType]datalog.AggFunc{Count: datalog.Count, Sum: datalog.Sum, Min: datalog.Min, Max: datalog.Max, Avg: datalog.Avg}[a.Type]
 	of := ""
+	// The aggregate is a number, or a date for min and max of dates
+	// (DES-0015).
+	result := classNumber
 	if a.Field != nil {
 		in, of = c.rel("values"), "V"
 		inArgs = append(slices.Clone(items), V)
@@ -1083,8 +1097,16 @@ func (c *compiler) aggregate(t *Test, sc *scope, alts []*scope, sub string) (dat
 			if !ok {
 				continue // empty on this type: nothing to read
 			}
-			if tg.rows || (tg.class != classNumber && tg.class != classAny) {
-				return datalog.Literal{}, &Error{Line: a.Field.Line, Msg: fmt.Sprintf("%s reads numbers; %s is %s", a.Type, a.Field.Field, describe(tg))}
+			dates := (a.Type == Min || a.Type == Max) && tg.class == classDate
+			if tg.rows || (tg.class != classNumber && tg.class != classAny && !dates) {
+				reads := "numbers"
+				if a.Type == Min || a.Type == Max {
+					reads = "numbers or dates"
+				}
+				return datalog.Literal{}, &Error{Line: a.Field.Line, Msg: fmt.Sprintf("%s reads %s; %s is %s", a.Type, reads, a.Field.Field, describe(tg))}
+			}
+			if dates {
+				result = classDate
 			}
 			body := append(alt.binds(), datalog.P(sub, items...))
 			c.prog.Add(datalog.Rule{Head: datalog.NewAtom(in, inArgs...), Body: append(body, c.read(tg, V)...)})
@@ -1107,8 +1129,8 @@ func (c *compiler) aggregate(t *Test, sc *scope, alts []*scope, sub string) (dat
 			Body: append(sc.binds(), datalog.N(has, chain...)),
 		})
 	}
-	// Every aggregate is a number; it is named in errors as, e.g., "count
-	// of verified_by" or "sum of failure_modes.score".
+	// An aggregate is named in errors as, e.g., "count of verified_by" or
+	// "sum of failure_modes.score".
 	what := t.Field.Field
 	if t.From != nil {
 		what = strings.Join(t.From, ", ")
@@ -1117,7 +1139,7 @@ func (c *compiler) aggregate(t *Test, sc *scope, alts []*scope, sub string) (dat
 	if a.Field != nil {
 		label += "." + a.Field.Field
 	}
-	left := target{ref: Ref{Line: t.Field.Line, Field: label}, at: sc, class: classNumber}
+	left := target{ref: Ref{Line: t.Field.Line, Field: label}, at: sc, class: result}
 	return c.compare(t, sc, left, []datalog.Literal{datalog.P(agg, append(slices.Clone(chain), V)...)})
 }
 

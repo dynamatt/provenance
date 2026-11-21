@@ -90,13 +90,29 @@ type EntityHistory struct {
 // with HEAD's. It needs every commit: a shallow clone that cut some off
 // is a *ShallowError.
 func (h *Repo) Changes(content Content, v Values) (*EntityHistory, error) {
+	return h.changesFrom(h.head, content, v)
+}
+
+// ChangesAt is Changes for the first-parent history of commit, with no
+// working tree: what a diff side at commit reads (DES-0058).
+func (h *Repo) ChangesAt(commit string, v Values) (*EntityHistory, error) {
+	c, err := h.r.CommitObject(plumbing.NewHash(commit))
+	if err != nil {
+		return nil, fmt.Errorf("reading commit %s: %w", Short(commit), err)
+	}
+	return h.changesFrom(c, nil, v)
+}
+
+// changesFrom walks the first-parent history from head; content nil
+// leaves the working tree out.
+func (h *Repo) changesFrom(head *object.Commit, content Content, v Values) (*EntityHistory, error) {
 	shallow, err := h.st.Shallow()
 	if err != nil {
 		return nil, err
 	}
 	var chain []*object.Commit
 	first := map[plumbing.Hash]bool{}
-	for c := h.head; c != nil; {
+	for c := head; c != nil; {
 		chain = append(chain, c)
 		first[c.Hash] = true
 		if c.NumParents() == 0 {
@@ -127,12 +143,14 @@ func (h *Repo) Changes(content Content, v Values) (*EntityHistory, error) {
 		}
 	}
 
-	work, err := w.working(content)
-	if err != nil {
-		return nil, err
-	}
-	for _, ec := range work {
-		add(ec, &Change{})
+	if content != nil {
+		work, err := w.working(content)
+		if err != nil {
+			return nil, err
+		}
+		for _, ec := range work {
+			add(ec, &Change{})
+		}
 	}
 	for i, c := range chain {
 		var parent *object.Commit

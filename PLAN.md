@@ -92,7 +92,7 @@
 - [x] E10.1 Design and git's behaviour
 - [x] E10.2 The example's approvals and justifications
 - [x] E10.3 Changes by value
-- [ ] E10.4 `changes` and `last_changed`
+- [x] E10.4 `changes` and `last_changed`
 - [ ] E10.5 The scenarios
 - [ ] E10.6 History it can't read
 - [ ] E10.7 Epic close-out
@@ -2394,6 +2394,11 @@ E10.1 checks each scenario against git and GitHub, records it in the DES, and ea
 | Where the comparison lives | `diff`'s value and text comparison moved to `internal/compare`, which `diff` aliases, so `load` can give `history` a `Values` that compares two versions of some files without an import cycle. Each source gained `Parse`. (E10.3) |
 | Schemas at old commits | Each version is typed by its own schema, read once per version of `schema/` (`history.DirKey`, from the tree's object hashes). Where an old commit's schema doesn't load today, as the example's first commits' don't, its entities are compared as written and the fields are the names written differently. (E10.3) |
 | Cost | The example's 34 first-parent commits, side branches included, take about 0.2 s; read only when asked (`History.Changes`). (E10.3) |
+| The names | `schema.Changes` and `schema.LastChanged`, built-in lists like `code_blocks` and reserved the same way. The graph adds their facts the first time a compiled condition, formula or query field names one (`NewGraphWith`, `query.History`); without git, naming one is `ErrNoHistory`. `last_changed.date` reads its one row in a formula. (E10.4) |
+| Commits and dates | A commit is a Datalog value of its own kind: shown as its hash, ordered by its first-parent position, never equal to a string. `max` and `min` read dates (`YYYY-MM-DD`) in formulas and aggregations; dates and numbers together have none. (E10.4) |
+| Templates | Through a calculated field (`changed_on: last_changed.date`), not names in the template data, which is built for every page and would read the history on every export. DES-0058 says so. (E10.4) |
+| A shallow clone | The example's rules read history, so `validate` in a shallow clone of it now stops with exit 2, naming `fetch-depth: 0`; the acceptance step that ran validate in one expects that, and runs it without those rules. (E10.4) |
+| The pin | On the example's `task/E10.2-example` commit until that PR merges into its epic branch; then on the epic branch. (E10.4) |
 | Requirements | REQ-0142 (changes in conditions) and REQ-0143 (stale dependent records), both tracing USR-0023, implemented by DES-0058; DES-0015 and DES-0016 cite them. (E10.1) |
 
 ### Order

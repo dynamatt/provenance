@@ -132,6 +132,11 @@ func (sh shape) find(name string) (member, error) {
 			}
 		}
 	}
+	if m.field == nil && m.facet == nil {
+		if f := schema.Builtin(name); f != nil && schema.History(f) {
+			return member{field: f, owners: sh.types}, nil
+		}
+	}
 	switch {
 	case m.field != nil && m.facet != nil:
 		return member{}, fmt.Errorf("%q is a field on some of %s and an incoming facet on others", name, sh.describe())
@@ -231,8 +236,17 @@ func (c *fcomp) path(ref *RefExpr, v datalog.Term) (lits []datalog.Literal, keys
 			}
 			sh = shape{types: targets}
 		case isRows:
+			if schema.History(f) && c.d != nil {
+				c.d.history = true
+			}
+			one := f.Cardinality == "one" // last_changed: one row, read as last_changed.date
 			if last {
 				return nil, nil, ferr(ref, "%s is a list of rows; name one of its fields: %s[].<field>", st.Name, st.Name)
+			}
+			if one && !st.Each {
+				lits = append(lits, datalog.P(RelRow, cur, str(st.Name), next))
+				sh = shape{types: m.owners, list: f}
+				break
 			}
 			if !st.Each {
 				return nil, nil, ferr(ref, "%s is a list of rows: write %s[].%s", st.Name, st.Name, ref.Steps[i+1].Name)
@@ -626,7 +640,8 @@ func (g *Graph) setCalc(out *datalog.Database, cf *calcField, v *model.Value, no
 		v.Result, v.Num = schema.Number, val.N
 	case datalog.Bool:
 		v.Result, v.Bool = schema.Boolean, val.B
-	case datalog.Str:
+	case datalog.Str, datalog.Commit:
+		// A commit reads as its hash (DES-0058).
 		v.Result, v.Str = schema.String, val.S
 	default:
 		return

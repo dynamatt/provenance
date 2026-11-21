@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dynamatt/provenance/internal/history"
 	"github.com/dynamatt/provenance/internal/history/historytest"
 	"github.com/dynamatt/provenance/internal/repo"
 )
@@ -221,5 +222,46 @@ func TestExampleFormatCommitIsNoChange(t *testing.T) {
 	}
 	if n == 0 {
 		t.Error("no changes at all")
+	}
+}
+
+// A commit's tree, loaded by At for diff, reads its entities' history up
+// to that commit, not HEAD's: a formula over last_changed is what it was.
+func TestAtReadsHistoryUpToItsCommit(t *testing.T) {
+	schemaWith := docSchema + "  - {name: changed_on, type: calculated, formula: \"last_changed.date\"}\n"
+	r := historytest.New(t)
+	files := func(body string) map[string]string {
+		return map[string]string{".component": "name: Test\ncode: TEST\n", "schema/Doc.yaml": schemaWith, "DOC/DOC-0001.md": doc("DOC-0001", "title: Pump\n", body)}
+	}
+	c1 := r.Commit(historytest.Commit{Message: "add", Author: on(ann, 1), Files: files("Old.\n")})
+	r.Commit(historytest.Commit{Message: "edit", Author: on(bea, 3), Parents: []string{c1}, Files: files("New.\n")})
+	changedOn := func(res *Result) string {
+		t.Helper()
+		for _, e := range res.Entities {
+			if e.ID == "DOC-0001" {
+				return e.Field("changed_on").Str
+			}
+		}
+		t.Fatal("no DOC-0001")
+		return ""
+	}
+	head, err := Load(&repo.Repo{Root: r.Dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := changedOn(head); got != "2026-11-03" {
+		t.Errorf("at HEAD: %q, want 2026-11-03", got)
+	}
+	h, err := history.Open(r.Dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	at, err := At(&repo.Repo{Root: r.Dir}, h, c1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := changedOn(at); got != "2026-11-01" {
+		t.Errorf("at the first commit: %q, want 2026-11-01", got)
 	}
 }

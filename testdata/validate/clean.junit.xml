@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="provenance validate" tests="54" failures="0" errors="0">
+<testsuites name="provenance validate" tests="58" failures="0" errors="0">
   <testsuite name="built-in" tests="42" failures="0" errors="0" skipped="0">
     <testcase name="content/caption" classname="built-in"></testcase>
     <testcase name="content/csv-column" classname="built-in"></testcase>
@@ -44,11 +44,19 @@
     <testcase name="schema/unused-record" classname="built-in"></testcase>
     <testcase name="schema/unused-type" classname="built-in"></testcase>
   </testsuite>
-  <testsuite name="rules" tests="12" failures="0" errors="0" skipped="0">
+  <testsuite name="rules" tests="16" failures="0" errors="0" skipped="0">
+    <testcase name="approval-current" classname="rules"></testcase>
     <testcase name="block-languages" classname="rules"></testcase>
     <testcase name="eco-change-type-valid" classname="rules"></testcase>
     <testcase name="equipment-calibration-current" classname="rules"></testcase>
+    <testcase name="evidence-after-approval" classname="rules">
+      <system-out>VER/EVD-0002.md:11: warning [evidence-after-approval] run or justified before the protocol&#39;s latest approval (EVD-0002)&#xA;</system-out>
+    </testcase>
     <testcase name="evidence-after-build" classname="rules"></testcase>
+    <testcase name="evidence-current" classname="rules">
+      <system-out>VER/EVD-0002.md:11: warning [evidence-current] the protocol it executed has changed since it was run or justified (EVD-0002)&#xA;</system-out>
+    </testcase>
+    <testcase name="execution-not-in-future" classname="rules"></testcase>
     <testcase name="no-implements-deprecated-need" classname="rules"></testcase>
     <testcase name="no-requirement-decomposition-cycles" classname="rules"></testcase>
     <testcase name="protocol-verifies-requirement" classname="rules"></testcase>

@@ -16,6 +16,10 @@ const (
 	Num                  // number
 	Bool                 // true or false
 	Node                 // an opaque node name, e.g. a list row; never equal to a string
+	// Commit is a commit of the history being read: S its hash, N its
+	// position in first-parent order, which orders it (DES-0058). Never
+	// equal to a string, so no rule compares a hash written in a file.
+	Commit
 )
 
 func (k Kind) String() string {
@@ -28,6 +32,8 @@ func (k Kind) String() string {
 		return "boolean"
 	case Node:
 		return "node"
+	case Commit:
+		return "commit"
 	}
 	return "invalid"
 }
@@ -45,6 +51,12 @@ func Number(n float64) Value   { return Value{Kind: Num, N: n} }
 func Boolean(b bool) Value     { return Value{Kind: Bool, B: b} }
 func NodeValue(s string) Value { return Value{Kind: Node, S: s} }
 
+// CommitValue is commit hash, at position order of the first-parent
+// history.
+func CommitValue(hash string, order int) Value {
+	return Value{Kind: Commit, S: hash, N: float64(order)}
+}
+
 func (v Value) String() string {
 	switch v.Kind {
 	case Str:
@@ -55,6 +67,8 @@ func (v Value) String() string {
 		return strconv.FormatBool(v.B)
 	case Node:
 		return "#" + v.S
+	case Commit:
+		return v.S
 	}
 	return "?"
 }
@@ -68,7 +82,7 @@ func CompareValues(a, b Value) (c int, ok bool) {
 	switch a.Kind {
 	case Str:
 		return strings.Compare(a.S, b.S), true
-	case Num:
+	case Num, Commit:
 		switch {
 		case a.N < b.N:
 			return -1, true
@@ -109,7 +123,7 @@ func sortKey(a, b Value) int {
 func appendKey(b []byte, v Value) []byte {
 	b = append(b, byte(v.Kind))
 	switch v.Kind {
-	case Str, Node:
+	case Str, Node, Commit:
 		b = binary.AppendUvarint(b, uint64(len(v.S)))
 		b = append(b, v.S...)
 	case Num:

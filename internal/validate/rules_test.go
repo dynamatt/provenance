@@ -106,7 +106,7 @@ func TestRuleFileProblems(t *testing.T) {
 		"two-problems.yaml": "severity: fatal\nmessage: m\nfrom: Prat\n",
 	})
 	want := `rules/Bad_Name.yaml: error [rules/name] a rule file is named for its ID, in lower-case kebab-case, with .yaml: Bad_Name.yaml is not
-rules/bad-field.yaml:5: error [rules/query] Part has no field "state" (fields: id, type, title, status, owner, parent, checks, notes, children, code_blocks)
+rules/bad-field.yaml:5: error [rules/query] Part has no field "state" (fields: id, type, title, status, owner, parent, checks, notes, children, code_blocks, changes, last_changed)
 rules/bad-severity.yaml:1: error [rules/severity] severity is error or warning, not "fatal"
 rules/broken-yaml.yaml:1: error [rules/file] invalid YAML: did not find expected node content
 rules/no-from.yaml:1: error [rules/query] rule has no from: <type>, from: [<type>, …] or from: any

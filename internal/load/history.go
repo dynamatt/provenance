@@ -109,6 +109,26 @@ func (h *History) Changes() (*history.EntityHistory, error) {
 	return h.changes, nil
 }
 
+// changes are the entities' changes the graph reads when a condition or
+// formula names them (DES-0058): the working tree's history, or, for a
+// commit At loaded, the history up to that commit. nil, nil outside a git
+// repository.
+func (r *Result) changes() (*history.EntityHistory, error) {
+	if r.Commit != "" {
+		repo, err := history.Open(r.Repo.Root)
+		if err != nil {
+			return nil, err
+		}
+		defer repo.Close()
+		return repo.ChangesAt(r.Commit, newValues())
+	}
+	h, err := r.History()
+	if err != nil || h == nil {
+		return nil, err
+	}
+	return h.Changes()
+}
+
 // Git is what an export stamps into its output (DES-0021, DES-0023); nil
 // outside a git repository, when outputs carry no commit or content hash.
 func (r *Result) Git() (*export.Git, error) {

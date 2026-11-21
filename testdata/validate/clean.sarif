@@ -388,6 +388,15 @@
               }
             },
             {
+              "id": "approval-current",
+              "shortDescription": {
+                "text": "the procedure or steps changed after the latest approval"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
               "id": "block-languages",
               "shortDescription": {
                 "text": "code block in a language this project does not use"
@@ -415,9 +424,36 @@
               }
             },
             {
+              "id": "evidence-after-approval",
+              "shortDescription": {
+                "text": "run or justified before the protocol's latest approval"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
               "id": "evidence-after-build",
               "shortDescription": {
                 "text": "executed before its build was built"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "evidence-current",
+              "shortDescription": {
+                "text": "the protocol it executed has changed since it was run or justified"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "execution-not-in-future",
+              "shortDescription": {
+                "text": "execution date is after the commit that recorded it"
               },
               "defaultConfiguration": {
                 "level": "error"
@@ -508,7 +544,7 @@
       "results": [
         {
           "ruleId": "requirement-verified",
-          "ruleIndex": 51,
+          "ruleIndex": 55,
           "level": "warning",
           "message": {
             "text": "requirement missing verification"
@@ -528,6 +564,54 @@
           ],
           "properties": {
             "entity": "REQ-0003"
+          }
+        },
+        {
+          "ruleId": "evidence-after-approval",
+          "ruleIndex": 46,
+          "level": "warning",
+          "message": {
+            "text": "run or justified before the protocol's latest approval"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "VER/EVD-0002.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "EVD-0002"
+          }
+        },
+        {
+          "ruleId": "evidence-current",
+          "ruleIndex": 48,
+          "level": "warning",
+          "message": {
+            "text": "the protocol it executed has changed since it was run or justified"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "VER/EVD-0002.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 11
+                }
+              }
+            }
+          ],
+          "properties": {
+            "entity": "EVD-0002"
           }
         }
       ]
