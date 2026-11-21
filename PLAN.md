@@ -90,7 +90,7 @@
 - [x] E9.6 The example's pull-request summary
 - [x] E9.7 Epic close-out
 - [x] E10.1 Design and git's behaviour
-- [ ] E10.2 The example's approvals and justifications
+- [x] E10.2 The example's approvals and justifications
 - [ ] E10.3 Changes by value
 - [ ] E10.4 `changes` and `last_changed`
 - [ ] E10.5 The scenarios
@@ -2388,6 +2388,9 @@ E10.1 checks each scenario against git and GitHub, records it in the DES, and ea
 | Git and GitHub, reviewed | Test pull requests 39–42 in the example, merged into a scratch branch: a merge commit is authored and dated by whoever merged, and the branch's commits keep their author dates on its second parent. A rebase merge keeps author dates and rewrites committers. A squash merge is one commit authored by whoever merged and dated when merged, so the changes it squashes have no date of their own. A branch that merged its base into itself made no change itself in that merge. DES-0058 records the table, and recommends merge commits or rebase merges where rules compare dates. (E10.1) |
 | A change's commit, date and author | `commit` is the commit on the history being validated: the merge, for a merged branch. `date`, `author` and `subject` come from the newest commit on the merged side whose values for the entity differ from those at each of its parents, so a merge of the base into the branch is passed over. (E10.1) |
 | An uncommitted change | A row with no commit and no date: a comparison of a blank fails, so date rules see it once committed. (E10.1) |
+| The example's history | The example already holds the case: VER-0002 gained its steps on 2026-10-18, after EVD-0002 was run on 2026-08-11, so no new commit was needed. Its protocols entered git a month after their evidence's fictional execution dates, as an import would, so a change row says whether it added the entity (`kind: added` or `changed`) and the rules count only `changed` (DES-0058, 2026-11-21). Both protocols are approved on 2026-11-18, after every change to their content; EVD-0001 is justified on 2026-11-19, and EVD-0002 is left stale on purpose. (E10.2) |
+| The fourth rule | `execution-not-in-future`: an execution date after the author date of the commit that set it (Matt, 2026-11-20). (E10.2) |
+| The pin | The rules name `changes`, which `v0.8.0-alpha` doesn't have, so the example's Validate fails on its epic branch until the release, and the pin moves to the epic branch with the implementation (E10.4), not before. (E10.2) |
 | Requirements | REQ-0142 (changes in conditions) and REQ-0143 (stale dependent records), both tracing USR-0023, implemented by DES-0058; DES-0015 and DES-0016 cite them. (E10.1) |
 
 ### Order
