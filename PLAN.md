@@ -93,7 +93,7 @@
 - [x] E10.2 The example's approvals and justifications
 - [x] E10.3 Changes by value
 - [x] E10.4 `changes` and `last_changed`
-- [ ] E10.5 The scenarios
+- [x] E10.5 The scenarios
 - [ ] E10.6 History it can't read
 - [ ] E10.7 Epic close-out
 
@@ -2399,6 +2399,7 @@ E10.1 checks each scenario against git and GitHub, records it in the DES, and ea
 | Templates | Through a calculated field (`changed_on: last_changed.date`), not names in the template data, which is built for every page and would read the history on every export. DES-0058 says so. (E10.4) |
 | A shallow clone | The example's rules read history, so `validate` in a shallow clone of it now stops with exit 2, naming `fetch-depth: 0`; the acceptance step that ran validate in one expects that, and runs it without those rules. (E10.4) |
 | The pin | On the example's `task/E10.2-example` commit until that PR merges into its epic branch; then on the epic branch. (E10.4) |
+| The scenarios | S1–S17 and S19 run as `validate`'s tests over repositories `historytest` builds commit by commit, with the example's four rules (S18 is acceptance's, E10.6). S2 found that `execution-not-in-future` as first written compared the date with every change that ever set it, so evidence run again tripped it on its first record; it now counts the changes made on or after the date and reports none (example, DES-0058). (E10.5) |
 | Requirements | REQ-0142 (changes in conditions) and REQ-0143 (stale dependent records), both tracing USR-0023, implemented by DES-0058; DES-0015 and DES-0016 cite them. (E10.1) |
 
 ### Order
