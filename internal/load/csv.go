@@ -65,6 +65,20 @@ func (c csvSource) Load(fsys fs.FS, _ []string) (*Loaded, error) {
 	return out, nil
 }
 
+// Parse is the rows of path when it is a source's file.
+func (c csvSource) Parse(path string, data func() ([]byte, error)) ([]*entity.Entity, bool, error) {
+	for _, t := range c.s.SourceTypes() {
+		if path == t.Source.CSV {
+			b, err := data()
+			if err != nil {
+				return nil, true, err
+			}
+			return entity.ParseCSV(c.table(t), t, b).Rows, true, nil
+		}
+	}
+	return nil, false, nil
+}
+
 // Entities are the rows of path when it is a source's file, each written
 // as the cells its fields read (entity.RowText).
 func (c csvSource) Entities(path string, data func() ([]byte, error)) ([]history.FileEntity, bool, error) {

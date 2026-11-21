@@ -19,6 +19,7 @@ type History struct {
 	content     history.Content
 	contentHash string
 	log         *history.Log
+	changes     *history.EntityHistory
 }
 
 // History reads the repository's git history the first time it is asked
@@ -88,6 +89,24 @@ func (h *History) Log() (*history.Log, error) {
 		return nil, err
 	}
 	return h.log, nil
+}
+
+// Changes is every entity's changes by value (DES-0058), read the first
+// time it is asked for. Like Log it needs every commit: a shallow clone
+// that cut some off is a *history.ShallowError.
+func (h *History) Changes() (*history.EntityHistory, error) {
+	if h.changes != nil {
+		return h.changes, nil
+	}
+	repo, err := history.Open(h.root)
+	if err != nil {
+		return nil, err
+	}
+	defer repo.Close()
+	if h.changes, err = repo.Changes(h.content, newValues()); err != nil {
+		return nil, err
+	}
+	return h.changes, nil
 }
 
 // Git is what an export stamps into its output (DES-0021, DES-0023); nil
