@@ -26,6 +26,9 @@ type Source interface {
 	// which reads its bytes, is then not called. A file that does not
 	// parse holds no entities.
 	Entities(path string, data func() ([]byte, error)) (entities []history.FileEntity, ok bool, err error)
+	// Parse reads the entities path holds, for history to compare two
+	// versions of the file by value (DES-0058); ok as for Entities.
+	Parse(path string, data func() ([]byte, error)) (entities []*entity.Entity, ok bool, err error)
 }
 
 // Loaded is what a source read.
