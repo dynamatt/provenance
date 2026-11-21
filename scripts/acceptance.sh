@@ -987,6 +987,17 @@ at 2026-11-22 "Record EVD-0001 as run in January"
 expect 1 '^VER/EVD-0001\.md:2: error \[execution-not-in-future\] execution date is after the commit that recorded it \(EVD-0001\)$' "$PROV" validate
 cd "$EXAMPLE_DIR"
 
+# E10.6: history rules need the history. Outside a git repository, as in
+# an archive of the example, validate stops with exit 2 and says why
+# (the shallow clone is E3.4's step); export, whose templates read no
+# history, carries on.
+mkdir "$WORK/archive"
+git -C "$EXAMPLE_DIR" archive HEAD | tar -x -C "$WORK/archive"
+cd "$WORK/archive"
+expect 2 '^validate: rules/[a-z-]+\.yaml: changes and last_changed read the repository.s git history, and there is none here' "$PROV" validate
+expect 0 '^exported website to _site$' "$PROV" export website
+cd "$EXAMPLE_DIR"
+
 if [ "$failures" -ne 0 ]; then
 	echo "$failures acceptance step(s) failed"
 	exit 1

@@ -94,7 +94,7 @@
 - [x] E10.3 Changes by value
 - [x] E10.4 `changes` and `last_changed`
 - [x] E10.5 The scenarios
-- [ ] E10.6 History it can't read
+- [x] E10.6 History it can't read
 - [ ] E10.7 Epic close-out
 
 ## Shape of the plan
@@ -2400,6 +2400,7 @@ E10.1 checks each scenario against git and GitHub, records it in the DES, and ea
 | A shallow clone | The example's rules read history, so `validate` in a shallow clone of it now stops with exit 2, naming `fetch-depth: 0`; the acceptance step that ran validate in one expects that, and runs it without those rules. (E10.4) |
 | The pin | On the example's `task/E10.2-example` commit until that PR merges into its epic branch; then on the epic branch. (E10.4) |
 | The scenarios | S1–S17 and S19 run as `validate`'s tests over repositories `historytest` builds commit by commit, with the example's four rules (S18 is acceptance's, E10.6). S2 found that `execution-not-in-future` as first written compared the date with every change that ever set it, so evidence run again tripped it on its first record; it now counts the changes made on or after the date and reports none (example, DES-0058). (E10.5) |
+| History it can't read | Already the case from E10.4: a shallow clone is history's `ShallowError`, naming `fetch-depth: 0`; no git repository is `query.ErrNoHistory`; both stop `validate` (exit 2) at the first rule reading history. Export of the example reads none and carries on. E10.6 adds the test and acceptance step for each, and the DDF's Validate fetches the whole history. (E10.6) |
 | Requirements | REQ-0142 (changes in conditions) and REQ-0143 (stale dependent records), both tracing USR-0023, implemented by DES-0058; DES-0015 and DES-0016 cite them. (E10.1) |
 
 ### Order

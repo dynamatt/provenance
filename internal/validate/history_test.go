@@ -1,12 +1,16 @@
 package validate
 
 import (
+	"errors"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/dynamatt/provenance/internal/history/historytest"
+	"github.com/dynamatt/provenance/internal/query"
 	"github.com/dynamatt/provenance/internal/repo"
 )
 
@@ -300,5 +304,27 @@ func TestHistoryScenarios(t *testing.T) {
 				t.Errorf("%s: %s\ngot  %q\nwant %q", sc.id, sc.name, got, sc.want)
 			}
 		})
+	}
+}
+
+// S18: rules that read history need it. Outside a git repository there is
+// none, and validate stops (exit 2) rather than reporting nothing; a
+// project that never names it validates there as anywhere.
+func TestHistoryRulesNeedGit(t *testing.T) {
+	dir := t.TempDir()
+	for rel, content := range tree(protocol(run, "2026-11-01"), evidence("2026-11-02")) {
+		write(t, dir, rel, content)
+	}
+	_, err := Run(&repo.Repo{Root: dir}, exporters())
+	if !errors.Is(err, query.ErrNoHistory) {
+		t.Fatalf("err = %v, want query.ErrNoHistory", err)
+	}
+	for _, rule := range []string{"evidence-current", "approval-current", "execution-not-in-future"} {
+		if err := os.Remove(filepath.Join(dir, "rules", rule+".yaml")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := Run(&repo.Repo{Root: dir}, exporters()); err != nil {
+		t.Fatalf("without the rules reading history: %v", err)
 	}
 }
