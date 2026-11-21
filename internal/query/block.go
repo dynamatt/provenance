@@ -23,19 +23,25 @@ type Graph struct {
 	Entities []*model.Entity
 	byID     map[string]*model.Entity
 	facts    *datalog.Database
+
+	history     History
+	historyRead bool
+	historyErr  error
 }
 
 // NewGraph prepares entities (sorted by ID) for queries. It evaluates every
-// calculated field, filling in its model value (see Calculate).
+// calculated field, filling in its model value (see Calculate). The graph
+// has no history: changes and last_changed are ErrNoHistory.
 func NewGraph(s *schema.Schema, entities []*model.Entity) (*Graph, error) {
+	return NewGraphWith(s, entities, nil)
+}
+
+func newGraph(s *schema.Schema, entities []*model.Entity) *Graph {
 	g := &Graph{Schema: s, Entities: entities, byID: make(map[string]*model.Entity, len(entities)), facts: Facts(entities)}
 	for _, e := range entities {
 		g.byID[e.ID] = e
 	}
-	if err := g.derive(); err != nil {
-		return nil, err
-	}
-	return g, nil
+	return g
 }
 
 // Entity returns the entity with the ID, or nil.
@@ -425,6 +431,11 @@ func (g *Graph) Matches(types []*schema.Type, cond *Condition) ([]Match, error) 
 	if err != nil {
 		return nil, err
 	}
+	if cp.history {
+		if err := g.useHistory(); err != nil {
+			return nil, err
+		}
+	}
 	out, err := datalog.Eval(cp.prog, g.facts)
 	if err != nil {
 		return nil, err
@@ -467,6 +478,11 @@ func (g *Graph) item(e *model.Entity, t *Test, v datalog.Value) Item {
 	if v.Kind == datalog.Node {
 		// RowNode: id/list/index; the list name and index have no slash.
 		it.Row, _ = strconv.Atoi(v.S[strings.LastIndex(v.S, "/")+1:])
+		if f := schema.Builtin(field); f != nil && schema.History(f) {
+			// A change is no line of the file: placed at the entity's id.
+			it.Line = e.IDLine()
+			return it
+		}
 		if field == schema.CodeBlocks.Name {
 			// A derived row: placed at its block's opening fence.
 			if ts := g.facts.Lookup(RelField, v, datalog.String("line")); len(ts) > 0 {

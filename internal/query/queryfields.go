@@ -37,6 +37,9 @@ import (
 type derived struct {
 	links  map[string]string // link or facet name → relation (node, target)
 	values map[string]string // calculated field name → relation (node, value)
+	// history is set when a formula or query field reads changes or
+	// last_changed, so the facts need the entities' history (DES-0058).
+	history bool
 }
 
 // link is the literal reading name's links from node to item.
@@ -239,6 +242,11 @@ func (g *Graph) derive() error {
 		}
 	}
 	live := slices.DeleteFunc(slices.Clone(queries), func(q *queryField) bool { return q.v.Invalid })
+	if d.history {
+		if err := g.useHistory(); err != nil {
+			return err
+		}
+	}
 
 	var out *datalog.Database
 	for {
