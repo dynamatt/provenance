@@ -412,10 +412,25 @@ func fold(f AggFunc, assigns []Tuple, slot int) (Value, bool) {
 		return Number(float64(len(assigns))), true
 	}
 	var nums []float64
+	var dates []string
 	for _, a := range assigns {
-		if a[slot].Kind == Num {
-			nums = append(nums, a[slot].N)
+		switch v := a[slot]; {
+		case v.Kind == Num:
+			nums = append(nums, v.N)
+		case IsDate(v):
+			dates = append(dates, v.S)
 		}
+	}
+	if (f == Max || f == Min) && len(dates) > 0 {
+		// Max and Min read dates too; dates and numbers together have no
+		// order, so no result (DES-0012).
+		if len(nums) > 0 {
+			return Value{}, false
+		}
+		if f == Max {
+			return String(slices.Max(dates)), true
+		}
+		return String(slices.Min(dates)), true
 	}
 	if len(nums) == 0 {
 		return Number(0), f == Sum
@@ -434,6 +449,20 @@ func fold(f AggFunc, assigns []Tuple, slot int) (Value, bool) {
 		return finite(sum / float64(len(nums)))
 	}
 	return finite(sum)
+}
+
+// IsDate reports a Str value written as a date, YYYY-MM-DD, as every date
+// value is: dates in that form order as their strings do.
+func IsDate(v Value) bool {
+	if v.Kind != Str || len(v.S) != 10 || v.S[4] != '-' || v.S[7] != '-' {
+		return false
+	}
+	for i, c := range v.S {
+		if i != 4 && i != 7 && (c < '0' || c > '9') {
+			return false
+		}
+	}
+	return true
 }
 
 func finite(n float64) (Value, bool) {

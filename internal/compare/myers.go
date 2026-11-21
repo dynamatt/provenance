@@ -1,18 +1,18 @@
-package diff
+package compare
 
-// edit is one step of an edit script turning a into b: an element kept
+// Edit is one step of an edit script turning a into b: an element kept
 // (both indexes set), deleted from a (B is -1) or inserted from b (A is
 // -1).
-type edit struct{ A, B int }
+type Edit struct{ A, B int }
 
-func (e edit) kept() bool     { return e.A >= 0 && e.B >= 0 }
-func (e edit) deleted() bool  { return e.B < 0 }
-func (e edit) inserted() bool { return e.A < 0 }
+func (e Edit) Kept() bool     { return e.A >= 0 && e.B >= 0 }
+func (e Edit) Deleted() bool  { return e.B < 0 }
+func (e Edit) Inserted() bool { return e.A < 0 }
 
-// script is a shortest edit script from a to b (Myers' O(ND) algorithm),
+// Script is a shortest edit script from a to b (Myers' O(ND) algorithm),
 // with deletions before insertions where both are possible, so a changed
 // element reads old then new. Elements are compared by key.
-func script(a, b []string) []edit {
+func Script(a, b []string) []Edit {
 	// The common prefix and suffix need no search.
 	pre := 0
 	for pre < len(a) && pre < len(b) && a[pre] == b[pre] {
@@ -22,9 +22,9 @@ func script(a, b []string) []edit {
 	for suf < len(a)-pre && suf < len(b)-pre && a[len(a)-1-suf] == b[len(b)-1-suf] {
 		suf++
 	}
-	var out []edit
+	var out []Edit
 	for i := 0; i < pre; i++ {
-		out = append(out, edit{i, i})
+		out = append(out, Edit{i, i})
 	}
 	for _, e := range myers(a[pre:len(a)-suf], b[pre:len(b)-suf]) {
 		if e.A >= 0 {
@@ -36,7 +36,7 @@ func script(a, b []string) []edit {
 		out = append(out, e)
 	}
 	for i := suf; i > 0; i-- {
-		out = append(out, edit{len(a) - i, len(b) - i})
+		out = append(out, Edit{len(a) - i, len(b) - i})
 	}
 	return out
 }
@@ -45,7 +45,7 @@ func script(a, b []string) []edit {
 // and insertions is taken as a whole replacement.
 const maxTrace = 4000
 
-func myers(a, b []string) []edit {
+func myers(a, b []string) []Edit {
 	n, m := len(a), len(b)
 	if n == 0 || m == 0 {
 		return replaced(n, m)
@@ -83,8 +83,8 @@ func myers(a, b []string) []edit {
 	panic("unreachable")
 }
 
-func backtrack(trace [][]int, off, n, m, d int) []edit {
-	var rev []edit
+func backtrack(trace [][]int, off, n, m, d int) []Edit {
+	var rev []Edit
 	x, y := n, m
 	for ; d > 0; d-- {
 		// at reads diagonal k of v before step d.
@@ -101,20 +101,20 @@ func backtrack(trace [][]int, off, n, m, d int) []edit {
 		py := px - pk
 		for x > px && y > py {
 			x, y = x-1, y-1
-			rev = append(rev, edit{x, y})
+			rev = append(rev, Edit{x, y})
 		}
 		if x == px {
-			rev = append(rev, edit{-1, y - 1})
+			rev = append(rev, Edit{-1, y - 1})
 		} else {
-			rev = append(rev, edit{x - 1, -1})
+			rev = append(rev, Edit{x - 1, -1})
 		}
 		x, y = px, py
 	}
 	for x > 0 && y > 0 {
 		x, y = x-1, y-1
-		rev = append(rev, edit{x, y})
+		rev = append(rev, Edit{x, y})
 	}
-	out := make([]edit, len(rev))
+	out := make([]Edit, len(rev))
 	for i, e := range rev {
 		out[len(rev)-1-i] = e
 	}
@@ -123,19 +123,19 @@ func backtrack(trace [][]int, off, n, m, d int) []edit {
 
 // orderRuns puts each run of deletions and insertions with no kept
 // element between them deletions first.
-func orderRuns(es []edit) []edit {
+func orderRuns(es []Edit) []Edit {
 	for i := 0; i < len(es); {
-		if es[i].kept() {
+		if es[i].Kept() {
 			i++
 			continue
 		}
 		j := i
-		for j < len(es) && !es[j].kept() {
+		for j < len(es) && !es[j].Kept() {
 			j++
 		}
-		var dels, ins []edit
+		var dels, ins []Edit
 		for _, e := range es[i:j] {
-			if e.deleted() {
+			if e.Deleted() {
 				dels = append(dels, e)
 			} else {
 				ins = append(ins, e)
@@ -148,13 +148,13 @@ func orderRuns(es []edit) []edit {
 }
 
 // replaced is the script deleting all n elements, then inserting all m.
-func replaced(n, m int) []edit {
-	out := make([]edit, 0, n+m)
+func replaced(n, m int) []Edit {
+	out := make([]Edit, 0, n+m)
 	for i := range n {
-		out = append(out, edit{i, -1})
+		out = append(out, Edit{i, -1})
 	}
 	for j := range m {
-		out = append(out, edit{-1, j})
+		out = append(out, Edit{-1, j})
 	}
 	return out
 }

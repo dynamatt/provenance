@@ -571,18 +571,18 @@ func comparePages(ob, nb []byte, oi, ni *sideImages) (htmltemplate.HTML, int, er
 	changed := 0
 	es := script(ka, kb)
 	for i := 0; i < len(es); {
-		if es[i].kept() {
+		if es[i].Kept() {
 			prev = b[es[i].B].node
 			i++
 			continue
 		}
 		j := i
-		for j < len(es) && !es[j].kept() {
+		for j < len(es) && !es[j].Kept() {
 			j++
 		}
 		var dels, ins []*hblock
 		for _, e := range es[i:j] {
-			if e.deleted() {
+			if e.Deleted() {
 				dels = append(dels, a[e.A])
 			} else {
 				ins = append(ins, b[e.B])
@@ -857,9 +857,9 @@ func (pw *pageWriter) words(ta, tb []token) {
 	}
 	for _, e := range script(ka, kb) {
 		switch {
-		case e.kept():
+		case e.Kept():
 			emit(Same, tb[e.B], "")
-		case e.deleted():
+		case e.Deleted():
 			if t := ta[e.A]; !t.isTag() {
 				emit(Removed, t, "") // the new block's tags are written
 			}

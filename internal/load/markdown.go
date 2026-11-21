@@ -32,6 +32,21 @@ func (markdown) Entities(p string, data func() ([]byte, error)) ([]history.FileE
 	return nil, true, nil
 }
 
+// Parse is the entity a Markdown file holds; none when it doesn't parse.
+func (markdown) Parse(p string, data func() ([]byte, error)) ([]*entity.Entity, bool, error) {
+	if !strings.EqualFold(path.Ext(p), ".md") {
+		return nil, false, nil
+	}
+	b, err := data()
+	if err != nil {
+		return nil, true, err
+	}
+	if e, _ := entity.Parse(p, b); e != nil {
+		return []*entity.Entity{e}, true, nil
+	}
+	return nil, true, nil
+}
+
 // Load reads every entity file. A file whose frontmatter does not parse,
 // and one declaring only one of id and type, is a content/frontmatter
 // problem. Of several files declaring one ID only the first found is an

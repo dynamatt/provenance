@@ -1,2 +1,4 @@
 REQ/REQ-0003.md:2: warning [requirement-verified] requirement missing verification (REQ-0003)
-0 errors, 1 warning
+VER/EVD-0002.md:11: warning [evidence-after-approval] run or justified before the protocol's latest approval (EVD-0002)
+VER/EVD-0002.md:11: warning [evidence-current] the protocol it executed has changed since it was run or justified (EVD-0002)
+0 errors, 3 warnings

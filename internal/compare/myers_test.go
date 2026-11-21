@@ -1,4 +1,4 @@
-package diff
+package compare
 
 import (
 	"math/rand"
@@ -19,19 +19,19 @@ func TestScript(t *testing.T) {
 	}
 	for range 2000 {
 		a, b := gen(), gen()
-		es := script(a, b)
+		es := Script(a, b)
 		var got []string
 		kept, ai, bi := 0, 0, 0
 		for i, e := range es {
 			switch {
-			case e.kept():
+			case e.Kept():
 				if a[e.A] != b[e.B] || e.A != ai || e.B != bi {
 					t.Fatalf("%v → %v: bad keep %v", a, b, e)
 				}
 				got = append(got, b[e.B])
 				kept++
 				ai, bi = ai+1, bi+1
-			case e.deleted():
+			case e.Deleted():
 				if e.A != ai {
 					t.Fatalf("%v → %v: bad delete %v", a, b, e)
 				}
@@ -40,7 +40,7 @@ func TestScript(t *testing.T) {
 				if e.B != bi {
 					t.Fatalf("%v → %v: bad insert %v", a, b, e)
 				}
-				if i+1 < len(es) && es[i+1].deleted() {
+				if i+1 < len(es) && es[i+1].Deleted() {
 					t.Fatalf("%v → %v: insertion before deletion", a, b)
 				}
 				got = append(got, b[e.B])

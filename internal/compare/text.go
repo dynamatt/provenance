@@ -1,4 +1,4 @@
-package diff
+package compare
 
 import (
 	"regexp"
@@ -60,30 +60,30 @@ type Word struct {
 	Text string
 }
 
-// compareText compares two texts block by block, nil when they read the
+// CompareText compares two texts block by block, nil when they read the
 // same: whitespace inside a block, such as a paragraph rewrapped, is no
 // change, being none when rendered.
-func compareText(old, new string) *Text {
+func CompareText(old, new string) *Text {
 	a, b := blocks(old), blocks(new)
 	ka, kb := keys(a), keys(b)
 	t := &Text{}
-	es := script(ka, kb)
+	es := Script(ka, kb)
 	changed := false
 	for i := 0; i < len(es); {
 		e := es[i]
-		if e.kept() {
+		if e.Kept() {
 			t.Blocks = append(t.Blocks, &Block{Op: Same, Old: ka[e.A], New: kb[e.B], Code: isCode(kb[e.B])})
 			i++
 			continue
 		}
 		changed = true
 		j := i
-		for j < len(es) && !es[j].kept() {
+		for j < len(es) && !es[j].Kept() {
 			j++
 		}
 		var dels, ins []string
 		for _, e := range es[i:j] {
-			if e.deleted() {
+			if e.Deleted() {
 				dels = append(dels, ka[e.A])
 			} else {
 				ins = append(ins, kb[e.B])
@@ -103,11 +103,11 @@ func compareText(old, new string) *Text {
 // fenced blocks, or when they share at least half their words, so an
 // edited paragraph reads as edited, not as replaced.
 func pair(dels, ins []string) []*Block {
-	matched := pairs(len(dels), len(ins), func(i, j int) bool {
+	matched := Pairs(len(dels), len(ins), func(i, j int) bool {
 		if isCode(dels[i]) || isCode(ins[j]) {
 			return isCode(dels[i]) && isCode(ins[j])
 		}
-		return similar(dels[i], ins[j])
+		return Similar(dels[i], ins[j])
 	})
 	var out []*Block
 	j := 0
@@ -133,10 +133,10 @@ func pair(dels, ins []string) []*Block {
 	return out
 }
 
-// pairs pairs n removed blocks with m added ones, in order, the most pairs
+// Pairs pairs n removed blocks with m added ones, in order, the most pairs
 // that match: matched[i] is the added block removed block i pairs with, or
 // -1. A run longer than maxPair is paired by position.
-func pairs(n, m int, match func(i, j int) bool) []int {
+func Pairs(n, m int, match func(i, j int) bool) []int {
 	matched := make([]int, n)
 	for i := range matched {
 		matched[i] = -1
@@ -189,11 +189,11 @@ func isCode(key string) bool { return strings.Contains(key, "\n") }
 func lines(old, new string) []Word {
 	la, lb := strings.Split(old, "\n"), strings.Split(new, "\n")
 	var out []Word
-	for _, e := range script(la, lb) {
+	for _, e := range Script(la, lb) {
 		switch {
-		case e.kept():
+		case e.Kept():
 			out = append(out, Word{Op: Same, Text: lb[e.B]})
-		case e.deleted():
+		case e.Deleted():
 			out = append(out, Word{Op: Removed, Text: la[e.A]})
 		default:
 			out = append(out, Word{Op: Added, Text: lb[e.B]})
@@ -202,14 +202,16 @@ func lines(old, new string) []Word {
 	return out
 }
 
-func similar(a, b string) bool {
+// Similar reports whether two blocks that aren't fenced share at least
+// half their words, so a removed one and an added one read as one changed.
+func Similar(a, b string) bool {
 	if isCode(a) || isCode(b) {
 		return false
 	}
 	wa, wb := strings.Fields(a), strings.Fields(b)
 	kept := 0
-	for _, e := range script(wa, wb) {
-		if e.kept() {
+	for _, e := range Script(wa, wb) {
+		if e.Kept() {
 			kept++
 		}
 	}
@@ -227,11 +229,11 @@ func words(old, new string) []Word {
 		}
 		out = append(out, Word{Op: op, Text: w})
 	}
-	for _, e := range script(wa, wb) {
+	for _, e := range Script(wa, wb) {
 		switch {
-		case e.kept():
+		case e.Kept():
 			add(Same, wb[e.B])
-		case e.deleted():
+		case e.Deleted():
 			add(Removed, wa[e.A])
 		default:
 			add(Added, wb[e.B])
